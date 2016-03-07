@@ -1,0 +1,12 @@
+[package]
+name = "rocket_macros"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+description = "Core Rocket Macros"
+
+[dependencies]
+hyper = "> 0.0.0"
+
+[lib]
+name = "rocket_macros"
+plugin = true
