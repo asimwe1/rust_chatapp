@@ -4,5 +4,4 @@ version = "0.0.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [dependencies]
-hyper = "> 0.7.0"
-rocket_macros = { path = "macros" }
+hyper = "*"
