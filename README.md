@@ -9,7 +9,7 @@ does, the following will be the canonical "Hello, world!" example:
 #![plugin(rocket_macros)]
 
 extern crate rocket;
-use rocket::{Rocket, Request, Response, Method, Route};
+use rocket::Rocket;
 
 #[route(GET, path = "/hello")]
 fn hello() -> &'static str {
