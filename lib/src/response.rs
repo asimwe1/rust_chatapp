@@ -2,6 +2,10 @@ pub use hyper::status::StatusCode;
 pub use hyper::header::{self, Headers};
 use std::io::Read;
 
+// Consider simply having Body be a trait, `RocketBody`, with one function that
+// takes in a prepped up HypResponse and acts on it. Then, `Response` changes
+// to be a Response<T: RocketBody> { body: T } and the Rocket HypHandler
+// simply sets up the status codes, headers, and calls body.fn(res).
 pub enum Body<'a> {
     Bytes(&'a [u8]),
     Str(&'a str),
