@@ -4,6 +4,10 @@ use error::Error;
 pub struct Request;
 
 impl Request {
+    pub fn empty() -> Request {
+        Request
+    }
+
     pub fn get_param_str(&self, name: &str) -> Result<&str, Error> {
         Err(Error::NoKey)
     }

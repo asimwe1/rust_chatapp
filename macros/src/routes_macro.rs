@@ -42,7 +42,7 @@ pub fn routes_macro(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
         last_seg.identifier = new_ident;
     }
 
-    // Build up the P<Expr> for each &path.
+    // Build up the P<Expr> for each path.
     let path_exprs = paths.iter().map(|p| { quote_expr!(ecx, &$p) }).collect();
     MacEager::expr(ecx.expr_vec_slice(sp, path_exprs))
 }
