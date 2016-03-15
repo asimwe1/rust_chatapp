@@ -1,4 +1,4 @@
-use self::Method::{Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch};
+use self::Method::*;
 use std::str::FromStr;
 use std::fmt::{self, Display};
 use error::Error;

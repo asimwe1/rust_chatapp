@@ -2,9 +2,13 @@ extern crate hyper;
 
 mod method;
 mod error;
+mod response;
+mod request;
 
 pub use method::Method;
 pub use error::Error;
+pub use response::Response;
+pub use request::Request;
 
 use hyper::server::Handler as HypHandler;
 use hyper::server::Request as HypRequest;
@@ -13,9 +17,6 @@ use hyper::net::Fresh as HypFresh;
 use hyper::Server;
 
 pub type Handler = fn(Request) -> Response;
-
-pub struct Request;
-pub struct Response;
 
 #[allow(dead_code)]
 pub struct Route<'a> {
@@ -48,10 +49,9 @@ impl Rocket {
     }
 
     pub fn mount(&mut self, base: &str, routes: &[&Route]) -> &mut Self {
-        println!("Mounting at {}", base);
+        println!("🛰  Mounting '{}':", base);
         for route in routes {
-            println!(" - Found {} route to {}", route.method, route.path);
-            (route.handler)(Request);
+            println!("\t* {} '{}'", route.method, route.path);
         }
 
         self
@@ -64,7 +64,7 @@ impl Rocket {
 
     pub fn launch(self) {
         let full_addr = format!("{}:{}", self.address, self.port);
-        println!("🚀  Rocket is launching ({})...", full_addr);
+        println!("🚀  Rocket has launched from {}...", full_addr);
         let _ = Server::http(full_addr.as_str()).unwrap().handle(self);
     }
 }

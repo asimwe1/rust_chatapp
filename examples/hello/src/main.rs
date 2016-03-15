@@ -2,24 +2,19 @@
 #![plugin(rocket_macros)]
 
 extern crate rocket;
-use rocket::{Rocket, Request, Response, Method, Route};
+use rocket::Rocket;
 
-#[route(GET, path = "/hello")]
-fn hello() -> &'static str {
-    "Hello, world!"
+#[route(GET, path = "/<name>")]
+fn hello(name: String) -> String {
+    format!("Hello, {}!", name)
 }
 
-mod test {
-    use rocket::{Request, Response, Method, Route};
-
-    #[route(GET, path = "")]
-    pub fn hello() -> &'static str {
-        "Hello, world!"
-    }
+#[route(PUT, path = "/<x>/<y>")]
+fn bye(x: usize, y: usize) -> String {
+    format!("{} + {} = {}", x, y, x + y)
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
-    rocket.mount("/test", routes![test::hello]);
-    rocket.mount_and_launch("/", routes![hello]);
+    let rocket = Rocket::new("localhost", 8000);
+    rocket.mount_and_launch("/", routes![hello, bye]);
 }

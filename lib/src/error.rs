@@ -1,3 +1,5 @@
 pub enum Error {
-    BadMethod
+    BadMethod,
+    BadParse,
+    NoKey
 }
