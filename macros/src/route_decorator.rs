@@ -11,7 +11,7 @@ use syntax::ast::{Item, Expr, ItemKind, MetaItem, MetaItemKind, FnDecl};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
 use syntax::ext::build::AstBuilder;
-use syntax::print::pprust::item_to_string;
+use syntax::print::pprust::{item_to_string, stmt_to_string};
 use syntax::parse::token::{self, str_to_ident};
 
 use rocket::Method;
@@ -117,6 +117,9 @@ fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
 
 pub fn get_fn_params(ecx: &ExtCtxt, sp: Span, path: &str,
                         fn_decl: &FnDecl) -> Vec<String> {
+
+    debug!("FUNCTION: {:?}", fn_decl);
+
     let mut seen = HashSet::new();
     let bad_match_err = "Path string is malformed.";
     let mut matching = false;
@@ -188,12 +191,15 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let mut fn_param_exprs = vec![];
     for param in &fn_params {
         let param_ident = str_to_ident(param.as_str());
-        fn_param_exprs.push(quote_stmt!(ecx,
+        let param_fn_item = quote_stmt!(ecx,
             let $param_ident = match _req.get_param($param) {
                 Ok(v) => v,
                 Err(_) => return rocket::Response::not_found()
             };
-        ).unwrap());
+        ).unwrap();
+
+        debug!("Param FN: {:?}", stmt_to_string(&param_fn_item));
+        fn_param_exprs.push(param_fn_item);
     }
 
     let mut fn_param_idents: Vec<TokenTree> = vec![];
@@ -212,9 +218,10 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
          fn $route_fn_name<'a>(_req: rocket::Request) -> rocket::Response<'a> {
              $fn_param_exprs
              let result = $fn_name($fn_param_idents);
-             rocket::Response::from(result)
+             rocket::Response::new(result)
          }
     ).unwrap();
+
     debug!("{}", item_to_string(&route_fn_item));
     push(Annotatable::Item(route_fn_item));
 
@@ -223,7 +230,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let method = method_variant_to_expr(ecx, route_params.method);
     push(Annotatable::Item(quote_item!(ecx,
         #[allow(non_upper_case_globals)]
-        pub static $struct_name: rocket::Route<'static, 'static> = rocket::Route {
+        pub static $struct_name: rocket::Route<'static> = rocket::Route {
             method: $method,
             path: $path,
             handler: $route_fn_name

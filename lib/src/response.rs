@@ -1,71 +1,146 @@
-pub use hyper::status::StatusCode;
-pub use hyper::header::{self, Headers};
-use std::io::Read;
+pub use hyper::server::Response as HypResponse;
+pub use hyper::net::Fresh as HypFresh;
 
-// Consider simply having Body be a trait, `RocketBody`, with one function that
-// takes in a prepped up HypResponse and acts on it. Then, `Response` changes
-// to be a Response<T: RocketBody> { body: T } and the Rocket HypHandler
-// simply sets up the status codes, headers, and calls body.fn(res).
-pub enum Body<'a> {
-    Bytes(&'a [u8]),
-    Str(&'a str),
-    String(String),
-    Stream(Box<Read>),
-    Empty
-}
+use hyper::status::StatusCode;
+use hyper::header::{self, Headers, Encoding};
+use std::io::{self, Read, Write};
+use std::fs::File;
 
 pub struct Response<'a> {
-    pub status: StatusCode,
-    pub headers: Headers,
-    pub body: Body<'a>
+    pub body: Box<Responder + 'a>
 }
+
+impl<'a> Response<'a> {
+    pub fn new<T: Responder + 'a>(body: T) -> Response<'a> {
+        Response {
+            body: Box::new(body)
+        }
+    }
+}
+
+struct Empty {
+    status: StatusCode
+}
+
+impl Empty {
+    fn new(status: StatusCode) -> Empty {
+        Empty {
+            status: status
+        }
+    }
+}
+
+pub trait Responder {
+    fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>);
+}
+
+impl Responder for Empty {
+    fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>) {
+        res.send(b"").unwrap();
+    }
+}
+
+impl<'a> Responder for &'a str {
+    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+        res.send(self.as_bytes()).unwrap();
+    }
+}
+
+impl Responder for String {
+    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+        res.send(self.as_bytes()).unwrap();
+    }
+}
+
+impl Responder for File {
+    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+        let size = self.metadata().unwrap().len();
+
+        res.headers_mut().set(header::ContentLength(size));
+        *(res.status_mut()) = StatusCode::Ok;
+
+        let mut s = String::new();
+        self.read_to_string(&mut s).unwrap();
+
+        let mut stream = res.start().unwrap();
+        stream.write_all(s.as_bytes()).unwrap();
+    }
+}
+
+// const CHUNK_SIZE: u32 = 4096;
+
+// pub struct Stream<T: Read>(T);
+
+// impl<T> Responder for Stream<T> {
+//     fn respond<'a>(&self, mut r: HypResponse<'a, HypFresh>) {
+//         r.headers_mut().set(header::TransferEncoding(vec![Encoding::Chunked]));
+//         *(r.status_mut()) = StatusCode::Ok;
+//         let mut stream = r.start();
+
+//         r.write()
+//         Response {
+//             status: StatusCode::Ok,
+//             headers: headers,
+//             body: Body::Stream(r)
+//         }
+//     }
+// }
 
 impl<'a> Response<'a> {
     pub fn empty() -> Response<'a> {
         Response {
-            status: StatusCode::Ok,
-            headers: Headers::new(),
-            body: Body::Empty
+            body: Box::new(Empty::new(StatusCode::Ok))
         }
     }
 
     pub fn not_found() -> Response<'a> {
         Response {
-            status: StatusCode::NotFound,
-            headers: Headers::new(),
-            body: Body::Empty
+            body: Box::new(Empty::new(StatusCode::NotFound))
         }
     }
 
     pub fn server_error() -> Response<'a> {
         Response {
-            status: StatusCode::InternalServerError,
-            headers: Headers::new(),
-            body: Body::Empty
+            body: Box::new(Empty::new(StatusCode::InternalServerError))
         }
     }
 }
 
-impl<'a> From<&'a str> for Response<'a> {
-    fn from(s: &'a str) -> Self {
-        let mut headers = Headers::new();
-        headers.set(header::ContentLength(s.len() as u64));
-        Response {
-            status: StatusCode::Ok,
-            headers: headers,
-            body: Body::Str(s)
-        }
-    }
-}
 
-impl<'a> From<String> for Response<'a> {
-    fn from(s: String) -> Self {
-        let mut headers = Headers::new();
-        headers.set(header::ContentLength(s.len() as u64));
-        Response {
-            status: StatusCode::Ok,
-            headers: headers,
-            body: Body::String(s)
-        }
-    }
-}
+// macro_rules! impl_from_lengthed {
+//     ($name:ident, $T:ty) => (
+//         impl<'a> From<$T> for Response<'a> {
+//             fn from(s: $T) -> Self {
+//                 Response {
+//                     status: StatusCode::Ok,
+//                     headers: Headers::new(),
+//                     body: Body::$name(s)
+//                 }
+//             }
+//         }
+//     )
+// }
+
+// impl_from_lengthed!(Str, &'a str);
+// impl_from_lengthed!(String, String);
+// impl_from_lengthed!(Bytes, &'a [u8]);
+// impl_from_lengthed!(File, File);
+
+// macro_rules! impl_from_reader {
+//     ($T:ty) => (
+//         impl<'a> From<&'a $T> for Response<'a> {
+//             fn from(r: &'a $T) -> Self {
+//                 let mut headers = Headers::new();
+//                 headers.set(header::TransferEncoding(vec![Encoding::Chunked]));
+//                 Response {
+//                     status: StatusCode::Ok,
+//                     headers: headers,
+//                     body: Body::Stream(r)
+//                 }
+//             }
+//         }
+//     )
+// }
+
+// impl_from_reader!(File);
+// impl_from_reader!(&'a [u8]);

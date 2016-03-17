@@ -1,38 +1,39 @@
 extern crate hyper;
 
-mod method;
-mod error;
-mod response;
-mod request;
+pub mod method;
+pub mod error;
+pub mod response;
+pub mod request;
+pub mod param;
 
 use std::io::Write;
 
 pub use method::Method;
 pub use error::Error;
-pub use response::{Body, Response};
+pub use response::{Response, HypResponse, HypFresh, Responder};
 pub use request::Request;
+pub use param::FromParam;
 
 use hyper::server::Handler as HypHandler;
 use hyper::server::Request as HypRequest;
-use hyper::server::Response as HypResponse;
-use hyper::net::Fresh as HypFresh;
 use hyper::Server;
 
 pub type Handler<'a> = fn(Request) -> Response<'a>;
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct Route<'a, 'b> {
+pub struct Route<'a> {
     pub method: Method,
-    pub path: &'a str,
-    pub handler: Handler<'b>
+    pub path: &'static str,
+    pub handler: Handler<'a>
 }
 
 #[allow(dead_code)]
 pub struct Rocket {
     address: &'static str,
     port: isize,
-    handler: Option<Route<'static, 'static>> // just for testing
+    handler: Option<Route<'static>>, // just for testing
+    paths: Vec<&'static str> // for now, to check for collisions
     // mounts: HashMap<&'static str, Route<'a>>
 }
 
@@ -41,17 +42,9 @@ impl HypHandler for Rocket {
                       mut res: HypResponse<'a, HypFresh>) {
         println!("Request: {:?}", req.uri);
         if self.handler.is_some() {
-            let response = (self.handler.as_ref().unwrap().handler)(Request::empty());
-            *(res.headers_mut()) = response.headers;
-            *(res.status_mut()) = response.status;
-            match response.body {
-                Body::Str(string) => {
-                    let mut stream = res.start().unwrap();
-                    stream.write_all(string.as_bytes()).unwrap();
-                    stream.end();
-                }
-                _ => println!("UNIMPLEMENTED")
-            }
+            let handler = self.handler.as_ref();
+            let mut response = (handler.unwrap().handler)(Request::empty());
+            response.body.respond(res);
         }
     }
 }
@@ -65,8 +58,8 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &str, routes: &[&Route<'static, 'static>]) -> &mut Self {
-        println!("🛰  Mounting '{}':", base);
+    pub fn mount(&mut self, base: &str, routes: &[&Route<'static>]) -> &mut Self {
+        println!("🛰 Mounting '{}':", base);
         for route in routes {
             if self.handler.is_none() {
                 println!("\t* INSTALLED: {} '{}'", route.method, route.path);
@@ -78,7 +71,7 @@ impl Rocket {
         self
     }
 
-    pub fn mount_and_launch(mut self, base: &str, routes: &[&Route<'static, 'static>]) {
+    pub fn mount_and_launch(mut self, base: &str, routes: &[&Route<'static>]) {
         self.mount(base, routes);
         self.launch();
     }
