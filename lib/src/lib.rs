@@ -5,6 +5,7 @@ pub mod error;
 pub mod response;
 pub mod request;
 pub mod param;
+pub mod router;
 
 use std::io::Write;
 
@@ -13,6 +14,7 @@ pub use error::Error;
 pub use response::{Response, HypResponse, HypFresh, Responder};
 pub use request::Request;
 pub use param::FromParam;
+pub use router::Router;
 
 use hyper::server::Handler as HypHandler;
 use hyper::server::Request as HypRequest;
@@ -33,7 +35,7 @@ pub struct Rocket {
     address: &'static str,
     port: isize,
     handler: Option<Route<'static>>, // just for testing
-    paths: Vec<&'static str> // for now, to check for collisions
+    router: Router
     // mounts: HashMap<&'static str, Route<'a>>
 }
 
@@ -54,7 +56,8 @@ impl Rocket {
         Rocket {
             address: address,
             port: port,
-            handler: None
+            handler: None,
+            router: Router::new()
         }
     }
 
@@ -65,7 +68,9 @@ impl Rocket {
                 println!("\t* INSTALLED: {} '{}'", route.method, route.path);
                 self.handler = Some((*route).clone());
             }
+
             println!("\t* {} '{}'", route.method, route.path);
+            self.router.add_route(route.method.clone(), base, route.path);
         }
 
         self
@@ -77,6 +82,10 @@ impl Rocket {
     }
 
     pub fn launch(self) {
+        if self.router.has_collisions() {
+            println!("Warning: route collisions detected!");
+        }
+
         let full_addr = format!("{}:{}", self.address, self.port);
         println!("🚀  Rocket has launched from {}...", full_addr);
         let _ = Server::http(full_addr.as_str()).unwrap().handle(self);
