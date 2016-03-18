@@ -11,9 +11,9 @@ does, the following will be the canonical "Hello, world!" example:
 extern crate rocket;
 use rocket::Rocket;
 
-#[route(GET, path = "/hello")]
-fn hello() -> &'static str {
-    "Hello, world!"
+#[route(GET, path = "/hello/<name>")]
+fn hello(name: &'static str) -> String {
+    format!("Hello, {}!", name)
 }
 
 fn main() {
@@ -36,6 +36,9 @@ cd examples/hello
 cargo build
 cargo run
 ```
+
+Then visit `localhost:8000/hello/{some_name}`, replacing `{some_name}` with some
+name.
 
 ### OS X
 
