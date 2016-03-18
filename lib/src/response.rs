@@ -2,8 +2,8 @@ pub use hyper::server::Response as HypResponse;
 pub use hyper::net::Fresh as HypFresh;
 
 use hyper::status::StatusCode;
-use hyper::header::{self, Headers, Encoding};
-use std::io::{self, Read, Write};
+use hyper::header;
+use std::io::{Read, Write};
 use std::fs::File;
 
 pub struct Response<'a> {
@@ -16,9 +16,31 @@ impl<'a> Response<'a> {
             body: Box::new(body)
         }
     }
+
+    pub fn empty() -> Response<'a> {
+        Response {
+            body: Box::new(Empty::new(StatusCode::Ok))
+        }
+    }
+
+    pub fn not_found() -> Response<'a> {
+        Response {
+            body: Box::new(Empty::new(StatusCode::NotFound))
+        }
+    }
+
+    pub fn server_error() -> Response<'a> {
+        Response {
+            body: Box::new(Empty::new(StatusCode::InternalServerError))
+        }
+    }
 }
 
-struct Empty {
+pub trait Responder {
+    fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>);
+}
+
+pub struct Empty {
     status: StatusCode
 }
 
@@ -30,24 +52,24 @@ impl Empty {
     }
 }
 
-pub trait Responder {
-    fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>);
-}
-
 impl Responder for Empty {
     fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>) {
-        res.send(b"").unwrap();
+        res.headers_mut().set(header::ContentLength(0));
+        *(res.status_mut()) = self.status;
+
+        let mut stream = res.start().unwrap();
+        stream.write_all(b"").unwrap();
     }
 }
 
 impl<'a> Responder for &'a str {
-    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+    fn respond<'b>(&mut self, res: HypResponse<'b, HypFresh>) {
         res.send(self.as_bytes()).unwrap();
     }
 }
 
 impl Responder for String {
-    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+    fn respond<'b>(&mut self, res: HypResponse<'b, HypFresh>) {
         res.send(self.as_bytes()).unwrap();
     }
 }
@@ -85,27 +107,6 @@ impl Responder for File {
 //         }
 //     }
 // }
-
-impl<'a> Response<'a> {
-    pub fn empty() -> Response<'a> {
-        Response {
-            body: Box::new(Empty::new(StatusCode::Ok))
-        }
-    }
-
-    pub fn not_found() -> Response<'a> {
-        Response {
-            body: Box::new(Empty::new(StatusCode::NotFound))
-        }
-    }
-
-    pub fn server_error() -> Response<'a> {
-        Response {
-            body: Box::new(Empty::new(StatusCode::InternalServerError))
-        }
-    }
-}
-
 
 // macro_rules! impl_from_lengthed {
 //     ($name:ident, $T:ty) => (

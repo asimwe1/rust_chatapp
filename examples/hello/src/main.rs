@@ -3,14 +3,8 @@
 
 extern crate rocket;
 use rocket::Rocket;
-use rocket::response::{HypResponse, HypFresh, Responder};
 
 use std::fs::File;
-
-// #[route(GET, path = "/")]
-// fn simple() -> &'static str {
-//     "Hello, simple example world! How is thou?"
-// }
 
 #[route(GET, path = "/")]
 fn simple() -> File {
@@ -28,8 +22,8 @@ fn simple3() -> String {
 }
 
 #[route(GET, path = "/<name>/<age>")]
-fn simple4(name: &str, age: i8) -> &str {
-    name
+fn simple4(name: &str, age: i8) -> String {
+    format!("Hello, {} year old named {}!", age, name)
 }
 
 #[route(GET, path = "/something")]

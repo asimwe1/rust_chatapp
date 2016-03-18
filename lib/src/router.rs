@@ -43,7 +43,8 @@ impl Router {
         }
     }
 
-    pub fn add_route(&mut self, method: Method, base: &str, route: &str) {
+    // TODO: Use `method` argument
+    pub fn add_route(&mut self, _method: Method, base: &str, route: &str) {
         // Allocate enough space for the worst case.
         let mut deduped = String::with_capacity(base.len() + route.len() + 1);
 
@@ -56,7 +57,7 @@ impl Router {
             last = c;
         }
 
-        let mut path = PathBuf::from(deduped);
+        let path = PathBuf::from(deduped);
         println!("Mounted: {:?}", path);
         self.paths.push(path);
     }

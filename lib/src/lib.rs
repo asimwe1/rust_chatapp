@@ -7,8 +7,6 @@ pub mod request;
 pub mod param;
 pub mod router;
 
-use std::io::Write;
-
 pub use method::Method;
 pub use error::Error;
 pub use response::{Response, HypResponse, HypFresh, Responder};
@@ -41,7 +39,7 @@ pub struct Rocket {
 
 impl HypHandler for Rocket {
     fn handle<'a, 'k>(&'a self, req: HypRequest<'a, 'k>,
-                      mut res: HypResponse<'a, HypFresh>) {
+            res: HypResponse<'a, HypFresh>) {
         println!("Request: {:?}", req.uri);
         if self.handler.is_some() {
             let handler = self.handler.as_ref();

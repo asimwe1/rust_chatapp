@@ -8,7 +8,7 @@ impl Request {
         Request
     }
 
-    pub fn get_param_str<'a>(&self, name: &'a str) -> Result<&'a str, Error> {
+    pub fn get_param_str<'a>(&self, _name: &'a str) -> Result<&'a str, Error> {
         Err(Error::NoKey)
     }
 
