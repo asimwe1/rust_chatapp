@@ -1,3 +1,5 @@
+#![feature(str_char)]
+
 extern crate hyper;
 
 pub mod method;
@@ -59,7 +61,8 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &str, routes: &[&Route<'static>]) -> &mut Self {
+    pub fn mount(&mut self, base: &'static str, routes: &[&Route<'static>])
+            -> &mut Self {
         println!("🛰 Mounting '{}':", base);
         for route in routes {
             if self.handler.is_none() {
@@ -74,7 +77,8 @@ impl Rocket {
         self
     }
 
-    pub fn mount_and_launch(mut self, base: &str, routes: &[&Route<'static>]) {
+    pub fn mount_and_launch(mut self, base: &'static str,
+                            routes: &[&Route<'static>]) {
         self.mount(base, routes);
         self.launch();
     }
