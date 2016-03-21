@@ -65,8 +65,13 @@ mod tests {
         route_a.collides_with(&Route::new(Get, "/", b))
     }
 
-    fn s_collide(a: &'static str, b: &'static str) -> bool {
+    fn s_r_collide(a: &'static str, b: &'static str) -> bool {
         a.collides_with(&Route::new(Get, "/", b))
+    }
+
+    fn r_s_collide(a: &'static str, b: &'static str) -> bool {
+        let route_a = Route::new(Get, "/", a);
+        route_a.collides_with(b)
     }
 
     #[test]
@@ -136,18 +141,30 @@ mod tests {
 
     #[test]
     fn test_str_non_collisions() {
-        assert!(!s_collide("/a", "/b"));
-        assert!(!s_collide("/a/b", "/a"));
-        assert!(!s_collide("/a/b", "/a/c"));
-        assert!(!s_collide("/a/hello", "/a/c"));
-        assert!(!s_collide("/hello", "/a/c"));
-        assert!(!s_collide("/hello/there", "/hello/there/guy"));
-        assert!(!s_collide("/b<a>/there", "/hi/there"));
-        assert!(!s_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!s_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!s_collide("/a<a>/<b>", "/b<b>/<a>"));
-        assert!(!s_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!s_r_collide("/a", "/b"));
+        assert!(!s_r_collide("/a/b", "/a"));
+        assert!(!s_r_collide("/a/b", "/a/c"));
+        assert!(!s_r_collide("/a/hello", "/a/c"));
+        assert!(!s_r_collide("/hello", "/a/c"));
+        assert!(!s_r_collide("/hello/there", "/hello/there/guy"));
+        assert!(!s_r_collide("/b<a>/there", "/hi/there"));
+        assert!(!s_r_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!s_r_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!s_r_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!s_r_collide("/a/<b>", "/b/<b>"));
+        assert!(!s_r_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!r_s_collide("/a", "/b"));
+        assert!(!r_s_collide("/a/b", "/a"));
+        assert!(!r_s_collide("/a/b", "/a/c"));
+        assert!(!r_s_collide("/a/hello", "/a/c"));
+        assert!(!r_s_collide("/hello", "/a/c"));
+        assert!(!r_s_collide("/hello/there", "/hello/there/guy"));
+        assert!(!r_s_collide("/b<a>/there", "/hi/there"));
+        assert!(!r_s_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!r_s_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!r_s_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!r_s_collide("/a/<b>", "/b/<b>"));
+        assert!(!r_s_collide("/a<a>/<b>", "/b/<b>"));
     }
 
     fn test_str_collisions() {

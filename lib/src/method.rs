@@ -2,8 +2,9 @@ use self::Method::*;
 use std::str::FromStr;
 use std::fmt::{self, Display};
 use error::Error;
+use hyper::method::Method as HypMethod;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     Get,
     Put,
@@ -16,16 +17,25 @@ pub enum Method {
     Patch
 }
 
+impl Method {
+    pub fn from_hyp(method: HypMethod) -> Option<Method> {
+        match method {
+            HypMethod::Get => Some(Get),
+            _ => None
+        }
+    }
+}
+
 impl FromStr for Method {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Method, Error> {
         match s {
-            "OPTIONS" => Ok(Options),
             "GET" => Ok(Get),
-            "POST" => Ok(Post),
             "PUT" => Ok(Put),
+            "POST" => Ok(Post),
             "DELETE" => Ok(Delete),
+            "OPTIONS" => Ok(Options),
             "HEAD" => Ok(Head),
             "TRACE" => Ok(Trace),
             "CONNECT" => Ok(Connect),
@@ -38,11 +48,11 @@ impl FromStr for Method {
 impl Display for Method {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(match *self {
-            Options => "OPTIONS",
             Get => "GET",
-            Post => "POST",
             Put => "PUT",
+            Post => "POST",
             Delete => "DELETE",
+            Options => "OPTIONS",
             Head => "HEAD",
             Trace => "TRACE",
             Connect => "CONNECT",

@@ -1,7 +1,11 @@
+use term_painter::ToStyle;
+use term_painter::Color::*;
 use std::path::{Path, PathBuf};
+use std::fmt;
 use method::Method;
 use super::Collider; // :D
 
+// FIXME: Take in the handler! Or maybe keep that in `Router`?
 #[derive(Debug)]
 pub struct Route {
     method: Method,
@@ -45,10 +49,15 @@ impl Route {
     }
 }
 
+impl fmt::Display for Route {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))
+    }
+}
+
 impl Collider for Path {
-    // FIXME: This assume that a and b have the same number of componenets.
-    // This is because it's expensive to compute the number of componenets: O(n)
-    // per path where n == number of chars.
+    // FIXME: It's expensive to compute the number of components: O(n) per path
+    // where n == number of chars.
     //
     // Idea: Create a `CachedPath` type that caches the number of components
     // similar to the way `Route` does it.
@@ -85,5 +94,11 @@ impl<'a> Collider<Route> for &'a str {
     fn collides_with(&self, other: &Route) -> bool {
         let path = Path::new(self);
         path.collides_with(&other.path)
+    }
+}
+
+impl Collider<str> for Route {
+    fn collides_with(&self, other: &str) -> bool {
+        other.collides_with(self)
     }
 }

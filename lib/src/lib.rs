@@ -1,5 +1,6 @@
 #![feature(str_char)]
 
+extern crate term_painter;
 extern crate hyper;
 
 pub mod method;
@@ -16,6 +17,10 @@ pub use request::Request;
 pub use param::FromParam;
 pub use router::Router;
 
+use std::fmt;
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use hyper::uri::RequestUri;
 use hyper::server::Handler as HypHandler;
 use hyper::server::Request as HypRequest;
 use hyper::Server;
@@ -30,23 +35,32 @@ pub struct Route<'a> {
     pub handler: Handler<'a>
 }
 
+impl<'a> fmt::Display for Route<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))
+    }
+}
+
 #[allow(dead_code)]
 pub struct Rocket {
     address: &'static str,
     port: isize,
-    handler: Option<Route<'static>>, // just for testing
     router: Router
 }
 
 impl HypHandler for Rocket {
     fn handle<'a, 'k>(&'a self, req: HypRequest<'a, 'k>,
             res: HypResponse<'a, HypFresh>) {
-        println!("Request: {:?}", req.uri);
-        if self.handler.is_some() {
-            let handler = self.handler.as_ref();
-            let mut response = (handler.unwrap().handler)(Request::empty());
-            response.body.respond(res);
+        if let RequestUri::AbsolutePath(uri_string) = req.uri {
+            if let Some(method) = Method::from_hyp(req.method) {
+                println!("Request: {:?}", uri_string);
+                self.router.route(method, uri_string.as_str());
+                res.send(b"Hello, world!").unwrap();
+                return;
+            }
         }
+
+        Response::not_found().body.respond(res);
     }
 }
 
@@ -55,21 +69,15 @@ impl Rocket {
         Rocket {
             address: address,
             port: port,
-            handler: None,
             router: Router::new()
         }
     }
 
     pub fn mount(&mut self, base: &'static str, routes: &[&Route<'static>])
             -> &mut Self {
-        println!("🛰 Mounting '{}':", base);
+        println!("🛰  {} '{}':", Magenta.paint("Mounting"), Blue.paint(base));
         for route in routes {
-            if self.handler.is_none() {
-                println!("\t* INSTALLED: {} '{}'", route.method, route.path);
-                self.handler = Some((*route).clone());
-            }
-
-            println!("\t* {} '{}'", route.method, route.path);
+            println!("\t* {}", route);
             self.router.add_route(route.method.clone(), base, route.path);
         }
 
@@ -84,11 +92,12 @@ impl Rocket {
 
     pub fn launch(self) {
         if self.router.has_collisions() {
-            println!("Warning: route collisions detected!");
+            println!("{}", Yellow.paint("Warning: route collisions detected!"));
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
-        println!("🚀  Rocket has launched from {}...", full_addr);
+        println!("🚀  {} {}...", White.paint("Rocket has launched from"),
+            White.bold().paint(&full_addr));
         let _ = Server::http(full_addr.as_str()).unwrap().handle(self);
     }
 }

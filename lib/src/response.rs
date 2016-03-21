@@ -89,10 +89,9 @@ impl Responder for File {
     }
 }
 
+// TODO: Allow streamed responses.
 // const CHUNK_SIZE: u32 = 4096;
-
 // pub struct Stream<T: Read>(T);
-
 // impl<T> Responder for Stream<T> {
 //     fn respond<'a>(&self, mut r: HypResponse<'a, HypFresh>) {
 //         r.headers_mut().set(header::TransferEncoding(vec![Encoding::Chunked]));
@@ -107,41 +106,3 @@ impl Responder for File {
 //         }
 //     }
 // }
-
-// macro_rules! impl_from_lengthed {
-//     ($name:ident, $T:ty) => (
-//         impl<'a> From<$T> for Response<'a> {
-//             fn from(s: $T) -> Self {
-//                 Response {
-//                     status: StatusCode::Ok,
-//                     headers: Headers::new(),
-//                     body: Body::$name(s)
-//                 }
-//             }
-//         }
-//     )
-// }
-
-// impl_from_lengthed!(Str, &'a str);
-// impl_from_lengthed!(String, String);
-// impl_from_lengthed!(Bytes, &'a [u8]);
-// impl_from_lengthed!(File, File);
-
-// macro_rules! impl_from_reader {
-//     ($T:ty) => (
-//         impl<'a> From<&'a $T> for Response<'a> {
-//             fn from(r: &'a $T) -> Self {
-//                 let mut headers = Headers::new();
-//                 headers.set(header::TransferEncoding(vec![Encoding::Chunked]));
-//                 Response {
-//                     status: StatusCode::Ok,
-//                     headers: headers,
-//                     body: Body::Stream(r)
-//                 }
-//             }
-//         }
-//     )
-// }
-
-// impl_from_reader!(File);
-// impl_from_reader!(&'a [u8]);

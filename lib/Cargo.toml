@@ -5,3 +5,4 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [dependencies]
 hyper = "*"
+term-painter = "*"
