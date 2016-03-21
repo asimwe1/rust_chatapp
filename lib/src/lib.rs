@@ -36,7 +36,6 @@ pub struct Rocket {
     port: isize,
     handler: Option<Route<'static>>, // just for testing
     router: Router
-    // mounts: HashMap<&'static str, Route<'a>>
 }
 
 impl HypHandler for Rocket {

@@ -1,0 +1,156 @@
+use std::path::Component;
+
+pub trait Collider<T: ?Sized = Self> {
+    fn collides_with(&self, other: &T) -> bool;
+}
+
+fn check_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
+    let (a_len, b_len) = (a.len() as isize, b.len() as isize);
+    let (mut i, mut j, delta) = if dir {
+        (0, 0, 1)
+    } else {
+        (a_len - 1, b_len - 1, -1)
+    };
+
+    while i >= 0 && j >= 0 && i < a_len && j < b_len {
+        let (c1, c2) = (a.char_at(i as usize), b.char_at(j as usize));
+        if c1 == break_c || c2 == break_c {
+            break;
+        } else if c1 != c2 {
+            return false;
+        } else {
+            i += delta;
+            j += delta;
+        }
+    }
+
+    return true;
+}
+
+macro_rules! comp_to_str {
+    ($component:expr) => (
+        match $component {
+            &Component::Normal(ref comp) => {
+                if let Some(string) = comp.to_str() { string }
+                else { return true }
+            },
+            _ => return true
+        };
+    )
+}
+
+impl<'a> Collider for Component<'a> {
+    fn collides_with(&self, other: &Component<'a>) -> bool {
+        let (a, b) = (comp_to_str!(self), comp_to_str!(other));
+        check_match_until('<', a, b, true) && check_match_until('>', a, b, false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use router::Collider;
+    use router::route::Route;
+    use Method;
+    use Method::*;
+
+    type SimpleRoute = (Method, &'static str);
+
+    fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
+        let route_a = Route::new(a.0, "/", a.1);
+        route_a.collides_with(&Route::new(b.0, "/", b.1))
+    }
+
+    fn collide(a: &'static str, b: &'static str) -> bool {
+        let route_a = Route::new(Get, "/", a);
+        route_a.collides_with(&Route::new(Get, "/", b))
+    }
+
+    fn s_collide(a: &'static str, b: &'static str) -> bool {
+        a.collides_with(&Route::new(Get, "/", b))
+    }
+
+    #[test]
+    fn simple_collisions() {
+        assert!(collide("a", "a"));
+        assert!(collide("/a", "/a"));
+        assert!(collide("/hello", "/hello"));
+        assert!(collide("/hello", "/hello/"));
+        assert!(collide("/hello/there/how/ar", "/hello/there/how/ar"));
+        assert!(collide("/hello/there", "/hello/there/"));
+    }
+
+    #[test]
+    fn simple_param_collisions() {
+        assert!(collide("/hello/<name>", "/hello/<person>"));
+        assert!(collide("/hello/<name>/hi", "/hello/<person>/hi"));
+        assert!(collide("/hello/<name>/hi/there", "/hello/<person>/hi/there"));
+        assert!(collide("/<name>/hi/there", "/<person>/hi/there"));
+        assert!(collide("/<name>/hi/there", "/dude/<name>/there"));
+        assert!(collide("/<name>/<a>/<b>", "/<a>/<b>/<c>"));
+        assert!(collide("/<name>/<a>/<b>/", "/<a>/<b>/<c>/"));
+    }
+
+    #[test]
+    fn medium_param_collisions() {
+        assert!(collide("/hello/<name>", "/hello/bob"));
+        assert!(collide("/<name>", "//bob"));
+    }
+
+    #[test]
+    fn hard_param_collisions() {
+        assert!(collide("/<name>bob", "/<name>b"));
+        assert!(collide("/a<b>c", "/abc"));
+        assert!(collide("/a<b>c", "/azooc"));
+        assert!(collide("/a<b>", "/a"));
+        assert!(collide("/<b>", "/a"));
+        assert!(collide("/<a>/<b>", "/a/b<c>"));
+        assert!(collide("/<a>/bc<b>", "/a/b<c>"));
+        assert!(collide("/<a>/bc<b>d", "/a/b<c>"));
+    }
+
+    #[test]
+    fn non_collisions() {
+        assert!(!collide("/a", "/b"));
+        assert!(!collide("/a/b", "/a"));
+        assert!(!collide("/a/b", "/a/c"));
+        assert!(!collide("/a/hello", "/a/c"));
+        assert!(!collide("/hello", "/a/c"));
+        assert!(!collide("/hello/there", "/hello/there/guy"));
+        assert!(!collide("/b<a>/there", "/hi/there"));
+        assert!(!collide("/<a>/<b>c", "/hi/person"));
+        assert!(!collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!collide("/a/<b>", "/b/<b>"));
+        assert!(!collide("/a<a>/<b>", "/b/<b>"));
+    }
+
+    #[test]
+    fn method_dependent_non_collisions() {
+        assert!(!m_collide((Get, "/"), (Post, "/")));
+        assert!(!m_collide((Post, "/"), (Put, "/")));
+        assert!(!m_collide((Put, "/a"), (Put, "/")));
+        assert!(!m_collide((Post, "/a"), (Put, "/")));
+        assert!(!m_collide((Get, "/a"), (Put, "/")));
+        assert!(!m_collide((Get, "/hello"), (Put, "/hello")));
+    }
+
+    #[test]
+    fn test_str_non_collisions() {
+        assert!(!s_collide("/a", "/b"));
+        assert!(!s_collide("/a/b", "/a"));
+        assert!(!s_collide("/a/b", "/a/c"));
+        assert!(!s_collide("/a/hello", "/a/c"));
+        assert!(!s_collide("/hello", "/a/c"));
+        assert!(!s_collide("/hello/there", "/hello/there/guy"));
+        assert!(!s_collide("/b<a>/there", "/hi/there"));
+        assert!(!s_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!s_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!s_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!s_collide("/a/<b>", "/b/<b>"));
+        assert!(!s_collide("/a<a>/<b>", "/b/<b>"));
+    }
+
+    fn test_str_collisions() {
+        // FIXME: Write these.
+    }
+}
