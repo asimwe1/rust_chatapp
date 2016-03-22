@@ -4,7 +4,7 @@ use rocket::{Rocket, Request, Response, Route};
 use rocket::Method::*;
 
 fn root(req: Request) -> Response<'static> {
-    let name = req.get_param::<&str>(0).unwrap_or("unnamed");
+    let name = req.get_param(0).unwrap_or("unnamed");
     Response::new(format!("Hello, {}!", name))
 }
 
