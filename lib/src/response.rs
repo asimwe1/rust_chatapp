@@ -81,11 +81,11 @@ impl Responder for File {
         res.headers_mut().set(header::ContentLength(size));
         *(res.status_mut()) = StatusCode::Ok;
 
-        let mut s = String::new();
-        self.read_to_string(&mut s).unwrap();
+        let mut v = Vec::new();
+        self.read_to_end(&mut v).unwrap();
 
         let mut stream = res.start().unwrap();
-        stream.write_all(s.as_bytes()).unwrap();
+        stream.write_all(&v).unwrap();
     }
 }
 

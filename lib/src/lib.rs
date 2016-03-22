@@ -34,6 +34,16 @@ pub struct Route {
     pub handler: Handler<'static>
 }
 
+impl Route {
+    pub fn new(method: Method, path: &'static str, handler: Handler<'static>) -> Route {
+        Route {
+            method: method,
+            path: path,
+            handler: handler
+        }
+    }
+}
+
 impl<'a> fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))

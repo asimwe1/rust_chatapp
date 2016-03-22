@@ -33,9 +33,11 @@ impl Router {
     }
 
     // TODO: Make a `Router` trait with this function. Rename this `Router`
-    // struct to something like `RocketRouter`.
+    // struct to something like `RocketRouter`. If that happens, returning a
+    // `Route` structure is inflexible. Have it be an associated type.
     pub fn route<'b>(&'b self, method: Method, uri: &str) -> Option<&'b Route> {
         let mut matched_route = None;
+
         let path = Path::new(uri);
         let num_components = path.components().count();
         if let Some(routes) = self.routes.get(&(method, num_components)) {
