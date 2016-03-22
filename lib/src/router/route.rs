@@ -4,33 +4,66 @@ use std::path::{Path, PathBuf};
 use std::fmt;
 use method::Method;
 use super::Collider; // :D
+use std::path::Component;
+use Handler;
 
 // FIXME: Take in the handler! Or maybe keep that in `Router`?
-#[derive(Debug)]
 pub struct Route {
     method: Method,
-    mount: &'static str,
-    route: &'static str,
     n_components: usize,
+    pub handler: Handler<'static>,
     path: PathBuf
 }
 
+macro_rules! comp_to_str {
+    ($component:expr) => (
+        match $component {
+            &Component::Normal(ref comp) => {
+                if let Some(string) = comp.to_str() { string }
+                else { panic!("Whoops, no string!") }
+            },
+            &Component::RootDir => "/",
+            &c@_ =>  panic!("Whoops, not normal: {:?}!", c)
+        };
+    )
+}
+
 impl Route {
-    pub fn new(m: Method, mount: &'static str, route: &'static str) -> Route {
+    pub fn new(m: Method, mount: &'static str, route: &'static str,
+               handler: Handler<'static>) -> Route {
         let deduped_path = Route::dedup(mount, route);
         let path = PathBuf::from(deduped_path);
 
         Route {
             method: m,
-            mount: mount,
-            route: route,
             n_components: path.components().count(),
-            path: path
+            handler: handler,
+            path: path,
         }
     }
 
+    #[inline]
     pub fn component_count(&self) -> usize {
         self.n_components
+    }
+
+    // FIXME: This is dirty (the comp_to_str and the RootDir thing). Might need
+    // to have my own wrapper arround path strings.
+    // FIXME: Decide whether a component has to be fully variable or not. That
+    // is, whether you can have: /a<a>b/
+    // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
+    pub fn get_params<'a>(&self, uri: &'a str) -> Vec<&'a str> {
+        let mut result = Vec::with_capacity(self.component_count());
+        let route_components = self.path.components();
+        let uri_components = Path::new(uri).components();
+
+        for (route_comp, uri_comp) in route_components.zip(uri_components) {
+            if comp_to_str!(&route_comp).starts_with("<") {
+                result.push(comp_to_str!(&uri_comp));
+            }
+        }
+
+        result
     }
 
     fn dedup(base: &'static str, route: &'static str) -> String {
@@ -56,7 +89,7 @@ impl fmt::Display for Route {
 }
 
 impl Collider for Path {
-    // FIXME: It's expensive to compute the number of components: O(n) per path
+    // TODO: It's expensive to compute the number of components: O(n) per path
     // where n == number of chars.
     //
     // Idea: Create a `CachedPath` type that caches the number of components

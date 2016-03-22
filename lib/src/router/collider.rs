@@ -4,7 +4,8 @@ pub trait Collider<T: ?Sized = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
 
-fn check_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
+pub fn index_match_until(break_c: char, a: &str, b: &str, dir: bool)
+        -> Option<(isize, isize)> {
     let (a_len, b_len) = (a.len() as isize, b.len() as isize);
     let (mut i, mut j, delta) = if dir {
         (0, 0, 1)
@@ -17,14 +18,18 @@ fn check_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
         if c1 == break_c || c2 == break_c {
             break;
         } else if c1 != c2 {
-            return false;
+            return None;
         } else {
             i += delta;
             j += delta;
         }
     }
 
-    return true;
+    return Some((i, j));
+}
+
+fn do_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
+    index_match_until(break_c, a, b, dir).is_some()
 }
 
 macro_rules! comp_to_str {
@@ -42,7 +47,7 @@ macro_rules! comp_to_str {
 impl<'a> Collider for Component<'a> {
     fn collides_with(&self, other: &Component<'a>) -> bool {
         let (a, b) = (comp_to_str!(self), comp_to_str!(other));
-        check_match_until('<', a, b, true) && check_match_until('>', a, b, false)
+        do_match_until('<', a, b, true) && do_match_until('>', a, b, false)
     }
 }
 
@@ -52,25 +57,30 @@ mod tests {
     use router::route::Route;
     use Method;
     use Method::*;
+    use {Request, Response};
 
     type SimpleRoute = (Method, &'static str);
 
+    fn dummy_handler(_req: Request) -> Response<'static> {
+        Response::empty()
+    }
+
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
-        let route_a = Route::new(a.0, "/", a.1);
-        route_a.collides_with(&Route::new(b.0, "/", b.1))
+        let route_a = Route::new(a.0, "/", a.1, dummy_handler);
+        route_a.collides_with(&Route::new(b.0, "/", b.1, dummy_handler))
     }
 
     fn collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::new(Get, "/", a);
-        route_a.collides_with(&Route::new(Get, "/", b))
+        let route_a = Route::new(Get, "/", a, dummy_handler);
+        route_a.collides_with(&Route::new(Get, "/", b, dummy_handler))
     }
 
     fn s_r_collide(a: &'static str, b: &'static str) -> bool {
-        a.collides_with(&Route::new(Get, "/", b))
+        a.collides_with(&Route::new(Get, "/", b, dummy_handler))
     }
 
     fn r_s_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::new(Get, "/", a);
+        let route_a = Route::new(Get, "/", a, dummy_handler);
         route_a.collides_with(b)
     }
 

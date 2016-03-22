@@ -27,15 +27,14 @@ use hyper::Server;
 
 pub type Handler<'a> = fn(Request) -> Response<'a>;
 
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Route<'a> {
+// TODO: Figure out if having Handler<'static> there is a good idea.
+pub struct Route {
     pub method: Method,
     pub path: &'static str,
-    pub handler: Handler<'a>
+    pub handler: Handler<'static>
 }
 
-impl<'a> fmt::Display for Route<'a> {
+impl<'a> fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))
     }
@@ -54,9 +53,15 @@ impl HypHandler for Rocket {
         if let RequestUri::AbsolutePath(uri_string) = req.uri {
             if let Some(method) = Method::from_hyp(req.method) {
                 println!("Request: {:?}", uri_string);
-                self.router.route(method, uri_string.as_str());
-                res.send(b"Hello, world!").unwrap();
-                return;
+                let uri_str = uri_string.as_str();
+                let route = self.router.route(method, uri_str);
+                let mut response = route.map_or(Response::not_found(), |route| {
+                    let params = route.get_params(uri_str);
+                    let request = Request::new(params, uri_str);
+                    (route.handler)(request)
+                });
+
+                return response.body.respond(res);
             }
         }
 
@@ -73,19 +78,17 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &'static str, routes: &[&Route<'static>])
-            -> &mut Self {
+    pub fn mount(&mut self, base: &'static str, routes: &[&Route]) -> &mut Self {
         println!("🛰  {} '{}':", Magenta.paint("Mounting"), Blue.paint(base));
         for route in routes {
             println!("\t* {}", route);
-            self.router.add_route(route.method.clone(), base, route.path);
+            self.router.add_route(route.method, base, route.path, route.handler);
         }
 
         self
     }
 
-    pub fn mount_and_launch(mut self, base: &'static str,
-                            routes: &[&Route<'static>]) {
+    pub fn mount_and_launch(mut self, base: &'static str, routes: &[&Route]) {
         self.mount(base, routes);
         self.launch();
     }

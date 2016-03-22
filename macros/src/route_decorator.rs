@@ -189,10 +189,10 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     debug!("Function Declaration: {:?}", fn_decl);
 
     let mut fn_param_exprs = vec![];
-    for param in &fn_params {
+    for (i, param) in fn_params.iter().enumerate() {
         let param_ident = str_to_ident(param.as_str());
         let param_fn_item = quote_stmt!(ecx,
-            let $param_ident = match _req.get_param($param) {
+            let $param_ident = match _req.get_param($i) {
                 Ok(v) => v,
                 Err(_) => return rocket::Response::not_found()
             };
@@ -230,7 +230,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let method = method_variant_to_expr(ecx, route_params.method);
     push(Annotatable::Item(quote_item!(ecx,
         #[allow(non_upper_case_globals)]
-        pub static $struct_name: rocket::Route<'static> = rocket::Route {
+        pub static $struct_name: rocket::Route = rocket::Route {
             method: $method,
             path: $path,
             handler: $route_fn_name
