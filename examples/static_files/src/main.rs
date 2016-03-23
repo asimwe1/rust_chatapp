@@ -5,6 +5,7 @@ extern crate rocket;
 
 use rocket::Rocket;
 use std::fs::File;
+use std::io::Error as IOError;
 
 #[route(GET, path = "/")]
 fn index() -> File {
@@ -12,8 +13,8 @@ fn index() -> File {
 }
 
 #[route(GET, path = "/<file>")]
-fn files(file: &str) -> File {
-    File::open(format!("static/{}", file)).unwrap()
+fn files(file: &str) -> Result<File, IOError> {
+    File::open(format!("static/{}", file))
 }
 
 fn main() {

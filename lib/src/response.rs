@@ -5,6 +5,7 @@ use hyper::status::StatusCode;
 use hyper::header;
 use std::io::{Read, Write};
 use std::fs::File;
+use std::fmt;
 
 pub struct Response<'a> {
     pub body: Box<Responder + 'a>
@@ -86,6 +87,30 @@ impl Responder for File {
 
         let mut stream = res.start().unwrap();
         stream.write_all(&v).unwrap();
+    }
+}
+
+// Waiting for RFC #1210: impl specialization. It's not quite stable yet.
+// impl<T: Responder, E: fmt::Display + fmt::Debug> Responder for Result<T, E> {
+//     fn respond<'b>(&mut self, res: HypResponse<'b, HypFresh>) {
+//         if self.is_err() {
+//             println!("Response error: {}", self.as_ref().err().unwrap());
+//             return;
+//         }
+
+//         self.as_mut().unwrap().respond(res);
+//     }
+// }
+
+impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
+    // prepend with `default` when using impl specialization
+    fn respond<'b>(&mut self, res: HypResponse<'b, HypFresh>) {
+        if self.is_err() {
+            println!("Error: {:?}", self.as_ref().err().unwrap());
+            return;
+        }
+
+        self.as_mut().unwrap().respond(res);
     }
 }
 
