@@ -58,7 +58,7 @@ fn get_route_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
     let params: &Vec<P<MetaItem>> = match meta_item.node {
         MetaItemKind::List(_, ref params) => params,
         _ => ecx.span_fatal(meta_item.span,
-                   "incorrect use of macro. correct form is: #[demo(...)]"),
+                   "Incorrect use of macro. correct form is: #[route(...)]"),
     };
 
     // Ensure we can unwrap the k = v params.
@@ -117,7 +117,6 @@ fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
 
 pub fn get_fn_params(ecx: &ExtCtxt, sp: Span, path: &str,
                         fn_decl: &FnDecl) -> Vec<String> {
-
     debug!("FUNCTION: {:?}", fn_decl);
 
     let mut seen = HashSet::new();
@@ -125,6 +124,7 @@ pub fn get_fn_params(ecx: &ExtCtxt, sp: Span, path: &str,
     let mut matching = false;
 
     // Collect all of the params in the path and insert into HashSet.
+    // TODO: Move this logic into main library.
     let mut start = 0;
     for (i, c) in path.char_indices() {
         match c {
@@ -147,6 +147,7 @@ pub fn get_fn_params(ecx: &ExtCtxt, sp: Span, path: &str,
         }
     }
 
+    // TODO: This should stay here, though.
     // Ensure every param in the function declaration is in `path`. Also add
     // each param name in the declaration to the result vector.
     let mut result = vec![];

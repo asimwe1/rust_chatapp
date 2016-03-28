@@ -1,4 +1,5 @@
 #![feature(str_char)]
+#![feature(specialization)]
 
 extern crate term_painter;
 extern crate hyper;
@@ -12,10 +13,10 @@ pub mod router;
 
 pub use method::Method;
 pub use error::Error;
-pub use response::{Response, HypResponse, HypFresh, Responder};
 pub use request::Request;
 pub use param::FromParam;
 pub use router::Router;
+pub use response::{Response, HypResponse, Responder, HypFresh};
 
 use std::fmt;
 use term_painter::ToStyle;
@@ -27,7 +28,8 @@ use hyper::Server;
 
 pub type Handler<'a> = fn(Request) -> Response<'a>;
 
-// TODO: Figure out if having Handler<'static> there is a good idea.
+// TODO: Figure out if using 'static for Handler is a good idea.
+// TODO: Merge this `Route` and route::Route, somewhow.
 pub struct Route {
     pub method: Method,
     pub path: &'static str,
@@ -35,7 +37,8 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn new(method: Method, path: &'static str, handler: Handler<'static>) -> Route {
+    pub fn new(method: Method, path: &'static str, handler: Handler<'static>)
+            -> Route {
         Route {
             method: method,
             path: path,
@@ -50,7 +53,6 @@ impl<'a> fmt::Display for Route {
     }
 }
 
-#[allow(dead_code)]
 pub struct Rocket {
     address: &'static str,
     port: isize,
@@ -60,9 +62,10 @@ pub struct Rocket {
 impl HypHandler for Rocket {
     fn handle<'a, 'k>(&'a self, req: HypRequest<'a, 'k>,
             res: HypResponse<'a, HypFresh>) {
+        println!("{} {:?} {:?}", White.paint("Incoming:"),
+            Green.paint(&req.method), Blue.paint(&req.uri));
         if let RequestUri::AbsolutePath(uri_string) = req.uri {
             if let Some(method) = Method::from_hyp(req.method) {
-                println!("Request: {:?}", uri_string);
                 let uri_str = uri_string.as_str();
                 let route = self.router.route(method, uri_str);
                 let mut response = route.map_or(Response::not_found(), |route| {
@@ -71,11 +74,15 @@ impl HypHandler for Rocket {
                     (route.handler)(request)
                 });
 
-                return response.body.respond(res);
+                println!("{}", Green.paint("\t=> Dispatched request."));
+                return response.respond(res);
             }
+
+            println!("{}", Yellow.paint("\t=> Debug: Method::from_hyp failed!"));
         }
 
-        Response::not_found().body.respond(res);
+        println!("{}", Red.paint("\t=> Dispatch failed. Returning 404."));
+        Response::not_found().respond(res);
     }
 }
 

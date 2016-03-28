@@ -7,6 +7,7 @@ use super::Collider; // :D
 use std::path::Component;
 use Handler;
 
+// TODO: Add ranking to routes. Give static routes higher rank by default.
 // FIXME: Take in the handler! Or maybe keep that in `Router`?
 pub struct Route {
     method: Method,
@@ -50,7 +51,7 @@ impl Route {
     // FIXME: This is dirty (the comp_to_str and the RootDir thing). Might need
     // to have my own wrapper arround path strings.
     // FIXME: Decide whether a component has to be fully variable or not. That
-    // is, whether you can have: /a<a>b/
+    // is, whether you can have: /a<a>b/ or even /<a>:<b>/
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     pub fn get_params<'a>(&self, uri: &'a str) -> Vec<&'a str> {
         let mut result = Vec::with_capacity(self.component_count());

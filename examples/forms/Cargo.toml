@@ -1,0 +1,8 @@
+[package]
+name = "forms"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_macros = { path = "../../macros" }

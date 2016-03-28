@@ -21,6 +21,14 @@ impl Method {
     pub fn from_hyp(method: HypMethod) -> Option<Method> {
         match method {
             HypMethod::Get => Some(Get),
+            HypMethod::Put => Some(Put),
+            HypMethod::Post => Some(Post),
+            HypMethod::Delete => Some(Delete),
+            HypMethod::Options => Some(Options),
+            HypMethod::Head => Some(Head),
+            HypMethod::Trace => Some(Trace),
+            HypMethod::Connect => Some(Connect),
+            HypMethod::Patch => Some(Patch),
             _ => None
         }
     }

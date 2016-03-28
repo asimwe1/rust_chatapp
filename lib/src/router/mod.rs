@@ -42,7 +42,7 @@ impl Router {
         let num_components = path.components().count();
         if let Some(routes) = self.routes.get(&(method, num_components)) {
             for route in routes.iter().filter(|r| r.collides_with(uri)) {
-                println!("Matched {} to: {}", uri, route);
+                println!("\t=> Matched {} to: {}", uri, route);
                 if let None = matched_route {
                     matched_route = Some(route);
                 }
