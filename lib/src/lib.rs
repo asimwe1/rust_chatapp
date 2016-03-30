@@ -19,6 +19,7 @@ pub use router::Router;
 pub use response::{Response, HypResponse, Responder, HypFresh};
 
 use std::fmt;
+use std::io::Read;
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use hyper::uri::RequestUri;
@@ -60,12 +61,16 @@ pub struct Rocket {
 }
 
 impl HypHandler for Rocket {
-    fn handle<'a, 'k>(&'a self, req: HypRequest<'a, 'k>,
+    fn handle<'a, 'k>(&'a self, mut req: HypRequest<'a, 'k>,
             res: HypResponse<'a, HypFresh>) {
         println!("{} {:?} {:?}", White.paint("Incoming:"),
             Green.paint(&req.method), Blue.paint(&req.uri));
+        let mut buf = vec![];
+        req.read_to_end(&mut buf); // FIXME: Simple DOS attack here.
+
         if let RequestUri::AbsolutePath(uri_string) = req.uri {
             if let Some(method) = Method::from_hyp(req.method) {
+
                 let uri_str = uri_string.as_str();
                 let route = self.router.route(method, uri_str);
                 let mut response = route.map_or(Response::not_found(), |route| {
