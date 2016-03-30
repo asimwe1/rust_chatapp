@@ -5,7 +5,7 @@ extern crate rocket;
 use rocket::Rocket;
 
 #[route(GET, path = "/users/<name>")]
-fn user(name: &str, other: i8) -> Option<&'static str> {
+fn user(name: &str) -> Option<&'static str> {
     if name == "Sergio" {
         Some("Hello, Sergio!")
     } else {
