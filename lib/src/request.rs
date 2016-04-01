@@ -1,6 +1,8 @@
 use error::Error;
 use param::FromParam;
 
+pub use hyper::server::Request as HyperRequest;
+
 pub struct Request<'a> {
     params: Vec<&'a str>,
     uri: &'a str,

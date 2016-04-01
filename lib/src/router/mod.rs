@@ -9,7 +9,7 @@ use self::route::Route;
 use std::collections::hash_map::HashMap;
 use std::path::Path;
 use method::Method;
-use Handler;
+use route::Handler;
 
 type Selector = (Method, usize);
 

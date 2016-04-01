@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 use syntax::ext::quote::rt::ToTokens;
 use syntax::codemap::{Span, BytePos, DUMMY_SP, Spanned};
-use syntax::ast::{self, Ident, TokenTree, PatKind, Stmt};
+use syntax::ast::{Ident, TokenTree, PatKind, Stmt};
 use syntax::ast::{Item, Expr, ItemKind, MetaItem, MetaItemKind, FnDecl, Ty};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;

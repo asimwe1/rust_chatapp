@@ -10,7 +10,7 @@ impl Empty {
 }
 
 impl Responder for Empty {
-    fn respond<'a>(&mut self, mut res: HypResponse<'a, HypFresh>) {
+    fn respond<'a>(&mut self, mut res: HyperResponse<'a, HyperFresh>) {
         res.headers_mut().set(header::ContentLength(0));
         *(res.status_mut()) = self.0;
 

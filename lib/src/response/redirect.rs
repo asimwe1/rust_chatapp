@@ -22,7 +22,7 @@ impl Redirect {
 }
 
 impl<'a> Responder for Redirect {
-    fn respond<'b>(&mut self, mut res: HypResponse<'b, HypFresh>) {
+    fn respond<'b>(&mut self, mut res: HyperResponse<'b, HyperFresh>) {
         res.headers_mut().set(header::ContentLength(0));
         res.headers_mut().set(header::Location(self.1.clone()));
         *(res.status_mut()) = self.0;

@@ -1,8 +1,9 @@
+use super::*;
 use self::Method::*;
+
+use std::fmt;
 use std::str::FromStr;
-use std::fmt::{self, Display};
-use error::Error;
-use hyper::method::Method as HypMethod;
+use hyper::method::Method as HyperMethod;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
@@ -18,17 +19,17 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn from_hyp(method: HypMethod) -> Option<Method> {
+    pub fn from_hyp(method: HyperMethod) -> Option<Method> {
         match method {
-            HypMethod::Get => Some(Get),
-            HypMethod::Put => Some(Put),
-            HypMethod::Post => Some(Post),
-            HypMethod::Delete => Some(Delete),
-            HypMethod::Options => Some(Options),
-            HypMethod::Head => Some(Head),
-            HypMethod::Trace => Some(Trace),
-            HypMethod::Connect => Some(Connect),
-            HypMethod::Patch => Some(Patch),
+            HyperMethod::Get => Some(Get),
+            HyperMethod::Put => Some(Put),
+            HyperMethod::Post => Some(Post),
+            HyperMethod::Delete => Some(Delete),
+            HyperMethod::Options => Some(Options),
+            HyperMethod::Head => Some(Head),
+            HyperMethod::Trace => Some(Trace),
+            HyperMethod::Connect => Some(Connect),
+            HyperMethod::Patch => Some(Patch),
             _ => None
         }
     }
@@ -53,7 +54,7 @@ impl FromStr for Method {
     }
 }
 
-impl Display for Method {
+impl fmt::Display for Method {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(match *self {
             Get => "GET",

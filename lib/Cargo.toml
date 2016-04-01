@@ -4,5 +4,9 @@ version = "0.0.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [dependencies]
-hyper = "*"
 term-painter = "*"
+hyper = "*"
+
+# [dependencies.hyper]
+# git = "https://github.com/hyperium/hyper.git"
+# branch = "mio"

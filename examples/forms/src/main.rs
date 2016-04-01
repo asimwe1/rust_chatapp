@@ -7,7 +7,7 @@ mod files;
 
 use rocket::Rocket;
 use rocket::response::Redirect;
-use rocket::error::Error;
+use rocket::Error;
 
 #[route(GET, path = "/user/<username>")]
 fn user_page(username: &str) -> String {

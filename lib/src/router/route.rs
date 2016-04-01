@@ -5,7 +5,7 @@ use std::fmt;
 use method::Method;
 use super::Collider; // :D
 use std::path::Component;
-use Handler;
+use route::Handler;
 
 // TODO: Add ranking to routes. Give static routes higher rank by default.
 // FIXME: Take in the handler! Or maybe keep that in `Router`?
@@ -86,31 +86,6 @@ impl Route {
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))
-    }
-}
-
-impl Collider for Path {
-    // TODO: It's expensive to compute the number of components: O(n) per path
-    // where n == number of chars.
-    //
-    // Idea: Create a `CachedPath` type that caches the number of components
-    // similar to the way `Route` does it.
-    fn collides_with(&self, b: &Path) -> bool {
-        if self.components().count() != b.components().count() {
-            return false;
-        }
-
-        let mut a_components = self.components();
-        let mut b_components = b.components();
-        while let Some(ref c1) = a_components.next() {
-            if let Some(ref c2) = b_components.next() {
-                if !c1.collides_with(c2) {
-                    return false
-                }
-            }
-        }
-
-        true
     }
 }
 

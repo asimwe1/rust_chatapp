@@ -1,4 +1,5 @@
 use std::path::Component;
+use std::path::Path;
 
 pub trait Collider<T: ?Sized = Self> {
     fn collides_with(&self, other: &T) -> bool;
@@ -44,10 +45,41 @@ macro_rules! comp_to_str {
     )
 }
 
+impl Collider for Path {
+    // TODO: It's expensive to compute the number of components: O(n) per path
+    // where n == number of chars.
+    //
+    // Idea: Create a `CachedPath` type that caches the number of components
+    // similar to the way `Route` does it.
+    fn collides_with(&self, b: &Path) -> bool {
+        if self.components().count() != b.components().count() {
+            return false;
+        }
+
+        let mut a_components = self.components();
+        let mut b_components = b.components();
+        while let Some(ref c1) = a_components.next() {
+            if let Some(ref c2) = b_components.next() {
+                if !c1.collides_with(c2) {
+                    return false
+                }
+            }
+        }
+
+        true
+    }
+}
+
 impl<'a> Collider for Component<'a> {
     fn collides_with(&self, other: &Component<'a>) -> bool {
         let (a, b) = (comp_to_str!(self), comp_to_str!(other));
         do_match_until('<', a, b, true) && do_match_until('>', a, b, false)
+    }
+}
+
+impl<'a> Collider<str> for &'a str {
+    fn collides_with(&self, other: &str) -> bool {
+        Path::new(self).collides_with(Path::new(other))
     }
 }
 
@@ -82,6 +114,10 @@ mod tests {
     fn r_s_collide(a: &'static str, b: &'static str) -> bool {
         let route_a = Route::new(Get, "/", a, dummy_handler);
         route_a.collides_with(b)
+    }
+
+    fn s_s_collide(a: &'static str, b: &'static str) -> bool {
+        a.collides_with(b)
     }
 
     #[test]
@@ -177,7 +213,19 @@ mod tests {
         assert!(!r_s_collide("/a<a>/<b>", "/b/<b>"));
     }
 
+    #[test]
     fn test_str_collisions() {
-        // FIXME: Write these.
+        assert!(!s_s_collide("/a", "/b"));
+        assert!(!s_s_collide("/a/b", "/a"));
+        assert!(!s_s_collide("/a/b", "/a/c"));
+        assert!(!s_s_collide("/a/hello", "/a/c"));
+        assert!(!s_s_collide("/hello", "/a/c"));
+        assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
+        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
+        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!s_s_collide("/a/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
     }
 }

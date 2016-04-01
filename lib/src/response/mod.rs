@@ -2,14 +2,14 @@ mod empty;
 mod responder;
 mod redirect;
 
+pub use hyper::server::Response as HyperResponse;
+pub use hyper::net::Fresh as HyperFresh;
+pub use hyper::status::StatusCode;
+pub use hyper::header;
+
 pub use self::responder::Responder;
 pub use self::empty::Empty;
 pub use self::redirect::Redirect;
-
-pub use hyper::server::Response as HypResponse;
-pub use hyper::net::Fresh as HypFresh;
-pub use hyper::status::StatusCode;
-pub use hyper::header;
 
 use std::ops::{Deref, DerefMut};
 
