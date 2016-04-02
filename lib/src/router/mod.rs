@@ -51,14 +51,15 @@ impl Router {
 
     pub fn has_collisions(&self) -> bool {
         let mut result = false;
-        for (_, routes) in &self.routes {
+        for routes in self.routes.values() {
             for i in 0..routes.len() {
                 for j in (i + 1)..routes.len() {
                     let (a_route, b_route) = (&routes[i], &routes[j]);
                     if a_route.collides_with(b_route) {
                         result = true;
                         println!("{} {} and {} collide!",
-                            Yellow.bold().paint("Warning:"), a_route, b_route);
+                            Yellow.bold().paint("Warning:"),
+                            a_route, b_route);
                     }
                 }
             }
