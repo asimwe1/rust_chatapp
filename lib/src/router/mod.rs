@@ -1,15 +1,15 @@
 mod collider;
 mod route;
+mod uri;
 
 pub use self::collider::Collider;
+pub use self::uri::{URI, URIBuf};
+pub use self::route::Route;
 
 use term_painter::ToStyle;
 use term_painter::Color::*;
-use self::route::Route;
 use std::collections::hash_map::HashMap;
-use std::path::Path;
 use method::Method;
-use route::Handler;
 
 type Selector = (Method, usize);
 
@@ -24,11 +24,8 @@ impl Router {
         }
     }
 
-    // FIXME: Take in Handler.
-    pub fn add_route(&mut self, method: Method, base: &'static str,
-                     route: &'static str, handler: Handler<'static>) {
-        let route = Route::new(method, base, route, handler);
-        let selector = (method, route.component_count());
+    pub fn add(&mut self, route: Route) {
+        let selector = (route.method, route.path.segment_count());
         self.routes.entry(selector).or_insert(vec![]).push(route);
     }
 
@@ -38,9 +35,9 @@ impl Router {
     pub fn route<'b>(&'b self, method: Method, uri: &str) -> Option<&'b Route> {
         let mut matched_route = None;
 
-        let path = Path::new(uri);
-        let num_components = path.components().count();
-        if let Some(routes) = self.routes.get(&(method, num_components)) {
+        let path = URI::new(uri);
+        let num_segments = path.segment_count();
+        if let Some(routes) = self.routes.get(&(method, num_segments)) {
             for route in routes.iter().filter(|r| r.collides_with(uri)) {
                 println!("\t=> Matched {} to: {}", uri, route);
                 if let None = matched_route {
@@ -73,8 +70,8 @@ impl Router {
 
 #[cfg(test)]
 mod test {
-    use super::Router;
     use Method::*;
+    use super::{Router, Route};
     use {Response, Request};
 
     fn dummy_handler(_req: Request) -> Response<'static> {
@@ -84,7 +81,8 @@ mod test {
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            router.add_route(Get, "/", route, dummy_handler);
+            let route = Route::new(Get, route.to_string(), dummy_handler);
+            router.add(route);
         }
 
         router
@@ -123,9 +121,9 @@ mod test {
         assert!(router.route(Get, "/jdlk/asdij").is_some());
 
         let mut router = Router::new();
-        router.add_route(Put, "/", "/hello", dummy_handler);
-        router.add_route(Post, "/", "/hello", dummy_handler);
-        router.add_route(Delete, "/", "/hello", dummy_handler);
+        router.add(Route::new(Put, "/hello".to_string(), dummy_handler));
+        router.add(Route::new(Post, "/hello".to_string(), dummy_handler));
+        router.add(Route::new(Delete, "/hello".to_string(), dummy_handler));
         assert!(router.route(Put, "/hello").is_some());
         assert!(router.route(Post, "/hello").is_some());
         assert!(router.route(Delete, "/hello").is_some());

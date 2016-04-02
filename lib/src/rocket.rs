@@ -56,17 +56,20 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &'static str, routes: &[&Route]) -> &mut Self {
+    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>) -> &mut Self {
         println!("🛰  {} '{}':", Magenta.paint("Mounting"), Blue.paint(base));
-        for route in routes {
+        for mut route in routes {
+            let path = format!("{}/{}", base, route.path.as_str());
+            route.set_path(path);
+
             println!("\t* {}", route);
-            self.router.add_route(route.method, base, route.path, route.handler);
+            self.router.add(route);
         }
 
         self
     }
 
-    pub fn mount_and_launch(mut self, base: &'static str, routes: &[&Route]) {
+    pub fn mount_and_launch(mut self, base: &'static str, routes: Vec<Route>) {
         self.mount(base, routes);
         self.launch();
     }

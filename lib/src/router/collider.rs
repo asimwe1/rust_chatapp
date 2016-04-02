@@ -98,21 +98,21 @@ mod tests {
     }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
-        let route_a = Route::new(a.0, "/", a.1, dummy_handler);
-        route_a.collides_with(&Route::new(b.0, "/", b.1, dummy_handler))
+        let route_a = Route::new(a.0, a.1.to_string(), dummy_handler);
+        route_a.collides_with(&Route::new(b.0, b.1.to_string(), dummy_handler))
     }
 
     fn collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::new(Get, "/", a, dummy_handler);
-        route_a.collides_with(&Route::new(Get, "/", b, dummy_handler))
+        let route_a = Route::new(Get, a.to_string(), dummy_handler);
+        route_a.collides_with(&Route::new(Get, b.to_string(), dummy_handler))
     }
 
     fn s_r_collide(a: &'static str, b: &'static str) -> bool {
-        a.collides_with(&Route::new(Get, "/", b, dummy_handler))
+        a.collides_with(&Route::new(Get, b.to_string(), dummy_handler))
     }
 
     fn r_s_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::new(Get, "/", a, dummy_handler);
+        let route_a = Route::new(Get, a.to_string(), dummy_handler);
         route_a.collides_with(b)
     }
 

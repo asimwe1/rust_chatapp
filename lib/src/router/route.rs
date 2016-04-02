@@ -1,85 +1,46 @@
 use term_painter::ToStyle;
 use term_painter::Color::*;
-use std::path::{Path, PathBuf};
 use std::fmt;
 use method::Method;
-use super::Collider; // :D
-use std::path::Component;
-use route::Handler;
+use super::{Collider, URI, URIBuf}; // :D
+use handler::Handler;
 
 // TODO: Add ranking to routes. Give static routes higher rank by default.
 // FIXME: Take in the handler! Or maybe keep that in `Router`?
 pub struct Route {
-    method: Method,
-    n_components: usize,
+    pub method: Method,
     pub handler: Handler<'static>,
-    path: PathBuf
-}
-
-macro_rules! comp_to_str {
-    ($component:expr) => (
-        match $component {
-            &Component::Normal(ref comp) => {
-                if let Some(string) = comp.to_str() { string }
-                else { panic!("Whoops, no string!") }
-            },
-            &Component::RootDir => "/",
-            &c@_ =>  panic!("Whoops, not normal: {:?}!", c)
-        };
-    )
+    pub path: URIBuf,
 }
 
 impl Route {
-    pub fn new(m: Method, mount: &'static str, route: &'static str,
-               handler: Handler<'static>) -> Route {
-        let deduped_path = Route::dedup(mount, route);
-        let path = PathBuf::from(deduped_path);
-
+    pub fn new(m: Method, path: String, handler: Handler<'static>) -> Route {
         Route {
             method: m,
-            n_components: path.components().count(),
+            path: URIBuf::new(path),
             handler: handler,
-            path: path,
         }
     }
 
-    #[inline]
-    pub fn component_count(&self) -> usize {
-        self.n_components
+    pub fn set_path(&mut self, path: String) {
+        self.path = URIBuf::new(path);
     }
 
-    // FIXME: This is dirty (the comp_to_str and the RootDir thing). Might need
-    // to have my own wrapper arround path strings.
     // FIXME: Decide whether a component has to be fully variable or not. That
     // is, whether you can have: /a<a>b/ or even /<a>:<b>/
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     pub fn get_params<'a>(&self, uri: &'a str) -> Vec<&'a str> {
-        let mut result = Vec::with_capacity(self.component_count());
-        let route_components = self.path.components();
-        let uri_components = Path::new(uri).components();
+        let route_components = self.path.segments();
+        let uri_components = URI::new(uri).segments();
 
-        for (route_comp, uri_comp) in route_components.zip(uri_components) {
-            if comp_to_str!(&route_comp).starts_with("<") {
-                result.push(comp_to_str!(&uri_comp));
+        let mut result = Vec::with_capacity(self.path.segment_count());
+        for (route_seg, uri_seg) in route_components.zip(uri_components) {
+            if route_seg.starts_with("<") { // FIXME: Here.
+                result.push(uri_seg);
             }
         }
 
         result
-    }
-
-    fn dedup(base: &'static str, route: &'static str) -> String {
-        let mut deduped = String::with_capacity(base.len() + route.len() + 1);
-
-        let mut last = '\0';
-        for c in base.chars().chain("/".chars()).chain(route.chars()) {
-            if !(last == '/' && c == '/') {
-                deduped.push(c);
-            }
-
-            last = c;
-        }
-
-        deduped
     }
 }
 
@@ -91,7 +52,8 @@ impl fmt::Display for Route {
 
 impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
-        if self.n_components != b.n_components || self.method != b.method {
+        if self.path.segment_count() != b.path.segment_count()
+                || self.method != b.method {
             return false;
         }
 
@@ -101,7 +63,7 @@ impl Collider for Route {
 
 impl<'a> Collider<Route> for &'a str {
     fn collides_with(&self, other: &Route) -> bool {
-        let path = Path::new(self);
+        let path = URI::new(self);
         path.collides_with(&other.path)
     }
 }
