@@ -3,6 +3,10 @@ use std::io::{Read, Write};
 use std::fs::File;
 use std::fmt;
 
+// TODO: Have this return something saying whether every was okay. Need
+// something like to be able to forward requests on when things don't work out.
+// In particular, we want to try the next ranked route when when parsing
+// parameters doesn't work out.
 pub trait Responder {
     fn respond<'a>(&mut self, mut res: HyperResponse<'a, HyperFresh>);
 }

@@ -5,7 +5,6 @@ use method::Method;
 use super::{Collider, URI, URIBuf}; // :D
 use handler::Handler;
 
-// TODO: Add ranking to routes. Give static routes higher rank by default.
 // FIXME: Take in the handler! Or maybe keep that in `Router`?
 pub struct Route {
     pub method: Method,
