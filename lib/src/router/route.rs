@@ -11,14 +11,26 @@ pub struct Route {
     pub method: Method,
     pub handler: Handler<'static>,
     pub path: URIBuf,
+    pub rank: isize
 }
 
 impl Route {
-    pub fn new(m: Method, path: String, handler: Handler<'static>) -> Route {
+    pub fn ranked(rank: isize, m: Method, path: String,
+                  handler: Handler<'static>) -> Route {
         Route {
             method: m,
             path: URIBuf::new(path),
             handler: handler,
+            rank: rank
+        }
+    }
+
+    pub fn new(m: Method, path: String, handler: Handler<'static>) -> Route {
+        Route {
+            method: m,
+            handler: handler,
+            rank: (!path.contains("<") as isize),
+            path: URIBuf::new(path),
         }
     }
 
@@ -53,7 +65,8 @@ impl fmt::Display for Route {
 impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
         if self.path.segment_count() != b.path.segment_count()
-                || self.method != b.method {
+                || self.method != b.method
+                || self.rank != b.rank {
             return false;
         }
 

@@ -19,9 +19,7 @@ pub struct Router {
 
 impl Router {
     pub fn new() -> Router {
-        Router {
-            routes: HashMap::new()
-        }
+        Router { routes: HashMap::new() }
     }
 
     pub fn add(&mut self, route: Route) {
@@ -33,14 +31,18 @@ impl Router {
     // struct to something like `RocketRouter`. If that happens, returning a
     // `Route` structure is inflexible. Have it be an associated type.
     pub fn route<'b>(&'b self, method: Method, uri: &str) -> Option<&'b Route> {
-        let mut matched_route = None;
+        let mut matched_route: Option<&Route> = None;
 
         let path = URI::new(uri);
         let num_segments = path.segment_count();
         if let Some(routes) = self.routes.get(&(method, num_segments)) {
             for route in routes.iter().filter(|r| r.collides_with(uri)) {
                 println!("\t=> Matched {} to: {}", uri, route);
-                if let None = matched_route {
+                if let Some(existing_route) = matched_route {
+                    if route.rank > existing_route.rank {
+                        matched_route = Some(route);
+                    }
+                } else {
                     matched_route = Some(route);
                 }
             }
@@ -89,19 +91,47 @@ mod test {
         router
     }
 
+    fn router_with_unranked_routes(routes: &[&'static str]) -> Router {
+        let mut router = Router::new();
+        for route in routes {
+            let route = Route::ranked(0, Get, route.to_string(), dummy_handler);
+            router.add(route);
+        }
+
+        router
+    }
+
     #[test]
     fn test_collisions() {
-        let router = router_with_routes(&["/hello", "/hello"]);
+        let router = router_with_unranked_routes(&["/hello", "/hello"]);
         assert!(router.has_collisions());
 
+        let router = router_with_unranked_routes(&["/<a>", "/hello"]);
+        assert!(router.has_collisions());
+
+        let router = router_with_unranked_routes(&["/<a>", "/<b>"]);
+        assert!(router.has_collisions());
+
+        let router = router_with_unranked_routes(&["/hello/bob", "/hello/<b>"]);
+        assert!(router.has_collisions());
+
+        let router = router_with_routes(&["/a/b/<c>/d", "/<a>/<b>/c/d"]);
+        assert!(router.has_collisions());
+    }
+
+    #[test]
+    fn test_none_collisions_when_ranked() {
         let router = router_with_routes(&["/<a>", "/hello"]);
-        assert!(router.has_collisions());
-
-        let router = router_with_routes(&["/<a>", "/<b>"]);
-        assert!(router.has_collisions());
+        assert!(!router.has_collisions());
 
         let router = router_with_routes(&["/hello/bob", "/hello/<b>"]);
-        assert!(router.has_collisions());
+        assert!(!router.has_collisions());
+
+        let router = router_with_routes(&["/a/b/c/d", "/<a>/<b>/c/d"]);
+        assert!(!router.has_collisions());
+
+        let router = router_with_routes(&["/hi", "/<hi>"]);
+        assert!(!router.has_collisions());
     }
 
     #[test]
@@ -157,6 +187,29 @@ mod test {
         assert!(router.route(Put, "/hello/hi").is_none());
         assert!(router.route(Put, "/a/b").is_none());
         assert!(router.route(Put, "/a/b").is_none());
+    }
+
+    macro_rules! assert_ranked_routes {
+        ($routes:expr, $to:expr, $want:expr) => ({
+            let router = router_with_routes($routes);
+            let route_path = router.route(Get, $to).unwrap().path.as_str();
+            assert_eq!(route_path as &str, $want as &str);
+        })
+    }
+
+    #[test]
+    fn test_default_ranking() {
+        assert_ranked_routes!(&["/hello", "/<name>"], "/hello", "/hello");
+        assert_ranked_routes!(&["/<name>", "/hello"], "/hello", "/hello");
+        assert_ranked_routes!(&["/<a>", "/hi", "/<b>"], "/hi", "/hi");
+        assert_ranked_routes!(&["/<a>/b", "/hi/c"], "/hi/c", "/hi/c");
+        assert_ranked_routes!(&["/<a>/<b>", "/hi/a"], "/hi/c", "/<a>/<b>");
+        assert_ranked_routes!(&["/hi/a", "/hi/<c>"], "/hi/c", "/hi/<c>");
+    }
+
+    #[test]
+    fn test_ranking() {
+        // FIXME: Add tests for non-default ranks.
     }
 
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
