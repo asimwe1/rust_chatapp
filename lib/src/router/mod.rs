@@ -14,7 +14,7 @@ use method::Method;
 type Selector = (Method, usize);
 
 pub struct Router {
-    routes: HashMap<Selector, Vec<Route>> // for now
+    routes: HashMap<Selector, Vec<Route>> // using 'selector' for now
 }
 
 impl Router {

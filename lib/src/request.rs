@@ -9,10 +9,6 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
-    pub fn empty() -> Request<'static> {
-        Request::new(vec![], "")
-    }
-
     pub fn new(params: Vec<&'a str>, uri: &'a str) -> Request<'a> {
         Request {
             params: params,

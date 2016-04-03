@@ -326,7 +326,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     }
 
     let mut fn_params = get_fn_params(ecx, sp, &route_params.path, &fn_decl,
-                                  external_params.clone());
+                                      external_params.clone());
 
     // Create a comma seperated list (token tree) of the function parameters
     // We pass this in to the user's function that we're wrapping.
@@ -365,7 +365,8 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let route_fn_name = prepend_ident(FN_PREFIX, &item.ident);
     let fn_name = item.ident;
     let route_fn_item = quote_item!(ecx,
-         fn $route_fn_name<'rocket>(_req: rocket::Request) -> rocket::Response<'rocket> {
+         fn $route_fn_name<'rocket>(_req: rocket::Request<'rocket>)
+                -> rocket::Response<'rocket> {
              $form_stmt
              $fn_param_exprs
              let result = $fn_name($fn_param_idents);
@@ -381,7 +382,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let method = method_variant_to_expr(ecx, route_params.method.node);
     push(Annotatable::Item(quote_item!(ecx,
         #[allow(non_upper_case_globals)]
-        pub static $struct_name: rocket::Route = rocket::Route {
+        pub static $struct_name: rocket::StaticRouteInfo = rocket::StaticRouteInfo {
             method: $method,
             path: $path,
             handler: $route_fn_name

@@ -17,7 +17,7 @@ use syntax::parse::token::intern;
 use routes_macro::routes_macro;
 use route_decorator::route_decorator;
 
-const STRUCT_PREFIX: &'static str = "ROCKET_ROUTE_STRUCT_";
+const STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
 const FN_PREFIX: &'static str = "rocket_route_fn_";
 
 #[plugin_registrar]

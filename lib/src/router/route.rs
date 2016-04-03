@@ -5,36 +5,36 @@ use method::Method;
 use super::{Collider, URI, URIBuf}; // :D
 use handler::Handler;
 
-// FIXME: Take in the handler! Or maybe keep that in `Router`?
 pub struct Route {
     pub method: Method,
-    pub handler: Handler<'static>,
+    pub handler: Handler,
     pub path: URIBuf,
     pub rank: isize
 }
 
 impl Route {
-    pub fn ranked(rank: isize, m: Method, path: String,
-                  handler: Handler<'static>) -> Route {
+    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler)
+            -> Route where S: AsRef<str> {
         Route {
             method: m,
-            path: URIBuf::new(path),
+            path: URIBuf::from(path.as_ref()),
             handler: handler,
             rank: rank
         }
     }
 
-    pub fn new(m: Method, path: String, handler: Handler<'static>) -> Route {
+    pub fn new<S>(m: Method, path: S, handler: Handler)
+            -> Route where S: AsRef<str> {
         Route {
             method: m,
             handler: handler,
-            rank: (!path.contains("<") as isize),
-            path: URIBuf::new(path),
+            rank: (!path.as_ref().contains("<") as isize),
+            path: URIBuf::from(path.as_ref()),
         }
     }
 
-    pub fn set_path(&mut self, path: String) {
-        self.path = URIBuf::new(path);
+    pub fn set_path<S>(&mut self, path: S) where S: AsRef<str> {
+        self.path = URIBuf::from(path.as_ref());
     }
 
     // FIXME: Decide whether a component has to be fully variable or not. That
@@ -57,7 +57,7 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {:?}", Green.paint(&self.method), Blue.paint(&self.path))
+        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))
     }
 }
 

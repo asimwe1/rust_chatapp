@@ -5,4 +5,3 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [dependencies]
 rocket = { path = "../../lib" }
-rocket_macros = { path = "../../macros" }

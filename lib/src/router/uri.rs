@@ -1,7 +1,9 @@
 use std::cell::Cell;
 use super::Collider;
+use std::convert::From;
+use std::fmt::{self, Write};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {
     path: &'a str,
     segment_count: Cell<Option<usize>>
@@ -32,9 +34,21 @@ impl<'a> URI<'a> {
     }
 }
 
+impl<'a> fmt::Display for URI<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut last = '\0';
+        for c in self.path.chars() {
+            if !(c == '/' && last == '/') { f.write_char(c)?; }
+            last = c;
+        }
+
+        Ok(())
+    }
+}
+
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URIBuf {
     path: String,
     segment_count: Cell<Option<usize>>
@@ -42,16 +56,8 @@ pub struct URIBuf {
 
 // I don't like repeating all of this stuff. Is there a better way?
 impl URIBuf {
-    pub fn new(path: String) -> URIBuf {
-        URIBuf {
-            segment_count: Cell::new(None),
-            path: path,
-        }
-    }
-
     pub fn segment_count(&self) -> usize {
         self.segment_count.get().unwrap_or_else(|| {
-            println!("Computing!");
             let count = self.segments().count();
             self.segment_count.set(Some(count));
             count
@@ -60,6 +66,10 @@ impl URIBuf {
 
     pub fn segments<'a>(&'a self) -> Segments<'a> {
         Segments(self.path.as_str())
+    }
+
+    fn as_uri_uncached<'a>(&'a self) -> URI<'a> {
+        URI::new(self.path.as_str())
     }
 
     pub fn as_uri<'a>(&'a self) -> URI<'a> {
@@ -78,6 +88,30 @@ impl URIBuf {
 }
 
 unsafe impl Sync for URIBuf { /* It's safe! */ }
+
+impl fmt::Display for URIBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.as_uri_uncached().fmt(f)
+    }
+}
+
+impl From<String> for URIBuf {
+    fn from(path: String) -> URIBuf {
+        URIBuf {
+            segment_count: Cell::new(None),
+            path: path,
+        }
+    }
+}
+
+impl<'a> From<&'a str> for URIBuf {
+    fn from(path: &'a str) -> URIBuf {
+        URIBuf {
+            segment_count: Cell::new(None),
+            path: path.to_string(),
+        }
+    }
+}
 
 impl<'a> Collider for URI<'a> {
     fn collides_with(&self, other: &URI) -> bool {
@@ -156,7 +190,7 @@ mod tests {
 
     fn seg_count(path: &str, expected: usize) -> bool {
         let actual = URI::new(path).segment_count();
-        let actual_buf = URIBuf::new(path.to_string()).segment_count();
+        let actual_buf = URIBuf::from(path).segment_count();
         if actual != expected || actual_buf != expected {
             println!("Count mismatch: expected {}, got {}.", expected, actual);
             println!("{}", if actual != expected { "lifetime" } else { "buf" });
@@ -173,7 +207,7 @@ mod tests {
         let uri = URI::new(path);
         let actual: Vec<&str> = uri.segments().collect();
 
-        let uri_buf = URIBuf::new(path.to_string());
+        let uri_buf = URIBuf::from(path);
         let actual_buf: Vec<&str> = uri_buf.segments().collect();
 
         actual == expected && actual_buf == expected

@@ -69,11 +69,6 @@ impl Rocket {
         self
     }
 
-    pub fn mount_and_launch(mut self, base: &'static str, routes: Vec<Route>) {
-        self.mount(base, routes);
-        self.launch();
-    }
-
     pub fn launch(self) {
         if self.router.has_collisions() {
             println!("{}", Yellow.paint("Warning: route collisions detected!"));
@@ -81,7 +76,12 @@ impl Rocket {
 
         let full_addr = format!("{}:{}", self.address, self.port);
         println!("🚀  {} {}...", White.paint("Rocket has launched from"),
-        White.bold().paint(&full_addr));
+            White.bold().paint(&full_addr));
         let _ = HyperServer::http(full_addr.as_str()).unwrap().handle(self);
+    }
+
+    pub fn mount_and_launch(mut self, base: &'static str, routes: Vec<Route>) {
+        self.mount(base, routes);
+        self.launch();
     }
 }
