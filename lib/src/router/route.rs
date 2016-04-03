@@ -1,9 +1,11 @@
 use term_painter::ToStyle;
 use term_painter::Color::*;
-use std::fmt;
 use method::Method;
 use super::{Collider, URI, URIBuf}; // :D
 use handler::Handler;
+use codegen::StaticRouteInfo;
+use std::fmt;
+use std::convert::From;
 
 pub struct Route {
     pub method: Method,
@@ -58,6 +60,12 @@ impl Route {
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))
+    }
+}
+
+impl<'a> From<&'a StaticRouteInfo> for Route {
+    fn from(info: &'a StaticRouteInfo) -> Route {
+        Route::new(info.method, info.path, info.handler)
     }
 }
 

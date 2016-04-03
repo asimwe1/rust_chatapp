@@ -5,6 +5,11 @@ extern crate rocket;
 use rocket::Rocket;
 use rocket::response::Redirect;
 
+#[route(GET, path = "/")]
+fn root() -> Redirect {
+    Redirect::to("/users/login")
+}
+
 #[route(GET, path = "/users/<name>")]
 fn user(name: &str) -> Result<&'static str, Redirect> {
     match name {
@@ -19,5 +24,6 @@ fn login() -> &'static str {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![user, login]);
+    let rocket = Rocket::new("localhost", 8000);
+    rocket.mount_and_launch("/", routes![root, user, login]);
 }

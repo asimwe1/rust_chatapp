@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::collections::HashSet;
 
 use syntax::ext::quote::rt::ToTokens;
-use syntax::codemap::{Span, BytePos, DUMMY_SP, Spanned};
+use syntax::codemap::{Span, BytePos, /* DUMMY_SP, */ Spanned};
 use syntax::ast::{Ident, TokenTree, PatKind, Stmt};
 use syntax::ast::{Item, Expr, ItemKind, MetaItem, MetaItemKind, FnDecl, Ty};
 use syntax::ext::base::{Annotatable, ExtCtxt};
@@ -215,6 +215,12 @@ impl SimpleArg {
     }
 }
 
+impl ToTokens for SimpleArg {
+    fn to_tokens(&self, cx: &ExtCtxt) -> Vec<TokenTree> {
+        str_to_ident(self.as_str()).to_tokens(cx)
+    }
+}
+
 fn get_fn_params<'a>(ecx: &ExtCtxt, dec_span: Span, path: &'a KVSpanned<String>,
         fn_decl: &Spanned<&FnDecl>, mut external: HashSet<&'a str>)
             -> Vec<SimpleArg> {
@@ -330,14 +336,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
 
     // Create a comma seperated list (token tree) of the function parameters
     // We pass this in to the user's function that we're wrapping.
-    let mut fn_param_idents: Vec<TokenTree> = vec![];
-    for i in 0..fn_params.len() {
-        let tokens = str_to_ident(fn_params[i].as_str()).to_tokens(ecx);
-        fn_param_idents.extend(tokens);
-        if i < fn_params.len() - 1 {
-            fn_param_idents.push(TokenTree::Token(DUMMY_SP, token::Comma));
-        }
-    }
+    let fn_param_idents = token_separate(ecx, &fn_params, token::Comma);
 
     // Generate the statements that will attempt to parse forms during run-time.
     // let form_span = route_params.form.map_or(DUMMY_SP, |f| f.span.clone());

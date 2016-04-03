@@ -1,4 +1,5 @@
 use syntax::parse::{token};
+use syntax::parse::token::Token;
 use syntax::ast::{Ident, MetaItem, MetaItemKind, LitKind, TokenTree};
 use syntax::ext::base::{ExtCtxt};
 use syntax::codemap::{Span, Spanned, BytePos, DUMMY_SP};
@@ -138,6 +139,20 @@ pub fn get_key_values<'b>(ecx: &mut ExtCtxt, sp: Span, required: &[&str],
 
     kv_pairs
 }
+
+pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &Vec<T>,
+                                   token: Token) -> Vec<TokenTree> {
+    let mut output: Vec<TokenTree> = vec![];
+    for (i, thing) in things.iter().enumerate() {
+        output.extend(thing.to_tokens(ecx));
+        if i < things.len() - 1 {
+            output.push(TokenTree::Token(DUMMY_SP, token.clone()));
+        }
+    }
+
+    output
+}
+
 // pub fn find_value_for(key: &str, kv_params: &[P<MetaItem>]) -> Option<String> {
 //     for param in kv_params {
 //         if let MetaItemKind::NameValue(ref name, ref value) = param.node {
