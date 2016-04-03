@@ -11,9 +11,9 @@ does, the following will be the canonical "Hello, world!" example:
 extern crate rocket;
 use rocket::Rocket;
 
-#[route(GET, path = "/hello/<name>")]
-fn hello(name: &'static str) -> String {
-    format!("Hello, {}!", name)
+#[route(GET, path = "/hello/<name>/<age>")]
+fn hello(name: &str, age: i8) -> String {
+    format!("Hello, {} year old named {}!", age, name)
 }
 
 fn main() {
