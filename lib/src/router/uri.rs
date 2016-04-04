@@ -154,19 +154,15 @@ impl<'a> Iterator for Segments<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // Find the start of the next segment (first that's not '/').
-        let s = self.0.chars().enumerate().skip_while(|&(_, c)| c == '/').next();
-        if s.is_none() {
-            return None;
-        }
-
-        // i is the index of the first character that's not '/'
-        let (i, _) = s.unwrap();
+        let i = match self.0.find(|c| c != '/') {
+            Some(index) => index,
+            None => return None
+        };
 
         // Get the index of the first character that _is_ a '/' after start.
         // j = index of first character after i (hence the i +) that's not a '/'
         let rest = &self.0[i..];
-        let mut end_iter = rest.chars().enumerate().skip_while(|&(_, c)| c != '/');
-        let j = end_iter.next().map_or(self.0.len(), |(j, _)| i + j);
+        let j = rest.find('/').map_or(self.0.len(), |j| i + j);
 
         // Save the result, update the iterator, and return!
         let result = Some(&self.0[i..j]);

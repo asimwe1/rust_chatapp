@@ -310,10 +310,20 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<SimpleArg>,
     quote_stmt!(ecx,
         // TODO: Actually get the form parameters to pass into from_form_string.
         // Alternatively, pass in some already parsed thing.
-        let $param_ident: $param_ty = match FormItem::from_form_string("test string") {
-            Ok(v) => v,
-            Err(_) => return rocket::Response::not_found()
-        };
+        let $param_ident: $param_ty = {
+            let form_string = std::str::from_utf8(_req.data);
+            if form_string.is_err() {
+                return rocket::Response::not_found()
+            };
+
+            match FromForm::from_form_string(form_string.unwrap()) {
+                Ok(v) => v,
+                Err(_) => {
+                    println!("\t=> Form failed to parse.");
+                    return rocket::Response::not_found()
+                }
+            }
+        }
     )
 }
 

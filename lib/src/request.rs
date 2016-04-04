@@ -5,14 +5,16 @@ pub use hyper::server::Request as HyperRequest;
 
 pub struct Request<'a> {
     params: Vec<&'a str>,
-    uri: &'a str,
+    pub uri: &'a str,
+    pub data: &'a [u8]
 }
 
 impl<'a> Request<'a> {
-    pub fn new(params: Vec<&'a str>, uri: &'a str) -> Request<'a> {
+    pub fn new(params: Vec<&'a str>, uri: &'a str, data: &'a [u8]) -> Request<'a> {
         Request {
             params: params,
-            uri: uri
+            uri: uri,
+            data: data
         }
     }
 

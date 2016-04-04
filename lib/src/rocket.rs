@@ -31,7 +31,7 @@ impl HyperHandler for Rocket {
                 let route = self.router.route(method, uri_str);
                 let mut response = route.map_or(Response::not_found(), |route| {
                     let params = route.get_params(uri_str);
-                    let request = Request::new(params, uri_str);
+                    let request = Request::new(params, uri_str, &buf);
                     (route.handler)(request)
                 });
 
