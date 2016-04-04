@@ -313,10 +313,10 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<SimpleArg>,
         let $param_ident: $param_ty = {
             let form_string = std::str::from_utf8(_req.data);
             if form_string.is_err() {
-                return rocket::Response::not_found()
+                return ::rocket::Response::not_found()
             };
 
-            match FromForm::from_form_string(form_string.unwrap()) {
+            match ::rocket::form::FromForm::from_form_string(form_string.unwrap()) {
                 Ok(v) => v,
                 Err(_) => {
                     println!("\t=> Form failed to parse.");
