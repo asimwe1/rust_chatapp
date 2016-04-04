@@ -14,9 +14,9 @@ impl<'a> FromParam<'a> for &'a str {
 }
 
 macro_rules! impl_with_fromstr {
-    ($($T:ident),+) => (
-        $(impl<'a> FromParam<'a> for $T {
-            fn from_param(param: &'a str) -> Result<$T, Error> {
+    ($($T:ident),+) => ($(
+        impl<'a> FromParam<'a> for $T {
+            fn from_param(param: &'a str) -> Result<Self, Error> {
                 $T::from_str(param).map_err(|_| Error::BadParse)
             }
         }

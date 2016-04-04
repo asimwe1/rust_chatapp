@@ -1,4 +1,6 @@
 use std::str::FromStr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+
 use error::Error;
 
 pub trait FromForm<'f>: Sized {
@@ -19,13 +21,20 @@ impl<'v> FromFormValue<'v> for &'v str {
     }
 }
 
-impl<'v> FromFormValue<'v> for isize {
-    type Error = &'v str;
-
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
-        isize::from_str(v).map_err(|_| v)
-    }
+macro_rules! impl_with_fromstr {
+    ($($T:ident),+) => ($(
+        impl<'v> FromFormValue<'v> for $T {
+            type Error = &'v str;
+            fn parse(v: &'v str) -> Result<Self, Self::Error> {
+                $T::from_str(v).map_err(|_| v)
+            }
+        }
+    )+)
 }
+
+impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
+       bool, String, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+       SocketAddr);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = Error;
