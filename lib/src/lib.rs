@@ -11,6 +11,7 @@ mod router;
 mod rocket;
 mod codegen;
 
+pub mod form;
 pub mod request;
 pub mod response;
 
