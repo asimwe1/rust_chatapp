@@ -8,11 +8,6 @@ mod files;
 use rocket::Rocket;
 use rocket::response::Redirect;
 
-#[route(GET, path = "/user/<username>")]
-fn user_page(username: &str) -> String {
-    format!("This is {}'s page.", username)
-}
-
 #[derive(FromForm)]
 struct UserLogin<'r> {
     username: &'r str,
@@ -20,7 +15,6 @@ struct UserLogin<'r> {
     age: Result<isize, &'r str>,
 }
 
-// FIXME: fn login<'a>(user: UserLogin<'a>)
 #[route(POST, path = "/login", form = "<user>")]
 fn login(user: UserLogin) -> Result<Redirect, String> {
     if user.age.is_err() {
@@ -28,8 +22,9 @@ fn login(user: UserLogin) -> Result<Redirect, String> {
         return Err(format!("'{}' is not a valid age integer.", input));
     }
 
-    if user.age.unwrap() < 20 {
-        return Err(format!("Sorry, {} is too young!", user.age.unwrap()));
+    let age = user.age.unwrap();
+    if age < 20 {
+        return Err(format!("Sorry, {} is too young!", age));
     }
 
     match user.username {
@@ -39,6 +34,11 @@ fn login(user: UserLogin) -> Result<Redirect, String> {
         },
         _ => Err(format!("Unrecognized user, '{}'.", user.username))
     }
+}
+
+#[route(GET, path = "/user/<username>")]
+fn user_page(username: &str) -> String {
+    format!("This is {}'s page.", username)
 }
 
 fn main() {
