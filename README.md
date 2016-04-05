@@ -1,5 +1,7 @@
 # Rocket
 
+[![Build Status](https://travis-ci.com/SergioBenitez/rocket.svg?token=CVq3HTkPNimYtLm3RHCn&branch=master)](https://travis-ci.com/SergioBenitez/rocket)
+
 Rocket is a work-in-progress web framework for Rust (nightly) with a focus on
 ease-of-use, expressability, and speed. It currently does not work. But, when it
 does, the following will be the canonical "Hello, world!" example:
