@@ -37,8 +37,8 @@ fn get_error_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
             }
         };
 
-        if numeric_code < 100 || numeric_code > 599 {
-            ecx.span_err(c.v_span, "Error codes must be >= 100 and <= 599.");
+        if numeric_code < 400 || numeric_code > 599 {
+            ecx.span_err(c.v_span, "Error codes must be >= 400 and <= 599.");
         }
 
         c.clone().map(|_| { numeric_code })
