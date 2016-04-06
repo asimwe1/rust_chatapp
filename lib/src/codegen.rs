@@ -7,3 +7,8 @@ pub struct StaticRouteInfo {
     pub handler: Handler
 }
 
+pub struct StaticCatchInfo {
+    pub code: u16,
+    pub handler: Handler
+}
+

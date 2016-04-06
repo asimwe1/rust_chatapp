@@ -1,4 +1,4 @@
-use super::{STRUCT_PREFIX, FN_PREFIX};
+use super::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX};
 use utils::*;
 
 use std::str::FromStr;
@@ -37,7 +37,7 @@ fn bad_method_err(ecx: &mut ExtCtxt, dec_sp: Span, message: &str) -> Method {
     Method::Get
 }
 
-fn get_fn_decl<'a>(ecx: &mut ExtCtxt, sp: Span, annotated: &'a Annotatable)
+pub fn get_fn_decl<'a>(ecx: &mut ExtCtxt, sp: Span, annotated: &'a Annotatable)
         -> (&'a P<Item>, Spanned<&'a FnDecl>) {
     // `annotated` is the AST object for the annotated item.
     let item: &P<Item> = match annotated {
@@ -56,13 +56,10 @@ fn get_fn_decl<'a>(ecx: &mut ExtCtxt, sp: Span, annotated: &'a Annotatable)
 
 fn get_route_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
     // First, check that the macro was used in the #[route(a, b, ..)] form.
-    let params: &Vec<P<MetaItem>> = match meta_item.node {
-        MetaItemKind::List(_, ref params) => params,
-        _ => ecx.span_fatal(meta_item.span,
-                   "Incorrect use of macro. correct form is: #[route(...)]"),
-    };
+    assert_meta_item_list(ecx, meta_item, "error");
 
     // Ensure we can unwrap the k = v params.
+    let params = meta_item.node.get_list_items().unwrap();
     if params.len() < 1 {
         bad_method_err(ecx, meta_item.span, "HTTP method parameter is missing.");
         ecx.span_fatal(meta_item.span, "At least 2 arguments are required.");
@@ -371,7 +368,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     }
 
     debug!("Final Params: {:?}", fn_params);
-    let route_fn_name = prepend_ident(FN_PREFIX, &item.ident);
+    let route_fn_name = prepend_ident(ROUTE_FN_PREFIX, &item.ident);
     let fn_name = item.ident;
     let route_fn_item = quote_item!(ecx,
          fn $route_fn_name<'rocket>(_req: rocket::Request<'rocket>)
@@ -386,7 +383,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     debug!("{}", item_to_string(&route_fn_item));
     push(Annotatable::Item(route_fn_item));
 
-    let struct_name = prepend_ident(STRUCT_PREFIX, &item.ident);
+    let struct_name = prepend_ident(ROUTE_STRUCT_PREFIX, &item.ident);
     let path = route_params.path.node;
     let method = method_variant_to_expr(ecx, route_params.method.node);
     push(Annotatable::Item(quote_item!(ecx,

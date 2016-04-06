@@ -1,4 +1,4 @@
-use super::{ROUTE_STRUCT_PREFIX};
+use super::{CATCH_STRUCT_PREFIX};
 use utils::*;
 use syntax::codemap::Span;
 use syntax::ast::{TokenTree, Expr};
@@ -9,7 +9,7 @@ use syntax::ptr::P;
 #[allow(dead_code)]
 const DEBUG: bool = false;
 
-pub fn routes_macro(ecx: &mut ExtCtxt, _sp: Span, args: &[TokenTree])
+pub fn errors_macro(ecx: &mut ExtCtxt, _sp: Span, args: &[TokenTree])
         -> Box<MacResult + 'static> {
     let mut parser = ecx.new_parser_from_tts(args);
     let mut paths = parse_paths(&mut parser).unwrap_or_else(|mut e| {
@@ -17,12 +17,12 @@ pub fn routes_macro(ecx: &mut ExtCtxt, _sp: Span, args: &[TokenTree])
         vec![]
     });
 
-    // Prefix each path terminator.
-    prefix_paths(ROUTE_STRUCT_PREFIX, &mut paths);
+    // Prefix each path terminator
+    prefix_paths(CATCH_STRUCT_PREFIX, &mut paths);
 
     // Build up the P<Expr> for each path.
     let path_exprs: Vec<P<Expr>> = paths.iter().map(|p| {
-        quote_expr!(ecx, rocket::Route::from(&$p))
+        quote_expr!(ecx, rocket::Catcher::from(&$p))
     }).collect();
 
     // Now put them all in one vector and return the thing.

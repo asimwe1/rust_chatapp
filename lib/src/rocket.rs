@@ -13,7 +13,8 @@ use hyper::server::Handler as HyperHandler;
 pub struct Rocket {
     address: &'static str,
     port: isize,
-    router: Router
+    router: Router,
+    catchers: Vec<Catcher>,
 }
 
 impl HyperHandler for Rocket {
@@ -52,7 +53,8 @@ impl Rocket {
         Rocket {
             address: address,
             port: port,
-            router: Router::new()
+            router: Router::new(),
+            catchers: Vec::new(),
         }
     }
 
@@ -64,6 +66,16 @@ impl Rocket {
 
             println!("\t* {}", route);
             self.router.add(route);
+        }
+
+        self
+    }
+
+    pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
+        println!("👾  {}:", Magenta.paint("Catchers"));
+        for catcher in catchers {
+            println!("\t* {}", catcher);
+            self.catchers.push(catcher);
         }
 
         self

@@ -10,6 +10,7 @@ mod param;
 mod router;
 mod rocket;
 mod codegen;
+mod catcher;
 
 pub mod form;
 pub mod request;
@@ -21,12 +22,13 @@ pub mod handler {
     pub type Handler = for<'r> fn(Request<'r>) -> Response<'r>;
 }
 
-pub use codegen::StaticRouteInfo;
+pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;
 pub use method::Method;
 pub use response::{Response, Responder};
 pub use error::Error;
 pub use param::FromParam;
 pub use router::{Router, Route};
+pub use catcher::Catcher;
 pub use rocket::Rocket;
 pub use handler::Handler;

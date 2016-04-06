@@ -97,9 +97,8 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
     trait_def.expand(ecx, meta_item, annotated, push);
 }
 
-// Mostly copied from syntax::ext::deriving::hash
-/// Defines how the implementation for `trace()` is to be generated
 fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
+    // Check that we specified the methods to the argument correctly.
     let arg = if substr.nonself_args.len() == 1 {
         &substr.nonself_args[0]
     } else {
@@ -110,6 +109,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     debug!("argument is: {:?}", arg);
 
+    // Ensure the the fields are from a 'StaticStruct' and extract them.
     let fields = match substr.fields {
         &StaticStruct(var_data, _) => match var_data {
             &VariantData::Struct(ref fields, _) => fields,
@@ -118,6 +118,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         _ => cx.span_bug(trait_span, "impossible substructure in `from_form`")
     };
 
+    // Create a vector of (ident, type) pairs, one for each field in struct.
     let mut fields_and_types = vec![];
     for field in fields {
         let ident = match field.node.ident() {
@@ -131,10 +132,12 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     debug!("Fields and types: {:?}", fields_and_types);
     let mut stmts = Vec::new();
 
+    // The thing to do when we wish to exit with an error.
     let return_err_stmt = quote_tokens!(cx,
         return Err(::rocket::Error::BadParse)
     );
 
+    // Generating the code that checks that the number of fields is correct.
     let num_fields = fields_and_types.len();
     let initial_block = quote_block!(cx, {
         let mut items = [("", ""); $num_fields];
@@ -146,12 +149,16 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     stmts.extend(initial_block.unwrap().stmts);
 
+    // Generate the let bindings for parameters that will be unwrapped and
+    // placed into the final struct
     for &(ref ident, ref ty) in &fields_and_types {
         stmts.push(quote_stmt!(cx,
             let mut $ident: ::std::option::Option<$ty> = None;
         ).unwrap());
     }
 
+    // Generating an arm for each struct field. This matches against the key and
+    // tries to parse the value according to the type.
     let mut arms = vec![];
     for &(ref ident, _) in &fields_and_types {
         let ident_string = ident.to_string();
@@ -164,6 +171,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         ));
     }
 
+    // The actual match statement. Uses the $arms generated above.
     stmts.push(quote_stmt!(cx,
        for &(k, v) in &items {
            match k {
@@ -173,6 +181,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
        }
     ).unwrap());
 
+    // This looks complicated but just generates the boolean condition checking
+    // that each parameter actually is Some(), IE, had a key/value and parsed.
     let mut failure_conditions = vec![];
     for (i, &(ref ident, _)) in (&fields_and_types).iter().enumerate() {
         if i > 0 {
@@ -182,6 +192,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         }
     }
 
+    // The fields of the struct, which are just the let bindings declared above.
     let mut result_fields = vec![];
     for &(ref ident, _) in &fields_and_types {
         result_fields.push(quote_tokens!(cx,
@@ -189,6 +200,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         ));
     }
 
+    // The final block: check the error conditions, and if all is well, return
+    // the structure.
     let self_ident = substr.type_ident;
     let final_block = quote_block!(cx, {
         if $failure_conditions {
@@ -202,6 +215,5 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     stmts.extend(final_block.unwrap().stmts);
     cx.expr_block(cx.block(trait_span, stmts, None))
-    // cx.expr_block(P(initial_block.unwrap()))
 }
 

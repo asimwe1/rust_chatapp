@@ -1,21 +1,14 @@
 use syntax::parse::{token};
 use syntax::parse::token::Token;
-use syntax::ast::{Ident, MetaItem, MetaItemKind, LitKind, TokenTree};
+use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind, TokenTree};
 use syntax::ext::base::{ExtCtxt};
 use syntax::codemap::{Span, Spanned, BytePos, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
+use syntax::parse::PResult;
+use syntax::parse::parser::{PathParsingMode, Parser};
 use syntax::ptr::P;
 
 use std::collections::{HashSet, HashMap};
-
-// macro_rules! debug {
-//     ($session:expr, $span:expr, $($message:tt)*) => ({
-//         if cfg!(debug) {
-//             span_note!($session, $span, "{}:{}", file!(), line!());
-//             span_note!($session, $span, $($message)*);
-//         }
-//     })
-// }
 
 macro_rules! debug {
     ($($message:tt)*) => ({
@@ -151,6 +144,57 @@ pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &Vec<T>,
     }
 
     output
+}
+
+pub fn assert_meta_item_list(ecx: &ExtCtxt, meta_item: &MetaItem, s: &str) {
+    if !meta_item.node.is_list() {
+        let msg = format!("Incorrect use of macro. Expected: #[{}(...)]", s);
+        ecx.span_fatal(meta_item.span, msg.as_str());
+    }
+}
+
+pub trait MetaItemExt {
+    fn is_list(&self) -> bool;
+    fn get_list_items(&self) -> Option<&Vec<P<MetaItem>>>;
+}
+
+impl MetaItemExt for MetaItemKind {
+    fn is_list(&self) -> bool {
+        self.get_list_items().is_some()
+    }
+
+    fn get_list_items(&self) -> Option<&Vec<P<MetaItem>>> {
+        match self {
+            &MetaItemKind::List(_, ref params) => Some(params),
+            _ => None
+        }
+    }
+}
+
+pub fn parse_paths<'a>(parser: &mut Parser<'a>) -> PResult<'a, Vec<Path>> {
+    if parser.eat(&Token::Eof) {
+        return Ok(vec![]);
+    }
+
+    let mut results = Vec::new();
+    loop {
+        results.push(try!(parser.parse_path(PathParsingMode::NoTypesAllowed)));
+        if !parser.eat(&Token::Comma) {
+            try!(parser.expect(&Token::Eof));
+            break;
+        }
+    }
+
+    Ok(results)
+}
+
+pub fn prefix_paths(prefix: &str, paths: &mut Vec<Path>) {
+    for p in paths {
+        let last = p.segments.len() - 1;
+        let last_seg = &mut p.segments[last];
+        let new_ident = prepend_ident(prefix, &last_seg.identifier);
+        last_seg.identifier = new_ident;
+    }
 }
 
 // pub fn find_value_for(key: &str, kv_params: &[P<MetaItem>]) -> Option<String> {
