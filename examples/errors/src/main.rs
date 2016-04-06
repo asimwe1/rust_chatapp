@@ -11,13 +11,12 @@ fn hello(name: &str, age: i8) -> String {
 
 #[error(code = "404")]
 fn not_found() -> &'static str {
-    "Sorry, I couldn't find what you're looking for."
+    "<h1>Sorry pal.</h1><p>Go to '/hello/&lt;name&gt;/&ltage&gt;' instead.</p>"
 }
 
 fn main() {
     let mut rocket = Rocket::new("localhost", 8000);
     rocket.mount("/", routes![hello]);
     rocket.catch(errors![not_found]);
-    // rocket.catch_and_launch(errors![not_found]);
     rocket.launch();
 }

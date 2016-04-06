@@ -19,8 +19,7 @@ fn hello(name: &str, age: u8) -> String {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
-    rocket.mount_and_launch("/hello", routes![hello]);
+    Rocket::new("localhost", 8000).mount_and_launch("/hello", routes![hello]);
 }
 ```
 

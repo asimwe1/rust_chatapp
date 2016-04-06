@@ -1,8 +1,10 @@
 use super::*;
 use response::{HyperResponse, HyperFresh};
 use request::HyperRequest;
+use catcher;
 
 use std::io::Read;
+use std::collections::HashMap;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
@@ -14,37 +16,45 @@ pub struct Rocket {
     address: &'static str,
     port: isize,
     router: Router,
-    catchers: Vec<Catcher>,
+    catchers: HashMap<u16, Catcher>,
 }
 
 impl HyperHandler for Rocket {
     fn handle<'a, 'k>(&'a self, mut req: HyperRequest<'a, 'k>,
                                     res: HyperResponse<'a, HyperFresh>) {
-        println!("{} {:?} {:?}", White.paint("Incoming:"),
-            Green.paint(&req.method), Blue.paint(&req.uri));
+        println!("{:?} {:?}", Green.paint(&req.method), Blue.paint(&req.uri));
 
         let mut buf = vec![];
         req.read_to_end(&mut buf); // FIXME: Simple DOS attack here.
         if let HyperRequestUri::AbsolutePath(uri_string) = req.uri {
             if let Some(method) = Method::from_hyp(req.method) {
-
                 let uri_str = uri_string.as_str();
                 let route = self.router.route(method, uri_str);
-                let mut response = route.map_or(Response::not_found(), |route| {
+
+                if route.is_some() {
+                    let route = route.unwrap();
                     let params = route.get_params(uri_str);
                     let request = Request::new(params, uri_str, &buf);
-                    (route.handler)(request)
-                });
 
-                println!("{}", Green.paint("\t=> Dispatched request."));
-                return response.respond(res);
+                    println!("{}", Green.paint("\t=> Dispatching request."));
+					// FIXME: Responder should be able to say it didn't work.
+                    return (route.handler)(request).respond(res);
+                } else {
+                    // FIXME: Try next highest ranking route, not just 404.
+                    let request = Request::new(vec![], uri_str, &buf);
+					let handler_404 = self.catchers.get(&404).unwrap().handler;
+
+					let msg = "\t=> Dispatch failed. Returning 404.";
+					println!("{}", Red.paint(msg));
+					return handler_404(request).respond(res);
+                }
             }
 
             println!("{}", Yellow.paint("\t=> Debug: Method::from_hyp failed!"));
         }
 
-        println!("{}", Red.paint("\t=> Dispatch failed. Returning 404."));
-        Response::not_found().respond(res);
+		println!("{}", Red.paint("\t=> Internal failure. Bad method or path."));
+        Response::server_error().respond(res);
     }
 }
 
@@ -54,7 +64,7 @@ impl Rocket {
             address: address,
             port: port,
             router: Router::new(),
-            catchers: Vec::new(),
+            catchers: catcher::defaults::get(),
         }
     }
 
@@ -73,9 +83,16 @@ impl Rocket {
 
     pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
         println!("👾  {}:", Magenta.paint("Catchers"));
-        for catcher in catchers {
-            println!("\t* {}", catcher);
-            self.catchers.push(catcher);
+        for c in catchers {
+            if self.catchers.contains_key(&c.code) &&
+                    !self.catchers.get(&c.code).unwrap().is_default() {
+                let msg = format!("warning: overrides {} catcher!", c.code);
+                println!("\t* {} ({})", c, Yellow.paint(msg.as_str()));
+            } else {
+                println!("\t* {}", c);
+            }
+
+            self.catchers.insert(c.code, c);
         }
 
         self
