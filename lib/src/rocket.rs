@@ -67,7 +67,7 @@ impl HyperHandler for Rocket {
 
 impl Rocket {
     fn dispatch<'h, 'k>(&self, mut req: HyperRequest<'h, 'k>,
-                        mut res: FreshHyperResponse<'h>) {
+                        res: FreshHyperResponse<'h>) {
         // We read all of the contents now because we have to do it at some
         // point thanks to Hyper. FIXME: Simple DOS attack here.
         let mut buf = vec![];
