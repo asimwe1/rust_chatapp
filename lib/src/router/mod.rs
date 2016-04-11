@@ -30,6 +30,8 @@ impl Router {
     // TODO: Make a `Router` trait with this function. Rename this `Router`
     // struct to something like `RocketRouter`. If that happens, returning a
     // `Route` structure is inflexible. Have it be an associated type.
+    // FIXME: Figure out a way to get more than one route, i.e., to correctly
+    // handle ranking.
     pub fn route<'b>(&'b self, method: Method, uri: &str) -> Option<&'b Route> {
         let mut matched_route: Option<&Route> = None;
 
@@ -37,7 +39,7 @@ impl Router {
         let num_segments = path.segment_count();
         if let Some(routes) = self.routes.get(&(method, num_segments)) {
             for route in routes.iter().filter(|r| r.collides_with(uri)) {
-                println!("\t=> Matched {} to: {}", uri, route);
+                println!("\t=> {} {}", Magenta.paint("Matched:"), route);
                 if let Some(existing_route) = matched_route {
                     if route.rank > existing_route.rank {
                         matched_route = Some(route);

@@ -1,5 +1,5 @@
 use super::*;
-use response::{HyperResponse, HyperFresh};
+use response::FreshHyperResponse;
 use request::HyperRequest;
 use catcher;
 
@@ -9,6 +9,7 @@ use term_painter::Color::*;
 use term_painter::ToStyle;
 
 use hyper::uri::RequestUri as HyperRequestUri;
+use hyper::method::Method as HyperMethod;
 use hyper::server::Server as HyperServer;
 use hyper::server::Handler as HyperHandler;
 
@@ -19,46 +20,94 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
 }
 
+fn uri_is_absolute(uri: &HyperRequestUri) -> bool {
+    match uri {
+        &HyperRequestUri::AbsolutePath(_) => true,
+        _ => false
+    }
+}
+
+fn unwrap_absolute_path<'a>(uri: &'a HyperRequestUri) -> &'a str {
+    match uri {
+        &HyperRequestUri::AbsolutePath(ref s) => s.as_str(),
+        _ => panic!("Can only accept absolute paths!")
+    }
+}
+
+fn method_is_valid(method: &HyperMethod) -> bool {
+    Method::from_hyp(method).is_some()
+}
+
 impl HyperHandler for Rocket {
-    fn handle<'a, 'k>(&'a self, mut req: HyperRequest<'a, 'k>,
-                                    res: HyperResponse<'a, HyperFresh>) {
-        println!("{:?} {:?}", Green.paint(&req.method), Blue.paint(&req.uri));
+    fn handle<'a, 'k>(&'a self, req: HyperRequest<'a, 'k>,
+            res: FreshHyperResponse<'a>) {
+        println!("{:?} '{}'", Green.paint(&req.method), Blue.paint(&req.uri));
 
-        let mut buf = vec![];
-        req.read_to_end(&mut buf); // FIXME: Simple DOS attack here.
-        if let HyperRequestUri::AbsolutePath(uri_string) = req.uri {
-            if let Some(method) = Method::from_hyp(req.method) {
-                let uri_str = uri_string.as_str();
-                let route = self.router.route(method, uri_str);
+        let finalize = |mut req: HyperRequest, _res: FreshHyperResponse| {
+            let mut buf = vec![];
+            // FIXME: Simple DOS attack here. Working around Hyper bug.
+            let _ = req.read_to_end(&mut buf);
+        };
 
-                if route.is_some() {
-                    let route = route.unwrap();
-                    let params = route.get_params(uri_str);
-                    let request = Request::new(params, uri_str, &buf);
-
-                    println!("{}", Green.paint("\t=> Dispatching request."));
-					// FIXME: Responder should be able to say it didn't work.
-                    return (route.handler)(request).respond(res);
-                } else {
-                    // FIXME: Try next highest ranking route, not just 404.
-                    let request = Request::new(vec![], uri_str, &buf);
-					let handler_404 = self.catchers.get(&404).unwrap().handler;
-
-					let msg = "\t=> Dispatch failed. Returning 404.";
-					println!("{}", Red.paint(msg));
-					return handler_404(request).respond(res);
-                }
-            }
-
-            println!("{}", Yellow.paint("\t=> Debug: Method::from_hyp failed!"));
+        if !uri_is_absolute(&req.uri) {
+            println!("{}", Red.paint("\t=> Internal failure. Bad URI."));
+            println!("{} {:?}", Yellow.paint("\t=> Debug:"), req.uri);
+            return finalize(req, res);
         }
 
-		println!("{}", Red.paint("\t=> Internal failure. Bad method or path."));
-        Response::server_error().respond(res);
+        if !method_is_valid(&req.method) {
+            println!("{}", Yellow.paint("\t=> Internal failure. Bad method."));
+            println!("{} {:?}", Yellow.paint("\t=> Debug:"), req.method);
+            return finalize(req, res);
+        }
+
+        return self.dispatch(req, res);
     }
 }
 
 impl Rocket {
+    fn dispatch<'h, 'k>(&self, mut req: HyperRequest<'h, 'k>,
+                        mut res: FreshHyperResponse<'h>) {
+        // We read all of the contents now because we have to do it at some
+        // point thanks to Hyper. FIXME: Simple DOS attack here.
+        let mut buf = vec![];
+        let _ = req.read_to_end(&mut buf);
+
+        // Extract the method, uri, and try to find a route.
+        let method = Method::from_hyp(&req.method).unwrap();
+        let uri = unwrap_absolute_path(&req.uri);
+        let route = self.router.route(method, uri);
+
+        // A closure which we call when we know there is no route.
+        let handle_not_found = |response: FreshHyperResponse| {
+            let request = Request::new(vec![], uri, &buf);
+            let handler_404 = self.catchers.get(&404).unwrap().handler;
+            println!("{}", Red.paint("\t<= Dispatch failed. Returning 404."));
+            handler_404(request).respond(response);
+        };
+
+        // No route found. Handle the not_found error and return.
+        if route.is_none() {
+            println!("{}", Red.paint("\t=> No matching routes."));
+            return handle_not_found(res);
+        }
+
+        // Okay, we've got a route. Unwrap it, generate a request, and try to
+        // dispatch. TODO: keep trying lower ranked routes before dispatching a
+        // not found error.
+        println!("\t=> {}", Magenta.paint("Dispatching request."));
+        let route = route.unwrap();
+        let params = route.get_params(uri);
+        let request = Request::new(params, uri, &buf);
+        let outcome = (route.handler)(request).respond(res);
+
+        println!("\t=> {} {}", White.paint("Outcome:"), outcome);
+        outcome.map_forward(|res| {
+            println!("{}", Red.paint("\t=> No further matching routes."));
+            handle_not_found(res);
+        });
+    }
+
     pub fn new(address: &'static str, port: isize) -> Rocket {
         Rocket {
             address: address,
@@ -68,7 +117,8 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>) -> &mut Self {
+    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>)
+            -> &mut Self {
         println!("🛰  {} '{}':", Magenta.paint("Mounting"), Blue.paint(base));
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());

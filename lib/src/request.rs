@@ -3,6 +3,7 @@ use param::FromParam;
 
 pub use hyper::server::Request as HyperRequest;
 
+#[derive(Clone)]
 pub struct Request<'a> {
     params: Vec<&'a str>,
     pub uri: &'a str,

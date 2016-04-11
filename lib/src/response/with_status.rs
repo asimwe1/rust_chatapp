@@ -15,9 +15,9 @@ impl<R: Responder> StatusResponse<R> {
 }
 
 impl<R: Responder> Responder for StatusResponse<R> {
-    fn respond<'b>(&mut self, mut res: HyperResponse<'b, HyperFresh>) {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
         *(res.status_mut()) = self.status;
-        self.responder.respond(res);
+        self.responder.respond(res)
     }
 }
 

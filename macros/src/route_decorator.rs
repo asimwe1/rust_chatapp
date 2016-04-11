@@ -359,7 +359,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
         let param_fn_item = quote_stmt!(ecx,
             let $param_ident: $param_ty = match _req.get_param($i) {
                 Ok(v) => v,
-                Err(_) => return rocket::Response::not_found()
+                Err(_) => return rocket::Response::forward()
             };
         ).unwrap();
 
