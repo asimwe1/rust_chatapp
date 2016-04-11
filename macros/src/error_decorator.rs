@@ -57,12 +57,13 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
 
     let fn_name = item.ident;
     let catch_fn_name = prepend_ident(CATCH_FN_PREFIX, &item.ident);
+    let catch_code = error_params.code.node;
     let catch_fn_item = quote_item!(ecx,
          fn $catch_fn_name<'rocket>(_req: rocket::Request<'rocket>)
                 -> rocket::Response<'rocket> {
              // TODO: Figure out what type signature of catcher should be.
              let result = $fn_name();
-             rocket::Response::new(result)
+             rocket::Response::with_raw_status($catch_code, result)
          }
     ).unwrap();
 
@@ -70,7 +71,6 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     push(Annotatable::Item(catch_fn_item));
 
     let struct_name = prepend_ident(CATCH_STRUCT_PREFIX, &item.ident);
-    let catch_code = error_params.code.node;
     push(Annotatable::Item(quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: rocket::StaticCatchInfo = rocket::StaticCatchInfo {

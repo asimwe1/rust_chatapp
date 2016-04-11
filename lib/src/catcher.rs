@@ -43,7 +43,7 @@ impl fmt::Display for Catcher {
 
 pub mod defaults {
     use request::Request;
-    use response::Response;
+    use response::{StatusCode, Response};
     use super::Catcher;
 	use std::collections::HashMap;
 
@@ -55,8 +55,7 @@ pub mod defaults {
     }
 
     pub fn not_found(_request: Request) -> Response {
-		// FIXME: Need a way to pass in the status code.
-        Response::new("\
+        Response::with_status(StatusCode::NotFound, "\
 			<head>\
   				<meta charset=\"utf-8\">\
 				<title>404: Not Found</title>\
@@ -71,8 +70,7 @@ pub mod defaults {
     }
 
     pub fn internal_error(_request: Request) -> Response {
-		// FIXME: Need a way to pass in the status code.
-        Response::new("\
+        Response::with_status(StatusCode::InternalServerError, "\
 			<head>\
   				<meta charset=\"utf-8\">\
 				<title>404: Not Found</title>\
