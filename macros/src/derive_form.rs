@@ -121,12 +121,12 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // Create a vector of (ident, type) pairs, one for each field in struct.
     let mut fields_and_types = vec![];
     for field in fields {
-        let ident = match field.node.ident() {
+        let ident = match field.ident {
             Some(ident) => ident,
             None => cx.span_fatal(trait_span, ONLY_STRUCTS_ERR)
         };
 
-        fields_and_types.push((ident, &field.node.ty));
+        fields_and_types.push((ident, &field.ty));
     }
 
     debug!("Fields and types: {:?}", fields_and_types);
