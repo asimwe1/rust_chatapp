@@ -24,7 +24,7 @@ impl Router {
 
     pub fn add(&mut self, route: Route) {
         let selector = (route.method, route.path.segment_count());
-        self.routes.entry(selector).or_insert(vec![]).push(route);
+        self.routes.entry(selector).or_insert_with(|| vec![]).push(route);
     }
 
     // TODO: Make a `Router` trait with this function. Rename this `Router`
@@ -56,9 +56,8 @@ impl Router {
     pub fn has_collisions(&self) -> bool {
         let mut result = false;
         for routes in self.routes.values() {
-            for i in 0..routes.len() {
-                for j in (i + 1)..routes.len() {
-                    let (a_route, b_route) = (&routes[i], &routes[j]);
+            for (i, a_route) in routes.iter().enumerate() {
+                for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
                         result = true;
                         println!("{} {} and {} collide!",

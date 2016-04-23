@@ -11,9 +11,10 @@ pub fn index_match_until(break_c: char, a: &str, b: &str, dir: bool)
         (a_len - 1, b_len - 1, -1)
     };
 
+    let break_b = break_c as u8;
     while i >= 0 && j >= 0 && i < a_len && j < b_len {
-        let (c1, c2) = (a.char_at(i as usize), b.char_at(j as usize));
-        if c1 == break_c || c2 == break_c {
+        let (c1, c2) = (a.as_bytes()[i as usize], b.as_bytes()[j as usize]);
+        if c1 == break_b || c2 == break_b {
             break;
         } else if c1 != c2 {
             return None;
@@ -23,7 +24,7 @@ pub fn index_match_until(break_c: char, a: &str, b: &str, dir: bool)
         }
     }
 
-    return Some((i, j));
+    Some((i, j))
 }
 
 fn do_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {

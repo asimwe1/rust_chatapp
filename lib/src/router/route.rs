@@ -30,7 +30,7 @@ impl Route {
         Route {
             method: m,
             handler: handler,
-            rank: (!path.as_ref().contains("<") as isize),
+            rank: (!path.as_ref().contains('<') as isize),
             path: URIBuf::from(path.as_ref()),
         }
     }
@@ -48,7 +48,7 @@ impl Route {
 
         let mut result = Vec::with_capacity(self.path.segment_count());
         for (route_seg, uri_seg) in route_components.zip(uri_components) {
-            if route_seg.starts_with("<") { // FIXME: Here.
+            if route_seg.starts_with('<') { // FIXME: Here.
                 result.push(uri_seg);
             }
         }

@@ -40,10 +40,10 @@ fn bad_method_err(ecx: &mut ExtCtxt, dec_sp: Span, message: &str) -> Method {
 pub fn get_fn_decl<'a>(ecx: &mut ExtCtxt, sp: Span, annotated: &'a Annotatable)
         -> (&'a P<Item>, Spanned<&'a FnDecl>) {
     // `annotated` is the AST object for the annotated item.
-    let item: &P<Item> = match annotated {
-        &Annotatable::Item(ref item) => item,
-        &Annotatable::TraitItem(ref item) => bad_item_fatal(ecx, sp, item.span),
-        &Annotatable::ImplItem(ref item) => bad_item_fatal(ecx, sp, item.span)
+    let item: &P<Item> = match *annotated {
+        Annotatable::Item(ref item) => item,
+        Annotatable::TraitItem(ref item) => bad_item_fatal(ecx, sp, item.span),
+        Annotatable::ImplItem(ref item) => bad_item_fatal(ecx, sp, item.span)
     };
 
     let fn_decl: &P<FnDecl> = match item.node {
@@ -90,7 +90,7 @@ fn get_route_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
 
     // Ensure we have a path, just to keep parsing and generating errors.
     let path = kv_pairs.get("path").map_or(dummy_kvspan("/".to_string()), |s| {
-        s.clone().map(|str_string| String::from(str_string))
+        s.clone().map(String::from)
     });
 
     // If there's a form parameter, ensure method is POST.
@@ -111,7 +111,7 @@ fn get_route_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
             ecx.span_err(f.p_span, "`form` must contain exactly one parameter");
         }
 
-        Some(f.clone().map(|str_string| String::from(str_string)))
+        Some(f.clone().map(String::from))
     });
 
     Params {
@@ -157,7 +157,7 @@ pub fn gen_params_hashset<'a>(ecx: &ExtCtxt, params: &Spanned<&'a str>)
             '>' if matching => {
                 matching = false;
 
-                let mut param_span = params.span.clone();
+                let mut param_span = params.span;
                 param_span.lo = params.span.lo + BytePos(start as u32);
                 param_span.hi = params.span.lo + BytePos((i + 1) as u32);
 
@@ -192,7 +192,7 @@ struct SimpleArg {
 
 pub fn gen_kv_string_hashset<'a>(ecx: &ExtCtxt, params: &'a KVSpanned<String>)
         -> HashSet<&'a str> {
-    let mut param_span = params.v_span.clone();
+    let mut param_span = params.v_span;
     param_span.lo = params.v_span.lo + BytePos(1);
     let params = Spanned {
         span: param_span,
@@ -254,7 +254,7 @@ fn get_fn_params<'a>(ecx: &ExtCtxt, dec_span: Span, path: &'a KVSpanned<String>,
             ecx.span_err(dec_span, msg2.as_str());
         }
 
-        result.push(SimpleArg::new(name, arg.ty.clone(), arg.pat.span.clone()));
+        result.push(SimpleArg::new(name, arg.ty.clone(), arg.pat.span));
     }
 
     // Ensure every param in `path` and `exclude` is in the function declaration.
@@ -347,7 +347,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
 
     // Generate the statements that will attempt to parse forms during run-time.
     // let form_span = route_params.form.map_or(DUMMY_SP, |f| f.span.clone());
-    let form_stmt = get_form_stmt(ecx, &mut fn_params, &mut form_param_hashset);
+    let form_stmt = get_form_stmt(ecx, &mut fn_params, &form_param_hashset);
     form_stmt.as_ref().map(|s| debug!("Form stmt: {:?}", stmt_to_string(s)));
 
     // Generate the statements that will attempt to parse the paramaters during

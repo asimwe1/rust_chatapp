@@ -62,7 +62,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
 pub fn form_items<'f>(string: &'f str, items: &mut [(&'f str, &'f str)]) -> usize {
     let mut param_num = 0;
     let mut rest = string;
-    while rest.len() > 0 && param_num < items.len() {
+    while !rest.is_empty() && param_num < items.len() {
         let (key, remainder) = match rest.find('=') {
             Some(index) => (&rest[..index], &rest[(index + 1)..]),
             None => return param_num

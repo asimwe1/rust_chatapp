@@ -1,4 +1,4 @@
-#![feature(str_char, question_mark)]
+#![feature(question_mark)]
 #![feature(specialization)]
 
 extern crate term_painter;

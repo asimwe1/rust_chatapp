@@ -18,8 +18,8 @@ static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
 
 fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
         -> Option<&'static str> {
-    match item {
-        &Annotatable::Item(ref item) => match item.node {
+    match *item {
+        Annotatable::Item(ref item) => match item.node {
             ItemKind::Struct(_, ref generics) => {
                 match generics.lifetimes.len() {
                     0 => None,
@@ -110,9 +110,9 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     debug!("argument is: {:?}", arg);
 
     // Ensure the the fields are from a 'StaticStruct' and extract them.
-    let fields = match substr.fields {
-        &StaticStruct(var_data, _) => match var_data {
-            &VariantData::Struct(ref fields, _) => fields,
+    let fields = match *substr.fields {
+        StaticStruct(var_data, _) => match *var_data {
+            VariantData::Struct(ref fields, _) => fields,
             _ => cx.span_fatal(trait_span, ONLY_STRUCTS_ERR)
         },
         _ => cx.span_bug(trait_span, "impossible substructure in `from_form`")

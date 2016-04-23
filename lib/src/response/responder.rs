@@ -70,9 +70,9 @@ impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
 
 impl<T: Responder, E: Responder + fmt::Debug> Responder for Result<T, E> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        match self {
-            &mut Ok(ref mut responder) => responder.respond(res),
-            &mut Err(ref mut responder) => responder.respond(res)
+        match *self {
+            Ok(ref mut responder) => responder.respond(res),
+            Err(ref mut responder) => responder.respond(res)
         }
     }
 }

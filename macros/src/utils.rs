@@ -133,7 +133,7 @@ pub fn get_key_values<'b>(ecx: &mut ExtCtxt, sp: Span, required: &[&str],
     kv_pairs
 }
 
-pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &Vec<T>,
+pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &[T],
                                    token: Token) -> Vec<TokenTree> {
     let mut output: Vec<TokenTree> = vec![];
     for (i, thing) in things.iter().enumerate() {
@@ -164,8 +164,8 @@ impl MetaItemExt for MetaItemKind {
     }
 
     fn get_list_items(&self) -> Option<&Vec<P<MetaItem>>> {
-        match self {
-            &MetaItemKind::List(_, ref params) => Some(params),
+        match *self {
+            MetaItemKind::List(_, ref params) => Some(params),
             _ => None
         }
     }

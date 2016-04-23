@@ -21,15 +21,15 @@ pub struct Rocket {
 }
 
 fn uri_is_absolute(uri: &HyperRequestUri) -> bool {
-    match uri {
-        &HyperRequestUri::AbsolutePath(_) => true,
+    match *uri {
+        HyperRequestUri::AbsolutePath(_) => true,
         _ => false
     }
 }
 
-fn unwrap_absolute_path<'a>(uri: &'a HyperRequestUri) -> &'a str {
-    match uri {
-        &HyperRequestUri::AbsolutePath(ref s) => s.as_str(),
+fn unwrap_absolute_path(uri: &HyperRequestUri) -> &str {
+    match *uri {
+        HyperRequestUri::AbsolutePath(ref s) => s.as_str(),
         _ => panic!("Can only accept absolute paths!")
     }
 }
@@ -61,7 +61,7 @@ impl HyperHandler for Rocket {
             return finalize(req, res);
         }
 
-        return self.dispatch(req, res);
+        self.dispatch(req, res)
     }
 }
 

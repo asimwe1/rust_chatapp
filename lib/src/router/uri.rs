@@ -64,21 +64,21 @@ impl URIBuf {
         })
     }
 
-    pub fn segments<'a>(&'a self) -> Segments<'a> {
+    pub fn segments(&self) -> Segments {
         Segments(self.path.as_str())
     }
 
-    fn as_uri_uncached<'a>(&'a self) -> URI<'a> {
+    fn as_uri_uncached(&self) -> URI {
         URI::new(self.path.as_str())
     }
 
-    pub fn as_uri<'a>(&'a self) -> URI<'a> {
+    pub fn as_uri(&self) -> URI {
         let mut uri = URI::new(self.path.as_str());
         uri.segment_count = self.segment_count.clone();
         uri
     }
 
-    pub fn as_str<'a>(&'a self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         self.path.as_str()
     }
 
@@ -125,7 +125,7 @@ impl<'a> Collider for URI<'a> {
             }
         }
 
-        return true;
+        true
     }
 }
 

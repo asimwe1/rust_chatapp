@@ -14,6 +14,7 @@ function build_and_test() {
 
   pushd ${dir}
   echo ":: Building '${PWD}'..."
+  cargo clean
   cargo build --verbose
 
   echo ":: Running unit tests in '${PWD}'..."

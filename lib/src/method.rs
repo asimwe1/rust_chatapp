@@ -20,16 +20,16 @@ pub enum Method {
 
 impl Method {
     pub fn from_hyp(method: &HyperMethod) -> Option<Method> {
-        match method {
-            &HyperMethod::Get => Some(Get),
-            &HyperMethod::Put => Some(Put),
-            &HyperMethod::Post => Some(Post),
-            &HyperMethod::Delete => Some(Delete),
-            &HyperMethod::Options => Some(Options),
-            &HyperMethod::Head => Some(Head),
-            &HyperMethod::Trace => Some(Trace),
-            &HyperMethod::Connect => Some(Connect),
-            &HyperMethod::Patch => Some(Patch),
+        match *method {
+            HyperMethod::Get => Some(Get),
+            HyperMethod::Put => Some(Put),
+            HyperMethod::Post => Some(Post),
+            HyperMethod::Delete => Some(Delete),
+            HyperMethod::Options => Some(Options),
+            HyperMethod::Head => Some(Head),
+            HyperMethod::Trace => Some(Trace),
+            HyperMethod::Connect => Some(Connect),
+            HyperMethod::Patch => Some(Patch),
             _ => None
         }
     }

@@ -12,25 +12,23 @@ pub enum Outcome<'h> {
 
 impl<'h> Outcome<'h> {
     pub fn as_str(&self) -> &'static str {
-        match self {
-            &Outcome::Complete => "Complete",
-            &Outcome::FailStop => "FailStop",
-            &Outcome::FailForward(..) => "FailForward",
+        match *self {
+            Outcome::Complete => "Complete",
+            Outcome::FailStop => "FailStop",
+            Outcome::FailForward(..) => "FailForward",
         }
     }
 
     pub fn is_forward(&self) -> bool {
-        match self {
-            &Outcome::FailForward(_) => true,
+        match *self {
+            Outcome::FailForward(_) => true,
             _ => false
         }
     }
 
-    pub fn map_forward<F>(self, f: F)
-            where F: FnOnce(FreshHyperResponse<'h>) {
-        match self {
-            Outcome::FailForward(res) => f(res),
-            _ => { /* nothing */ }
+    pub fn map_forward<F>(self, f: F) where F: FnOnce(FreshHyperResponse<'h>) {
+        if let Outcome::FailForward(res) = self {
+            f(res)
         }
     }
 
@@ -51,10 +49,10 @@ impl<'h> Outcome<'h> {
     }
 
     fn as_int(&self) -> isize {
-        match self {
-            &Outcome::Complete => 0,
-            &Outcome::FailStop => 1,
-            &Outcome::FailForward(..) => 2,
+        match *self {
+            Outcome::Complete => 0,
+            Outcome::FailStop => 1,
+            Outcome::FailForward(..) => 2,
         }
     }
 }
@@ -73,14 +71,14 @@ impl<'h> fmt::Debug for Outcome<'h> {
 
 impl<'h> fmt::Display for Outcome<'h> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Outcome::Complete => {
+        match *self {
+            Outcome::Complete => {
                 write!(f, "{}", Green.paint("Complete"))
             },
-            &Outcome::FailStop => {
+            Outcome::FailStop => {
                 write!(f, "{}", Red.paint("Failed"))
             },
-            &Outcome::FailForward(..) => {
+            Outcome::FailForward(..) => {
                 write!(f, "{}", Yellow.paint("Forwarding"))
             },
         }
