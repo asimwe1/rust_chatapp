@@ -89,6 +89,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                 attributes: vec![],
                 is_unsafe: false,
                 combine_substructure: c_s(Box::new(from_form_substructure)),
+                unify_fieldless_variants: false,
             }
         ],
         associated_types: vec![],
@@ -214,6 +215,6 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     });
 
     stmts.extend(final_block.unwrap().stmts);
-    cx.expr_block(cx.block(trait_span, stmts, None))
+    cx.expr_block(cx.block(trait_span, stmts))
 }
 

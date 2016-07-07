@@ -6,11 +6,11 @@ use std::collections::HashSet;
 
 use syntax::ext::quote::rt::ToTokens;
 use syntax::codemap::{Span, BytePos, /* DUMMY_SP, */ Spanned};
-use syntax::ast::{Ident, TokenTree, PatKind, Stmt};
+use syntax::tokenstream::TokenTree;
+use syntax::ast::{Ident, PatKind, Stmt};
 use syntax::ast::{Item, Expr, ItemKind, MetaItem, MetaItemKind, FnDecl, Ty};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
-use syntax::ext::build::AstBuilder;
 use syntax::print::pprust::{item_to_string, stmt_to_string};
 use syntax::parse::token::{self, str_to_ident};
 

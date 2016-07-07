@@ -1,11 +1,12 @@
 use syntax::parse::{token};
 use syntax::parse::token::Token;
-use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind, TokenTree};
+use syntax::tokenstream::TokenTree;
+use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind};
 use syntax::ext::base::{ExtCtxt};
 use syntax::codemap::{Span, Spanned, BytePos, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::parse::PResult;
-use syntax::parse::parser::{PathParsingMode, Parser};
+use syntax::parse::parser::{PathStyle, Parser};
 use syntax::ptr::P;
 
 use std::collections::{HashSet, HashMap};
@@ -178,7 +179,7 @@ pub fn parse_paths<'a>(parser: &mut Parser<'a>) -> PResult<'a, Vec<Path>> {
 
     let mut results = Vec::new();
     loop {
-        results.push(try!(parser.parse_path(PathParsingMode::NoTypesAllowed)));
+        results.push(try!(parser.parse_path(PathStyle::Mod)));
         if !parser.eat(&Token::Comma) {
             try!(parser.expect(&Token::Eof));
             break;

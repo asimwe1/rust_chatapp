@@ -1,7 +1,8 @@
 use super::{ROUTE_STRUCT_PREFIX};
 use utils::*;
 use syntax::codemap::Span;
-use syntax::ast::{TokenTree, Expr};
+use syntax::tokenstream::TokenTree;
+use syntax::ast::Expr;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager};
 use syntax::parse::token::Token;
 use syntax::ptr::P;
