@@ -80,10 +80,11 @@ impl Rocket {
 
         // A closure which we call when we know there is no route.
         let handle_not_found = |response: FreshHyperResponse| {
-            let request = Request::new(vec![], uri, &buf);
-            let handler_404 = self.catchers.get(&404).unwrap().handler;
             println!("{}", Red.paint("\t<= Dispatch failed. Returning 404."));
-            handler_404(request).respond(response);
+
+            let request = Request::new(method, uri, None, &buf);
+            let catcher = self.catchers.get(&404).unwrap();
+            catcher.handle(RoutingError::unchained(request)).respond(response);
         };
 
         // No route found. Handle the not_found error and return.
@@ -93,17 +94,20 @@ impl Rocket {
         }
 
         // Okay, we've got a route. Unwrap it, generate a request, and try to
-        // dispatch. TODO: keep trying lower ranked routes before dispatching a
-        // not found error.
+        // dispatch.
         println!("\t=> {}", Magenta.paint("Dispatching request."));
         let route = route.unwrap();
         let params = route.get_params(uri);
-        let request = Request::new(params, uri, &buf);
+        let request = Request::new(method, uri, Some(params), &buf);
         let outcome = (route.handler)(request).respond(res);
 
+        // TODO: keep trying lower ranked routes before dispatching a not found
+        // error.
         println!("\t=> {} {}", White.paint("Outcome:"), outcome);
         outcome.map_forward(|res| {
             println!("{}", Red.paint("\t=> No further matching routes."));
+            // TODO: Have some way to know why this was failed forward. Use that
+            // instead of always using an unchained error.
             handle_not_found(res);
         });
     }

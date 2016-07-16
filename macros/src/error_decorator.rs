@@ -62,7 +62,7 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
          fn $catch_fn_name<'rocket>(_req: rocket::Request<'rocket>)
                 -> rocket::Response<'rocket> {
              // TODO: Figure out what type signature of catcher should be.
-             let result = $fn_name();
+             let result = $fn_name(RoutingError::unchained(_req));
              rocket::Response::with_raw_status($catch_code, result)
          }
     ).unwrap();

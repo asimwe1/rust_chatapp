@@ -1,4 +1,8 @@
 use handler::Handler;
+use error::Error;
+use response::Response;
+use request::Request;
+use error::RoutingError;
 use codegen::StaticCatchInfo;
 
 use std::fmt;
@@ -7,13 +11,21 @@ use term_painter::Color::*;
 
 pub struct Catcher {
     pub code: u16,
-    pub handler: Handler,
+    handler: Handler,
     is_default: bool
 }
+
+// TODO: Should `Catcher` be an interface? Should there be an `ErrorHandler`
+// that takes in a `RoutingError` and returns a `Response`? What's the right
+// interface here?
 
 impl Catcher {
     pub fn new(code: u16, handler: Handler) -> Catcher {
         Catcher::new_with_default(code, handler, false)
+    }
+
+    pub fn handle<'a>(&'a self, error: RoutingError<'a>) -> Response {
+        (self.handler)(error.request)
     }
 
     fn new_with_default(code: u16, handler: Handler, default: bool) -> Catcher {
@@ -47,13 +59,6 @@ pub mod defaults {
     use super::Catcher;
 	use std::collections::HashMap;
 
-    pub fn get() -> HashMap<u16, Catcher> {
-		let mut map = HashMap::new();
-		map.insert(404, Catcher::new_with_default(404, not_found, true));
-		map.insert(500, Catcher::new_with_default(500, internal_error, true));
-		map
-    }
-
     pub fn not_found(_request: Request) -> Response {
         Response::with_status(StatusCode::NotFound, "\
 			<head>\
@@ -82,5 +87,11 @@ pub mod defaults {
             <small>Rocket</small>\
         ")
     }
-}
 
+    pub fn get() -> HashMap<u16, Catcher> {
+		let mut map = HashMap::new();
+		map.insert(404, Catcher::new_with_default(404, not_found, true));
+		map.insert(500, Catcher::new_with_default(500, internal_error, true));
+		map
+    }
+}

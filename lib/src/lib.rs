@@ -26,7 +26,7 @@ pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;
 pub use method::Method;
 pub use response::{Response, Responder};
-pub use error::Error;
+pub use error::{Error, RoutingError};
 pub use param::FromParam;
 pub use router::{Router, Route};
 pub use catcher::Catcher;
