@@ -93,12 +93,12 @@ impl Rocket {
             return handle_not_found(res);
         }
 
-        // Okay, we've got a route. Unwrap it, generate a request, and try to
-        // dispatch.
-        println!("\t=> {}", Magenta.paint("Dispatching request."));
+        // Okay, we've got a route. Unwrap it, generate a request, and dispatch.
         let route = route.unwrap();
         let params = route.get_params(uri);
         let request = Request::new(method, uri, Some(params), &buf);
+
+        println!("\t=> {}", Magenta.paint("Dispatching request."));
         let outcome = (route.handler)(request).respond(res);
 
         // TODO: keep trying lower ranked routes before dispatching a not found

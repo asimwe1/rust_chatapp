@@ -17,17 +17,15 @@ struct Params {
 }
 
 fn get_error_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
-    assert_meta_item_list(ecx, meta_item, "error");
-
-    // Ensure we can unwrap the k = v params.
-    let params = meta_item.node.get_list_items().unwrap();
+    // Ensure we've been supplied with a k = v meta item. Error out if not.
+    let params = meta_item.expect_list(ecx, "Bad use. Expected: #[error(...)]");
 
     // Now grab all of the required and optional parameters.
     let req: [&'static str; 1] = ["code"];
     let kv_pairs = get_key_values(ecx, meta_item.span, &req, &[], &*params);
 
     // Ensure we have a code, just to keep parsing and generating errors.
-    let code = kv_pairs.get("code").map_or(dummy_kvspan(404), |c| {
+    let code = kv_pairs.get("code").map_or(KVSpanned::dummy(404), |c| {
         let numeric_code = match c.node.parse() {
             Ok(n) => n,
             Err(_) => {

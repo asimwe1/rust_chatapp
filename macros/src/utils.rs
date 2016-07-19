@@ -1,7 +1,7 @@
 use syntax::parse::{token};
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind};
+use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind, Ty, self};
 use syntax::ext::base::{ExtCtxt};
 use syntax::codemap::{Span, Spanned, BytePos, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
@@ -50,22 +50,30 @@ pub fn dummy_span<T>(t: T) -> Spanned<T> {
     }
 }
 
-#[inline]
-pub fn dummy_kvspan<T>(t: T) -> KVSpanned<T> {
-    KVSpanned {
-        k_span: DUMMY_SP,
-        v_span: DUMMY_SP,
-        p_span: DUMMY_SP,
-        node: t,
+#[derive(Debug, Clone)]
+pub struct KVSpanned<T> {
+    pub k_span: Span, // Span for the key.
+    pub v_span: Span, // Span for the value.
+    pub p_span: Span, // Span for the full parameter.
+    pub node: T       // The value.
+}
+
+impl<T> KVSpanned<T> {
+    #[inline]
+    pub fn dummy(t: T) -> KVSpanned<T> {
+        KVSpanned {
+            k_span: DUMMY_SP,
+            v_span: DUMMY_SP,
+            p_span: DUMMY_SP,
+            node: t,
+        }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct KVSpanned<T> {
-    pub k_span: Span,
-    pub v_span: Span,
-    pub p_span: Span,
-    pub node: T
+impl<T: Default> Default for KVSpanned<T> {
+    fn default() -> KVSpanned<T> {
+        KVSpanned::dummy(T::default())
+    }
 }
 
 impl<T: ToTokens> ToTokens for KVSpanned<T> {
@@ -147,27 +155,38 @@ pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &[T],
     output
 }
 
-pub fn assert_meta_item_list(ecx: &ExtCtxt, meta_item: &MetaItem, s: &str) {
-    if !meta_item.node.is_list() {
-        let msg = format!("Incorrect use of macro. Expected: #[{}(...)]", s);
-        ecx.span_fatal(meta_item.span, msg.as_str());
-    }
-}
-
 pub trait MetaItemExt {
-    fn is_list(&self) -> bool;
-    fn get_list_items(&self) -> Option<&Vec<P<MetaItem>>>;
+    fn expect_list<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Vec<P<MetaItem>>;
+    fn expect_word<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a str;
 }
 
-impl MetaItemExt for MetaItemKind {
-    fn is_list(&self) -> bool {
-        self.get_list_items().is_some()
+impl MetaItemExt for MetaItem {
+    fn expect_list<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Vec<P<MetaItem>> {
+        match self.node {
+            MetaItemKind::List(_, ref params) => params,
+            _ => ecx.span_fatal(self.span, msg)
+        }
     }
 
-    fn get_list_items(&self) -> Option<&Vec<P<MetaItem>>> {
-        match *self {
-            MetaItemKind::List(_, ref params) => Some(params),
-            _ => None
+    fn expect_word<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a str {
+        match self.node {
+            MetaItemKind::Word(ref s) => &*s,
+            _ => ecx.span_fatal(self.span, msg)
+        }
+    }
+}
+
+pub trait PatExt {
+    fn expect_ident<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Ident;
+}
+
+impl PatExt for ast::Pat {
+    fn expect_ident<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Ident {
+        match self.node {
+            ast::PatKind::Ident(_, ref ident, _) => &ident.node,
+            _ => {
+                ecx.span_fatal(self.span, msg)
+            }
         }
     }
 }
@@ -198,16 +217,26 @@ pub fn prefix_paths(prefix: &str, paths: &mut Vec<Path>) {
     }
 }
 
-// pub fn find_value_for(key: &str, kv_params: &[P<MetaItem>]) -> Option<String> {
-//     for param in kv_params {
-//         if let MetaItemKind::NameValue(ref name, ref value) = param.node {
-//             if &**name == key {
-//                 if let LitKind::Str(ref string, _) = value.node {
-//                     return Some(String::from(&**string));
-//                 }
-//             }
-//         }
-//     }
+#[derive(Debug)]
+pub struct SimpleArg {
+    pub name: String,
+    pub ty: P<Ty>,
+    pub span: Span
+}
 
-//     None
-// }
+impl SimpleArg {
+    pub fn new<T: ToString>(name: T, ty: P<Ty>, sp: Span) -> SimpleArg {
+        SimpleArg { name: name.to_string(), ty: ty, span: sp }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ToTokens for SimpleArg {
+    fn to_tokens(&self, cx: &ExtCtxt) -> Vec<TokenTree> {
+        token::str_to_ident(self.as_str()).to_tokens(cx)
+    }
+}
+

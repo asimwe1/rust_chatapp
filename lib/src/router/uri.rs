@@ -5,15 +5,26 @@ use std::fmt::{self, Write};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {
+    uri: &'a str,
     path: &'a str,
+    query: Option<&'a str>,
     segment_count: Cell<Option<usize>>
 }
 
 impl<'a> URI<'a> {
-    pub fn new<T: AsRef<str> + ?Sized>(path: &'a T) -> URI<'a> {
+    pub fn new<T: AsRef<str> + ?Sized>(uri: &'a T) -> URI<'a> {
+        let uri = uri.as_ref();
+
+        let (path, query) = match uri.find('?') {
+            Some(index) => (&uri[..index], Some(&uri[index..])),
+            None => (uri, None)
+        };
+
         URI {
             segment_count: Cell::new(None),
-            path: path.as_ref(),
+            uri: uri,
+            path: path,
+            query: query,
         }
     }
 
@@ -30,14 +41,14 @@ impl<'a> URI<'a> {
     }
 
     pub fn as_str(&self) -> &'a str {
-        self.path
+        self.uri
     }
 }
 
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut last = '\0';
-        for c in self.path.chars() {
+        for c in self.uri.chars() {
             if !(c == '/' && last == '/') { f.write_char(c)?; }
             last = c;
         }
@@ -50,7 +61,7 @@ unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URIBuf {
-    path: String,
+    uri: String,
     segment_count: Cell<Option<usize>>
 }
 
@@ -65,25 +76,25 @@ impl URIBuf {
     }
 
     pub fn segments(&self) -> Segments {
-        Segments(self.path.as_str())
+        self.as_uri_uncached().segments()
     }
 
     fn as_uri_uncached(&self) -> URI {
-        URI::new(self.path.as_str())
+        URI::new(self.uri.as_str())
     }
 
     pub fn as_uri(&self) -> URI {
-        let mut uri = URI::new(self.path.as_str());
+        let mut uri = URI::new(self.uri.as_str());
         uri.segment_count = self.segment_count.clone();
         uri
     }
 
     pub fn as_str(&self) -> &str {
-        self.path.as_str()
+        self.uri.as_str()
     }
 
     pub fn to_string(&self) -> String {
-        self.path.clone()
+        self.uri.clone()
     }
 }
 
@@ -96,19 +107,19 @@ impl fmt::Display for URIBuf {
 }
 
 impl From<String> for URIBuf {
-    fn from(path: String) -> URIBuf {
+    fn from(uri: String) -> URIBuf {
         URIBuf {
             segment_count: Cell::new(None),
-            path: path,
+            uri: uri,
         }
     }
 }
 
 impl<'a> From<&'a str> for URIBuf {
-    fn from(path: &'a str) -> URIBuf {
+    fn from(uri: &'a str) -> URIBuf {
         URIBuf {
             segment_count: Cell::new(None),
-            path: path.to_string(),
+            uri: uri.to_string(),
         }
     }
 }

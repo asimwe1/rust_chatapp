@@ -4,7 +4,7 @@ use method::Method;
 
 pub use hyper::server::Request as HyperRequest;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Request<'a> {
     params: Option<Vec<&'a str>>,
     pub method: Method,
