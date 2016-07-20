@@ -207,7 +207,7 @@ fn get_fn_params<'a, T: Iterator<Item=&'a Spanned<&'a str>>>(ecx: &ExtCtxt,
 fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<SimpleArg>,
                  form_params: &[Spanned<&str>]) -> Option<Stmt> {
     if form_params.len() < 1 {
-        return None
+        return None;
     } else if form_params.len() > 1 {
         panic!("Allowed more than 1 form parameter!");
     }
@@ -232,20 +232,18 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<SimpleArg>,
 
     // The actual code we'll be inserting.
     quote_stmt!(ecx,
-        let $param_ident: $param_ty = {
-            let form_string = std::str::from_utf8(_req.data);
-            if form_string.is_err() {
-                return ::rocket::Response::server_error();
-            };
-
-            match ::rocket::form::FromForm::from_form_string(form_string.unwrap()) {
-                Ok(v) => v,
-                Err(_) => {
-                    println!("\t=> Form failed to parse.");
-                    return rocket::Response::not_found()
+        let $param_ident: $param_ty =
+            if let Ok(form_string) = ::std::str::from_utf8(_req.data) {
+                match ::rocket::form::FromForm::from_form_string(form_string) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        println!("\t=> Form failed to parse.");
+                        return ::rocket::Response::not_found();
+                    }
                 }
+            } else {
+                return ::rocket::Response::server_error();
             }
-        }
     )
 }
 
@@ -304,7 +302,7 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
         let param_fn_item = quote_stmt!(ecx,
             let $param_ident: $param_ty = match _req.get_param($i) {
                 Ok(v) => v,
-                Err(_) => return rocket::Response::forward()
+                Err(_) => return ::rocket::Response::forward()
             };
         ).unwrap();
 
@@ -316,12 +314,12 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let route_fn_name = prepend_ident(ROUTE_FN_PREFIX, &item.ident);
     let fn_name = item.ident;
     let route_fn_item = quote_item!(ecx,
-         fn $route_fn_name<'rocket>(_req: rocket::Request<'rocket>)
-                -> rocket::Response<'rocket> {
+         fn $route_fn_name<'rocket>(_req: ::rocket::Request<'rocket>)
+                -> ::rocket::Response<'rocket> {
              $form_stmt
              $fn_param_exprs
              let result = $fn_name($fn_param_idents);
-             rocket::Response::new(result)
+             ::rocket::Response::new(result)
          }
     ).unwrap();
 
@@ -333,11 +331,12 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let method = method_variant_to_expr(ecx, route.method.node);
     push(Annotatable::Item(quote_item!(ecx,
         #[allow(non_upper_case_globals)]
-        pub static $struct_name: rocket::StaticRouteInfo = rocket::StaticRouteInfo {
-            method: $method,
-            path: $path,
-            handler: $route_fn_name
-        };
+        pub static $struct_name: ::rocket::StaticRouteInfo =
+            ::rocket::StaticRouteInfo {
+                method: $method,
+                path: $path,
+                handler: $route_fn_name
+            };
     ).unwrap()));
 }
 
