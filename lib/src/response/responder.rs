@@ -1,4 +1,5 @@
 use response::*;
+use response::mime::{Mime, TopLevel, SubLevel};
 use std::io::{Read, Write};
 use std::fs::File;
 use std::fmt;
@@ -12,20 +13,27 @@ pub trait Responder {
 }
 
 impl<'a> Responder for &'a str {
-    fn respond<'b>(&mut self, res: FreshHyperResponse<'b>) -> Outcome<'b> {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
+        let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
+        res.headers_mut().set(header::ContentType(mime));
         res.send(self.as_bytes()).unwrap();
         Outcome::Complete
     }
 }
 
 impl Responder for String {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
+    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
+        let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
+        res.headers_mut().set(header::ContentType(mime));
         res.send(self.as_bytes()).unwrap();
         Outcome::Complete
     }
 }
 
 // FIXME: Should we set a content-type here? Safari needs text/html to render.
+// Unfortunately, the file name is gone at this point. Should fix this. There's
+// a way to retrieve a file based on its fd, strangely enough. See...
+// https://stackoverflow.com/questions/1188757/getting-filename-from-file-descriptor-in-c
 impl Responder for File {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
         let size = self.metadata().unwrap().len();
@@ -47,7 +55,7 @@ impl<T: Responder> Responder for Option<T> {
         if self.is_none() {
             println!("Option is none.");
             // TODO: Should this be a 404 or 500?
-            return Empty::new(StatusCode::NotFound).respond(res)
+            return Outcome::FailForward(res);
         }
 
         self.as_mut().unwrap().respond(res)
@@ -61,7 +69,7 @@ impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
         if self.is_err() {
             println!("Error: {:?}", self.as_ref().err().unwrap());
             // TODO: Should this be a 404 or 500?
-            return Empty::new(StatusCode::NotFound).respond(res)
+            return Outcome::FailForward(res);
         }
 
         self.as_mut().unwrap().respond(res)

@@ -1,6 +1,7 @@
 #![allow(unused_imports)] // FIXME: Why is this coming from quote_tokens?
 
 use syntax::ext::base::{Annotatable, ExtCtxt};
+use syntax::print::pprust::{stmt_to_string};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
@@ -11,10 +12,11 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
+static PRIVATE_LIFETIME: &'static str = "'rocket";
 
 fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
         -> Option<&'static str> {
@@ -48,7 +50,14 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
 
 pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
-    let lifetime_var = get_struct_lifetime(ecx, annotated, span);
+    let struct_lifetime = get_struct_lifetime(ecx, annotated, span);
+    let (lifetime_var, trait_generics) = match struct_lifetime {
+        lifetime@Some(_) => (lifetime, ty::LifetimeBounds::empty()),
+        None => (Some(PRIVATE_LIFETIME), ty::LifetimeBounds {
+                lifetimes: vec![(PRIVATE_LIFETIME, vec![])],
+                bounds: vec![]
+            })
+    };
 
     let trait_def = TraitDef {
         is_unsafe: false,
@@ -61,7 +70,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
             global: true,
         },
         additional_bounds: Vec::new(),
-        generics: ty::LifetimeBounds::empty(),
+        generics: trait_generics,
         methods: vec![
             MethodDef {
                 name: "from_form_string",
@@ -143,15 +152,18 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     let initial_block = quote_block!(cx, {
         let mut items = [("", ""); $num_fields];
         let form_count = ::rocket::form::form_items($arg, &mut items);
-        if form_count != items.len() {
-            $return_err_stmt;
-        };
+        // if form_count != items.len() {
+        //     println!("\t Form parse: Wrong number of items!");
+        //     $return_err_stmt;
+        // };
     });
 
     stmts.extend(initial_block.unwrap().stmts);
 
     // Generate the let bindings for parameters that will be unwrapped and
-    // placed into the final struct
+    // placed into the final struct. They start out as `None` and are changed
+    // to Some when a parse completes, or some default value if the parse was
+    // unsuccessful and default() returns Some.
     for &(ref ident, ref ty) in &fields_and_types {
         stmts.push(quote_stmt!(cx,
             let mut $ident: ::std::option::Option<$ty> = None;
@@ -174,30 +186,38 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     // The actual match statement. Uses the $arms generated above.
     stmts.push(quote_stmt!(cx,
-       for &(k, v) in &items {
-           match k {
-               $arms
-                _ => $return_err_stmt
+        for &(k, v) in &items[..form_count] {
+            match k {
+                $arms
+                // Return error when a field is in the form but not in struct.
+                _ => {
+                    println!("\t{}={} has no matching field in struct.", k, v);
+                    $return_err_stmt
+                }
            };
        }
     ).unwrap());
 
     // This looks complicated but just generates the boolean condition checking
-    // that each parameter actually is Some(), IE, had a key/value and parsed.
+    // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
-    for (i, &(ref ident, _)) in (&fields_and_types).iter().enumerate() {
+    for (i, &(ref ident, ref ty)) in (&fields_and_types).iter().enumerate() {
         if i > 0 {
-            failure_conditions.push(quote_tokens!(cx, || $ident.is_none()));
-        } else {
-            failure_conditions.push(quote_tokens!(cx, $ident.is_none()));
+            failure_conditions.push(quote_tokens!(cx, ||));
         }
+
+        failure_conditions.push(quote_tokens!(cx, $ident.is_none() &&
+            <$ty as ::rocket::form::FromFormValue>::default().is_none()));
     }
 
-    // The fields of the struct, which are just the let bindings declared above.
+    // The fields of the struct, which are just the let bindings declared above
+    // or the default value.
     let mut result_fields = vec![];
-    for &(ref ident, _) in &fields_and_types {
+    for &(ref ident, ref ty) in &fields_and_types {
         result_fields.push(quote_tokens!(cx,
-            $ident: $ident.unwrap(),
+            $ident: $ident.unwrap_or_else(||
+                <$ty as ::rocket::form::FromFormValue>::default().unwrap()
+            ),
         ));
     }
 
@@ -206,6 +226,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     let self_ident = substr.type_ident;
     let final_block = quote_block!(cx, {
         if $failure_conditions {
+            println!("\tOne of the fields didn't parse.");
             $return_err_stmt;
         }
 
@@ -215,6 +236,12 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     });
 
     stmts.extend(final_block.unwrap().stmts);
+
+    debug!("Form statements:");
+    for stmt in &stmts {
+        debug!("{:?}", stmt_to_string(stmt));
+    }
+
     cx.expr_block(cx.block(trait_span, stmts))
 }
 

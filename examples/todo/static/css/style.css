@@ -1,0 +1,13 @@
+.field-error {
+  border: 1px solid #ff0000 !important;
+}
+
+.field-error-msg {
+  color: #ff0000;
+  display: block;
+  margin: -10px 0 10px 0;
+}
+
+span.completed {
+    text-decoration: line-through;
+}

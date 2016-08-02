@@ -8,6 +8,7 @@ pub use hyper::server::Response as HyperResponse;
 pub use hyper::net::Fresh as HyperFresh;
 pub use hyper::status::StatusCode;
 pub use hyper::header;
+pub use hyper::mime;
 
 pub use self::responder::Responder;
 pub use self::empty::{Empty, Forward};

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use url::{self};
 
 use error::Error;
 
@@ -11,6 +12,13 @@ pub trait FromFormValue<'v>: Sized {
     type Error;
 
     fn parse(v: &'v str) -> Result<Self, Self::Error>;
+
+    // Returns a default value to be used when the form field does not exist. If
+    // this returns None, then the field is required. Otherwise, this should
+    // return Some(default_value).
+    fn default() -> Option<Self> {
+        None
+    }
 }
 
 impl<'v> FromFormValue<'v> for &'v str {
@@ -18,6 +26,30 @@ impl<'v> FromFormValue<'v> for &'v str {
 
     fn parse(v: &'v str) -> Result<Self, Self::Error> {
         Ok(v)
+    }
+}
+
+impl<'v> FromFormValue<'v> for String {
+    type Error = &'v str;
+
+    // This actually parses the value according to the standard.
+    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+        let decoder = url::percent_encoding::percent_decode(v.as_bytes());
+        let res = decoder.decode_utf8().map_err(|_| v).map(|s| s.into_owned());
+        match res {
+            e@Err(_) => e,
+            Ok(mut string) => Ok({
+                unsafe {
+                    for c in string.as_mut_vec() {
+                        if *c == b'+' {
+                            *c = b' ';
+                        }
+                    }
+                }
+
+                string
+            })
+        }
     }
 }
 
@@ -33,7 +65,7 @@ macro_rules! impl_with_fromstr {
 }
 
 impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
-       bool, String, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+       bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
        SocketAddr);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
@@ -44,6 +76,10 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
             Ok(v) => Ok(Some(v)),
             Err(_) => Ok(None)
         }
+    }
+
+    fn default() -> Option<Option<T>> {
+        Some(None)
     }
 }
 

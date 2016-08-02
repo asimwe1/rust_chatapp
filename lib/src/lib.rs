@@ -3,6 +3,7 @@
 
 extern crate term_painter;
 extern crate hyper;
+extern crate url;
 
 mod method;
 mod error;

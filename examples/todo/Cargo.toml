@@ -6,3 +6,10 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_macros = { path = "../../macros" }
+lazy_static = "*"
+tera = "*"
+serde = { git = "https://github.com/serde-rs/serde" }
+serde_json = { git = "https://github.com/serde-rs/json" }
+serde_macros = { git = "https://github.com/serde-rs/serde" }
+diesel = { version = "*", features = ["sqlite"] }
+diesel_codegen = { git = "https://github.com/diesel-rs/diesel/", default_features = false, features = ["nightly", "sqlite"] }

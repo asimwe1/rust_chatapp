@@ -1,7 +1,5 @@
 use handler::Handler;
-use error::Error;
 use response::Response;
-use request::Request;
 use error::RoutingError;
 use codegen::StaticCatchInfo;
 

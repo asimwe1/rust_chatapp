@@ -13,6 +13,7 @@ use method::Method;
 
 type Selector = (Method, usize);
 
+#[derive(Default)]
 pub struct Router {
     routes: HashMap<Selector, Vec<Route>> // using 'selector' for now
 }

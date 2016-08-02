@@ -116,7 +116,6 @@ fn parse_route(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
     }
 }
 
-
 // TODO: Put something like this in the library. Maybe as an iterator?
 pub fn extract_params<'a>(ecx: &ExtCtxt, params: &Spanned<&'a str>)
         -> Vec<Spanned<&'a str>> {

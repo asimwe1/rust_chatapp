@@ -5,7 +5,7 @@ pub struct Redirect(StatusCode, String);
 
 impl Redirect {
     pub fn to(uri: &str) -> Redirect {
-        Redirect(StatusCode::TemporaryRedirect, String::from(uri))
+        Redirect(StatusCode::Found, String::from(uri))
     }
 
     pub fn created(uri: &str) -> Redirect {
@@ -18,6 +18,10 @@ impl Redirect {
 
     pub fn permanent(uri: &str) -> Redirect {
         Redirect(StatusCode::PermanentRedirect, String::from(uri))
+    }
+
+    pub fn temporary(uri: &str) -> Redirect {
+        Redirect(StatusCode::TemporaryRedirect, String::from(uri))
     }
 }
 

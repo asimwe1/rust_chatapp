@@ -40,7 +40,7 @@ fn method_is_valid(method: &HyperMethod) -> bool {
 
 impl HyperHandler for Rocket {
     fn handle<'a, 'k>(&'a self, req: HyperRequest<'a, 'k>,
-            res: FreshHyperResponse<'a>) {
+            mut res: FreshHyperResponse<'a>) {
         println!("{:?} '{}'", Green.paint(&req.method), Blue.paint(&req.uri));
 
         let finalize = |mut req: HyperRequest, _res: FreshHyperResponse| {
@@ -61,6 +61,8 @@ impl HyperHandler for Rocket {
             return finalize(req, res);
         }
 
+
+        res.headers_mut().set(response::header::Server("rocket".to_string()));
         self.dispatch(req, res)
     }
 }
