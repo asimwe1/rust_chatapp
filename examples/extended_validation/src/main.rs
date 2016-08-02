@@ -18,8 +18,8 @@ struct AdultAge(isize);
 #[derive(FromForm)]
 struct UserLogin<'r> {
     username: &'r str,
-    password: Result<StrongPassword<'r>, &'r str>,
-    age: Result<AdultAge, &'r str>,
+    password: Result<StrongPassword<'r>, &'static str>,
+    age: Result<AdultAge, &'static str>,
 }
 
 impl<'v> FromFormValue<'v> for StrongPassword<'v> {
@@ -40,12 +40,12 @@ impl<'v> FromFormValue<'v> for AdultAge {
     fn parse(v: &'v str) -> Result<Self, Self::Error> {
         let age = match isize::parse(v) {
             Ok(v) => v,
-            Err(_) => return Err("Age value is not a number.")
+            Err(_) => return Err("Age value is not a number."),
         };
 
         match age > 20 {
             true => Ok(AdultAge(age)),
-            false => Err("Must be at least 21.")
+            false => Err("Must be at least 21."),
         }
     }
 }
@@ -61,11 +61,13 @@ fn login(user: UserLogin) -> Result<Redirect, String> {
     }
 
     match user.username {
-        "Sergio" => match user.password.unwrap().0 {
-            "password" => Ok(Redirect::other("/user/Sergio")),
-            _ => Err("Wrong password!".to_string())
-        },
-        _ => Err(format!("Unrecognized user, '{}'.", user.username))
+        "Sergio" => {
+            match user.password.unwrap().0 {
+                "password" => Ok(Redirect::other("/user/Sergio")),
+                _ => Err("Wrong password!".to_string()),
+            }
+        }
+        _ => Err(format!("Unrecognized user, '{}'.", user.username)),
     }
 }
 
