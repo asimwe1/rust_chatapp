@@ -1,5 +1,4 @@
 use diesel;
-use serde::Serialize;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use self::schema::tasks;
