@@ -5,6 +5,9 @@ EXAMPLES_DIR="examples"
 LIB_DIR="lib"
 MACROS_DIR="macros"
 
+# Add Cargo to PATH.
+export PATH=${HOME}/.cargo/bin:${PATH}
+
 function build_and_test() {
   local dir=$1
   if [ -z "${dir}" ] || ! [ -d "${dir}" ]; then
