@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-EXAMPLES_DIR="examples/"
-LIB_DIR="lib/"
-MACROS_DIR="macros/"
+EXAMPLES_DIR="examples"
+LIB_DIR="lib"
+MACROS_DIR="macros"
 
 function build_and_test() {
   local dir=$1
@@ -26,8 +26,18 @@ build_and_test $LIB_DIR
 build_and_test $MACROS_DIR
 
 for file in ${EXAMPLES_DIR}/*; do
-  echo "${file}"
   if [ -d "${file}" ]; then
+    bootstrap_script="${file}/bootstrap.sh"
+    if [ -x "${bootstrap_script}" ]; then
+      echo ":: Bootstrapping ${file}..."
+
+      if ! ./${bootstrap_script}; then
+        echo ":: Running bootstrap script (${bootstrap_script}) failed!"
+        echo ":: Skipping ${file}."
+        continue
+      fi
+    fi
+
     build_and_test "${file}"
   fi
 done

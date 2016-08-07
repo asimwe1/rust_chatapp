@@ -7,7 +7,7 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 rocket = { path = "../../lib" }
 rocket_macros = { path = "../../macros" }
 lazy_static = "*"
-tera = "*"
+tera = { git = "https://github.com/Keats/tera" }
 serde = "0.8"
 serde_json = "0.8"
 serde_macros = "0.8"
