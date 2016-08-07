@@ -3,6 +3,7 @@ mod responder;
 mod redirect;
 mod with_status;
 mod outcome;
+mod cookied;
 
 pub use hyper::server::Response as HyperResponse;
 pub use hyper::net::Fresh as HyperFresh;
@@ -15,6 +16,7 @@ pub use self::empty::{Empty, Forward};
 pub use self::redirect::Redirect;
 pub use self::with_status::StatusResponse;
 pub use self::outcome::Outcome;
+pub use self::cookied::Cookied;
 
 use std::ops::{Deref, DerefMut};
 

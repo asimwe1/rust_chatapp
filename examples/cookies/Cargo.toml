@@ -1,0 +1,10 @@
+[package]
+name = "cookies"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_macros = { path = "../../macros" }
+lazy_static = "*"
+tera = { git = "https://github.com/Keats/tera" }

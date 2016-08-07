@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 SCRIPT_PATH=$(cd "$(dirname "$0")" ; pwd -P)
-DATABASE_URL=${SCRIPT_PATH}/db/db.sql 
+DATABASE_URL=${SCRIPT_PATH}/db/db.sql
 
 pushd $SCRIPT_PATH
   # install the diesel CLI tools
