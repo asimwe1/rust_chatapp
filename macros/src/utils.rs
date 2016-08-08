@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use syntax::parse::{token};
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
@@ -237,6 +239,34 @@ impl SimpleArg {
 impl ToTokens for SimpleArg {
     fn to_tokens(&self, cx: &ExtCtxt) -> Vec<TokenTree> {
         token::str_to_ident(self.as_str()).to_tokens(cx)
+    }
+}
+
+pub struct UserParam {
+    pub arg: SimpleArg,
+    pub declared: bool
+}
+
+impl UserParam {
+    pub fn new(arg: SimpleArg, declared: bool) -> UserParam {
+        UserParam {
+            arg: arg,
+            declared: declared
+        }
+    }
+}
+
+impl Deref for UserParam {
+    type Target = SimpleArg;
+
+    fn deref(&self) -> &SimpleArg {
+        &self.arg
+    }
+}
+
+impl ToTokens for UserParam {
+    fn to_tokens(&self, cx: &ExtCtxt) -> Vec<TokenTree> {
+        self.arg.to_tokens(cx)
     }
 }
 

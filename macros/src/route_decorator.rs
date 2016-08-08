@@ -163,8 +163,12 @@ pub fn extract_params_from_kv<'a>(ecx: &ExtCtxt, params: &'a KVSpanned<String>)
     })
 }
 
+// Analyzes the declared parameters against the function declaration. Returns
+// two vectors. The first is the set of parameters declared by the user, and
+// the second is the set of parameters not declared by the user.
 fn get_fn_params<'a, T: Iterator<Item=&'a Spanned<&'a str>>>(ecx: &ExtCtxt,
-        declared_params: T, fn_decl: &Spanned<&FnDecl>) -> Vec<SimpleArg> {
+        declared_params: T, fn_decl: &Spanned<&FnDecl>)
+            -> Vec<UserParam> {
     debug!("FUNCTION: {:?}", fn_decl);
 
     // First, check that all of the parameters are unique.
@@ -179,20 +183,20 @@ fn get_fn_params<'a, T: Iterator<Item=&'a Spanned<&'a str>>>(ecx: &ExtCtxt,
         }
     }
 
+    let mut user_params = vec![];
+
     // Ensure every param in the function declaration was declared by the user.
-    let mut result = vec![];
     for arg in &fn_decl.node.inputs {
         let name = arg.pat.expect_ident(ecx, "Expected identifier.");
-        if seen.remove(&*name.to_string()).is_none() {
-            let msg = format!("'{}' appears in the function declaration \
-                but does not appear as a parameter in the attribute.", name);
-            ecx.span_err(arg.pat.span, msg.as_str());
+        let arg = SimpleArg::new(name, arg.ty.clone(), arg.pat.span);
+        if seen.remove(&*name.to_string()).is_some() {
+            user_params.push(UserParam::new(arg, true));
+        } else {
+            user_params.push(UserParam::new(arg, false));
         }
-
-        result.push(SimpleArg::new(name, arg.ty.clone(), arg.pat.span));
     }
 
-    // Ensure every declared parameter is in the function declaration.
+    // Emit an error on every attribute param that didn't match in fn params.
     for item in seen.values() {
         let msg = format!("'{}' was declared in the attribute...", item.node);
         ecx.span_err(item.span, msg.as_str());
@@ -200,10 +204,10 @@ fn get_fn_params<'a, T: Iterator<Item=&'a Spanned<&'a str>>>(ecx: &ExtCtxt,
                      declaration.");
     }
 
-    result
+    user_params
 }
 
-fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<SimpleArg>,
+fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<UserParam>,
                  form_params: &[Spanned<&str>]) -> Option<Stmt> {
     if form_params.len() < 1 {
         return None;
@@ -281,35 +285,52 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
 
     // Ensure the params match the function declaration and return the params.
     let all_params = path_params.iter().chain(form_params.iter());
-    let mut fn_params = get_fn_params(ecx, all_params, &fn_decl);
+    let mut user_params = get_fn_params(ecx, all_params, &fn_decl);
 
     // Create a comma seperated list (token tree) of the function parameters
     // We pass this in to the user's function that we're wrapping.
-    let fn_param_idents = token_separate(ecx, &fn_params, token::Comma);
+    let fn_param_idents = token_separate(ecx, &user_params, token::Comma);
 
     // Generate the statements that will attempt to parse forms during run-time.
     // Calling this function also remove the form parameter from fn_params.
-    let form_stmt = get_form_stmt(ecx, &mut fn_params, &form_params);
+    let form_stmt = get_form_stmt(ecx, &mut user_params, &form_params);
     form_stmt.as_ref().map(|s| debug!("Form stmt: {:?}", stmt_to_string(s)));
 
     // Generate the statements that will attempt to parse the paramaters during
     // run-time.
     let mut fn_param_exprs = vec![];
-    for (i, param) in fn_params.iter().enumerate() {
-        let param_ident = str_to_ident(param.as_str());
-        let param_ty = &param.ty;
-        let param_fn_item = quote_stmt!(ecx,
-            let $param_ident: $param_ty = match _req.get_param($i) {
-                Ok(v) => v,
-                Err(_) => return ::rocket::Response::forward()
+    for (i, param) in user_params.iter().enumerate() {
+        let ident = str_to_ident(param.as_str());
+        let ty = &param.ty;
+        let param_fn_item =
+            if param.declared {
+                quote_stmt!(ecx,
+                    let $ident: $ty = match _req.get_param($i) {
+                        Ok(v) => v,
+                        Err(_) => return ::rocket::Response::forward()
+                    };
+                ).unwrap()
+            } else {
+                quote_stmt!(ecx,
+                    let $ident: $ty = match
+                    <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            // TODO: Add $ident and $ty to the string.
+                            // TODO: Add some kind of loggin facility in Rocket
+                            // to get the formatting right (IE, so it idents
+                            // correctly).
+                            println!("Failed to parse: {:?}", e);
+                            return ::rocket::Response::forward();
+                        }
+                    };
+                ).unwrap()
             };
-        ).unwrap();
 
         debug!("Param FN: {:?}", stmt_to_string(&param_fn_item));
         fn_param_exprs.push(param_fn_item);
     }
 
-    debug!("Final Params: {:?}", fn_params);
     let route_fn_name = prepend_ident(ROUTE_FN_PREFIX, &item.ident);
     let fn_name = item.ident;
     let route_fn_item = quote_item!(ecx,

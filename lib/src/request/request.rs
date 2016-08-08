@@ -2,8 +2,6 @@ use error::Error;
 use param::FromParam;
 use method::Method;
 
-pub use hyper::server::Request as HyperRequest;
-
 #[derive(Clone, Debug)]
 pub struct Request<'a> {
     params: Option<Vec<&'a str>>,

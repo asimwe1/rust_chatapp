@@ -6,10 +6,9 @@ extern crate lazy_static;
 extern crate rocket;
 extern crate tera;
 
-mod static_files;
-
 use rocket::Rocket;
 use rocket::response::{Cookied, Redirect};
+use rocket::Method;
 
 lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("templates/**/*"););
 
@@ -31,13 +30,13 @@ fn submit(message: Message) -> Cookied<Redirect> {
 }
 
 #[route(GET, path = "/")]
-fn index() -> tera::TeraResult<String> {
+fn index(method: Method) -> tera::TeraResult<String> {
+    println!("Method is: {}", method);
     TERA.render("index.html", ctxt(None))
 }
 
 fn main() {
     let mut rocket = Rocket::new("127.0.0.1", 8000);
-    rocket.mount("/", static_files::routes());
     rocket.mount("/", routes![submit, index]);
     rocket.launch();
 }
