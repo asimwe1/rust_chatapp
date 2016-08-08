@@ -15,7 +15,7 @@ impl<R: Responder> Cookied<R> {
         }
     }
 
-    pub fn with(responder: R, pairs: &[(&ToString, &ToString)]) -> Cookied<R> {
+    pub fn pairs(responder: R, pairs: &[(&ToString, &ToString)]) -> Cookied<R> {
         Cookied {
             cookies: Some(
                 pairs.iter()

@@ -84,7 +84,7 @@ impl Rocket {
         let handle_not_found = |response: FreshHyperResponse| {
             println!("{}", Red.paint("\t<= Dispatch failed. Returning 404."));
 
-            let request = Request::new(method, uri, None, &buf);
+            let request = Request::new(&req.headers, method, uri, None, &buf);
             let catcher = self.catchers.get(&404).unwrap();
             catcher.handle(RoutingError::unchained(request)).respond(response);
         };
@@ -98,7 +98,7 @@ impl Rocket {
         // Okay, we've got a route. Unwrap it, generate a request, and dispatch.
         let route = route.unwrap();
         let params = route.get_params(uri);
-        let request = Request::new(method, uri, Some(params), &buf);
+        let request = Request::new(&req.headers, method, uri, Some(params), &buf);
 
         println!("\t=> {}", Magenta.paint("Dispatching request."));
         let outcome = (route.handler)(request).respond(res);

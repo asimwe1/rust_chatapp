@@ -8,14 +8,14 @@ extern crate tera;
 
 use rocket::Rocket;
 use rocket::response::{Cookied, Redirect};
-use rocket::Method;
+use rocket::request::Cookies;
 
 lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("templates/**/*"););
 
-fn ctxt(message: Option<&str>) -> tera::Context {
+fn ctxt(message: Option<String>) -> tera::Context {
     let mut context = tera::Context::new();
     context.add("have_message", &message.is_some());
-    context.add("message", &message.unwrap_or("").to_string());
+    context.add("message", &message.unwrap_or("".to_string()));
     context
 }
 
@@ -30,9 +30,9 @@ fn submit(message: Message) -> Cookied<Redirect> {
 }
 
 #[route(GET, path = "/")]
-fn index(method: Method) -> tera::TeraResult<String> {
-    println!("Method is: {}", method);
-    TERA.render("index.html", ctxt(None))
+fn index(cookies: Cookies) -> tera::TeraResult<String> {
+    let message = cookies.find("message").map(|msg| msg.value);
+    TERA.render("index.html", ctxt(message))
 }
 
 fn main() {
