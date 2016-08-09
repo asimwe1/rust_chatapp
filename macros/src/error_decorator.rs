@@ -1,7 +1,6 @@
 use utils::*;
+use meta_item_parser::MetaItemParser;
 use super::{CATCH_STRUCT_PREFIX, CATCH_FN_PREFIX};
-
-use route_decorator::get_fn_decl;
 
 use syntax::codemap::{Span};
 use syntax::ast::{MetaItem};
@@ -16,7 +15,7 @@ struct Params {
     code: KVSpanned<u16>,
 }
 
-fn get_error_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
+fn get_error_params(ecx: &ExtCtxt, meta_item: &MetaItem) -> Params {
     // Ensure we've been supplied with a k = v meta item. Error out if not.
     let params = meta_item.expect_list(ecx, "Bad use. Expected: #[error(...)]");
 
@@ -49,7 +48,9 @@ fn get_error_params(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
 
 pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
-    let (item, _fn_decl) = get_fn_decl(ecx, sp, annotated);
+    let parser = MetaItemParser::new(ecx, meta_item, annotated, &sp);
+    let item = parser.expect_item();
+
     let error_params = get_error_params(ecx, meta_item);
     debug!("Error parameters are: {:?}", error_params);
 

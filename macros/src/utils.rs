@@ -37,7 +37,7 @@ pub fn append_ident<T: ToString>(ident: &Ident, other: T) -> Ident {
 }
 
 #[inline]
-pub fn wrap_span<T>(t: T, span: Span) -> Spanned<T> {
+pub fn span<T>(t: T, span: Span) -> Spanned<T> {
     Spanned {
         span: span,
         node: t,
@@ -95,7 +95,7 @@ impl<T> KVSpanned<T> {
     }
 }
 
-pub fn get_key_values<'b>(ecx: &mut ExtCtxt, sp: Span, required: &[&str],
+pub fn get_key_values<'b>(ecx: &ExtCtxt, sp: Span, required: &[&str],
         optional: &[&str], kv_params: &'b [P<MetaItem>])
             -> HashMap<&'b str, KVSpanned<&'b str>> {
     let mut seen = HashSet::new();
@@ -160,9 +160,21 @@ pub fn token_separate<T: ToTokens>(ecx: &ExtCtxt, things: &[T],
 pub trait MetaItemExt {
     fn expect_list<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Vec<P<MetaItem>>;
     fn expect_word<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a str;
+    fn is_word(&self) -> bool;
+    fn name<'a>(&'a self) -> &'a str;
 }
 
 impl MetaItemExt for MetaItem {
+    fn name<'a>(&'a self) -> &'a str {
+        let interned_name = match self.node {
+            MetaItemKind::Word(ref s) => s,
+            MetaItemKind::List(ref s, _) => s,
+            MetaItemKind::NameValue(ref s, _) => s
+        };
+
+        &*interned_name
+    }
+
     fn expect_list<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Vec<P<MetaItem>> {
         match self.node {
             MetaItemKind::List(_, ref params) => params,
@@ -174,6 +186,13 @@ impl MetaItemExt for MetaItem {
         match self.node {
             MetaItemKind::Word(ref s) => &*s,
             _ => ecx.span_fatal(self.span, msg)
+        }
+    }
+
+    fn is_word(&self) -> bool {
+        match self.node {
+            MetaItemKind::Word(_) => true,
+            _ => false
         }
     }
 }

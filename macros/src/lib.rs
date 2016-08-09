@@ -13,6 +13,7 @@ mod errors_macro;
 mod route_decorator;
 mod error_decorator;
 mod derive_form;
+mod meta_item_parser;
 
 use rustc_plugin::Registry;
 use syntax::ext::base::SyntaxExtension;
@@ -39,4 +40,6 @@ pub fn plugin_registrar(reg: &mut Registry) {
         SyntaxExtension::MultiDecorator(Box::new(from_form_derive)));
     reg.register_macro("routes", routes_macro);
     reg.register_macro("errors", errors_macro);
+
+//     reg.register_macro("GET", get_macro);
 }

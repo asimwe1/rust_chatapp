@@ -23,7 +23,7 @@ pub fn routes_macro(ecx: &mut ExtCtxt, _sp: Span, args: &[TokenTree])
 
     // Build up the P<Expr> for each path.
     let path_exprs: Vec<P<Expr>> = paths.iter().map(|p| {
-        quote_expr!(ecx, rocket::Route::from(&$p))
+        quote_expr!(ecx, ::rocket::Route::from(&$p))
     }).collect();
 
     // Now put them all in one vector and return the thing.

@@ -1,11 +1,11 @@
 use super::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX};
 use utils::*;
+use meta_item_parser::{MetaItemParser, RouteDecoratorExt};
 
-use std::str::FromStr;
 use std::collections::HashMap;
 
 use syntax::codemap::{Span, BytePos, /* DUMMY_SP, */ Spanned};
-use syntax::ast::{Stmt, Item, Expr, ItemKind, MetaItem, MetaItemKind, FnDecl};
+use syntax::ast::{Stmt, Expr, MetaItem, FnDecl};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ptr::P;
 use syntax::print::pprust::{item_to_string, stmt_to_string};
@@ -16,156 +16,16 @@ use rocket::Method;
 #[allow(dead_code)]
 const DEBUG: bool = true;
 
-struct Params {
-    method: Spanned<Method>,
-    path: KVSpanned<String>,
-    form: Option<KVSpanned<String>>,
-}
-
-fn bad_item_fatal(ecx: &mut ExtCtxt, dec_sp: Span, i_sp: Span) -> ! {
-    ecx.span_err(dec_sp, "This decorator cannot be used on non-functions...");
-    ecx.span_fatal(i_sp, "...but it was used on the item below.")
-}
-
-fn bad_method_err(ecx: &mut ExtCtxt, dec_sp: Span, message: &str) -> Method {
-    let message = format!("{} Valid methods are: [GET, PUT, POST, DELETE, \
-        OPTIONS, HEAD, TRACE, CONNECT, PATCH]", message);
-    ecx.span_err(dec_sp, message.as_str());
-    Method::Get
-}
-
-pub fn get_fn_decl<'a>(ecx: &mut ExtCtxt, sp: Span, annotated: &'a Annotatable)
-        -> (&'a P<Item>, Spanned<&'a FnDecl>) {
-    // `annotated` is the AST object for the annotated item.
-    let item: &P<Item> = match *annotated {
-        Annotatable::Item(ref item) => item,
-        Annotatable::TraitItem(ref item) => bad_item_fatal(ecx, sp, item.span),
-        Annotatable::ImplItem(ref item) => bad_item_fatal(ecx, sp, item.span)
-    };
-
-    let fn_decl: &P<FnDecl> = match item.node {
-         ItemKind::Fn(ref decl, _, _, _, _, _) => decl,
-         _ => bad_item_fatal(ecx, sp, item.span)
-     };
-
-    (item, wrap_span(&*fn_decl, item.span))
-}
-
-// Parses the MetaItem derived from the route(...) macro.
-fn parse_route(ecx: &mut ExtCtxt, meta_item: &MetaItem) -> Params {
-    // Ensure we've been supplied with a k = v meta item. Error out if not.
-    let params = meta_item.expect_list(ecx, "Bad use. Expected: #[route(...)]");
-    if params.len() < 1 {
-        bad_method_err(ecx, meta_item.span, "HTTP method parameter is missing.");
-        ecx.span_fatal(meta_item.span, "At least 2 arguments are required.");
-    }
-
-    // Get the method and the rest of the k = v params.
-    let (method_param, kv_params) = params.split_first().unwrap();
-
-    // Ensure method parameter is valid. If it's not, issue an error but use
-    // "GET" to continue parsing. method :: Spanned<Method>.
-    let method = if let MetaItemKind::Word(ref word) = method_param.node {
-        let method = Method::from_str(word).unwrap_or_else(|_| {
-            let message = format!("{} is not a valid method.", word);
-            bad_method_err(ecx, method_param.span, message.as_str())
-        });
-
-        Spanned { span: method_param.span, node: method }
-    } else {
-        let method = bad_method_err(ecx, method_param.span, "Invalid parameter. \
-            Expected a valid HTTP method at this position.");
-        dummy_span(method)
-    };
-
-    // Now grab all of the required and optional parameters.
-    let req: [&'static str; 1] = ["path"];
-    let opt: [&'static str; 1] = ["form"];
-    let kv_pairs = get_key_values(ecx, meta_item.span, &req, &opt, kv_params);
-
-    // Ensure we have a path, just to keep parsing and generating errors.
-    let path = kv_pairs.get("path").map_or(KVSpanned::dummy("/".to_string()), |s| {
-        s.clone().map(String::from)
-    });
-
-    // If there's a form parameter, ensure method is POST.
-    let form = kv_pairs.get("form").map_or(None, |f| {
-        if method.node != Method::Post {
-            ecx.span_err(f.p_span, "Use of `form` requires a POST method...");
-            let message = format!("...but {} was found instead.", method.node);
-            ecx.span_err(method_param.span, message.as_str());
-        }
-
-        if !(f.node.starts_with('<') && f.node.ends_with('>')) {
-            ecx.struct_span_err(f.p_span, "`form` cannot contain arbitrary text")
-                .help("`form` must be exactly one parameter: \"<param>\"")
-                .emit();
-        }
-
-        if f.node.chars().filter(|c| *c == '<' || *c == '>').count() != 2 {
-            ecx.span_err(f.p_span, "`form` must contain exactly one parameter");
-        }
-
-        Some(f.clone().map(String::from))
-    });
-
-    Params {
-        method: method,
-        path: path,
-        form: form
-    }
-}
-
-// TODO: Put something like this in the library. Maybe as an iterator?
-pub fn extract_params<'a>(ecx: &ExtCtxt, params: &Spanned<&'a str>)
-        -> Vec<Spanned<&'a str>> {
-    let mut output_params = vec![];
-    let bad_match_err = "Parameter string is malformed.";
-
-    let mut start = 0;
-    let mut matching = false;
-    for (i, c) in params.node.char_indices() {
-        match c {
-            '<' if !matching => {
-                matching = true;
-                start = i;
-            },
-            '>' if matching => {
-                matching = false;
-
-                let mut param_span = params.span;
-                param_span.lo = params.span.lo + BytePos(start as u32);
-                param_span.hi = params.span.lo + BytePos((i + 1) as u32);
-
-                if i > start + 1 {
-                    let param_name = &params.node[(start + 1)..i];
-                    output_params.push(wrap_span(param_name, param_span))
-                } else {
-                    ecx.span_err(param_span, "Parameter names cannot be empty.");
-                }
-            },
-            '<' if matching => ecx.span_err(params.span, bad_match_err),
-            '>' if !matching => ecx.span_err(params.span, bad_match_err),
-            _ => { /* ... */ }
-        }
-    }
-
-    output_params
-}
-
-pub fn extract_params_from_kv<'a>(ecx: &ExtCtxt, params: &'a KVSpanned<String>)
-        -> Vec<Spanned<&'a str>> {
+pub fn extract_params_from_kv<'a>(parser: &MetaItemParser,
+                    params: &'a KVSpanned<String>) -> Vec<Spanned<&'a str>> {
     let mut param_span = params.v_span;
     param_span.lo = params.v_span.lo + BytePos(1);
-    extract_params(ecx, &Spanned {
-        span: param_span,
-        node: &*params.node
-    })
+    let spanned = span(&*params.node, param_span);
+    parser.iter_params(&spanned).collect()
 }
 
 // Analyzes the declared parameters against the function declaration. Returns
-// two vectors. The first is the set of parameters declared by the user, and
-// the second is the set of parameters not declared by the user.
+// a vector of all of the parameters in the order the user wants them.
 fn get_fn_params<'a, T: Iterator<Item=&'a Spanned<&'a str>>>(ecx: &ExtCtxt,
         declared_params: T, fn_decl: &Spanned<&FnDecl>)
             -> Vec<UserParam> {
@@ -273,15 +133,16 @@ fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
 pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
     // Get the encompassing item and function declaration for the annotated func.
-    let (item, fn_decl) = get_fn_decl(ecx, sp, annotated);
+    let parser = MetaItemParser::new(ecx, meta_item, annotated, &sp);
+    let (item, fn_decl) = (parser.expect_item(), parser.expect_fn_decl());
 
     // Parse and retrieve all of the parameters of the route.
-    let route = parse_route(ecx, meta_item);
+    let route = parser.parse_route(None);
 
     // Get a list of the user declared parameters in `path` and `form`.
-    let path_params = extract_params_from_kv(ecx, &route.path);
+    let path_params = extract_params_from_kv(&parser, &route.path);
     let form_thing = route.form.unwrap_or_default(); // Default is empty string.
-    let form_params = extract_params_from_kv(ecx, &form_thing);
+    let form_params = extract_params_from_kv(&parser, &form_thing);
 
     // Ensure the params match the function declaration and return the params.
     let all_params = path_params.iter().chain(form_params.iter());
