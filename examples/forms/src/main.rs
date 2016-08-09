@@ -15,7 +15,7 @@ struct UserLogin<'r> {
     age: Result<isize, &'r str>,
 }
 
-#[route(POST, path = "/login", form = "<user>")]
+#[POST(path = "/login", form = "<user>")]
 fn login(user: UserLogin) -> Result<Redirect, String> {
     if user.age.is_err() {
         let input = user.age.unwrap_err();
@@ -36,7 +36,7 @@ fn login(user: UserLogin) -> Result<Redirect, String> {
     }
 }
 
-#[route(GET, path = "/user/<username>")]
+#[GET(path = "/user/<username>")]
 fn user_page(username: &str) -> String {
     format!("This is {}'s page.", username)
 }

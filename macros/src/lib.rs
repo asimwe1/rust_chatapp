@@ -21,7 +21,7 @@ use syntax::parse::token::intern;
 
 use routes_macro::routes_macro;
 use errors_macro::errors_macro;
-use route_decorator::route_decorator;
+use route_decorator::*;
 use error_decorator::error_decorator;
 use derive_form::from_form_derive;
 
@@ -30,16 +30,32 @@ const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &'static str = "rocket_route_fn_";
 const CATCH_FN_PREFIX: &'static str = "rocket_catch_fn_";
 
+macro_rules! register_decorators {
+    ($registry:expr, $($name:expr => $func:expr),+) => (
+        $($registry.register_syntax_extension(intern($name),
+                SyntaxExtension::MultiDecorator(Box::new($func)));
+         )+
+    )
+}
+
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(intern("route"),
-        SyntaxExtension::MultiDecorator(Box::new(route_decorator)));
-    reg.register_syntax_extension(intern("error"),
-        SyntaxExtension::MultiDecorator(Box::new(error_decorator)));
-    reg.register_syntax_extension(intern("derive_FromForm"),
-        SyntaxExtension::MultiDecorator(Box::new(from_form_derive)));
     reg.register_macro("routes", routes_macro);
     reg.register_macro("errors", errors_macro);
 
-//     reg.register_macro("GET", get_macro);
+    register_decorators!(reg,
+        "derive_FromForm" => from_form_derive,
+        "route" => generic_route_decorator,
+        "error" => error_decorator,
+
+        "GET" => get_decorator,
+        "PUT" => put_decorator,
+        "POST" => post_decorator,
+        "DELETE" => delete_decorator,
+        "OPTIONS" => options_decorator,
+        "HEAD" => head_decorator,
+        "TRACE" => trace_decorator,
+        "CONNECT" => connect_decorator,
+        "PATCH" => patch_decorator
+    );
 }

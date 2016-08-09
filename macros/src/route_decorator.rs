@@ -130,14 +130,15 @@ fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
 }
 
 // FIXME: Compilation fails when parameters have the same name as the function!
-pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
-          annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
+pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
+                       sp: Span, meta_item: &MetaItem, annotated: &Annotatable,
+                       push: &mut FnMut(Annotatable)) {
     // Get the encompassing item and function declaration for the annotated func.
     let parser = MetaItemParser::new(ecx, meta_item, annotated, &sp);
     let (item, fn_decl) = (parser.expect_item(), parser.expect_fn_decl());
 
     // Parse and retrieve all of the parameters of the route.
-    let route = parser.parse_route(None);
+    let route = parser.parse_route(known_method);
 
     // Get a list of the user declared parameters in `path` and `form`.
     let path_params = extract_params_from_kv(&parser, &route.path);
@@ -221,3 +222,31 @@ pub fn route_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     ).unwrap()));
 }
 
+
+pub fn generic_route_decorator(ecx: &mut ExtCtxt,
+                       sp: Span, meta_item: &MetaItem, annotated: &Annotatable,
+                       push: &mut FnMut(Annotatable)) {
+    route_decorator(None, ecx, sp, meta_item, annotated, push);
+}
+
+macro_rules! method_decorator {
+    ($name:ident, $method:ident) => (
+        pub fn $name(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
+                     annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
+            let mut i_sp = meta_item.span;
+            i_sp.hi = i_sp.lo + BytePos(meta_item.name().len() as u32);
+            let method = Some(span(Method::$method, i_sp));
+            route_decorator(method, ecx, sp, meta_item, annotated, push);
+        }
+    )
+}
+
+method_decorator!(get_decorator, Get);
+method_decorator!(put_decorator, Put);
+method_decorator!(post_decorator, Post);
+method_decorator!(delete_decorator, Delete);
+method_decorator!(options_decorator, Options);
+method_decorator!(head_decorator, Head);
+method_decorator!(trace_decorator, Trace);
+method_decorator!(connect_decorator, Connect);
+method_decorator!(patch_decorator, Patch);
