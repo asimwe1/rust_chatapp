@@ -13,7 +13,7 @@ application:
 extern crate rocket;
 use rocket::Rocket;
 
-#[route(GET, path = "/<name>/<age>")]
+#[GET(path = "/<name>/<age>")]
 fn hello(name: &str, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
