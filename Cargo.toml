@@ -1,0 +1,16 @@
+[workspace]
+members = [
+  "examples/cookies",
+  "examples/errors",
+  "examples/extended_validation",
+  "examples/forms",
+  "examples/hello_person",
+  "examples/hello_query_params",
+  "examples/hello_world",
+  "examples/manual_routes",
+  "examples/optional_redirect",
+  "examples/optional_result",
+  "examples/redirect",
+  "examples/static_files",
+  "examples/todo",
+]
