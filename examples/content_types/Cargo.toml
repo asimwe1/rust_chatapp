@@ -1,0 +1,12 @@
+[package]
+name = "content_types"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_macros = { path = "../../macros" }
+serde = "0.8"
+serde_json = "0.8"
+serde_macros = "0.8"
