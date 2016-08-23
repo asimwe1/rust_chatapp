@@ -8,6 +8,9 @@ use syntax::ptr::P;
 use utils::*;
 use rocket::Method;
 
+#[allow(dead_code)]
+const DEBUG: bool = true;
+
 pub struct MetaItemParser<'a, 'c: 'a> {
     attr_name: &'a str,
     ctxt: &'a ExtCtxt<'c>,
@@ -119,6 +122,7 @@ pub struct RouteParams {
     pub method: Spanned<Method>,
     pub path: KVSpanned<String>,
     pub form: Option<KVSpanned<String>>,
+    pub data: Option<KVSpanned<String>>,
 }
 
 pub trait RouteDecoratorExt {
@@ -169,7 +173,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
 
         // Now grab all of the required and optional parameters.
         let req: [&'static str; 1] = ["path"];
-        let opt: [&'static str; 1] = ["form"];
+        let opt: [&'static str; 2] = ["form", "data"];
         let kv_pairs = get_key_values(self.ctxt, self.meta_item.span,
                                       &req, &opt, kv_params);
 
@@ -179,7 +183,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
         });
 
         // If there's a form parameter, ensure method is POST.
-        let form = kv_pairs.get("form").map_or(None, |f| {
+        let form = kv_pairs.get("form").and_then(|f| {
             if method.node != Method::Post {
                 self.ctxt.span_err(f.p_span, "Use of `form` requires POST method...");
                 let message = format!("...but {} was found instead.", method.node);
@@ -201,10 +205,17 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
             Some(f.clone().map(String::from))
         });
 
+        let data = kv_pairs.get("data").and_then(|data| {
+            Some(data.clone().map(String::from))
+        });
+
+        debug!("Found data: {:?}", data);
+
         RouteParams {
             method: method,
             path: path,
-            form: form
+            form: form,
+            data: data
         }
     }
 
