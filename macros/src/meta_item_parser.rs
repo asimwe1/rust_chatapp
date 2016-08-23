@@ -6,7 +6,7 @@ use syntax::codemap::{Span, Spanned, BytePos};
 use syntax::ptr::P;
 
 use utils::*;
-use rocket::Method;
+use rocket::{Method, ContentType};
 
 #[allow(dead_code)]
 const DEBUG: bool = true;
@@ -122,7 +122,7 @@ pub struct RouteParams {
     pub method: Spanned<Method>,
     pub path: KVSpanned<String>,
     pub form: Option<KVSpanned<String>>,
-    pub content_type: Option<KVSpanned<String>>,
+    pub content_type: Option<KVSpanned<ContentType>>,
 }
 
 pub trait RouteDecoratorExt {
@@ -206,7 +206,18 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
         });
 
         let content_type = kv_pairs.get("content").and_then(|data| {
-            Some(data.clone().map(String::from))
+            if let Ok(ct) = ContentType::from_str(data.node) {
+                if ct.is_ext() {
+                    let msg = format!("'{}' is not a known content-type", data.node);
+                    self.ctxt.span_warn(data.v_span, &msg);
+                }
+
+                Some(data.clone().map(|_| ct))
+            } else {
+                let msg = format!("'{}' is not a valid content-type", data.node);
+                self.ctxt.span_err(data.v_span, &msg);
+                None
+            }
         });
 
         debug!("Found data: {:?}", content_type);

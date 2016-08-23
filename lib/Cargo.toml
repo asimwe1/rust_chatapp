@@ -7,6 +7,7 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 term-painter = "*"
 hyper = "*"
 url = "*"
+mime = "*"
 
 # [dependencies.hyper]
 # git = "https://github.com/hyperium/hyper.git"

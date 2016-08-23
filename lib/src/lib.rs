@@ -4,6 +4,7 @@
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
+extern crate mime;
 
 mod method;
 mod error;
@@ -16,6 +17,7 @@ mod catcher;
 pub mod form;
 pub mod request;
 pub mod response;
+pub mod content_type;
 
 pub mod handler {
     use super::{Request, Response};
@@ -23,6 +25,7 @@ pub mod handler {
     pub type Handler = for<'r> fn(Request<'r>) -> Response<'r>;
 }
 
+pub use content_type::ContentType;
 pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;
 pub use method::Method;

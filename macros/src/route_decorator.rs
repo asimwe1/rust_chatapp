@@ -217,7 +217,11 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
             ::rocket::StaticRouteInfo {
                 method: $method,
                 path: $path,
-                handler: $route_fn_name
+                handler: $route_fn_name,
+                content_type: ::rocket::ContentType(
+                    ::rocket::content_type::TopLevel::Star,
+                    ::rocket::content_type::SubLevel::Star,
+                    None)
             };
     ).unwrap()));
 }

@@ -1,10 +1,11 @@
-use method::Method;
-use handler::Handler;
+use ::{Method, Handler};
+use content_type::ContentType;
 
 pub struct StaticRouteInfo {
     pub method: Method,
     pub path: &'static str,
-    pub handler: Handler
+    pub content_type: ContentType,
+    pub handler: Handler,
 }
 
 pub struct StaticCatchInfo {

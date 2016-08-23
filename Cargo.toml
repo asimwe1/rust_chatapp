@@ -13,4 +13,5 @@ members = [
   "examples/redirect",
   "examples/static_files",
   "examples/todo",
+  "examples/content_types",
 ]

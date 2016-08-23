@@ -1,9 +1,10 @@
+use ::{Method, Handler, StaticRouteInfo};
+use content_type::ContentType;
+use super::{Collider, URI, URIBuf}; // :D
+
 use term_painter::ToStyle;
 use term_painter::Color::*;
-use method::Method;
-use super::{Collider, URI, URIBuf}; // :D
-use handler::Handler;
-use codegen::StaticRouteInfo;
+
 use std::fmt;
 use std::convert::From;
 
@@ -11,17 +12,19 @@ pub struct Route {
     pub method: Method,
     pub handler: Handler,
     pub path: URIBuf,
-    pub rank: isize
+    pub rank: isize,
+    pub content_type: ContentType,
 }
 
 impl Route {
-    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler)
+    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler, t: ContentType)
             -> Route where S: AsRef<str> {
         Route {
             method: m,
             path: URIBuf::from(path.as_ref()),
             handler: handler,
-            rank: rank
+            rank: rank,
+            content_type: t,
         }
     }
 
@@ -32,6 +35,7 @@ impl Route {
             handler: handler,
             rank: (!path.as_ref().contains('<') as isize),
             path: URIBuf::from(path.as_ref()),
+            content_type: ContentType::any(),
         }
     }
 
