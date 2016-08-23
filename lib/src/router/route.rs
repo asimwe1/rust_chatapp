@@ -17,7 +17,7 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler, t: ContentType)
+    pub fn full<S>(rank: isize, m: Method, path: S, handler: Handler, t: ContentType)
             -> Route where S: AsRef<str> {
         Route {
             method: m,
@@ -25,6 +25,17 @@ impl Route {
             handler: handler,
             rank: rank,
             content_type: t,
+        }
+    }
+
+    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler)
+            -> Route where S: AsRef<str> {
+        Route {
+            method: m,
+            path: URIBuf::from(path.as_ref()),
+            handler: handler,
+            rank: rank,
+            content_type: ContentType::any(),
         }
     }
 
