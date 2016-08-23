@@ -122,7 +122,7 @@ pub struct RouteParams {
     pub method: Spanned<Method>,
     pub path: KVSpanned<String>,
     pub form: Option<KVSpanned<String>>,
-    pub data: Option<KVSpanned<String>>,
+    pub content_type: Option<KVSpanned<String>>,
 }
 
 pub trait RouteDecoratorExt {
@@ -173,7 +173,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
 
         // Now grab all of the required and optional parameters.
         let req: [&'static str; 1] = ["path"];
-        let opt: [&'static str; 2] = ["form", "data"];
+        let opt: [&'static str; 2] = ["form", "content"];
         let kv_pairs = get_key_values(self.ctxt, self.meta_item.span,
                                       &req, &opt, kv_params);
 
@@ -205,17 +205,17 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
             Some(f.clone().map(String::from))
         });
 
-        let data = kv_pairs.get("data").and_then(|data| {
+        let content_type = kv_pairs.get("content").and_then(|data| {
             Some(data.clone().map(String::from))
         });
 
-        debug!("Found data: {:?}", data);
+        debug!("Found data: {:?}", content_type);
 
         RouteParams {
             method: method,
             path: path,
             form: form,
-            data: data
+            content_type: content_type,
         }
     }
 
