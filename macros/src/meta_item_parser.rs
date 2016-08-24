@@ -107,7 +107,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         if param.len() == 0 {
             self.ctxt.span_err(param_span, "Parameter names cannot be empty.");
             None
-        } else if param.contains(|c: char| !c.is_alphanumeric()) {
+        } else if param.contains(char::is_alphanumeric) {
             self.ctxt.span_err(param_span, "Parameters must be alphanumeric.");
             None
         } else {
@@ -206,6 +206,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
         });
 
         let content_type = kv_pairs.get("content").and_then(|data| {
+            debug!("Found data: {:?}", content_type);
             if let Ok(ct) = ContentType::from_str(data.node) {
                 if ct.is_ext() {
                     let msg = format!("'{}' is not a known content-type", data.node);
@@ -220,7 +221,6 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
             }
         });
 
-        debug!("Found data: {:?}", content_type);
 
         RouteParams {
             method: method,
