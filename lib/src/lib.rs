@@ -5,6 +5,14 @@ extern crate term_painter;
 extern crate hyper;
 extern crate url;
 extern crate mime;
+#[macro_use] extern crate log;
+
+#[macro_use]
+pub mod logger;
+pub mod form;
+pub mod request;
+pub mod response;
+pub mod content_type;
 
 mod method;
 mod error;
@@ -14,17 +22,13 @@ mod rocket;
 mod codegen;
 mod catcher;
 
-pub mod form;
-pub mod request;
-pub mod response;
-pub mod content_type;
-
 pub mod handler {
     use super::{Request, Response};
 
     pub type Handler = for<'r> fn(Request<'r>) -> Response<'r>;
 }
 
+pub use logger::RocketLogger;
 pub use content_type::ContentType;
 pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;

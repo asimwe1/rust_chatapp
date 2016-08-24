@@ -6,8 +6,6 @@ pub use self::collider::Collider;
 pub use self::uri::{URI, URIBuf};
 pub use self::route::Route;
 
-use term_painter::ToStyle;
-use term_painter::Color::*;
 use std::collections::hash_map::HashMap;
 use method::Method;
 
@@ -40,7 +38,7 @@ impl Router {
         let num_segments = path.segment_count();
         if let Some(routes) = self.routes.get(&(method, num_segments)) {
             for route in routes.iter().filter(|r| r.collides_with(uri)) {
-                println!("\t=> {} {}", Magenta.paint("Matched:"), route);
+                info_!("Matched: {}", route);
                 if let Some(existing_route) = matched_route {
                     if route.rank > existing_route.rank {
                         matched_route = Some(route);
@@ -61,9 +59,7 @@ impl Router {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
                         result = true;
-                        println!("{} {} and {} collide!",
-                            Yellow.bold().paint("Warning:"),
-                            a_route, b_route);
+                        warn!("{} and {} collide!", a_route, b_route);
                     }
                 }
             }

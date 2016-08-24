@@ -13,9 +13,6 @@ use syntax::parse::token::{self, str_to_ident};
 
 use rocket::Method;
 
-#[allow(dead_code)]
-const DEBUG: bool = true;
-
 pub fn extract_params_from_kv<'a>(parser: &MetaItemParser,
                     params: &'a KVSpanned<String>) -> Vec<Spanned<&'a str>> {
     let mut param_span = params.v_span;
@@ -100,7 +97,7 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<UserParam>,
                 match ::rocket::form::FromForm::from_form_string(form_string) {
                     Ok(v) => v,
                     Err(_) => {
-                        println!("\t=> Form failed to parse.");
+                        debug!("\t=> Form failed to parse.");
                         return ::rocket::Response::not_found();
                     }
                 }
@@ -182,7 +179,7 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                             // TODO: Add some kind of loggin facility in Rocket
                             // to get the formatting right (IE, so it idents
                             // correctly).
-                            println!("Failed to parse: {:?}", e);
+                            denig!("Failed to parse: {:?}", e);
                             return ::rocket::Response::forward();
                         }
                     };

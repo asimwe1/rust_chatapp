@@ -2,6 +2,7 @@
 #![feature(quote, concat_idents, plugin_registrar, rustc_private)]
 
 #[macro_use] extern crate syntax;
+#[macro_use] extern crate log;
 extern crate syntax_ext;
 extern crate rustc;
 extern crate rustc_plugin;

@@ -12,8 +12,6 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-const DEBUG: bool = true;
-
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
 static PRIVATE_LIFETIME: &'static str = "'rocket";

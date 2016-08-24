@@ -199,11 +199,11 @@ mod tests {
         let actual = URI::new(path).segment_count();
         let actual_buf = URIBuf::from(path).segment_count();
         if actual != expected || actual_buf != expected {
-            println!("Count mismatch: expected {}, got {}.", expected, actual);
-            println!("{}", if actual != expected { "lifetime" } else { "buf" });
-            println!("Segments (for {}):", path);
+            trace_!("Count mismatch: expected {}, got {}.", expected, actual);
+            trace_!("{}", if actual != expected { "lifetime" } else { "buf" });
+            trace_!("Segments (for {}):", path);
             for (i, segment) in URI::new(path).segments().enumerate() {
-                println!("\t{}: {}", i, segment);
+                trace_!("{}: {}", i, segment);
             }
         }
 

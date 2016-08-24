@@ -5,6 +5,7 @@ use catcher;
 
 use std::io::Read;
 use std::collections::HashMap;
+
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
@@ -41,7 +42,7 @@ fn method_is_valid(method: &HyperMethod) -> bool {
 impl HyperHandler for Rocket {
     fn handle<'a, 'k>(&'a self, req: HyperRequest<'a, 'k>,
             mut res: FreshHyperResponse<'a>) {
-        println!("{:?} '{}'", Green.paint(&req.method), Blue.paint(&req.uri));
+        info!("{:?} '{}':", Green.paint(&req.method), Blue.paint(&req.uri));
 
         let finalize = |mut req: HyperRequest, _res: FreshHyperResponse| {
             let mut buf = vec![];
@@ -50,17 +51,16 @@ impl HyperHandler for Rocket {
         };
 
         if !uri_is_absolute(&req.uri) {
-            println!("{}", Red.paint("\t=> Internal failure. Bad URI."));
-            println!("{} {:?}", Yellow.paint("\t=> Debug:"), req.uri);
+            error_!("Internal failure. Bad URI.");
+            debug_!("Debug: {}", req.uri);
             return finalize(req, res);
         }
 
         if !method_is_valid(&req.method) {
-            println!("{}", Yellow.paint("\t=> Internal failure. Bad method."));
-            println!("{} {:?}", Yellow.paint("\t=> Debug:"), req.method);
+            error_!("Internal failure. Bad method.");
+            debug_!("Method: {}", req.method);
             return finalize(req, res);
         }
-
 
         res.headers_mut().set(response::header::Server("rocket".to_string()));
         self.dispatch(req, res)
@@ -82,7 +82,7 @@ impl Rocket {
 
         // A closure which we call when we know there is no route.
         let handle_not_found = |response: FreshHyperResponse| {
-            println!("{}", Red.paint("\t<= Dispatch failed. Returning 404."));
+            error_!("Dispatch failed. Returning 404.");
 
             let request = Request::new(&req.headers, method, uri, None, &buf);
             let catcher = self.catchers.get(&404).unwrap();
@@ -91,7 +91,7 @@ impl Rocket {
 
         // No route found. Handle the not_found error and return.
         if route.is_none() {
-            println!("{}", Red.paint("\t=> No matching routes."));
+            error_!("No matching routes.");
             return handle_not_found(res);
         }
 
@@ -100,14 +100,15 @@ impl Rocket {
         let params = route.get_params(uri);
         let request = Request::new(&req.headers, method, uri, Some(params), &buf);
 
-        println!("\t=> {}", Magenta.paint("Dispatching request."));
+        // TODO: Paint these magenta.
+        trace_!("Dispatching request.");
         let outcome = (route.handler)(request).respond(res);
 
         // TODO: keep trying lower ranked routes before dispatching a not found
         // error.
-        println!("\t=> {} {}", White.paint("Outcome:"), outcome);
+        info_!("{} {}", White.paint("Outcome:"), outcome);
         outcome.map_forward(|res| {
-            println!("{}", Red.paint("\t=> No further matching routes."));
+            error_!("No further matching routes.");
             // TODO: Have some way to know why this was failed forward. Use that
             // instead of always using an unchained error.
             handle_not_found(res);
@@ -115,6 +116,9 @@ impl Rocket {
     }
 
     pub fn new(address: &'static str, port: isize) -> Rocket {
+        // FIXME: Allow user to override level/disable logging.
+        logger::init(logger::Level::Normal);
+
         Rocket {
             address: address,
             port: port,
@@ -125,12 +129,12 @@ impl Rocket {
 
     pub fn mount(&mut self, base: &'static str, routes: Vec<Route>)
             -> &mut Self {
-        println!("🛰  {} '{}':", Magenta.paint("Mounting"), Blue.paint(base));
+        info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());
             route.set_path(path);
 
-            println!("\t* {}", route);
+            info_!("{}", route);
             self.router.add(route);
         }
 
@@ -138,14 +142,14 @@ impl Rocket {
     }
 
     pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
-        println!("👾  {}:", Magenta.paint("Catchers"));
+        info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.contains_key(&c.code) &&
                     !self.catchers.get(&c.code).unwrap().is_default() {
                 let msg = format!("warning: overrides {} catcher!", c.code);
-                println!("\t* {} ({})", c, Yellow.paint(msg.as_str()));
+                info_!("{} ({})", c, Yellow.paint(msg.as_str()));
             } else {
-                println!("\t* {}", c);
+                info_!("{}", c);
             }
 
             self.catchers.insert(c.code, c);
@@ -156,11 +160,11 @@ impl Rocket {
 
     pub fn launch(self) {
         if self.router.has_collisions() {
-            println!("{}", Yellow.paint("Warning: route collisions detected!"));
+            warn!("Route collisions detected!");
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
-        println!("🚀  {} {}...", White.paint("Rocket has launched from"),
+        info!("🚀  {} {}...", White.paint("Rocket has launched from"),
             White.bold().paint(&full_addr));
         let _ = HyperServer::http(full_addr.as_str()).unwrap().handle(self);
     }

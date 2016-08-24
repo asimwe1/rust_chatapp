@@ -53,7 +53,7 @@ impl Responder for File {
 impl<T: Responder> Responder for Option<T> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         if self.is_none() {
-            println!("Option is none.");
+            trace!("Option is none.");
             // TODO: Should this be a 404 or 500?
             return Outcome::FailForward(res);
         }
@@ -67,7 +67,7 @@ impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
     default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>)
             -> Outcome<'a> {
         if self.is_err() {
-            println!("Error: {:?}", self.as_ref().err().unwrap());
+            error_!("{:?}", self.as_ref().err().unwrap());
             // TODO: Should this be a 404 or 500?
             return Outcome::FailForward(res);
         }

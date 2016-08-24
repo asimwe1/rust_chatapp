@@ -13,16 +13,6 @@ use syntax::ptr::P;
 
 use std::collections::{HashSet, HashMap};
 
-macro_rules! debug {
-    ($($message:tt)*) => ({
-        if DEBUG {
-            println!("{}:{}", file!(), line!());
-            println!($($message)*);
-            println!("");
-        }
-    })
-}
-
 pub fn prepend_ident<T: ToString>(other: T, ident: &Ident) -> Ident {
     let mut new_ident = other.to_string();
     new_ident.push_str(ident.name.to_string().as_str());

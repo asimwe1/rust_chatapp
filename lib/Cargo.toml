@@ -5,6 +5,7 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [dependencies]
 term-painter = "*"
+log = "*"
 hyper = "*"
 url = "*"
 mime = "*"

@@ -206,7 +206,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
         });
 
         let content_type = kv_pairs.get("content").and_then(|data| {
-            debug!("Found data: {:?}", content_type);
+            debug!("Found data: {:?}", data);
             if let Ok(ct) = ContentType::from_str(data.node) {
                 if ct.is_ext() {
                     let msg = format!("'{}' is not a known content-type", data.node);
