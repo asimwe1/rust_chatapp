@@ -8,3 +8,5 @@ plugin = true
 
 [dependencies]
 rocket = { path = "../lib/" }
+log = "*"
+env_logger = "*"

@@ -7,9 +7,6 @@ use syntax::ast::{MetaItem};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{item_to_string};
 
-#[allow(dead_code)]
-const DEBUG: bool = true;
-
 #[derive(Debug)]
 struct Params {
     code: KVSpanned<u16>,
@@ -58,10 +55,11 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let catch_fn_name = prepend_ident(CATCH_FN_PREFIX, &item.ident);
     let catch_code = error_params.code.node;
     let catch_fn_item = quote_item!(ecx,
-         fn $catch_fn_name<'rocket>(_req: rocket::Request<'rocket>)
-                -> rocket::Response<'rocket> {
+         fn $catch_fn_name<'rocket>(err: ::rocket::Error,
+                                    req: &'rocket ::rocket::Request<'rocket>)
+                -> ::rocket::Response<'rocket> {
              // TODO: Figure out what type signature of catcher should be.
-             let result = $fn_name(RoutingError::unchained(_req));
+             let result = $fn_name(err, req);
              rocket::Response::with_raw_status($catch_code, result)
          }
     ).unwrap();

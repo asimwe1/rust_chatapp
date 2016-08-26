@@ -1,4 +1,4 @@
-use ::{Method, Handler};
+use ::{Method, Handler, ErrorHandler};
 use content_type::ContentType;
 
 pub struct StaticRouteInfo {
@@ -10,6 +10,6 @@ pub struct StaticRouteInfo {
 
 pub struct StaticCatchInfo {
     pub code: u16,
-    pub handler: Handler
+    pub handler: ErrorHandler
 }
 

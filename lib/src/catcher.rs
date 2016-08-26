@@ -1,7 +1,8 @@
-use handler::Handler;
+use handler::ErrorHandler;
 use response::Response;
-use error::RoutingError;
 use codegen::StaticCatchInfo;
+use error::Error;
+use request::Request;
 
 use std::fmt;
 use term_painter::ToStyle;
@@ -9,7 +10,7 @@ use term_painter::Color::*;
 
 pub struct Catcher {
     pub code: u16,
-    handler: Handler,
+    handler: ErrorHandler,
     is_default: bool
 }
 
@@ -18,15 +19,15 @@ pub struct Catcher {
 // interface here?
 
 impl Catcher {
-    pub fn new(code: u16, handler: Handler) -> Catcher {
+    pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher::new_with_default(code, handler, false)
     }
 
-    pub fn handle<'a>(&'a self, error: RoutingError<'a>) -> Response {
-        (self.handler)(error.request)
+    pub fn handle<'r>(&self, error: Error, request: &'r Request<'r>) -> Response<'r> {
+        (self.handler)(error, request)
     }
 
-    fn new_with_default(code: u16, handler: Handler, default: bool) -> Catcher {
+    fn new_with_default(code: u16, handler: ErrorHandler, default: bool) -> Catcher {
         Catcher {
             code: code,
             handler: handler,
@@ -55,9 +56,10 @@ pub mod defaults {
     use request::Request;
     use response::{StatusCode, Response};
     use super::Catcher;
+    use error::Error;
 	use std::collections::HashMap;
 
-    pub fn not_found(_request: Request) -> Response {
+    pub fn not_found<'r>(_error: Error, _request: &'r Request<'r>) -> Response<'r> {
         Response::with_status(StatusCode::NotFound, "\
 			<head>\
   				<meta charset=\"utf-8\">\
@@ -72,7 +74,8 @@ pub mod defaults {
         ")
     }
 
-    pub fn internal_error(_request: Request) -> Response {
+    pub fn internal_error<'r>(_error: Error, _request: &'r Request<'r>)
+        -> Response<'r> {
         Response::with_status(StatusCode::InternalServerError, "\
 			<head>\
   				<meta charset=\"utf-8\">\

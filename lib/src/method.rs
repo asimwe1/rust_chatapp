@@ -30,7 +30,7 @@ impl Method {
             HyperMethod::Trace => Some(Trace),
             HyperMethod::Connect => Some(Connect),
             HyperMethod::Patch => Some(Patch),
-            _ => None
+            HyperMethod::Extension(_) => None
         }
     }
 }
@@ -49,7 +49,7 @@ impl FromStr for Method {
             "TRACE" => Ok(Trace),
             "CONNECT" => Ok(Connect),
             "PATCH" => Ok(Patch),
-            _ => Err(Error::BadMethod)
+            _ => Err(Error::BadMethod),
         }
     }
 }

@@ -23,9 +23,10 @@ mod codegen;
 mod catcher;
 
 pub mod handler {
-    use super::{Request, Response};
+    use super::{Request, Response, Error};
 
-    pub type Handler = for<'r> fn(Request<'r>) -> Response<'r>;
+    pub type Handler = for<'r> fn(&'r Request<'r>) -> Response<'r>;
+    pub type ErrorHandler = for<'r> fn(error: Error, &'r Request<'r>) -> Response<'r>;
 }
 
 pub use logger::RocketLogger;
@@ -34,9 +35,9 @@ pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;
 pub use method::Method;
 pub use response::{Response, Responder};
-pub use error::{Error, RoutingError};
+pub use error::Error;
 pub use param::FromParam;
 pub use router::{Router, Route};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
-pub use handler::Handler;
+pub use handler::{Handler, ErrorHandler};

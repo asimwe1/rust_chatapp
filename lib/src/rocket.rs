@@ -28,20 +28,13 @@ fn uri_is_absolute(uri: &HyperRequestUri) -> bool {
     }
 }
 
-fn unwrap_absolute_path(uri: &HyperRequestUri) -> &str {
-    match *uri {
-        HyperRequestUri::AbsolutePath(ref s) => s.as_str(),
-        _ => panic!("Can only accept absolute paths!")
-    }
-}
-
 fn method_is_valid(method: &HyperMethod) -> bool {
     Method::from_hyp(method).is_some()
 }
 
 impl HyperHandler for Rocket {
-    fn handle<'a, 'k>(&'a self, req: HyperRequest<'a, 'k>,
-            mut res: FreshHyperResponse<'a>) {
+    fn handle<'h, 'k>(&self, req: HyperRequest<'h, 'k>,
+            mut res: FreshHyperResponse<'h>) {
         info!("{:?} '{}':", Green.paint(&req.method), Blue.paint(&req.uri));
 
         let finalize = |mut req: HyperRequest, _res: FreshHyperResponse| {
@@ -68,51 +61,38 @@ impl HyperHandler for Rocket {
 }
 
 impl Rocket {
-    fn dispatch<'h, 'k>(&self, mut req: HyperRequest<'h, 'k>,
+    fn dispatch<'h, 'k>(&self, hyper_req: HyperRequest<'h, 'k>,
                         res: FreshHyperResponse<'h>) {
-        // We read all of the contents now because we have to do it at some
-        // point thanks to Hyper. FIXME: Simple DOS attack here.
-        let mut buf = vec![];
-        let _ = req.read_to_end(&mut buf);
+        let req = Request::from(hyper_req);
+        let route = self.router.route(&req);
+        if let Some(route) = route {
+            // Retrieve and set the requests parameters.
+            req.set_params(&route);
 
-        // Extract the method, uri, and try to find a route.
-        let method = Method::from_hyp(&req.method).unwrap();
-        let uri = unwrap_absolute_path(&req.uri);
-        let route = self.router.route(method, uri);
+            // Here's the magic: dispatch the request to the handler.
+            let outcome = (route.handler)(&req).respond(res);
+            info_!("{} {}", White.paint("Outcome:"), outcome);
 
-        // A closure which we call when we know there is no route.
-        let handle_not_found = |response: FreshHyperResponse| {
-            error_!("Dispatch failed. Returning 404.");
-
-            let request = Request::new(&req.headers, method, uri, None, &buf);
-            let catcher = self.catchers.get(&404).unwrap();
-            catcher.handle(RoutingError::unchained(request)).respond(response);
-        };
-
-        // No route found. Handle the not_found error and return.
-        if route.is_none() {
+            // // TODO: keep trying lower ranked routes before dispatching a not
+            // // found error.
+            // outcome.map_forward(|res| {
+            //     error_!("No further matching routes.");
+            //     // TODO: Have some way to know why this was failed forward. Use that
+            //     // instead of always using an unchained error.
+            //     self.handle_not_found(req, res);
+            // });
+        } else {
             error_!("No matching routes.");
-            return handle_not_found(res);
+            return self.handle_not_found(&req, res);
         }
+    }
 
-        // Okay, we've got a route. Unwrap it, generate a request, and dispatch.
-        let route = route.unwrap();
-        let params = route.get_params(uri);
-        let request = Request::new(&req.headers, method, uri, Some(params), &buf);
-
-        // TODO: Paint these magenta.
-        trace_!("Dispatching request.");
-        let outcome = (route.handler)(request).respond(res);
-
-        // TODO: keep trying lower ranked routes before dispatching a not found
-        // error.
-        info_!("{} {}", White.paint("Outcome:"), outcome);
-        outcome.map_forward(|res| {
-            error_!("No further matching routes.");
-            // TODO: Have some way to know why this was failed forward. Use that
-            // instead of always using an unchained error.
-            handle_not_found(res);
-        });
+    // A closure which we call when we know there is no route.
+    fn handle_not_found<'r>(&self, request: &'r Request<'r>,
+                            response: FreshHyperResponse) {
+        error_!("Dispatch failed. Returning 404.");
+        let catcher = self.catchers.get(&404).unwrap();
+        catcher.handle(Error::NoRoute, request).respond(response);
     }
 
     pub fn new(address: &'static str, port: isize) -> Rocket {

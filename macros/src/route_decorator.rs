@@ -11,7 +11,8 @@ use syntax::ptr::P;
 use syntax::print::pprust::{item_to_string, stmt_to_string};
 use syntax::parse::token::{self, str_to_ident};
 
-use rocket::Method;
+use rocket::{Method, ContentType};
+use rocket::content_type::{TopLevel, SubLevel};
 
 pub fn extract_params_from_kv<'a>(parser: &MetaItemParser,
                     params: &'a KVSpanned<String>) -> Vec<Spanned<&'a str>> {
@@ -93,11 +94,12 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<UserParam>,
     // The actual code we'll be inserting.
     quote_stmt!(ecx,
         let $param_ident: $param_ty =
-            if let Ok(form_string) = ::std::str::from_utf8(_req.data) {
+            if let Ok(form_string) = ::std::str::from_utf8(_req.data.as_slice()) {
                 match ::rocket::form::FromForm::from_form_string(form_string) {
                     Ok(v) => v,
                     Err(_) => {
-                        debug!("\t=> Form failed to parse.");
+                        // TODO:
+                        // debug!("\t=> Form failed to parse.");
                         return ::rocket::Response::not_found();
                     }
                 }
@@ -107,9 +109,9 @@ fn get_form_stmt(ecx: &ExtCtxt, fn_args: &mut Vec<UserParam>,
     )
 }
 
-// Is there a better way to do this? I need something with ToTokens for the
-// quote_expr macro that builds the route struct. I tried using
-// str_to_ident("rocket::Method::Options"), but this seems to miss the context,
+// TODO: Is there a better way to do this? I need something with ToTokens for
+// the quote_expr macro that builds the route struct. I tried using
+// str_to_ident("::rocket::Method::Options"), but this seems to miss the context,
 // and you get an 'ident not found' on compile. I also tried using the path expr
 // builder from ASTBuilder: same thing.
 fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
@@ -126,10 +128,61 @@ fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> P<Expr> {
     }
 }
 
+// Same here.
+fn top_level_to_expr(ecx: &ExtCtxt, level: &TopLevel) -> P<Expr> {
+    use rocket::content_type::TopLevel::*;
+    match *level {
+        Star => quote_expr!(ecx, ::rocket::content_type::TopLevel::Star),
+        Text => quote_expr!(ecx, ::rocket::content_type::TopLevel::Text),
+        Image => quote_expr!(ecx, ::rocket::content_type::TopLevel::Image),
+        Audio => quote_expr!(ecx, ::rocket::content_type::TopLevel::Audio),
+        Video => quote_expr!(ecx, ::rocket::content_type::TopLevel::Video),
+        Application => quote_expr!(ecx, ::rocket::content_type::TopLevel::Application),
+        Multipart => quote_expr!(ecx, ::rocket::content_type::TopLevel::Multipart),
+        Message => quote_expr!(ecx, ::rocket::content_type::TopLevel::Message),
+        Model => quote_expr!(ecx, ::rocket::content_type::TopLevel::Model),
+        Ext(ref s) => quote_expr!(ecx, ::rocket::content_type::TopLevel::Ext($s)),
+    }
+}
+
+// Same here.
+fn sub_level_to_expr(ecx: &ExtCtxt, level: &SubLevel) -> P<Expr> {
+    use rocket::content_type::SubLevel::*;
+    match *level {
+        Star => quote_expr!(ecx, ::rocket::content_type::SubLevel::Star),
+        Plain => quote_expr!(ecx, ::rocket::content_type::SubLevel::Plain),
+        Html => quote_expr!(ecx, ::rocket::content_type::SubLevel::Html),
+        Xml => quote_expr!(ecx, ::rocket::content_type::SubLevel::Xml),
+        Javascript => quote_expr!(ecx, ::rocket::content_type::SubLevel::Javascript),
+        Css => quote_expr!(ecx, ::rocket::content_type::SubLevel::Css),
+        EventStream => quote_expr!(ecx, ::rocket::content_type::SubLevel::EventStream),
+        Json => quote_expr!(ecx, ::rocket::content_type::SubLevel::Json),
+        WwwFormUrlEncoded =>
+            quote_expr!(ecx, ::rocket::content_type::SubLevel::WwwFormUrlEncoded),
+        Msgpack => quote_expr!(ecx, ::rocket::content_type::SubLevel::Msgpack),
+        OctetStream =>
+            quote_expr!(ecx, ::rocket::content_type::SubLevel::OctetStream),
+        FormData => quote_expr!(ecx, ::rocket::content_type::SubLevel::FormData),
+        Png => quote_expr!(ecx, ::rocket::content_type::SubLevel::Png),
+        Gif => quote_expr!(ecx, ::rocket::content_type::SubLevel::Gif),
+        Bmp => quote_expr!(ecx, ::rocket::content_type::SubLevel::Bmp),
+        Jpeg => quote_expr!(ecx, ::rocket::content_type::SubLevel::Jpeg),
+        Ext(ref s) => quote_expr!(ecx, ::rocket::content_type::SubLevel::Ext($s)),
+    }
+}
+
+fn content_type_to_expr(ecx: &ExtCtxt, content_type: &ContentType) -> P<Expr> {
+    let top_level = top_level_to_expr(ecx, &content_type.0);
+    let sub_level = sub_level_to_expr(ecx, &content_type.1);
+    quote_expr!(ecx, ::rocket::ContentType($top_level, $sub_level, None))
+}
+
 // FIXME: Compilation fails when parameters have the same name as the function!
 pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                        sp: Span, meta_item: &MetaItem, annotated: &Annotatable,
                        push: &mut FnMut(Annotatable)) {
+    ::rocket::logger::init(::rocket::logger::Level::Debug);
+
     // Get the encompassing item and function declaration for the annotated func.
     let parser = MetaItemParser::new(ecx, meta_item, annotated, &sp);
     let (item, fn_decl) = (parser.expect_item(), parser.expect_fn_decl());
@@ -186,14 +239,14 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                 ).unwrap()
             };
 
-        debug!("Param FN: {:?}", stmt_to_string(&param_fn_item));
+        debug!("Param FN: {}", stmt_to_string(&param_fn_item));
         fn_param_exprs.push(param_fn_item);
     }
 
     let route_fn_name = prepend_ident(ROUTE_FN_PREFIX, &item.ident);
     let fn_name = item.ident;
     let route_fn_item = quote_item!(ecx,
-         fn $route_fn_name<'rocket>(_req: ::rocket::Request<'rocket>)
+         fn $route_fn_name<'rocket>(_req: &'rocket ::rocket::Request<'rocket>)
                 -> ::rocket::Response<'rocket> {
              $form_stmt
              $fn_param_exprs
@@ -208,19 +261,21 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
     let struct_name = prepend_ident(ROUTE_STRUCT_PREFIX, &item.ident);
     let path = &route.path.node;
     let method = method_variant_to_expr(ecx, route.method.node);
-    push(Annotatable::Item(quote_item!(ecx,
+    let content_type = content_type_to_expr(ecx, &route.content_type.node);
+
+    let static_item = quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,
-                content_type: ::rocket::ContentType(
-                    ::rocket::content_type::TopLevel::Star,
-                    ::rocket::content_type::SubLevel::Star,
-                    None)
+                content_type: $content_type,
             };
-    ).unwrap()));
+    ).unwrap();
+
+    debug!("Emitting static: {}", item_to_string(&static_item));
+    push(Annotatable::Item(static_item));
 }
 
 

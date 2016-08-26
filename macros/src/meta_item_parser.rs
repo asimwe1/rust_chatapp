@@ -8,9 +8,6 @@ use syntax::ptr::P;
 use utils::*;
 use rocket::{Method, ContentType};
 
-#[allow(dead_code)]
-const DEBUG: bool = true;
-
 pub struct MetaItemParser<'a, 'c: 'a> {
     attr_name: &'a str,
     ctxt: &'a ExtCtxt<'c>,
@@ -122,7 +119,7 @@ pub struct RouteParams {
     pub method: Spanned<Method>,
     pub path: KVSpanned<String>,
     pub form: Option<KVSpanned<String>>,
-    pub content_type: Option<KVSpanned<ContentType>>,
+    pub content_type: KVSpanned<ContentType>,
 }
 
 pub trait RouteDecoratorExt {
@@ -219,8 +216,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
                 self.ctxt.span_err(data.v_span, &msg);
                 None
             }
-        });
-
+        }).unwrap_or(KVSpanned::dummy(ContentType::any()));
 
         RouteParams {
             method: method,

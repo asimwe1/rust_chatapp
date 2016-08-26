@@ -45,10 +45,12 @@ mod tests {
     use Method;
     use Method::*;
     use {Request, Response};
+    use content_type::{ContentType, TopLevel, SubLevel};
+    use std::str::FromStr;
 
     type SimpleRoute = (Method, &'static str);
 
-    fn dummy_handler(_req: Request) -> Response<'static> {
+    fn dummy_handler(_req: &Request) -> Response<'static> {
         Response::empty()
     }
 
@@ -182,5 +184,53 @@ mod tests {
         assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
         assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
+    }
+
+    fn ct_route(m: Method, s: &str, ct: &str) -> Route {
+        let mut route_a = Route::new(m, s, dummy_handler);
+        route_a.content_type = ContentType::from_str(ct).expect("Whoops!");
+        route_a
+    }
+
+    fn ct_ct_collide(ct1: &str, ct2: &str) -> bool {
+        let ct_a = ContentType::from_str(ct1).expect(ct1);
+        let ct_b = ContentType::from_str(ct2).expect(ct2);
+        ct_a.collides_with(&ct_b)
+    }
+
+    #[test]
+    fn test_content_type_colliions() {
+        assert!(ct_ct_collide("application/json", "application/json"));
+        assert!(ct_ct_collide("*/json", "application/json"));
+        assert!(ct_ct_collide("*/*", "application/json"));
+        assert!(ct_ct_collide("application/*", "application/json"));
+        assert!(ct_ct_collide("application/*", "*/json"));
+        assert!(ct_ct_collide("something/random", "something/random"));
+
+        assert!(!ct_ct_collide("text/*", "application/*"));
+        assert!(!ct_ct_collide("*/text", "*/json"));
+        assert!(!ct_ct_collide("*/text", "application/test"));
+        assert!(!ct_ct_collide("something/random", "something_else/random"));
+        assert!(!ct_ct_collide("something/random", "*/else"));
+        assert!(!ct_ct_collide("*/random", "*/else"));
+        assert!(!ct_ct_collide("something/*", "random/else"));
+    }
+
+    fn r_ct_ct_collide(m1: Method, ct1: &str, m2: Method, ct2: &str) -> bool {
+        let a_route = ct_route(m1, "a", ct1);
+        let b_route = ct_route(m2, "a", ct2);
+        a_route.collides_with(&b_route)
+    }
+
+    #[test]
+    fn test_route_content_type_colliions() {
+        assert!(r_ct_ct_collide(Get, "application/json", Get, "application/json"));
+        assert!(r_ct_ct_collide(Get, "*/json", Get, "application/json"));
+        assert!(r_ct_ct_collide(Get, "*/json", Get, "application/*"));
+        assert!(r_ct_ct_collide(Get, "text/html", Get, "text/*"));
+
+        assert!(!r_ct_ct_collide(Get, "text/html", Get, "application/*"));
+        assert!(!r_ct_ct_collide(Get, "application/html", Get, "text/*"));
+        assert!(!r_ct_ct_collide(Get, "*/json", Get, "text/html"));
     }
 }

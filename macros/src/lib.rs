@@ -7,6 +7,7 @@ extern crate syntax_ext;
 extern crate rustc;
 extern crate rustc_plugin;
 extern crate rocket;
+extern crate env_logger;
 
 #[macro_use] mod utils;
 mod routes_macro;

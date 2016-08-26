@@ -8,6 +8,7 @@ pub use self::route::Route;
 
 use std::collections::hash_map::HashMap;
 use method::Method;
+use request::Request;
 
 type Selector = (Method, usize);
 
@@ -31,13 +32,15 @@ impl Router {
     // `Route` structure is inflexible. Have it be an associated type.
     // FIXME: Figure out a way to get more than one route, i.e., to correctly
     // handle ranking.
-    pub fn route<'b>(&'b self, method: Method, uri: &str) -> Option<&'b Route> {
-        let mut matched_route: Option<&Route> = None;
+    // TODO: Should the Selector include the content-type? If it does, can't
+    // warn the user that a match was found for the wrong content-type. It
+    // doesn't, can, but this method is slower.
+    pub fn route<'b>(&'b self, req: &Request) -> Option<&'b Route> {
+        let num_segments = req.uri.segment_count();
 
-        let path = URI::new(uri);
-        let num_segments = path.segment_count();
-        if let Some(routes) = self.routes.get(&(method, num_segments)) {
-            for route in routes.iter().filter(|r| r.collides_with(uri)) {
+        let mut matched_route: Option<&Route> = None;
+        if let Some(routes) = self.routes.get(&(req.method, num_segments)) {
+            for route in routes.iter().filter(|r| r.collides_with(req)) {
                 info_!("Matched: {}", route);
                 if let Some(existing_route) = matched_route {
                     if route.rank > existing_route.rank {
@@ -71,11 +74,13 @@ impl Router {
 
 #[cfg(test)]
 mod test {
-    use Method::*;
+    use method::Method;
+    use method::Method::*;
     use super::{Router, Route};
     use {Response, Request};
+    use super::URI;
 
-    fn dummy_handler(_req: Request) -> Response<'static> {
+    fn dummy_handler(_req: &Request) -> Response<'static> {
         Response::empty()
     }
 
@@ -132,65 +137,70 @@ mod test {
         assert!(!router.has_collisions());
     }
 
+    fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
+        let request = Request::mock(method, uri);
+        router.route(&request)
+    }
+
     #[test]
     fn test_ok_routing() {
         let router = router_with_routes(&["/hello"]);
-        assert!(router.route(Get, "/hello").is_some());
+        assert!(route(&router, Get, "/hello").is_some());
 
         let router = router_with_routes(&["/<a>"]);
-        assert!(router.route(Get, "/hello").is_some());
-        assert!(router.route(Get, "/hi").is_some());
-        assert!(router.route(Get, "/bobbbbbbbbbby").is_some());
-        assert!(router.route(Get, "/dsfhjasdf").is_some());
+        assert!(route(&router, Get, "/hello").is_some());
+        assert!(route(&router, Get, "/hi").is_some());
+        assert!(route(&router, Get, "/bobbbbbbbbbby").is_some());
+        assert!(route(&router, Get, "/dsfhjasdf").is_some());
 
         let router = router_with_routes(&["/<a>/<b>"]);
-        assert!(router.route(Get, "/hello/hi").is_some());
-        assert!(router.route(Get, "/a/b/").is_some());
-        assert!(router.route(Get, "/i/a").is_some());
-        assert!(router.route(Get, "/jdlk/asdij").is_some());
+        assert!(route(&router, Get, "/hello/hi").is_some());
+        assert!(route(&router, Get, "/a/b/").is_some());
+        assert!(route(&router, Get, "/i/a").is_some());
+        assert!(route(&router, Get, "/jdlk/asdij").is_some());
 
         let mut router = Router::new();
         router.add(Route::new(Put, "/hello".to_string(), dummy_handler));
         router.add(Route::new(Post, "/hello".to_string(), dummy_handler));
         router.add(Route::new(Delete, "/hello".to_string(), dummy_handler));
-        assert!(router.route(Put, "/hello").is_some());
-        assert!(router.route(Post, "/hello").is_some());
-        assert!(router.route(Delete, "/hello").is_some());
+        assert!(route(&router, Put, "/hello").is_some());
+        assert!(route(&router, Post, "/hello").is_some());
+        assert!(route(&router, Delete, "/hello").is_some());
     }
 
     #[test]
     fn test_err_routing() {
         let router = router_with_routes(&["/hello"]);
-        assert!(router.route(Put, "/hello").is_none());
-        assert!(router.route(Post, "/hello").is_none());
-        assert!(router.route(Options, "/hello").is_none());
-        assert!(router.route(Get, "/hell").is_none());
-        assert!(router.route(Get, "/hi").is_none());
-        assert!(router.route(Get, "/hello/there").is_none());
-        assert!(router.route(Get, "/hello/i").is_none());
-        assert!(router.route(Get, "/hillo").is_none());
+        assert!(route(&router, Put, "/hello").is_none());
+        assert!(route(&router, Post, "/hello").is_none());
+        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Get, "/hell").is_none());
+        assert!(route(&router, Get, "/hi").is_none());
+        assert!(route(&router, Get, "/hello/there").is_none());
+        assert!(route(&router, Get, "/hello/i").is_none());
+        assert!(route(&router, Get, "/hillo").is_none());
 
         let router = router_with_routes(&["/<a>"]);
-        assert!(router.route(Put, "/hello").is_none());
-        assert!(router.route(Post, "/hello").is_none());
-        assert!(router.route(Options, "/hello").is_none());
-        assert!(router.route(Get, "/hello/there").is_none());
-        assert!(router.route(Get, "/hello/i").is_none());
+        assert!(route(&router, Put, "/hello").is_none());
+        assert!(route(&router, Post, "/hello").is_none());
+        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Get, "/hello/there").is_none());
+        assert!(route(&router, Get, "/hello/i").is_none());
 
         let router = router_with_routes(&["/<a>/<b>"]);
-        assert!(router.route(Get, "/a/b/c").is_none());
-        assert!(router.route(Get, "/a").is_none());
-        assert!(router.route(Get, "/a/").is_none());
-        assert!(router.route(Get, "/a/b/c/d").is_none());
-        assert!(router.route(Put, "/hello/hi").is_none());
-        assert!(router.route(Put, "/a/b").is_none());
-        assert!(router.route(Put, "/a/b").is_none());
+        assert!(route(&router, Get, "/a/b/c").is_none());
+        assert!(route(&router, Get, "/a").is_none());
+        assert!(route(&router, Get, "/a/").is_none());
+        assert!(route(&router, Get, "/a/b/c/d").is_none());
+        assert!(route(&router, Put, "/hello/hi").is_none());
+        assert!(route(&router, Put, "/a/b").is_none());
+        assert!(route(&router, Put, "/a/b").is_none());
     }
 
     macro_rules! assert_ranked_routes {
         ($routes:expr, $to:expr, $want:expr) => ({
             let router = router_with_routes($routes);
-            let route_path = router.route(Get, $to).unwrap().path.as_str();
+            let route_path = route(&router, Get, $to).unwrap().path.as_str();
             assert_eq!(route_path as &str, $want as &str);
         })
     }
@@ -211,8 +221,8 @@ mod test {
     }
 
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
-        router.route(Get, path).map_or(false, |route| {
-            let params = route.get_params(path);
+        route(router, Get, path).map_or(false, |route| {
+            let params = route.get_params(URI::new(path));
             if params.len() != expected.len() {
                 return false;
             }

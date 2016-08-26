@@ -75,8 +75,9 @@ impl Log for RocketLogger {
             }
             Debug => {
                 let loc = record.location();
-                println!("{} {}:{}", Cyan.paint("-->"), loc.file(), loc.line());
-                println!("{}", Cyan.paint(record.args()));
+                print!("\n{} ", Blue.bold().paint("-->"));
+                println!("{}:{}", Blue.paint(loc.file()), Blue.paint(loc.line()));
+                println!("{}", record.args());
             }
         }
     }

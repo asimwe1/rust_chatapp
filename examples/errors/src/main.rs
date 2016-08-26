@@ -2,7 +2,7 @@
 #![plugin(rocket_macros)]
 
 extern crate rocket;
-use rocket::{Rocket, RoutingError};
+use rocket::{Rocket, Error, Request};
 
 #[route(GET, path = "/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -10,10 +10,10 @@ fn hello(name: &str, age: i8) -> String {
 }
 
 #[error(code = "404")]
-fn not_found(error: RoutingError) -> String {
+fn not_found<'r>(_error: Error, request: &'r Request<'r>) -> String {
     format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            error.request.uri)
+            request.uri)
 }
 
 fn main() {

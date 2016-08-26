@@ -3,14 +3,14 @@ extern crate rocket;
 use rocket::{Rocket, Request, Response, Route};
 use rocket::Method::*;
 
-fn root(req: Request) -> Response {
+fn root<'r>(req: &'r Request<'r>) -> Response<'r> {
     let name = req.get_param(0).unwrap_or("unnamed");
     Response::new(format!("Hello, {}!", name))
 }
 
 #[allow(dead_code)]
-fn echo_url<'a>(req: Request<'a>) -> Response<'a> {
-    Response::new(req.get_uri().split_at(6).1)
+fn echo_url<'a>(req: &'a Request<'a>) -> Response<'a> {
+    Response::new(req.uri().as_str().split_at(6).1)
 }
 
 fn main() {

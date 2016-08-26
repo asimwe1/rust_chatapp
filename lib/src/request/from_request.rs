@@ -28,7 +28,7 @@ impl<'r, 'c> FromRequest<'r, 'c> for Cookies {
     type Error = &'static str;
 
     fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
-        match request.headers.get::<HyperCookie>() {
+        match request.headers().get::<HyperCookie>() {
            // TODO: What to do about key?
            Some(cookie) => Ok(cookie.to_cookie_jar(&[])),
            None => Ok(Cookies::new(&[]))
