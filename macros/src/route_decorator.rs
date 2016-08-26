@@ -179,7 +179,7 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                             // TODO: Add some kind of loggin facility in Rocket
                             // to get the formatting right (IE, so it idents
                             // correctly).
-                            denig!("Failed to parse: {:?}", e);
+                            // debug!("Failed to parse: {:?}", e);
                             return ::rocket::Response::forward();
                         }
                     };
