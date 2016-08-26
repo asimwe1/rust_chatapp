@@ -107,7 +107,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         if param.len() == 0 {
             self.ctxt.span_err(param_span, "Parameter names cannot be empty.");
             None
-        } else if param.contains(char::is_alphanumeric) {
+        } else if param.contains(|c: char| !c.is_alphanumeric()) {
             self.ctxt.span_err(param_span, "Parameters must be alphanumeric.");
             None
         } else {
