@@ -30,7 +30,7 @@ impl<'a, 'c> MetaItemParser<'a, 'c> {
             ctxt: ctxt,
             meta_item: meta_item,
             annotated: annotated,
-            span: span.clone(),
+            span: *span,
         }
     }
 
@@ -101,7 +101,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         param_span.hi = self.span.lo + BytePos((end + 1) as u32);
 
         // Check for nonemptiness and that the characters are correct.
-        if param.len() == 0 {
+        if param.is_empty() {
             self.ctxt.span_err(param_span, "Parameter names cannot be empty.");
             None
         } else if param.contains(|c: char| !c.is_alphanumeric()) {
@@ -216,7 +216,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
                 self.ctxt.span_err(data.v_span, &msg);
                 None
             }
-        }).unwrap_or(KVSpanned::dummy(ContentType::any()));
+        }).unwrap_or_else(|| KVSpanned::dummy(ContentType::any()));
 
         RouteParams {
             method: method,

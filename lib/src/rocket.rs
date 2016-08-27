@@ -54,10 +54,10 @@ impl Rocket {
             let outcome = (route.handler)(&request).respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
+            // Get the result if we failed so we can try again.
             res = match outcome {
-                Outcome::Complete => return,
-                Outcome::FailStop => return,
-                Outcome::FailForward(r) => r
+                Outcome::FailForward(r) => r,
+                Outcome::Complete | Outcome::FailStop => return,
             };
         }
 

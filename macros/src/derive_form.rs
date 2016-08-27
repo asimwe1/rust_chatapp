@@ -162,7 +162,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // placed into the final struct. They start out as `None` and are changed
     // to Some when a parse completes, or some default value if the parse was
     // unsuccessful and default() returns Some.
-    for &(ref ident, ref ty) in &fields_and_types {
+    for &(ref ident, ty) in &fields_and_types {
         stmts.push(quote_stmt!(cx,
             let mut $ident: ::std::option::Option<$ty> = None;
         ).unwrap());
@@ -199,7 +199,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // This looks complicated but just generates the boolean condition checking
     // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
-    for (i, &(ref ident, ref ty)) in (&fields_and_types).iter().enumerate() {
+    for (i, &(ref ident, ty)) in (&fields_and_types).iter().enumerate() {
         if i > 0 {
             failure_conditions.push(quote_tokens!(cx, ||));
         }
@@ -211,7 +211,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The fields of the struct, which are just the let bindings declared above
     // or the default value.
     let mut result_fields = vec![];
-    for &(ref ident, ref ty) in &fields_and_types {
+    for &(ref ident, ty) in &fields_and_types {
         result_fields.push(quote_tokens!(cx,
             $ident: $ident.unwrap_or_else(||
                 <$ty as ::rocket::form::FromFormValue>::default().unwrap()

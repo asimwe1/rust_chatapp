@@ -151,15 +151,14 @@ pub trait MetaItemExt {
     fn expect_list<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a Vec<P<MetaItem>>;
     fn expect_word<'a>(&'a self, ecx: &ExtCtxt, msg: &str) -> &'a str;
     fn is_word(&self) -> bool;
-    fn name<'a>(&'a self) -> &'a str;
+    fn name(&self) -> &str;
 }
 
 impl MetaItemExt for MetaItem {
-    fn name<'a>(&'a self) -> &'a str {
+    fn name(&self) -> &str {
         let interned_name = match self.node {
-            MetaItemKind::Word(ref s) => s,
-            MetaItemKind::List(ref s, _) => s,
-            MetaItemKind::NameValue(ref s, _) => s
+            MetaItemKind::Word(ref s) | MetaItemKind::List(ref s, _)
+                | MetaItemKind::NameValue(ref s, _) => s,
         };
 
         &*interned_name
