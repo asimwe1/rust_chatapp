@@ -120,6 +120,7 @@ pub struct RouteParams {
     pub path: KVSpanned<String>,
     pub form: Option<KVSpanned<String>>,
     pub content_type: KVSpanned<ContentType>,
+    pub rank: Option<KVSpanned<isize>>,
 }
 
 pub trait RouteDecoratorExt {
@@ -170,7 +171,7 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
 
         // Now grab all of the required and optional parameters.
         let req: [&'static str; 1] = ["path"];
-        let opt: [&'static str; 2] = ["form", "content"];
+        let opt: [&'static str; 3] = ["form", "content", "rank"];
         let kv_pairs = get_key_values(self.ctxt, self.meta_item.span,
                                       &req, &opt, kv_params);
 
@@ -218,11 +219,27 @@ impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
             }
         }).unwrap_or_else(|| KVSpanned::dummy(ContentType::any()));
 
+        let rank = kv_pairs.get("rank").and_then(|data| {
+            debug!("Found data: {:?}", data);
+            if let Ok(rank) = isize::from_str(data.node) {
+                if rank < 0 {
+                    self.ctxt.span_err(data.v_span, "rank must be nonnegative");
+                    None
+                } else {
+                    Some(data.clone().map(|_| rank))
+                }
+            } else {
+                self.ctxt.span_err(data.v_span, "rank value must be an integer");
+                None
+            }
+        });
+
         RouteParams {
             method: method,
             path: path,
             form: form,
             content_type: content_type,
+            rank: rank
         }
     }
 

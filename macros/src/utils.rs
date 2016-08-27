@@ -3,7 +3,7 @@ use std::ops::Deref;
 use syntax::parse::{token};
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Path, Ident, MetaItem, MetaItemKind, LitKind, Ty, self};
+use syntax::ast::{Path, Expr, Ident, MetaItem, MetaItemKind, LitKind, Ty, self};
 use syntax::ext::base::{ExtCtxt};
 use syntax::codemap::{Span, Spanned, BytePos, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
@@ -224,6 +224,13 @@ pub fn prefix_paths(prefix: &str, paths: &mut Vec<Path>) {
         let last_seg = &mut p.segments[last];
         let new_ident = prepend_ident(prefix, &last_seg.identifier);
         last_seg.identifier = new_ident;
+    }
+}
+
+pub fn option_as_expr<T: ToTokens>(ecx: &ExtCtxt, opt: &Option<T>) -> P<Expr> {
+    match *opt {
+        Some(ref item) => quote_expr!(ecx, Some($item)),
+        None => quote_expr!(ecx, None)
     }
 }
 

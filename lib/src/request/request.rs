@@ -53,6 +53,7 @@ impl<'a> Request<'a> {
         &self.headers
     }
 
+    // FIXME: This should be an Option. Not all requests have content types.
     pub fn content_type(&self) -> ContentType {
         let hyp_ct = self.headers().get::<header::ContentType>();
         hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))

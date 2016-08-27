@@ -4,7 +4,7 @@
 extern crate rocket;
 extern crate serde_json;
 
-use rocket::{Rocket, Request, Error};
+use rocket::{Rocket, Request, Error, ContentType};
 use rocket::response::JSON;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -13,13 +13,15 @@ struct Person {
     age: i8,
 }
 
+// FIXME: Change 'content' to 'format'. Look at 'accept' header to match.
 #[GET(path = "/<name>/<age>", content = "application/json")]
-fn hello(name: String, age: i8) -> JSON<String> {
+fn hello(content_type: ContentType, name: String, age: i8) -> JSON<String> {
     let person = Person {
         name: name,
         age: age,
     };
 
+    println!("ContentType: {}", content_type);
     JSON(serde_json::to_string(&person).unwrap())
 }
 

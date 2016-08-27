@@ -71,6 +71,10 @@ impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))?;
 
+        if self.rank > 1 {
+            write!(f, " [{}]", White.paint(&self.rank))?;
+        }
+
         if !self.content_type.is_any() {
             write!(f, " {}", Yellow.paint(&self.content_type))
         } else {
@@ -83,6 +87,10 @@ impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
         route.content_type = info.content_type.clone();
+        if let Some(rank) = info.rank {
+            route.rank = rank;
+        }
+
         route
     }
 }

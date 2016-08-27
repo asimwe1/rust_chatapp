@@ -33,6 +33,14 @@ impl Method {
             HyperMethod::Extension(_) => None
         }
     }
+
+    /// Whether the method supports a payload or not.
+    pub fn supports_payload(&self) -> bool {
+        match *self {
+            Put | Post | Delete | Patch => true,
+            Get | Head | Connect | Trace | Options => false,
+        }
+    }
 }
 
 impl FromStr for Method {

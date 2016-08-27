@@ -6,6 +6,7 @@ pub struct StaticRouteInfo {
     pub path: &'static str,
     pub content_type: ContentType,
     pub handler: Handler,
+    pub rank: Option<isize>,
 }
 
 pub struct StaticCatchInfo {

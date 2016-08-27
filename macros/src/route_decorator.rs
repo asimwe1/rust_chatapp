@@ -208,39 +208,43 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
     let form_stmt = get_form_stmt(ecx, &mut user_params, &form_params);
     form_stmt.as_ref().map(|s| debug!("Form stmt: {:?}", stmt_to_string(s)));
 
-    // Generate the statements that will attempt to parse the paramaters during
-    // run-time.
+    // Generate the statements that will parse paramaters during run-time.
     let mut fn_param_exprs = vec![];
-    for (i, param) in user_params.iter().enumerate() {
-        let ident = str_to_ident(param.as_str());
-        let ty = &param.ty;
-        let param_fn_item =
-            if param.declared {
-                quote_stmt!(ecx,
-                    let $ident: $ty = match _req.get_param($i) {
-                        Ok(v) => v,
-                        Err(_) => return ::rocket::Response::forward()
-                    };
-                ).unwrap()
-            } else {
-                quote_stmt!(ecx,
-                    let $ident: $ty = match
-                    <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            // TODO: Add $ident and $ty to the string.
-                            // TODO: Add some kind of loggin facility in Rocket
-                            // to get the formatting right (IE, so it idents
-                            // correctly).
-                            // debug!("Failed to parse: {:?}", e);
-                            return ::rocket::Response::forward();
-                        }
-                    };
-                ).unwrap()
-            };
 
-        debug!("Param FN: {}", stmt_to_string(&param_fn_item));
-        fn_param_exprs.push(param_fn_item);
+    // Push all of the declared parameters.
+    for (i, param) in user_params.iter().filter(|p| p.declared).enumerate() {
+        let (ident, ty) = (str_to_ident(param.as_str()), &param.ty);
+        let fn_item = quote_stmt!(ecx,
+            let $ident: $ty = match _req.get_param($i) {
+                Ok(v) => v,
+                Err(_) => return ::rocket::Response::forward()
+            };
+        ).unwrap();
+
+        debug!("Declared FN: {}", stmt_to_string(&fn_item));
+        fn_param_exprs.push(fn_item);
+    }
+
+    // Push all of the undeclared (FromRequest) parameters.
+    for param in user_params.iter().filter(|p| !p.declared) {
+        let (ident, ty) = (str_to_ident(param.as_str()), &param.ty);
+        let fn_item = quote_stmt!(ecx,
+            let $ident: $ty = match
+            <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
+                Ok(v) => v,
+                Err(_e) => {
+                    // TODO: Add $ident and $ty to the string.
+                    // TODO: Add some kind of loggin facility in Rocket
+                    // to get the formatting right (IE, so it idents
+                    // correctly).
+                    // debug!("Failed to parse: {:?}", e);
+                    return ::rocket::Response::forward();
+                }
+            };
+        ).unwrap();
+
+        debug!("Param FN: {}", stmt_to_string(&fn_item));
+        fn_param_exprs.push(fn_item);
     }
 
     let route_fn_name = prepend_ident(ROUTE_FN_PREFIX, &item.ident);
@@ -262,6 +266,7 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
     let path = &route.path.node;
     let method = method_variant_to_expr(ecx, route.method.node);
     let content_type = content_type_to_expr(ecx, &route.content_type.node);
+    let rank = option_as_expr(ecx, &route.rank);
 
     let static_item = quote_item!(ecx,
         #[allow(non_upper_case_globals)]
@@ -271,6 +276,7 @@ pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                 path: $path,
                 handler: $route_fn_name,
                 content_type: $content_type,
+                rank: $rank,
             };
     ).unwrap();
 

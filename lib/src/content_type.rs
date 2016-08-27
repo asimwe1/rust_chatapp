@@ -4,13 +4,19 @@ use response::mime::{Param};
 use std::str::FromStr;
 use std::borrow::Borrow;
 use std::fmt;
-use self::TopLevel::{Text, Application};
-use self::SubLevel::{Json, Html};
 
 use router::Collider;
 
 #[derive(Debug, Clone)]
 pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
+
+macro_rules! is_some {
+    ($name:ident: $top:ident/$sub:ident) => {
+        pub fn $name(&self) -> bool {
+            self.0 == TopLevel::$top && self.1 == SubLevel::$sub
+        }
+    };
+}
 
 impl ContentType {
     #[inline(always)]
@@ -28,14 +34,6 @@ impl ContentType {
         ContentType::of(TopLevel::Star, SubLevel::Star)
     }
 
-    pub fn is_json(&self) -> bool {
-        self.0 == Application && self.1 == Json
-    }
-
-    pub fn is_any(&self) -> bool {
-        self.0 == TopLevel::Star && self.1 == SubLevel::Star
-    }
-
     pub fn is_ext(&self) -> bool {
         if let TopLevel::Ext(_) = self.0 {
             true
@@ -46,9 +44,10 @@ impl ContentType {
         }
     }
 
-    pub fn is_html(&self) -> bool {
-        self.0 == Text && self.1 == Html
-    }
+    is_some!(is_json: Application/Json);
+    is_some!(is_xml: Application/Xml);
+    is_some!(is_any: Star/Star);
+    is_some!(is_html: Application/Html);
 }
 
 impl Into<Mime> for ContentType {

@@ -1,6 +1,7 @@
 use request::*;
 use method::Method;
 use std::fmt::Debug;
+use content_type::ContentType;
 
 pub trait FromRequest<'r, 'c>: Sized {
     type Error: Debug;
@@ -17,7 +18,7 @@ impl<'r, 'c> FromRequest<'r, 'c> for &'r Request<'c> {
 }
 
 impl<'r, 'c> FromRequest<'r, 'c> for Method {
-    type Error = &'static str;
+    type Error = ();
 
     fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
         Ok(request.method)
@@ -25,7 +26,7 @@ impl<'r, 'c> FromRequest<'r, 'c> for Method {
 }
 
 impl<'r, 'c> FromRequest<'r, 'c> for Cookies {
-    type Error = &'static str;
+    type Error = ();
 
     fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
         match request.headers().get::<HyperCookie>() {
@@ -33,6 +34,14 @@ impl<'r, 'c> FromRequest<'r, 'c> for Cookies {
            Some(cookie) => Ok(cookie.to_cookie_jar(&[])),
            None => Ok(Cookies::new(&[]))
         }
+    }
+}
+
+impl<'r, 'c> FromRequest<'r, 'c> for ContentType {
+    type Error = ();
+
+    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+        Ok(request.content_type())
     }
 }
 
