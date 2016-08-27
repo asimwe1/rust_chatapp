@@ -140,6 +140,11 @@ mod test {
         }
     }
 
+    fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
+        let request = Request::mock(method, uri);
+        router.route(&request)
+    }
+
     #[test]
     fn test_ok_routing() {
         let router = router_with_routes(&["/hello"]);
@@ -227,11 +232,15 @@ mod test {
     }
 
     macro_rules! assert_ranked_routing {
-        (to: $to:expr, with: $routes:expr, expect: $want:expr) => ({
+        (to: $to:expr, with: $routes:expr, expect: $($want:expr),+) => ({
             let router = router_with_ranked_routes(&$routes);
-            let routed_to = route(&router, Get, $to).unwrap();
-            assert_eq!(routed_to.path.as_str() as &str, $want.1);
-            assert_eq!(routed_to.rank, $want.0);
+            let routed_to = matches(&router, Get, $to);
+            let expected = &[$($want),+];
+            assert!(routed_to.len() == expected.len());
+            for (got, expected) in routed_to.iter().zip(expected.iter()) {
+                assert_eq!(got.path.as_str() as &str, expected.1);
+                assert_eq!(got.rank, expected.0);
+            }
         })
     }
 
@@ -240,19 +249,31 @@ mod test {
         assert_ranked_routing!(
             to: "a/b",
             with: [(1, "a/<b>"), (2, "a/<b>")],
-            expect: (1, "a/<b>")
+            expect: (1, "a/<b>"), (2, "a/<b>")
         );
 
         assert_ranked_routing!(
             to: "b/b",
             with: [(1, "a/<b>"), (2, "b/<b>"), (3, "b/b")],
-            expect: (2, "b/<b>")
+            expect: (2, "b/<b>"), (3, "b/b")
         );
 
         assert_ranked_routing!(
             to: "b/b",
             with: [(1, "a/<b>"), (2, "b/<b>"), (0, "b/b")],
-            expect: (0, "b/b")
+            expect: (0, "b/b"), (2, "b/<b>")
+        );
+
+        assert_ranked_routing!(
+            to: "/profile/sergio/edit",
+            with: [(1, "/<a>/<b>/edit"), (2, "/profile/<d>"), (0, "/<a>/<b>/<c>")],
+            expect: (0, "/<a>/<b>/<c>"), (1, "/<a>/<b>/edit")
+        );
+
+        assert_ranked_routing!(
+            to: "/profile/sergio/edit",
+            with: [(0, "/<a>/<b>/edit"), (2, "/profile/<d>"), (5, "/<a>/<b>/<c>")],
+            expect: (0, "/<a>/<b>/edit"), (5, "/<a>/<b>/<c>")
         );
     }
 

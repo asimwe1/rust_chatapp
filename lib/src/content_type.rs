@@ -99,7 +99,7 @@ impl FromStr for ContentType {
         };
 
 		let top_str = &raw[..slash];
-		let (sub_str, rest) = match raw.find(';') {
+		let (sub_str, _rest) = match raw.find(';') {
 			Some(j) => (&raw[(slash + 1)..j], Some(&raw[(j + 1)..])),
 			None => (&raw[(slash + 1)..], None)
 		};
