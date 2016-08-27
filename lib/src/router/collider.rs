@@ -45,7 +45,7 @@ mod tests {
     use Method;
     use Method::*;
     use {Request, Response};
-    use content_type::{ContentType, TopLevel, SubLevel};
+    use content_type::ContentType;
     use std::str::FromStr;
 
     type SimpleRoute = (Method, &'static str);

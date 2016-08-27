@@ -1,5 +1,5 @@
 use super::*;
-use response::FreshHyperResponse;
+use response::{FreshHyperResponse, Outcome};
 use request::HyperRequest;
 use catcher;
 
@@ -29,7 +29,7 @@ impl HyperHandler for Rocket {
 
 impl Rocket {
     fn dispatch<'h, 'k>(&self, hyp_req: HyperRequest<'h, 'k>,
-                        res: FreshHyperResponse<'h>) {
+                        mut res: FreshHyperResponse<'h>) {
         // Get a copy of the URI for later use.
         let uri = hyp_req.uri.to_string();
 
@@ -43,27 +43,25 @@ impl Rocket {
         };
 
         info!("{}:", request);
-        let route = self.router.route(&request);
-        if let Some(ref route) = route {
+        let matches = self.router.route(&request);
+        trace_!("Found {} matches.", matches.len());
+        for route in matches {
             // Retrieve and set the requests parameters.
+            info_!("Matched: {}", route);
             request.set_params(route);
 
             // Here's the magic: dispatch the request to the handler.
             let outcome = (route.handler)(&request).respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
-            // TODO: keep trying lower ranked routes before dispatching a not
-            // found error.
-            outcome.map_forward(|res| {
-                error_!("No further matching routes.");
-                // TODO: Have some way to know why this was failed forward. Use that
-                // instead of always using an unchained error.
-                self.handle_not_found(&request, res);
-            });
-        } else {
-            error_!("No matching routes.");
-            self.handle_not_found(&request, res);
+            res = match outcome {
+                Outcome::Complete => return,
+                Outcome::FailStop => return,
+                Outcome::FailForward(r) => r
+            };
         }
+
+        self.handle_not_found(&request, res);
     }
 
     // Call on internal server error.
@@ -95,6 +93,7 @@ impl Rocket {
 
     pub fn mount(&mut self, base: &'static str, routes: Vec<Route>)
             -> &mut Self {
+        self.enable_normal_logging_if_disabled();
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());
@@ -108,12 +107,13 @@ impl Rocket {
     }
 
     pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
+        self.enable_normal_logging_if_disabled();
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.contains_key(&c.code) &&
                     !self.catchers.get(&c.code).unwrap().is_default() {
                 let msg = format!("warning: overrides {} catcher!", c.code);
-                info_!("{} ({})", c, Yellow.paint(msg.as_str()));
+                warn!("{} ({})", c, Yellow.paint(msg.as_str()));
             } else {
                 info_!("{}", c);
             }
@@ -122,6 +122,13 @@ impl Rocket {
         }
 
         self
+    }
+
+    fn enable_normal_logging_if_disabled(&mut self) {
+        if !self.log_set {
+            logger::init(LoggingLevel::Normal);
+            self.log_set = true;
+        }
     }
 
     pub fn log(&mut self, level: LoggingLevel) {
@@ -134,12 +141,9 @@ impl Rocket {
     }
 
     pub fn launch(mut self) {
+        self.enable_normal_logging_if_disabled();
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
-        }
-
-        if !self.log_set {
-            self.log(LoggingLevel::Normal)
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);

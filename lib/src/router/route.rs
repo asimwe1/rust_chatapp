@@ -69,10 +69,10 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} ", Green.paint(&self.method), Blue.paint(&self.path))?;
+        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))?;
 
         if !self.content_type.is_any() {
-            write!(f, "{}", Yellow.paint(&self.content_type))
+            write!(f, " {}", Yellow.paint(&self.content_type))
         } else {
             Ok(())
         }

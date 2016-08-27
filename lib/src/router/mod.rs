@@ -32,27 +32,16 @@ impl Router {
     // `Route` structure is inflexible. Have it be an associated type.
     // FIXME: Figure out a way to get more than one route, i.e., to correctly
     // handle ranking.
-    // TODO: Should the Selector include the content-type? If it does, can't
-    // warn the user that a match was found for the wrong content-type. It
-    // doesn't, can, but this method is slower.
-    pub fn route<'b>(&'b self, req: &Request) -> Option<&'b Route> {
+    pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
         let num_segments = req.uri.segment_count();
+        self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
+            let mut matches: Vec<&'b Route> = routes.iter().filter(|r| {
+                r.collides_with(req)
+            }).collect();
 
-        let mut matched_route: Option<&Route> = None;
-        if let Some(routes) = self.routes.get(&(req.method, num_segments)) {
-            for route in routes.iter().filter(|r| r.collides_with(req)) {
-                info_!("Matched: {}", route);
-                if let Some(existing_route) = matched_route {
-                    if route.rank < existing_route.rank {
-                        matched_route = Some(route);
-                    }
-                } else {
-                    matched_route = Some(route);
-                }
-            }
-        }
-
-        matched_route
+            matches.sort_by(|a, b| a.rank.cmp(&b.rank));
+            matches
+        })
     }
 
     pub fn has_collisions(&self) -> bool {
@@ -94,6 +83,16 @@ mod test {
         router
     }
 
+    fn router_with_ranked_routes(routes: &[(isize, &'static str)]) -> Router {
+        let mut router = Router::new();
+        for &(rank, route) in routes {
+            let route = Route::ranked(rank, Get, route.to_string(), dummy_handler);
+            router.add(route);
+        }
+
+        router
+    }
+
     fn router_with_unranked_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
@@ -104,42 +103,41 @@ mod test {
         router
     }
 
+    fn unranked_route_collisions(routes: &[&'static str]) -> bool {
+        let router = router_with_unranked_routes(routes);
+        router.has_collisions()
+    }
+
+    fn default_rank_route_collisions(routes: &[&'static str]) -> bool {
+        let router = router_with_routes(routes);
+        router.has_collisions()
+    }
+
     #[test]
     fn test_collisions() {
-        let router = router_with_unranked_routes(&["/hello", "/hello"]);
-        assert!(router.has_collisions());
-
-        let router = router_with_unranked_routes(&["/<a>", "/hello"]);
-        assert!(router.has_collisions());
-
-        let router = router_with_unranked_routes(&["/<a>", "/<b>"]);
-        assert!(router.has_collisions());
-
-        let router = router_with_unranked_routes(&["/hello/bob", "/hello/<b>"]);
-        assert!(router.has_collisions());
-
-        let router = router_with_routes(&["/a/b/<c>/d", "/<a>/<b>/c/d"]);
-        assert!(router.has_collisions());
+        assert!(unranked_route_collisions(&["/hello", "/hello"]));
+        assert!(unranked_route_collisions(&["/<a>", "/hello"]));
+        assert!(unranked_route_collisions(&["/<a>", "/<b>"]));
+        assert!(unranked_route_collisions(&["/hello/bob", "/hello/<b>"]));
+        assert!(unranked_route_collisions(&["/a/b/<c>/d", "/<a>/<b>/c/d"]));
     }
 
     #[test]
     fn test_none_collisions_when_ranked() {
-        let router = router_with_routes(&["/<a>", "/hello"]);
-        assert!(!router.has_collisions());
-
-        let router = router_with_routes(&["/hello/bob", "/hello/<b>"]);
-        assert!(!router.has_collisions());
-
-        let router = router_with_routes(&["/a/b/c/d", "/<a>/<b>/c/d"]);
-        assert!(!router.has_collisions());
-
-        let router = router_with_routes(&["/hi", "/<hi>"]);
-        assert!(!router.has_collisions());
+        assert!(!default_rank_route_collisions(&["/<a>", "/hello"]));
+        assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
+        assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
+        assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
     }
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let request = Request::mock(method, uri);
-        router.route(&request)
+        let matches = router.route(&request);
+        if matches.len() > 0 {
+            Some(matches[0])
+        } else {
+            None
+        }
     }
 
     #[test]
@@ -215,11 +213,47 @@ mod test {
         assert_ranked_routes!(&["/hi/a", "/hi/<c>"], "/hi/c", "/hi/<c>");
     }
 
+    fn ranked_collisions(routes: &[(isize, &'static str)]) -> bool {
+        let router = router_with_ranked_routes(routes);
+        router.has_collisions()
+    }
+
     #[test]
-    fn test_ranking() {
-        let a = Route::ranked(1, Get, "a/<b>", dummy_handler);
-        let b = Route::ranked(2, Get, "a/<b>", dummy_handler);
-        // FIXME: Add tests for non-default ranks.
+    fn test_no_manual_ranked_collisions() {
+        assert!(!ranked_collisions(&[(1, "a/<b>"), (2, "a/<b>")]));
+        assert!(!ranked_collisions(&[(0, "a/<b>"), (2, "a/<b>")]));
+        assert!(!ranked_collisions(&[(5, "a/<b>"), (2, "a/<b>")]));
+        assert!(!ranked_collisions(&[(1, "a/<b>"), (1, "b/<b>")]));
+    }
+
+    macro_rules! assert_ranked_routing {
+        (to: $to:expr, with: $routes:expr, expect: $want:expr) => ({
+            let router = router_with_ranked_routes(&$routes);
+            let routed_to = route(&router, Get, $to).unwrap();
+            assert_eq!(routed_to.path.as_str() as &str, $want.1);
+            assert_eq!(routed_to.rank, $want.0);
+        })
+    }
+
+    #[test]
+    fn test_ranked_routing() {
+        assert_ranked_routing!(
+            to: "a/b",
+            with: [(1, "a/<b>"), (2, "a/<b>")],
+            expect: (1, "a/<b>")
+        );
+
+        assert_ranked_routing!(
+            to: "b/b",
+            with: [(1, "a/<b>"), (2, "b/<b>"), (3, "b/b")],
+            expect: (2, "b/<b>")
+        );
+
+        assert_ranked_routing!(
+            to: "b/b",
+            with: [(1, "a/<b>"), (2, "b/<b>"), (0, "b/b")],
+            expect: (0, "b/b")
+        );
     }
 
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
