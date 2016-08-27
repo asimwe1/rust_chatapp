@@ -1,5 +1,9 @@
 use std::io::{Read};
 use std::cell::RefCell;
+use std::fmt;
+
+use term_painter::Color::*;
+use term_painter::ToStyle;
 
 use error::Error;
 use param::FromParam;
@@ -16,10 +20,10 @@ use router::Route;
 use request::{HyperHeaders, HyperRequest};
 
 pub struct Request<'a> {
-    pub params: RefCell<Option<Vec<&'a str>>>, // This also sucks.
     pub method: Method,
     pub uri: URIBuf, // FIXME: Should be URI (without Hyper).
     pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
+    params: RefCell<Option<Vec<&'a str>>>, // This also sucks.
     headers: HyperHeaders, // This sucks.
 }
 
@@ -33,7 +37,6 @@ impl<'a> Request<'a> {
         }
     }
 
-    #[cfg(test)]
     pub fn mock(method: Method, uri: &str) -> Request {
         Request {
             params: RefCell::new(None),
@@ -43,7 +46,6 @@ impl<'a> Request<'a> {
             headers: HyperHeaders::new()
         }
     }
-
 
     // FIXME: Get rid of Hyper.
     #[inline(always)]
@@ -70,27 +72,38 @@ impl<'a> Request<'a> {
         self.headers.set::<header::ContentType>(hyper_ct)
     }
 
-}
-
-impl<'a, 'h, 'k> From<HyperRequest<'h, 'k>> for Request<'a> {
-    fn from(hyper_req: HyperRequest<'h, 'k>) -> Request<'a> {
+    pub fn from_hyp<'h, 'k>(hyper_req: HyperRequest<'h, 'k>)
+            -> Result<Request<'a>, String> {
         let (_, h_method, h_headers, h_uri, _, mut h_body) = hyper_req.deconstruct();
 
         let uri = match h_uri {
             HyperRequestUri::AbsolutePath(s) => URIBuf::from(s),
-            _ => panic!("Can only accept absolute paths!")
+            _ => return Err(format!("Bad URI: {}", h_uri))
+        };
+
+        let method = match Method::from_hyp(&h_method) {
+            Some(m) => m,
+            _ => return Err(format!("Bad method: {}", h_method))
         };
 
         // FIXME: GRRR.
         let mut data = vec![];
         h_body.read_to_end(&mut data).unwrap();
 
-        Request {
+        let request = Request {
             params: RefCell::new(None),
-            method: Method::from_hyp(&h_method).unwrap(),
+            method: method,
             uri: uri,
             data: data,
             headers: h_headers,
-        }
+        };
+
+        Ok(request)
+    }
+}
+
+impl<'r> fmt::Display for Request<'r> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))
     }
 }

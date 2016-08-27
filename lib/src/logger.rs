@@ -2,9 +2,10 @@ use log::{self, Log, LogLevel, LogRecord, LogMetadata};
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-pub struct RocketLogger(Level);
+pub struct RocketLogger(LoggingLevel);
 
-pub enum Level {
+#[derive(PartialEq)]
+pub enum LoggingLevel {
     /// Only shows errors and warning.
     Critical,
     /// Shows everything except debug and trace information.
@@ -13,13 +14,13 @@ pub enum Level {
     Debug,
 }
 
-impl Level {
+impl LoggingLevel {
     #[inline(always)]
     fn max_log_level(&self) -> LogLevel {
         match *self {
-            Level::Critical => LogLevel::Warn,
-            Level::Normal => LogLevel::Info,
-            Level::Debug => LogLevel::Trace
+            LoggingLevel::Critical => LogLevel::Warn,
+            LoggingLevel::Normal => LogLevel::Info,
+            LoggingLevel::Debug => LogLevel::Trace
         }
     }
 }
@@ -55,7 +56,7 @@ impl Log for RocketLogger {
         }
 
         // In Rocket, we abuse target with value "_" to indicate indentation.
-        if record.target() == "_" {
+        if record.target() == "_" && self.0 != LoggingLevel::Critical {
             print!("    {} ", White.paint("=>"));
         }
 
@@ -83,7 +84,7 @@ impl Log for RocketLogger {
     }
 }
 
-pub fn init(level: Level) {
+pub fn init(level: LoggingLevel) {
     let result = log::set_logger(|max_log_level| {
         max_log_level.set(level.max_log_level().to_log_level_filter());
         Box::new(RocketLogger(level))

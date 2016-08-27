@@ -1,9 +1,9 @@
-pub use hyper::mime::{Mime, TopLevel, SubLevel};
+pub use response::mime::{Mime, TopLevel, SubLevel};
+use response::mime::{Param};
 
 use std::str::FromStr;
 use std::borrow::Borrow;
 use std::fmt;
-use hyper::mime::{Param};
 use self::TopLevel::{Text, Application};
 use self::SubLevel::{Json, Html};
 

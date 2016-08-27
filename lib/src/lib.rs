@@ -29,7 +29,7 @@ pub mod handler {
     pub type ErrorHandler = for<'r> fn(error: Error, &'r Request<'r>) -> Response<'r>;
 }
 
-pub use logger::RocketLogger;
+pub use logger::{RocketLogger, LoggingLevel};
 pub use content_type::ContentType;
 pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;

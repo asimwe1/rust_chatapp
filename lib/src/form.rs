@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
-use url::{self};
+use url;
 
 use error::Error;
 

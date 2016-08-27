@@ -14,8 +14,11 @@ pub trait Responder {
 
 impl<'a> Responder for &'a str {
     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
-        res.headers_mut().set(header::ContentType(mime));
+        if res.headers().get::<header::ContentType>().is_none() {
+            let mime = Mime(TopLevel::Text, SubLevel::Plain, vec![]);
+            res.headers_mut().set(header::ContentType(mime));
+        }
+
         res.send(self.as_bytes()).unwrap();
         Outcome::Complete
     }
@@ -23,8 +26,10 @@ impl<'a> Responder for &'a str {
 
 impl Responder for String {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
-        res.headers_mut().set(header::ContentType(mime));
+        if res.headers().get::<header::ContentType>().is_none() {
+            let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
+            res.headers_mut().set(header::ContentType(mime));
+        }
         res.send(self.as_bytes()).unwrap();
         Outcome::Complete
     }

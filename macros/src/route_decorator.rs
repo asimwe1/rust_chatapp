@@ -181,7 +181,7 @@ fn content_type_to_expr(ecx: &ExtCtxt, content_type: &ContentType) -> P<Expr> {
 pub fn route_decorator(known_method: Option<Spanned<Method>>, ecx: &mut ExtCtxt,
                        sp: Span, meta_item: &MetaItem, annotated: &Annotatable,
                        push: &mut FnMut(Annotatable)) {
-    ::rocket::logger::init(::rocket::logger::Level::Debug);
+    ::rocket::logger::init(::rocket::LoggingLevel::Debug);
 
     // Get the encompassing item and function declaration for the annotated func.
     let parser = MetaItemParser::new(ecx, meta_item, annotated, &sp);

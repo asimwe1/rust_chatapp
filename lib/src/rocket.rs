@@ -3,14 +3,11 @@ use response::FreshHyperResponse;
 use request::HyperRequest;
 use catcher;
 
-use std::io::Read;
 use std::collections::HashMap;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-use hyper::uri::RequestUri as HyperRequestUri;
-use hyper::method::Method as HyperMethod;
 use hyper::server::Server as HyperServer;
 use hyper::server::Handler as HyperHandler;
 
@@ -19,91 +16,80 @@ pub struct Rocket {
     port: isize,
     router: Router,
     catchers: HashMap<u16, Catcher>,
-}
-
-fn uri_is_absolute(uri: &HyperRequestUri) -> bool {
-    match *uri {
-        HyperRequestUri::AbsolutePath(_) => true,
-        _ => false
-    }
-}
-
-fn method_is_valid(method: &HyperMethod) -> bool {
-    Method::from_hyp(method).is_some()
+    log_set: bool,
 }
 
 impl HyperHandler for Rocket {
     fn handle<'h, 'k>(&self, req: HyperRequest<'h, 'k>,
             mut res: FreshHyperResponse<'h>) {
-        info!("{:?} '{}':", Green.paint(&req.method), Blue.paint(&req.uri));
-
-        let finalize = |mut req: HyperRequest, _res: FreshHyperResponse| {
-            let mut buf = vec![];
-            // FIXME: Simple DOS attack here. Working around Hyper bug.
-            let _ = req.read_to_end(&mut buf);
-        };
-
-        if !uri_is_absolute(&req.uri) {
-            error_!("Internal failure. Bad URI.");
-            debug_!("Debug: {}", req.uri);
-            return finalize(req, res);
-        }
-
-        if !method_is_valid(&req.method) {
-            error_!("Internal failure. Bad method.");
-            debug_!("Method: {}", req.method);
-            return finalize(req, res);
-        }
-
         res.headers_mut().set(response::header::Server("rocket".to_string()));
         self.dispatch(req, res)
     }
 }
 
 impl Rocket {
-    fn dispatch<'h, 'k>(&self, hyper_req: HyperRequest<'h, 'k>,
+    fn dispatch<'h, 'k>(&self, hyp_req: HyperRequest<'h, 'k>,
                         res: FreshHyperResponse<'h>) {
-        let req = Request::from(hyper_req);
-        let route = self.router.route(&req);
-        if let Some(route) = route {
+        // Get a copy of the URI for later use.
+        let uri = hyp_req.uri.to_string();
+
+        // Try to create a Rocket request from the hyper request.
+        let request = match Request::from_hyp(hyp_req) {
+            Ok(req) => req,
+            Err(reason) => {
+                let mock_request = Request::mock(Method::Get, uri.as_str());
+                return self.handle_internal_error(reason, &mock_request, res);
+            }
+        };
+
+        info!("{}:", request);
+        let route = self.router.route(&request);
+        if let Some(ref route) = route {
             // Retrieve and set the requests parameters.
-            req.set_params(&route);
+            request.set_params(route);
 
             // Here's the magic: dispatch the request to the handler.
-            let outcome = (route.handler)(&req).respond(res);
+            let outcome = (route.handler)(&request).respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
-            // // TODO: keep trying lower ranked routes before dispatching a not
-            // // found error.
-            // outcome.map_forward(|res| {
-            //     error_!("No further matching routes.");
-            //     // TODO: Have some way to know why this was failed forward. Use that
-            //     // instead of always using an unchained error.
-            //     self.handle_not_found(req, res);
-            // });
+            // TODO: keep trying lower ranked routes before dispatching a not
+            // found error.
+            outcome.map_forward(|res| {
+                error_!("No further matching routes.");
+                // TODO: Have some way to know why this was failed forward. Use that
+                // instead of always using an unchained error.
+                self.handle_not_found(&request, res);
+            });
         } else {
             error_!("No matching routes.");
-            return self.handle_not_found(&req, res);
+            self.handle_not_found(&request, res);
         }
     }
 
-    // A closure which we call when we know there is no route.
+    // Call on internal server error.
+    fn handle_internal_error<'r>(&self, reason: String, request: &'r Request<'r>,
+                            response: FreshHyperResponse) {
+        error!("Internal server error.");
+        debug!("{}", reason);
+        let catcher = self.catchers.get(&500).unwrap();
+        catcher.handle(Error::Internal, request).respond(response);
+    }
+
+    // Call when no route was found.
     fn handle_not_found<'r>(&self, request: &'r Request<'r>,
                             response: FreshHyperResponse) {
-        error_!("Dispatch failed. Returning 404.");
+        error_!("{} dispatch failed: 404.", request);
         let catcher = self.catchers.get(&404).unwrap();
         catcher.handle(Error::NoRoute, request).respond(response);
     }
 
     pub fn new(address: &'static str, port: isize) -> Rocket {
-        // FIXME: Allow user to override level/disable logging.
-        logger::init(logger::Level::Normal);
-
         Rocket {
             address: address,
             port: port,
             router: Router::new(),
             catchers: catcher::defaults::get(),
+            log_set: false,
         }
     }
 
@@ -138,9 +124,22 @@ impl Rocket {
         self
     }
 
-    pub fn launch(self) {
+    pub fn log(&mut self, level: LoggingLevel) {
+        if self.log_set {
+            warn!("Log level already set! Not overriding.");
+        } else {
+            logger::init(level);
+            self.log_set = true;
+        }
+    }
+
+    pub fn launch(mut self) {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
+        }
+
+        if !self.log_set {
+            self.log(LoggingLevel::Normal)
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
