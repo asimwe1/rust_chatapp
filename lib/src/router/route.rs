@@ -13,8 +13,14 @@ pub struct Route {
     pub method: Method,
     pub handler: Handler,
     pub path: URIBuf,
-    pub rank: isize,
+    pub rank: isize, // Lower ranks have higher priorities.
     pub content_type: ContentType,
+}
+
+fn default_rank(path: &str) -> isize {
+    // The rank for a given path is 0 if it is a static route (it doesn't
+    // contain any dynamic <segmants>) or 1 if it is dynamic.
+    path.contains('<') as isize
 }
 
 impl Route {
@@ -33,7 +39,7 @@ impl Route {
         Route {
             method: m,
             handler: handler,
-            rank: (!path.as_ref().contains('<') as isize),
+            rank: default_rank(path.as_ref()),
             path: URIBuf::from(path.as_ref()),
             content_type: ContentType::any(),
         }

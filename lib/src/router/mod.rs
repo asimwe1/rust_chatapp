@@ -43,7 +43,7 @@ impl Router {
             for route in routes.iter().filter(|r| r.collides_with(req)) {
                 info_!("Matched: {}", route);
                 if let Some(existing_route) = matched_route {
-                    if route.rank > existing_route.rank {
+                    if route.rank < existing_route.rank {
                         matched_route = Some(route);
                     }
                 } else {
@@ -217,6 +217,8 @@ mod test {
 
     #[test]
     fn test_ranking() {
+        let a = Route::ranked(1, Get, "a/<b>", dummy_handler);
+        let b = Route::ranked(2, Get, "a/<b>", dummy_handler);
         // FIXME: Add tests for non-default ranks.
     }
 
