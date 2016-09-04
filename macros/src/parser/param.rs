@@ -43,10 +43,10 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
 
         // Check for nonemptiness and that the characters are correct.
         if param.is_empty() {
-            self.ctxt.span_err(param_span, "Parameter names cannot be empty.");
+            self.ctxt.span_err(param_span, "parameter names cannot be empty");
             None
         } else if param.contains(|c: char| !c.is_alphanumeric()) {
-            self.ctxt.span_err(param_span, "Parameters must be alphanumeric.");
+            self.ctxt.span_err(param_span, "parameters must be alphanumeric");
             None
         } else {
             self.string = &self.string[(end + 1)..];

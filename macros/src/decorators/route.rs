@@ -85,11 +85,12 @@ impl RouteGenerateExt for RouteParams {
     // TODO: Add some kind of logging facility in Rocket to get be able to log
     // an error/debug message if parsing a parameter fails.
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt> {
+        let params: Vec<_> = self.path_params(ecx).collect();
         let mut fn_param_statements = vec![];
 
         // Retrieve an iterator over the user's path parameters and ensure that
         // each parameter appears in the function signature.
-        for param in self.path_params(ecx) {
+        for param in &params {
             if self.annotated_fn.find_input(param.node).is_none() {
                 let fn_span = self.annotated_fn.span();
                 let msg = format!("'{}' is declared as an argument...", param.node);
@@ -99,7 +100,7 @@ impl RouteGenerateExt for RouteParams {
         }
 
         // Create a function thats checks if an argument was declared in `path`.
-        let set: HashSet<&str> = self.path_params(ecx).map(|p| p.node).collect();
+        let set: HashSet<&str> = params.iter().map(|p| p.node).collect();
         let declared = &|arg: &&Arg| set.contains(&*arg.name().unwrap());
 
         // These are all of the arguments in the function signature.
