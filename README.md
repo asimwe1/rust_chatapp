@@ -28,11 +28,16 @@ route resulting in the string `Hello, 58 year old named John!` being sent to the
 browser. If an `<age>` string was passed in that can't be parsed as a `u8`, the
 route won't get called, resulting in a 404 error.
 
+
+## Building
+
+### Nightly
+
 Rocket requires a nightly version of Rust as it makes heavy use of syntax
 extensions. This also means that the first two unwieldly lines in the Rust file
 above are required.
 
-## Building
+### Examples
 
 Try running the examples in the `examples/` folder. For instance, the following
 sequence of commands builds and runs the `Hello, world!` example:
