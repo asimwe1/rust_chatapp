@@ -67,7 +67,7 @@ macro_rules! quote_enum {
                 idents.push(variant);
                 $ecx.path_global(DUMMY_SP, idents)
             })+
-            $($extra => $result)*
+            $($extra => $result),*
         }
     })
 }
