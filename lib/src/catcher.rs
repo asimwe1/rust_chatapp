@@ -54,13 +54,13 @@ impl fmt::Display for Catcher {
 
 pub mod defaults {
     use request::Request;
-    use response::{StatusCode, Response};
+    use response::{StatusCode, Response, HTML};
     use super::Catcher;
     use error::Error;
 	use std::collections::HashMap;
 
     pub fn not_found<'r>(_error: Error, _request: &'r Request<'r>) -> Response<'r> {
-        Response::with_status(StatusCode::NotFound, "\
+        Response::with_status(StatusCode::NotFound, HTML("\
 			<head>\
   				<meta charset=\"utf-8\">\
 				<title>404: Not Found</title>\
@@ -71,12 +71,12 @@ pub mod defaults {
             <hr />\
             <small>Rocket</small>\
 			</body>\
-        ")
+        "))
     }
 
     pub fn internal_error<'r>(_error: Error, _request: &'r Request<'r>)
         -> Response<'r> {
-        Response::with_status(StatusCode::InternalServerError, "\
+        Response::with_status(StatusCode::InternalServerError, HTML("\
 			<head>\
   				<meta charset=\"utf-8\">\
 				<title>404: Not Found</title>\
@@ -86,7 +86,7 @@ pub mod defaults {
             <p>The server encountered a problem processing your request.<p>\
             <hr />\
             <small>Rocket</small>\
-        ")
+        "))
     }
 
     pub fn get() -> HashMap<u16, Catcher> {
