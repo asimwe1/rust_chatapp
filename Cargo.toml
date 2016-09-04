@@ -16,4 +16,5 @@ members = [
   "examples/content_types",
   "examples/hello_ranks",
   "examples/testing",
+  "examples/from_request",
 ]

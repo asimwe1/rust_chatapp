@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX};
+use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
 use utils::{emit_item, span, sep_by_tok, SpanExt, IdentExt, ArgExt, option_as_expr};
 use parser::RouteParams;
 
@@ -67,7 +67,7 @@ impl RouteGenerateExt for RouteParams {
         }
 
         let arg = arg.unwrap();
-        let (name, ty) = (arg.ident().unwrap(), &arg.ty);
+        let (name, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
         Some(quote_stmt!(ecx,
             let $name: $ty =
                 if let Ok(s) = ::std::str::from_utf8(_req.data.as_slice()) {
@@ -107,7 +107,7 @@ impl RouteGenerateExt for RouteParams {
 
         // Generate code for each user declared parameter.
         for (i, arg) in all.iter().filter(declared).enumerate() {
-            let (ident, ty) = (arg.ident().unwrap(), &arg.ty);
+            let (ident, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match _req.get_param($i) {
                     Ok(v) => v,
@@ -125,7 +125,7 @@ impl RouteGenerateExt for RouteParams {
 
         // Generate the code for `form_request` parameters.
         for arg in all.iter().filter(from_request) {
-            let (ident, ty) = (arg.ident().unwrap(), &arg.ty);
+            let (ident, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match
                 <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
@@ -140,7 +140,7 @@ impl RouteGenerateExt for RouteParams {
 
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree> {
         let args = self.annotated_fn.decl().inputs.iter().map(|a| {
-            a.ident().expect("function decl pat -> ident").clone()
+            a.ident().expect("function decl pat -> ident").prepend(PARAM_PREFIX)
         }).collect::<Vec<Ident>>();
 
         sep_by_tok(ecx, &args, token::Comma)

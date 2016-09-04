@@ -21,6 +21,7 @@ use rustc_plugin::Registry;
 use syntax::ext::base::SyntaxExtension;
 use syntax::parse::token::intern;
 
+const PARAM_PREFIX: &'static str = "rocket_param_";
 const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
 const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &'static str = "rocket_route_fn_";
