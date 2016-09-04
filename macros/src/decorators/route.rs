@@ -15,7 +15,7 @@ use syntax::ptr::P;
 use rocket::{Method, ContentType};
 use rocket::content_type::{TopLevel, SubLevel};
 
-fn method_variant_to_expr(ecx: &ExtCtxt, method: Method) -> Path {
+fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     quote_enum!(ecx, method => ::rocket::Method {
         Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch;
     })
@@ -148,7 +148,7 @@ impl RouteGenerateExt for RouteParams {
 
     fn explode(&self, ecx: &ExtCtxt) -> (&String, Path, P<Expr>, P<Expr>) {
         let path = &self.path.node;
-        let method = method_variant_to_expr(ecx, self.method.node);
+        let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
         let content_type = option_as_expr(ecx, &content_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
