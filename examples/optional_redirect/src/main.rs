@@ -5,12 +5,12 @@ extern crate rocket;
 use rocket::Rocket;
 use rocket::response::Redirect;
 
-#[route(GET, path = "/")]
+#[get("/")]
 fn root() -> Redirect {
     Redirect::to("/users/login")
 }
 
-#[route(GET, path = "/users/<name>")]
+#[get("/users/<name>")]
 fn user(name: &str) -> Result<&'static str, Redirect> {
     match name {
         "Sergio" => Ok("Hello, Sergio!"),
@@ -18,7 +18,7 @@ fn user(name: &str) -> Result<&'static str, Redirect> {
     }
 }
 
-#[route(GET, path = "/users/login")]
+#[get("/users/login")]
 fn login() -> &'static str {
     "Hi! That user doesn't exist. Maybe you need to log in?"
 }

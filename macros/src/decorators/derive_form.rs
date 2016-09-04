@@ -59,6 +59,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
 
     let trait_def = TraitDef {
         is_unsafe: false,
+        supports_unions: false,
         span: span,
         attributes: Vec::new(),
         path: ty::Path {

@@ -7,12 +7,12 @@ use rocket::Rocket;
 use std::fs::File;
 use std::io::Error as IOError;
 
-#[route(GET, path = "/")]
+#[get("/")]
 fn index() -> File {
     File::open("static/index.html").unwrap()
 }
 
-#[route(GET, path = "/<file>")]
+#[get("/<file>")]
 fn files(file: &str) -> Result<File, IOError> {
     File::open(format!("static/{}", file))
 }

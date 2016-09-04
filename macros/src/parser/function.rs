@@ -29,6 +29,10 @@ impl Function {
         &self.0.node.1
     }
 
+    pub fn span(&self) -> Span {
+        self.0.span
+    }
+
     pub fn find_input<'a>(&'a self, name: &str) -> Option<&'a Arg> {
         self.decl().inputs.iter().filter(|arg| arg.named(name)).next()
     }

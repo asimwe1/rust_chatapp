@@ -14,17 +14,19 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let catch_fn_name = user_fn_name.prepend(CATCH_FN_PREFIX);
     let code = error.code.node;
     emit_item(push, quote_item!(ecx,
-         fn $catch_fn_name<'rocket>(err: ::rocket::Error,
-                                    req: &'rocket ::rocket::Request<'rocket>)
-                                    -> ::rocket::Response<'rocket> {
-             rocket::Response::with_raw_status($code, $user_fn_name(err, req))
-         }
+        fn $catch_fn_name<'rocket>(err: ::rocket::Error,
+                                   req: &'rocket ::rocket::Request<'rocket>)
+                                   -> ::rocket::Response<'rocket> {
+            let result = $user_fn_name(err, req);
+            rocket::Response::with_raw_status($code, result)
+        }
     ).expect("catch function"));
 
     let struct_name = user_fn_name.prepend(CATCH_STRUCT_PREFIX);
     emit_item(push, quote_item!(ecx,
         #[allow(non_upper_case_globals)]
-        pub static $struct_name: rocket::StaticCatchInfo = rocket::StaticCatchInfo {
+        pub static $struct_name: ::rocket::StaticCatchInfo =
+        ::rocket::StaticCatchInfo {
             code: $code,
             handler: $catch_fn_name
         };

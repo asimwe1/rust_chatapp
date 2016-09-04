@@ -29,7 +29,7 @@ impl ErrorParams {
             ecx.struct_span_fatal(sp, "incorrect use of attribute")
                 .help("attributes in Rocket must have the form: #[name(...)]")
                 .emit();
-            unreachable!()
+            ecx.span_fatal(sp, "malformed attribute");
         });
 
         if meta_items.len() < 1 {

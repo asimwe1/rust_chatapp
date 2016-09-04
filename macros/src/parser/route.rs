@@ -5,41 +5,10 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
-use utils::{span, MetaItemExt, SpanExt, ArgExt};
-use super::ParamIter;
+use utils::{span, MetaItemExt, SpanExt};
+use super::{Function, ParamIter};
 use super::keyvalue::KVSpanned;
 use rocket::{Method, ContentType};
-
-pub struct Function(Spanned<(Ident, FnDecl)>);
-
-impl Function {
-    fn from(annotated: &Annotatable) -> Result<Function, Span> {
-        let inner = match *annotated {
-            Annotatable::Item(ref item) => match item.node {
-                ItemKind::Fn(ref decl, ..) => {
-                    span((item.ident, decl.clone().unwrap()), item.span)
-                }
-                _ => return Err(item.span)
-            },
-            Annotatable::TraitItem(ref item) => return Err(item.span),
-            Annotatable::ImplItem(ref item) => return Err(item.span),
-        };
-
-        Ok(Function(inner))
-    }
-
-    pub fn ident(&self) -> &Ident {
-        &self.0.node.0
-    }
-
-    pub fn decl(&self) -> &FnDecl {
-        &self.0.node.1
-    }
-
-    pub fn find_input<'a>(&'a self, name: &str) -> Option<&'a Arg> {
-        self.decl().inputs.iter().filter(|arg| arg.named(name)).next()
-    }
-}
 
 /// This structure represents the parsed `route` attribute.
 ///
@@ -52,7 +21,7 @@ pub struct RouteParams {
     pub method: Spanned<Method>,
     pub path: Spanned<String>,
     pub form_param: Option<KVSpanned<String>>,
-    pub accept: Option<KVSpanned<ContentType>>,
+    pub format: Option<KVSpanned<ContentType>>,
     pub rank: Option<KVSpanned<isize>>,
 }
 
@@ -72,10 +41,10 @@ impl RouteParams {
         });
 
         let meta_items = meta_item.meta_item_list().unwrap_or_else(|| {
-            ecx.struct_span_fatal(sp, "incorrect use of attribute")
+            ecx.struct_span_err(sp, "incorrect use of attribute")
                 .help("attributes in Rocket must have the form: #[name(...)]")
                 .emit();
-            unreachable!()
+            ecx.span_fatal(sp, "malformed attribute");
         });
 
         if meta_items.len() < 1 {
@@ -91,18 +60,18 @@ impl RouteParams {
         };
 
         if attr_params.len() < 1 {
-            ecx.struct_span_fatal(sp, "attribute requires at least a path")
+            ecx.struct_span_err(sp, "attribute requires at least a path")
                 .help(r#"example: #[get("/my/path")] or #[get(path = "/hi")]"#)
                 .emit();
-            unreachable!()
+            ecx.span_fatal(sp, "malformed attribute");
         }
 
+        // Parse the required path parameter.
         let path = parse_path(ecx, &attr_params[0]);
 
         // Parse all of the optional parameters.
-        // TODO: Factor this out for use in Error.
         let mut seen_keys = HashSet::new();
-        let (mut rank, mut form, mut accept) = Default::default();
+        let (mut rank, mut form, mut format) = Default::default();
         for param in &attr_params[1..] {
             let kv_opt = kv_from_nested(&param);
             if kv_opt.is_none() {
@@ -114,9 +83,9 @@ impl RouteParams {
             match kv.key().as_str() {
                 "rank" => rank = parse_opt(ecx, &kv, parse_rank),
                 "form" => form = parse_opt(ecx, &kv, parse_form),
-                "accept" => accept = parse_opt(ecx, &kv, parse_accept),
+                "format" => format = parse_opt(ecx, &kv, parse_format),
                 _ => {
-                    let msg = format!("{} is not a known parameter", kv.key());
+                    let msg = format!("'{}' is not a known parameter", kv.key());
                     ecx.span_err(kv.span, &msg);
                     continue;
                 }
@@ -136,7 +105,7 @@ impl RouteParams {
             method: method,
             path: path,
             form_param: form,
-            accept: accept,
+            format: format,
             rank: rank,
             annotated_fn: function,
         }
@@ -145,7 +114,7 @@ impl RouteParams {
     pub fn path_params<'s, 'a, 'c: 'a>(&'s self,
                                    ecx: &'a ExtCtxt<'c>)
                                     -> ParamIter<'s, 'a, 'c> {
-        ParamIter::new(ecx, self.path.node.as_str(), self.path.span)
+        ParamIter::new(ecx, self.path.node.as_str(), self.path.span.trim(1))
     }
 }
 
@@ -227,13 +196,13 @@ fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> String {
 
             ecx.span_err(kv.value.span, "parameter name must be alphanumeric");
         }
-    } else {
-        ecx.struct_span_err(kv.span, r#"expected `form = "<name>"`"#)
-            .help(r#"form, if specified, must be a key-value pair where \
-                  the key is `form` and the value is a string with a single \
-                  parameter inside '<' '>'. e.g: form = "<login>""#)
-            .emit();
     }
+
+    ecx.struct_span_err(kv.span, r#"expected `form = "<name>"`"#)
+        .help(r#"form, if specified, must be a key-value pair where
+              the key is `form` and the value is a string with a single
+              parameter inside '<' '>'. e.g: form = "<login>""#)
+        .emit();
 
     "".to_string()
 }
@@ -258,7 +227,7 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
     -1
 }
 
-fn parse_accept(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
+fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
     if let LitKind::Str(ref s, _) = *kv.value() {
         if let Ok(ct) = ContentType::from_str(s) {
             if ct.is_ext() {
@@ -267,14 +236,16 @@ fn parse_accept(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
             } else {
                 return ct;
             }
+        } else {
+            ecx.span_err(kv.value.span, "malformed content type");
         }
-    } else {
-        ecx.struct_span_err(kv.span, r#"expected `accept = "content/type"`"#)
-            .help(r#"accept, if specified, must be a key-value pair where
-                  the key is `accept` and the value is a string representing the
-                  content-type accepted. e.g: accept = "application/json""#)
-            .emit();
     }
+
+    ecx.struct_span_err(kv.span, r#"expected `format = "content/type"`"#)
+        .help(r#"format, if specified, must be a key-value pair where
+              the key is `format` and the value is a string representing the
+              content-type accepted. e.g: format = "application/json""#)
+        .emit();
 
     ContentType::any()
 }

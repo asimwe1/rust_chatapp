@@ -24,12 +24,12 @@ struct Message {
     message: String
 }
 
-#[route(POST, path = "/submit", form = "<message>")]
+#[post("/submit", form = "<message>")]
 fn submit(message: Message) -> Cookied<Redirect> {
     Cookied::new(Redirect::to("/")).add("message", &message.message)
 }
 
-#[route(GET, path = "/")]
+#[get("/")]
 fn index(cookies: Cookies) -> tera::TeraResult<String> {
     let message = cookies.find("message").map(|msg| msg.value);
     TERA.render("index.html", ctxt(message))

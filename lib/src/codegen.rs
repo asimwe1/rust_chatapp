@@ -4,7 +4,7 @@ use content_type::ContentType;
 pub struct StaticRouteInfo {
     pub method: Method,
     pub path: &'static str,
-    pub accept: Option<ContentType>,
+    pub format: Option<ContentType>,
     pub handler: Handler,
     pub rank: Option<isize>,
 }

@@ -36,11 +36,11 @@ fn sub_level_to_expr(ecx: &ExtCtxt, level: &SubLevel) -> Path {
     })
 }
 
-fn accept_to_path(ecx: &ExtCtxt, accept: Option<ContentType>) -> Option<Path> {
-    accept.map(|ct| {
+fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
+    ct.map(|ct| {
         let top_level = top_level_to_expr(ecx, &ct.0);
         let sub_level = sub_level_to_expr(ecx, &ct.1);
-        quote_path!(ecx, ::rocket::ContentType($top_level, $sub_level, None))
+        quote_expr!(ecx, ::rocket::ContentType($top_level, $sub_level, None))
     })
 }
 
@@ -53,12 +53,20 @@ trait RouteGenerateExt {
 
 impl RouteGenerateExt for RouteParams {
     fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
-        let name = self.form_param.as_ref().map(|p| p.value());
-        let arg: &Arg = match name.and_then(|p| self.annotated_fn.find_input(p)) {
-            Some(arg) => arg,
-            None => return None
-        };
+        let param = self.form_param.as_ref();
+        let arg = param.and_then(|p| self.annotated_fn.find_input(p.value()));
+        if param.is_none() {
+            return None;
+        } else if arg.is_none() {
+            let param = param.unwrap();
+            let fn_span = self.annotated_fn.span();
+            let msg = format!("'{}' is declared as an argument...", param.value());
+            ecx.span_err(param.span, &msg);
+            ecx.span_err(fn_span, "...but isn't in the function signature.");
+            return None;
+        }
 
+        let arg = arg.unwrap();
         let (name, ty) = (arg.ident().unwrap(), &arg.ty);
         Some(quote_stmt!(ecx,
             let $name: $ty =
@@ -77,14 +85,28 @@ impl RouteGenerateExt for RouteParams {
     // TODO: Add some kind of logging facility in Rocket to get be able to log
     // an error/debug message if parsing a parameter fails.
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt> {
-        let path_params = self.path_params(ecx);
-        let all = &self.annotated_fn.decl().inputs;
-        let declared: HashSet<&str> = path_params.map(|p| p.node).collect();
-        let arg_declared = |arg: &&Arg| declared.contains(&*arg.name().unwrap());
-
         let mut fn_param_statements = vec![];
 
-        for (i, arg) in all.iter().filter(&arg_declared).enumerate() {
+        // Retrieve an iterator over the user's path parameters and ensure that
+        // each parameter appears in the function signature.
+        for param in self.path_params(ecx) {
+            if self.annotated_fn.find_input(param.node).is_none() {
+                let fn_span = self.annotated_fn.span();
+                let msg = format!("'{}' is declared as an argument...", param.node);
+                ecx.span_err(param.span, &msg);
+                ecx.span_err(fn_span, "...but isn't in the function signature.");
+            }
+        }
+
+        // Create a function thats checks if an argument was declared in `path`.
+        let set: HashSet<&str> = self.path_params(ecx).map(|p| p.node).collect();
+        let declared = &|arg: &&Arg| set.contains(&*arg.name().unwrap());
+
+        // These are all of the arguments in the function signature.
+        let all = &self.annotated_fn.decl().inputs;
+
+        // Generate code for each user declared parameter.
+        for (i, arg) in all.iter().filter(declared).enumerate() {
             let (ident, ty) = (arg.ident().unwrap(), &arg.ty);
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match _req.get_param($i) {
@@ -94,7 +116,15 @@ impl RouteGenerateExt for RouteParams {
             ).expect("declared param parsing statement"));
         }
 
-        for arg in all.iter().filter(|p| !arg_declared(p)) {
+        // A from_request parameter is one that isnt't declared and isn't `form`.
+        let from_request = |a: &&Arg| {
+            let a_name = &*a.name().unwrap();
+            !declared(a)
+                && self.form_param.as_ref().map_or(true, |p| p.value() != a_name)
+        };
+
+        // Generate the code for `form_request` parameters.
+        for arg in all.iter().filter(from_request) {
             let (ident, ty) = (arg.ident().unwrap(), &arg.ty);
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match
@@ -119,8 +149,8 @@ impl RouteGenerateExt for RouteParams {
     fn explode(&self, ecx: &ExtCtxt) -> (&String, Path, P<Expr>, P<Expr>) {
         let path = &self.path.node;
         let method = method_variant_to_expr(ecx, self.method.node);
-        let accept = self.accept.as_ref().map(|kv| kv.value().clone());
-        let content_type = option_as_expr(ecx, &accept_to_path(ecx, accept));
+        let format = self.format.as_ref().map(|kv| kv.value().clone());
+        let content_type = option_as_expr(ecx, &content_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
 
         (path, method, content_type, rank)
@@ -167,7 +197,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,
-                accept: $content_type,
+                format: $content_type,
                 rank: $rank,
             };
     ).unwrap());

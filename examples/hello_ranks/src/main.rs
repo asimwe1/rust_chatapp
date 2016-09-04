@@ -4,12 +4,12 @@
 extern crate rocket;
 use rocket::Rocket;
 
-#[GET(path = "/hello/<name>/<age>")]
+#[get("/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 
-#[GET(path = "/hello/<name>/<age>", rank = "2")]
+#[get("/hello/<name>/<age>", rank = 2)]
 fn hi(name: &str, age: &str) -> String {
     format!("Hi {}! You age ({}) is kind of funky.", name, age)
 }

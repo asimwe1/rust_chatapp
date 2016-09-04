@@ -24,7 +24,7 @@ fn ctxt(error: Option<&str>) -> tera::Context {
     context
 }
 
-#[route(POST, path = "", form = "<todo>")]
+#[post("/", form = "<todo>")]
 fn new(todo: Task) -> Result<Redirect, tera::TeraResult<String>> {
     if todo.description.is_empty() {
         let context = ctxt(Some("Description cannot be empty."));
@@ -38,7 +38,7 @@ fn new(todo: Task) -> Result<Redirect, tera::TeraResult<String>> {
 }
 
 // Should likely do something to simulate PUT.
-#[route(GET, path = "/<id>/toggle")]
+#[post("/<id>/toggle")]
 fn toggle(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
     if Task::toggle_with_id(id) {
         Ok(Redirect::to("/")) // Say that it was added...somehow.
@@ -49,7 +49,7 @@ fn toggle(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
 }
 
 // Should likely do something to simulate DELETE.
-#[route(GET, path = "/<id>/delete")]
+#[get("/<id>/delete")]
 fn delete(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
     if Task::delete_with_id(id) {
         Ok(Redirect::to("/")) // Say that it was added...somehow.
@@ -59,7 +59,7 @@ fn delete(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
     }
 }
 
-#[route(GET, path = "/")]
+#[get("/")]
 fn index() -> tera::TeraResult<String> {
     TERA.render("index.html", ctxt(None))
 }

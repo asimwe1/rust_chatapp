@@ -86,7 +86,7 @@ impl fmt::Display for Route {
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
-        route.content_type = info.accept.clone().unwrap_or(ContentType::any());
+        route.content_type = info.format.clone().unwrap_or(ContentType::any());
         if let Some(rank) = info.rank {
             route.rank = rank;
         }

@@ -40,7 +40,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("errors", macros::errors);
 
     register_decorators!(reg,
-        // "derive_FromForm" => from_form_derive
+        "derive_FromForm" => from_form_derive,
         "error" => error_decorator,
 
         "route" => route_decorator,

@@ -16,16 +16,6 @@ pub struct KVSpanned<V> {
 }
 
 impl<V> KVSpanned<V> {
-    /// Maps the inner value of this span using `f`. The key, value, and full
-    /// spans will remain the same in the new KVSpan.
-    pub fn map<U, F: FnOnce(V) -> U>(self, f: F) -> KVSpanned<U> {
-        KVSpanned {
-            span: self.span,
-            key: self.key,
-            value: span(f(self.value.node), self.value.span)
-        }
-    }
-
     /// Maps a reference of the inner value of this span using `f`. The key,
     /// value, and full spans will remain the same in the new KVSpan.
     pub fn map_ref<U, F: FnOnce(&V) -> U>(&self, f: F) -> KVSpanned<U> {

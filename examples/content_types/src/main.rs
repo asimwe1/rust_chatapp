@@ -13,8 +13,7 @@ struct Person {
     age: i8,
 }
 
-// FIXME: Change 'content' to 'format'. Look at 'accept' header to match.
-#[GET(path = "/<name>/<age>", content = "application/json")]
+#[get("/<name>/<age>", format = "application/json")]
 fn hello(content_type: ContentType, name: String, age: i8) -> JSON<String> {
     let person = Person {
         name: name,
@@ -25,7 +24,7 @@ fn hello(content_type: ContentType, name: String, age: i8) -> JSON<String> {
     JSON(serde_json::to_string(&person).unwrap())
 }
 
-#[error(code = "404")]
+#[error(404)]
 fn not_found<'r>(error: Error, request: &'r Request<'r>) -> String {
     match error {
         Error::BadMethod if !request.content_type().is_json() => {

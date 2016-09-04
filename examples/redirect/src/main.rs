@@ -5,12 +5,12 @@ extern crate rocket;
 use rocket::Rocket;
 use rocket::response::Redirect;
 
-#[route(GET, path = "/")]
+#[get("/")]
 fn root() -> Redirect {
     Redirect::to("/login")
 }
 
-#[route(GET, path = "/login")]
+#[get("/login")]
 fn login() -> &'static str {
     "Hi! Please log in before continuing."
 }

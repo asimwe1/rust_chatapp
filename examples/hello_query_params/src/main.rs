@@ -18,7 +18,7 @@ use rocket::{Rocket, Error};
 //     format!("Hello, {} year old named {}!", q.get("name")?, q.get("age")?)
 // }
 
-#[route(GET, path = "/hello")]
+#[get("/hello")]
 fn hello() -> &'static str {
     "Hello there! Don't have query params yet, but we're working on it."
 }
