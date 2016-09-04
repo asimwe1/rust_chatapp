@@ -38,7 +38,7 @@ fn new(todo: Task) -> Result<Redirect, tera::TeraResult<String>> {
 }
 
 // Should likely do something to simulate PUT.
-#[post("/<id>/toggle")]
+#[get("/<id>/toggle")]
 fn toggle(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
     if Task::toggle_with_id(id) {
         Ok(Redirect::to("/")) // Say that it was added...somehow.
