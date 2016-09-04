@@ -1,5 +1,6 @@
 pub use response::mime::{Mime, TopLevel, SubLevel};
 use response::mime::{Param};
+use std::default::Default;
 
 use std::str::FromStr;
 use std::borrow::Borrow;
@@ -48,6 +49,13 @@ impl ContentType {
     is_some!(is_xml: Application/Xml);
     is_some!(is_any: Star/Star);
     is_some!(is_html: Application/Html);
+}
+
+impl Default for ContentType {
+    #[inline(always)]
+    fn default() -> ContentType {
+        ContentType::any()
+    }
 }
 
 impl Into<Mime> for ContentType {

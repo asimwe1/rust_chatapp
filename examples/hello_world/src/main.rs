@@ -4,7 +4,7 @@
 extern crate rocket;
 use rocket::Rocket;
 
-#[GET(path = "/")]
+#[get("/")]
 fn root() -> &'static str {
     "Hello, world!"
 }

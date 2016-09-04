@@ -131,8 +131,8 @@ pub trait RouteDecoratorExt {
 
 impl<'a, 'c> RouteDecoratorExt for MetaItemParser<'a, 'c> {
     fn bad_method(&self, sp: Span, message: &str) {
-        let message = format!("{} Valid methods are: [GET, PUT, POST, DELETE, \
-            OPTIONS, HEAD, TRACE, CONNECT, PATCH]", message);
+        let message = format!("{} {}", message,
+                              "Valid methods are: [GET, PUT, POST, DELETE, PATCH]");
         self.ctxt.span_err(sp, message.as_str());
     }
 
