@@ -3,6 +3,7 @@ use syntax::codemap::{Span, Spanned};
 use syntax::ext::base::Annotatable;
 use utils::{ArgExt, span};
 
+#[derive(Debug)]
 pub struct Function(Spanned<(Ident, FnDecl)>);
 
 impl Function {
@@ -33,7 +34,7 @@ impl Function {
         self.0.span
     }
 
-    pub fn find_input<'a>(&'a self, name: &str) -> Option<&'a Arg> {
+    pub fn find_input<'a>(&'a self, name: &Name) -> Option<&'a Arg> {
         self.decl().inputs.iter().filter(|arg| arg.named(name)).next()
     }
 }

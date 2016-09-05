@@ -13,9 +13,9 @@ pub trait FromFormValue<'v>: Sized {
 
     fn parse(v: &'v str) -> Result<Self, Self::Error>;
 
-    // Returns a default value to be used when the form field does not exist. If
-    // this returns None, then the field is required. Otherwise, this should
-    // return Some(default_value).
+    /// Returns a default value to be used when the form field does not exist.
+    /// If this returns None, then the field is required. Otherwise, this should
+    /// return Some(default_value).
     fn default() -> Option<Self> {
         None
     }
@@ -95,27 +95,37 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
     }
 }
 
-pub fn form_items<'f>(string: &'f str, items: &mut [(&'f str, &'f str)]) -> usize {
-    let mut param_num = 0;
-    let mut rest = string;
-    while !rest.is_empty() && param_num < items.len() {
-        let (key, remainder) = match rest.find('=') {
-            Some(index) => (&rest[..index], &rest[(index + 1)..]),
-            None => return param_num
+pub struct FormItems<'f>(pub &'f str);
+
+impl<'f> Iterator for FormItems<'f> {
+    type Item = (&'f str, &'f str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let string = self.0;
+        let (key, rest) = match string.find('=') {
+            Some(index) => (&string[..index], &string[(index + 1)..]),
+            None => return None
         };
 
-        rest = remainder;
         let (value, remainder) = match rest.find('&') {
             Some(index) => (&rest[..index], &rest[(index + 1)..]),
             None => (rest, "")
         };
 
-        rest = remainder;
-        items[param_num] = (key, value);
-        param_num += 1;
+        self.0 = remainder;
+        Some((key, value))
+    }
+}
+
+
+pub fn form_items<'f>(string: &'f str, items: &mut [(&'f str, &'f str)]) -> usize {
+    let mut param_count = 0;
+    for (i, item) in FormItems(string).take(items.len()).enumerate() {
+        items[i] = item;
+        param_count += 1;
     }
 
-    param_num
+    param_count
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
+use syntax::parse::token::str_to_ident;
 
 use utils::{span, MetaItemExt, SpanExt};
 use super::{Function, ParamIter};
@@ -16,11 +17,13 @@ use rocket::{Method, ContentType};
 /// the user supplied the information. This structure can only be obtained by
 /// calling the `RouteParams::from` function and passing in the entire decorator
 /// environment.
+#[derive(Debug)]
 pub struct RouteParams {
     pub annotated_fn: Function,
     pub method: Spanned<Method>,
     pub path: Spanned<String>,
-    pub form_param: Option<KVSpanned<String>>,
+    pub form_param: Option<KVSpanned<Ident>>,
+    pub query_param: Option<Spanned<Ident>>,
     pub format: Option<KVSpanned<ContentType>>,
     pub rank: Option<KVSpanned<isize>>,
 }
@@ -66,8 +69,8 @@ impl RouteParams {
             ecx.span_fatal(sp, "malformed attribute");
         }
 
-        // Parse the required path parameter.
-        let path = parse_path(ecx, &attr_params[0]);
+        // Parse the required path and optional query parameters.
+        let (path, query) = parse_path(ecx, &attr_params[0]);
 
         // Parse all of the optional parameters.
         let mut seen_keys = HashSet::new();
@@ -105,6 +108,7 @@ impl RouteParams {
             method: method,
             path: path,
             form_param: form,
+            query_param: query,
             format: format,
             rank: rank,
             annotated_fn: function,
@@ -137,6 +141,22 @@ pub fn kv_from_nested(item: &NestedMetaItem) -> Option<KVSpanned<LitKind>> {
     })
 }
 
+fn param_string_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Ident> {
+    let string = s.node;
+    if string.starts_with('<') && string.ends_with('>') {
+        let param = &string[1..(string.len() - 1)];
+        if param.chars().all(char::is_alphanumeric) {
+            return Some(str_to_ident(param));
+        }
+
+        ecx.span_err(s.span, "parameter name must be alphanumeric");
+    } else {
+        ecx.span_err(s.span, "parameters must start with '<' and end with '>'");
+    }
+
+    None
+}
+
 fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     if let Some(word) = meta_item.word() {
         if let Ok(method) = Method::from_str(&*word.name()) {
@@ -157,18 +177,29 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     return dummy_spanned(Method::Get);
 }
 
-fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<String> {
+fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> (Spanned<String>, Option<Spanned<Ident>>) {
+    let from_string = |string: &str, sp: Span| {
+        if let Some(q) = string.find('?') {
+            let path = span(string[..q].to_string(), sp);
+            let q_str = span(&string[(q + 1)..], sp);
+            let query = param_string_to_ident(ecx, q_str).map(|i| span(i, sp));
+            return (path, query);
+        } else {
+            return (span(string.to_string(), sp), None)
+        }
+    };
+
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
         if name != "path" {
             ecx.span_err(sp, "the first key, if any, must be 'path'");
         } else if let LitKind::Str(ref s, _) = lit.node {
-            return span(s.to_string(), lit.span);
+            return from_string(s, lit.span);
         } else {
             ecx.span_err(lit.span, "`path` value must be a string")
         }
     } else if let Some(s) = meta_item.str_lit() {
-        return span(s.to_string(), sp);
+        return from_string(s, sp);
     } else {
         ecx.struct_span_err(sp, r#"expected `path = string` or a path string"#)
             .help(r#"you can specify the path directly as a string, \
@@ -177,7 +208,7 @@ fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<String> {
             .emit();
     }
 
-    dummy_spanned("".to_string())
+    (dummy_spanned("".to_string()), None)
 }
 
 fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanned<O>>
@@ -186,15 +217,10 @@ fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanne
     Some(kv.map_ref(|_| f(ecx, kv)))
 }
 
-fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> String {
+fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
     if let LitKind::Str(ref s, _) = *kv.value() {
-        if s.starts_with('<') && s.ends_with('>') {
-            let form_param = s[1..(s.len() - 1)].to_string();
-            if form_param.chars().all(char::is_alphanumeric) {
-                return form_param;
-            }
-
-            ecx.span_err(kv.value.span, "parameter name must be alphanumeric");
+        if let Some(ident) = param_string_to_ident(ecx, span(s, kv.value.span)) {
+            return ident;
         }
     }
 
@@ -204,7 +230,7 @@ fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> String {
               parameter inside '<' '>'. e.g: form = "<login>""#)
         .emit();
 
-    "".to_string()
+    str_to_ident("")
 }
 
 fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {

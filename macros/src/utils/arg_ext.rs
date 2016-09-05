@@ -1,15 +1,15 @@
-use syntax::ast::{Arg, PatKind, Ident};
+use syntax::ast::{Arg, PatKind, Ident, Name};
 
 pub trait ArgExt {
     fn ident(&self) -> Option<&Ident>;
 
-    fn name(&self) -> Option<String> {
+    fn name(&self) -> Option<&Name> {
         self.ident().map(|ident| {
-            ident.name.to_string()
+            &ident.name
         })
     }
 
-    fn named(&self, name: &str) -> bool {
+    fn named(&self, name: &Name) -> bool {
         self.name().map_or(false, |a| a == name)
     }
 }

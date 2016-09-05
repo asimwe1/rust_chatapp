@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::Display;
 
 use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
 use utils::{emit_item, span, sep_by_tok, SpanExt, IdentExt, ArgExt, option_as_expr};
@@ -6,7 +7,7 @@ use parser::RouteParams;
 
 use syntax::codemap::{Span, Spanned};
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
+use syntax::ast::{Name, Arg, Ident, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token::{self, str_to_ident};
@@ -21,6 +22,7 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     })
 }
 
+// FIXME: This should return an Expr! (Ext is not a path.)
 fn top_level_to_expr(ecx: &ExtCtxt, level: &TopLevel) -> Path {
     quote_enum!(ecx, *level => ::rocket::content_type::TopLevel {
         Star, Text, Image, Audio, Video, Application, Multipart, Model, Message;
@@ -28,6 +30,7 @@ fn top_level_to_expr(ecx: &ExtCtxt, level: &TopLevel) -> Path {
     })
 }
 
+// FIXME: This should return an Expr! (Ext is not a path.)
 fn sub_level_to_expr(ecx: &ExtCtxt, level: &SubLevel) -> Path {
     quote_enum!(ecx, *level => ::rocket::content_type::SubLevel {
         Star, Plain, Html, Xml, Javascript, Css, EventStream, Json,
@@ -45,24 +48,31 @@ fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr
 }
 
 trait RouteGenerateExt {
+    fn gen_form(&self, &ExtCtxt, Option<&Spanned<Ident>>, P<Expr>) -> Option<Stmt>;
+    fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>);
+
     fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
+    fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
     fn explode(&self, ecx: &ExtCtxt) -> (&String, Path, P<Expr>, P<Expr>);
 }
 
 impl RouteGenerateExt for RouteParams {
-    fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
-        let param = self.form_param.as_ref();
-        let arg = param.and_then(|p| self.annotated_fn.find_input(p.value()));
+    fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>) {
+        let fn_span = self.annotated_fn.span();
+        let msg = format!("'{}' is declared as an argument...", arg.node);
+        ecx.span_err(arg.span, &msg);
+        ecx.span_err(fn_span, "...but isn't in the function signature.");
+    }
+
+    fn gen_form(&self, ecx: &ExtCtxt, param: Option<&Spanned<Ident>>,
+                form_string: P<Expr>) -> Option<Stmt> {
+        let arg = param.and_then(|p| self.annotated_fn.find_input(&p.node.name));
         if param.is_none() {
             return None;
         } else if arg.is_none() {
-            let param = param.unwrap();
-            let fn_span = self.annotated_fn.span();
-            let msg = format!("'{}' is declared as an argument...", param.value());
-            ecx.span_err(param.span, &msg);
-            ecx.span_err(fn_span, "...but isn't in the function signature.");
+            self.missing_declared_err(ecx, &param.unwrap());
             return None;
         }
 
@@ -70,16 +80,36 @@ impl RouteGenerateExt for RouteParams {
         let (name, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
         Some(quote_stmt!(ecx,
             let $name: $ty =
-                if let Ok(s) = ::std::str::from_utf8(_req.data.as_slice()) {
-                    if let Ok(v) = ::rocket::form::FromForm::from_form_string(s) {
-                        v
-                    } else {
-                        return ::rocket::Response::not_found();
-                    }
-                } else {
-                    return ::rocket::Response::server_error();
+                match ::rocket::form::FromForm::from_form_string($form_string) {
+                    Ok(v) => v,
+                    Err(_) => return ::rocket::Response::forward()
                 };
         ).expect("form statement"))
+    }
+
+    fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
+        let param = self.form_param.as_ref().map(|p| &p.value);
+        let expr = quote_expr!(ecx,
+            match ::std::str::from_utf8(_req.data.as_slice()) {
+                Ok(s) => s,
+                Err(_) => return ::rocket::Response::server_error()
+            }
+        );
+
+        self.gen_form(ecx, param, expr)
+    }
+
+    fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
+        let param = self.query_param.as_ref();
+        let expr = quote_expr!(ecx,
+           match _req.uri().query() {
+               // FIXME: Don't reinterpret as UTF8 again.
+               Some(query) => query,
+               None => return ::rocket::Response::forward()
+           }
+        );
+
+        self.gen_form(ecx, param, expr)
     }
 
     // TODO: Add some kind of logging facility in Rocket to get be able to log
@@ -91,16 +121,13 @@ impl RouteGenerateExt for RouteParams {
         // Retrieve an iterator over the user's path parameters and ensure that
         // each parameter appears in the function signature.
         for param in &params {
-            if self.annotated_fn.find_input(param.node).is_none() {
-                let fn_span = self.annotated_fn.span();
-                let msg = format!("'{}' is declared as an argument...", param.node);
-                ecx.span_err(param.span, &msg);
-                ecx.span_err(fn_span, "...but isn't in the function signature.");
+            if self.annotated_fn.find_input(&param.node.name).is_none() {
+                self.missing_declared_err(ecx, &param);
             }
         }
 
         // Create a function thats checks if an argument was declared in `path`.
-        let set: HashSet<&str> = params.iter().map(|p| p.node).collect();
+        let set: HashSet<&Name> = params.iter().map(|p| &p.node.name).collect();
         let declared = &|arg: &&Arg| set.contains(&*arg.name().unwrap());
 
         // These are all of the arguments in the function signature.
@@ -117,11 +144,13 @@ impl RouteGenerateExt for RouteParams {
             ).expect("declared param parsing statement"));
         }
 
-        // A from_request parameter is one that isnt't declared and isn't `form`.
+        // A from_request parameter is one that isn't declared, `form`, or query.
         let from_request = |a: &&Arg| {
-            let a_name = &*a.name().unwrap();
-            !declared(a)
-                && self.form_param.as_ref().map_or(true, |p| p.value() != a_name)
+            !declared(a) && self.form_param.as_ref().map_or(true, |p| {
+                !a.named(&p.value().name)
+            }) && self.query_param.as_ref().map_or(true, |p| {
+                !a.named(&p.node.name)
+            })
         };
 
         // Generate the code for `form_request` parameters.
@@ -170,7 +199,10 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
 
     // Parse the route and generate the code to create the form and param vars.
     let route = RouteParams::from(ecx, sp, known_method, meta_item, annotated);
+    debug!("Route params: {:?}", route);
+
     let form_statement = route.generate_form_statement(ecx);
+    let query_statement = route.generate_query_statement(ecx);
     let param_statements = route.generate_param_statements(ecx);
     let fn_arguments = route.generate_fn_arguments(ecx);
 
@@ -181,6 +213,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
          fn $route_fn_name<'rocket>(_req: &'rocket ::rocket::Request<'rocket>)
                 -> ::rocket::Response<'rocket> {
              $form_statement
+             $query_statement
              $param_statements
              let result = $user_fn_name($fn_arguments);
              ::rocket::Response::new(result)

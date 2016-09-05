@@ -16,7 +16,7 @@ impl<'a> URI<'a> {
         let uri = uri.as_ref();
 
         let (path, query) = match uri.find('?') {
-            Some(index) => (&uri[..index], Some(&uri[index..])),
+            Some(index) => (&uri[..index], Some(&uri[(index + 1)..])),
             None => (uri, None)
         };
 
@@ -38,6 +38,10 @@ impl<'a> URI<'a> {
 
     pub fn segments(&self) -> Segments<'a> {
         Segments(self.path)
+    }
+
+    pub fn query(&self) -> Option<&'a str> {
+        self.query
     }
 
     pub fn as_str(&self) -> &'a str {

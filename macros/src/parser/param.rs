@@ -1,5 +1,7 @@
+use syntax::ast::Ident;
 use syntax::ext::base::ExtCtxt;
 use syntax::codemap::{Span, Spanned, BytePos};
+use syntax::parse::token::str_to_ident;
 
 use utils::span;
 
@@ -20,9 +22,9 @@ impl<'s, 'a, 'c: 'a> ParamIter<'s, 'a, 'c> {
 }
 
 impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
-    type Item = Spanned<&'s str>;
+    type Item = Spanned<Ident>;
 
-    fn next(&mut self) -> Option<Spanned<&'s str>> {
+    fn next(&mut self) -> Option<Spanned<Ident>> {
         // Find the start and end indexes for the next parameter, if any.
         let (start, end) = match (self.string.find('<'), self.string.find('>')) {
             (Some(i), Some(j)) => (i, j),
@@ -51,7 +53,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         } else {
             self.string = &self.string[(end + 1)..];
             self.span.lo = self.span.lo + BytePos((end + 1) as u32);
-            Some(span(param, param_span))
+            Some(span(str_to_ident(param), param_span))
         }
     }
 }
