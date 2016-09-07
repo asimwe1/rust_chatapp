@@ -2,7 +2,8 @@ use std::collections::HashSet;
 use std::fmt::Display;
 
 use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
-use utils::{emit_item, span, sep_by_tok, SpanExt, IdentExt, ArgExt, option_as_expr};
+use utils::{emit_item, span, sep_by_tok, option_as_expr, strip_ty_lifetimes};
+use utils::{SpanExt, IdentExt, ArgExt};
 use parser::RouteParams;
 
 use syntax::codemap::{Span, Spanned};
@@ -77,7 +78,8 @@ impl RouteGenerateExt for RouteParams {
         }
 
         let arg = arg.unwrap();
-        let (name, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
+        let name = arg.ident().unwrap().prepend(PARAM_PREFIX);
+        let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
             let $name: $ty =
                 match ::rocket::form::FromForm::from_form_string($form_string) {
@@ -135,7 +137,8 @@ impl RouteGenerateExt for RouteParams {
 
         // Generate code for each user declared parameter.
         for (i, arg) in all.iter().filter(declared).enumerate() {
-            let (ident, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
+            let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
+            let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match _req.get_param($i) {
                     Ok(v) => v,

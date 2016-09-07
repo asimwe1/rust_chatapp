@@ -28,7 +28,7 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
-    pub fn get_param<T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
+    pub fn get_param<T: FromParam<'a>>(&self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
         if params.is_none() || n >= params.as_ref().unwrap().len() {
             Err(Error::NoKey)

@@ -18,6 +18,8 @@ use syntax::codemap::{spanned, Span, Spanned, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::print::pprust::item_to_string;
 use syntax::ptr::P;
+use syntax::fold::Folder;
+use syntax::ast::{Lifetime, LifetimeDef, Ty};
 
 #[inline]
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
@@ -72,3 +74,19 @@ macro_rules! quote_enum {
     })
 }
 
+pub struct TyLifetimeRemover;
+
+// FIXME: Doesn't work for T + whatever.
+impl Folder for TyLifetimeRemover {
+    fn fold_opt_lifetime(&mut self, _: Option<Lifetime>) -> Option<Lifetime> {
+        None
+    }
+
+    fn fold_lifetime_defs(&mut self, _: Vec<LifetimeDef>) -> Vec<LifetimeDef> {
+        vec![]
+    }
+}
+
+pub fn strip_ty_lifetimes(ty: P<Ty>) -> P<Ty> {
+    TyLifetimeRemover.fold_ty(ty)
+}
