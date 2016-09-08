@@ -1,5 +1,8 @@
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::path::PathBuf;
+use router::Segments;
+
 use url;
 
 use error::Error;
@@ -34,3 +37,19 @@ macro_rules! impl_with_fromstr {
 impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
        bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
        SocketAddr);
+
+pub trait FromSegments<'a>: Sized {
+    fn from_segments(segments: Segments<'a>) -> Result<Self, Error>;
+}
+
+impl<'a> FromSegments<'a> for Segments<'a> {
+    fn from_segments(segments: Segments<'a>) -> Result<Segments<'a>, Error> {
+        Ok(segments)
+    }
+}
+
+impl<'a> FromSegments<'a> for PathBuf {
+    fn from_segments(segments: Segments<'a>) -> Result<PathBuf, Error> {
+        Ok(segments.collect())
+    }
+}

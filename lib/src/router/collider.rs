@@ -1,3 +1,6 @@
+/// The Collider trait is used to determine if two items that can be routed on
+/// can match against a given request. That is, if two items `collide`, they
+/// will both match against _some_ request.
 pub trait Collider<T: ?Sized = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
@@ -47,6 +50,7 @@ mod tests {
     use {Request, Response};
     use content_type::ContentType;
     use std::str::FromStr;
+    use router::URI;
 
     type SimpleRoute = (Method, &'static str);
 
@@ -64,17 +68,8 @@ mod tests {
         route_a.collides_with(&Route::ranked(0, Get, b.to_string(), dummy_handler))
     }
 
-    fn s_r_collide(a: &'static str, b: &'static str) -> bool {
-        a.collides_with(&Route::new(Get, b.to_string(), dummy_handler))
-    }
-
-    fn r_s_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::new(Get, a.to_string(), dummy_handler);
-        route_a.collides_with(b)
-    }
-
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        a.collides_with(b)
+        URI::new(a).collides_with(&URI::new(b))
     }
 
     #[test]
@@ -96,6 +91,14 @@ mod tests {
         assert!(unranked_collide("/<name>/hi/there", "/dude/<name>/there"));
         assert!(unranked_collide("/<name>/<a>/<b>", "/<a>/<b>/<c>"));
         assert!(unranked_collide("/<name>/<a>/<b>/", "/<a>/<b>/<c>/"));
+        assert!(unranked_collide("/<a..>", "/hi"));
+        assert!(unranked_collide("/<a..>", "/hi/hey"));
+        assert!(unranked_collide("/<a..>", "/hi/hey/hayo"));
+        assert!(unranked_collide("/a/<a..>", "/a/hi/hey/hayo"));
+        assert!(unranked_collide("/a/<b>/<a..>", "/a/hi/hey/hayo"));
+        assert!(unranked_collide("/a/<b>/<c>/<a..>", "/a/hi/hey/hayo"));
+        assert!(unranked_collide("/<b>/<c>/<a..>", "/a/hi/hey/hayo"));
+        assert!(unranked_collide("/<b>/<c>/hey/hayo", "/a/hi/hey/hayo"));
     }
 
     #[test]
@@ -114,6 +117,7 @@ mod tests {
         assert!(unranked_collide("/<a>/<b>", "/a/b<c>"));
         assert!(unranked_collide("/<a>/bc<b>", "/a/b<c>"));
         assert!(unranked_collide("/<a>/bc<b>d", "/a/b<c>"));
+        assert!(unranked_collide("/<a..>", "///a///"));
     }
 
     #[test]
@@ -130,6 +134,10 @@ mod tests {
         assert!(!unranked_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!unranked_collide("/a/<b>", "/b/<b>"));
         assert!(!unranked_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!unranked_collide("/<a..>", "/"));
+        assert!(!unranked_collide("/hi/<a..>", "/hi"));
+        assert!(!unranked_collide("/hi/<a..>", "/hi/"));
+        assert!(!unranked_collide("/<a..>", "//////"));
     }
 
     #[test]
@@ -144,34 +152,6 @@ mod tests {
 
     #[test]
     fn test_str_non_collisions() {
-        assert!(!s_r_collide("/a", "/b"));
-        assert!(!s_r_collide("/a/b", "/a"));
-        assert!(!s_r_collide("/a/b", "/a/c"));
-        assert!(!s_r_collide("/a/hello", "/a/c"));
-        assert!(!s_r_collide("/hello", "/a/c"));
-        assert!(!s_r_collide("/hello/there", "/hello/there/guy"));
-        assert!(!s_r_collide("/b<a>/there", "/hi/there"));
-        assert!(!s_r_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!s_r_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!s_r_collide("/a<a>/<b>", "/b<b>/<a>"));
-        assert!(!s_r_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_r_collide("/a<a>/<b>", "/b/<b>"));
-        assert!(!r_s_collide("/a", "/b"));
-        assert!(!r_s_collide("/a/b", "/a"));
-        assert!(!r_s_collide("/a/b", "/a/c"));
-        assert!(!r_s_collide("/a/hello", "/a/c"));
-        assert!(!r_s_collide("/hello", "/a/c"));
-        assert!(!r_s_collide("/hello/there", "/hello/there/guy"));
-        assert!(!r_s_collide("/b<a>/there", "/hi/there"));
-        assert!(!r_s_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!r_s_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!r_s_collide("/a<a>/<b>", "/b<b>/<a>"));
-        assert!(!r_s_collide("/a/<b>", "/b/<b>"));
-        assert!(!r_s_collide("/a<a>/<b>", "/b/<b>"));
-    }
-
-    #[test]
-    fn test_str_collisions() {
         assert!(!s_s_collide("/a", "/b"));
         assert!(!s_s_collide("/a/b", "/a"));
         assert!(!s_s_collide("/a/b", "/a/c"));
@@ -184,6 +164,33 @@ mod tests {
         assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
         assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/a", "/b"));
+        assert!(!s_s_collide("/a/b", "/a"));
+        assert!(!s_s_collide("/a/b", "/a/c"));
+        assert!(!s_s_collide("/a/hello", "/a/c"));
+        assert!(!s_s_collide("/hello", "/a/c"));
+        assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
+        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
+        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!s_s_collide("/a/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/a", "/b"));
+        assert!(!s_s_collide("/a/b", "/a"));
+        assert!(!s_s_collide("/a/b", "/a/c"));
+        assert!(!s_s_collide("/a/hello", "/a/c"));
+        assert!(!s_s_collide("/hello", "/a/c"));
+        assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
+        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
+        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
+        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
+        assert!(!s_s_collide("/a/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
+        assert!(!s_s_collide("/<a..>", "/"));
+        assert!(!s_s_collide("/hi/<a..>", "/hi/"));
+        assert!(!s_s_collide("/a/hi/<a..>", "/a/hi/"));
     }
 
     fn ct_route(m: Method, s: &str, ct: &str) -> Route {

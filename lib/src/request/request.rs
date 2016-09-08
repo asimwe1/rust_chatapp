@@ -6,7 +6,7 @@ use term_painter::Color::*;
 use term_painter::ToStyle;
 
 use error::Error;
-use param::FromParam;
+use param::{FromParam, FromSegments};
 use method::Method;
 
 use content_type::ContentType;
@@ -28,12 +28,29 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
+    // FIXME: Don't do the parsing here. I think. Not sure. Decide.
     pub fn get_param<T: FromParam<'a>>(&self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
         if params.is_none() || n >= params.as_ref().unwrap().len() {
+            debug!("{} is >= param count {}", n, params.as_ref().unwrap().len());
             Err(Error::NoKey)
         } else {
             T::from_param(params.as_ref().unwrap()[n])
+        }
+    }
+
+    /// i is the index of the first segment to consider
+    pub fn get_segments<'r: 'a, T: FromSegments<'a>>(&'r self, i: usize)
+            -> Result<T, Error> {
+        if i >= self.uri().segment_count() {
+            debug!("{} is >= segment count {}", i, self.uri().segment_count());
+            Err(Error::NoKey)
+        } else {
+            // TODO: Really want to do self.uri.segments().skip(i).into_inner(),
+            // but the std lib doesn't implement it for Skip.
+            let mut segments = self.uri.segments();
+            for _ in segments.by_ref().take(i) { /* do nothing */ }
+            T::from_segments(segments)
         }
     }
 
@@ -59,10 +76,24 @@ impl<'a> Request<'a> {
         hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))
     }
 
+    /// Returns the first content-type accepted by this request.
+    pub fn accepts(&self) -> ContentType {
+        let accept = self.headers().get::<header::Accept>();
+        accept.map_or(ContentType::any(), |accept| {
+            let items = &accept.0;
+            if items.len() < 1 {
+                return ContentType::any();
+            } else {
+                return ContentType::from(items[0].item.clone())
+            }
+        })
+    }
+
     pub fn uri(&'a self) -> URI<'a> {
         self.uri.as_uri()
     }
 
+    // FIXME: Don't need a refcell for this.
     pub fn set_params(&'a self, route: &Route) {
         *self.params.borrow_mut() = Some(route.get_params(self.uri.as_uri()))
     }

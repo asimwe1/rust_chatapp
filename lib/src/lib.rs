@@ -36,7 +36,7 @@ pub use request::Request;
 pub use method::Method;
 pub use response::{Response, Responder};
 pub use error::Error;
-pub use param::FromParam;
+pub use param::{FromParam, FromSegments};
 pub use router::{Router, Route};
 pub use catcher::Catcher;
 pub use rocket::Rocket;

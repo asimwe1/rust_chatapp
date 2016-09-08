@@ -130,38 +130,27 @@ impl<'a> From<&'a str> for URIBuf {
 
 impl<'a> Collider for URI<'a> {
     fn collides_with(&self, other: &URI) -> bool {
-        if self.segment_count() != other.segment_count() {
-            return false;
-        }
-
+        let mut trailing = false;
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
+            if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
+                trailing = true;
+                break;
+            }
+
             if !seg_a.collides_with(seg_b) {
                 return false;
             }
+        }
+
+        if !trailing && (self.segment_count() != other.segment_count()) {
+            return false;
         }
 
         true
     }
 }
 
-impl Collider for URIBuf {
-    fn collides_with(&self, other: &URIBuf) -> bool {
-        self.as_uri().collides_with(&other.as_uri())
-    }
-}
-
-impl<'a> Collider<URI<'a>> for URIBuf {
-    fn collides_with(&self, other: &URI<'a>) -> bool {
-        self.as_uri().collides_with(other)
-    }
-}
-
-impl<'a> Collider<URIBuf> for URI<'a> {
-    fn collides_with(&self, other: &URIBuf) -> bool {
-        other.as_uri().collides_with(self)
-    }
-}
-
+#[derive(Clone, Debug)]
 pub struct Segments<'a>(&'a str);
 
 impl<'a> Iterator for Segments<'a> {

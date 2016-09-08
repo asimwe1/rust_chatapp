@@ -3,14 +3,15 @@ mod route;
 mod uri;
 
 pub use self::collider::Collider;
-pub use self::uri::{URI, URIBuf};
+pub use self::uri::{URI, URIBuf, Segments};
 pub use self::route::Route;
 
 use std::collections::hash_map::HashMap;
 use method::Method;
 use request::Request;
 
-type Selector = (Method, usize);
+// type Selector = (Method, usize);
+type Selector = Method;
 
 #[derive(Default)]
 pub struct Router {
@@ -23,7 +24,8 @@ impl Router {
     }
 
     pub fn add(&mut self, route: Route) {
-        let selector = (route.method, route.path.segment_count());
+        // let selector = (route.method, route.path.segment_count());
+        let selector = route.method;
         self.routes.entry(selector).or_insert_with(|| vec![]).push(route);
     }
 
@@ -33,9 +35,12 @@ impl Router {
     // FIXME: Figure out a way to get more than one route, i.e., to correctly
     // handle ranking.
     pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
-        let num_segments = req.uri.segment_count();
-        self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
-            let mut matches: Vec<&'b Route> = routes.iter().filter(|r| {
+        trace_!("Trying to route: {}", req);
+        // let num_segments = req.uri.segment_count();
+        // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
+        self.routes.get(&req.method).map_or(vec![], |routes| {
+            trace_!("All possible matches: {:?}", routes);
+            let mut matches: Vec<_> = routes.iter().filter(|r| {
                 r.collides_with(req)
             }).collect();
 
@@ -120,6 +125,18 @@ mod test {
         assert!(unranked_route_collisions(&["/<a>", "/<b>"]));
         assert!(unranked_route_collisions(&["/hello/bob", "/hello/<b>"]));
         assert!(unranked_route_collisions(&["/a/b/<c>/d", "/<a>/<b>/c/d"]));
+        assert!(unranked_route_collisions(&["/a/b", "/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/b/c", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/<a>/b", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/<b>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/b/<c>", "/a/<a..>"]));
+    }
+
+    #[test]
+    fn test_no_collisions() {
+        assert!(!unranked_route_collisions(&["/<a>", "/a/<a..>"]));
+        assert!(!unranked_route_collisions(&["/a/b", "/a/b/c"]));
+        assert!(!unranked_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
     }
 
     #[test]
@@ -128,6 +145,8 @@ mod test {
         assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
         assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
         assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
+        assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
+        assert!(!default_rank_route_collisions(&["/a/b", "/a/b/<c..>"]));
     }
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
@@ -169,6 +188,13 @@ mod test {
         assert!(route(&router, Put, "/hello").is_some());
         assert!(route(&router, Post, "/hello").is_some());
         assert!(route(&router, Delete, "/hello").is_some());
+
+        let router = router_with_routes(&["/<a..>"]);
+        assert!(route(&router, Get, "/hello/hi").is_some());
+        assert!(route(&router, Get, "/a/b/").is_some());
+        assert!(route(&router, Get, "/i/a").is_some());
+        assert!(route(&router, Get, "/a/b/c/d/e/f").is_some());
+
     }
 
     #[test]
@@ -274,6 +300,18 @@ mod test {
             to: "/profile/sergio/edit",
             with: [(0, "/<a>/<b>/edit"), (2, "/profile/<d>"), (5, "/<a>/<b>/<c>")],
             expect: (0, "/<a>/<b>/edit"), (5, "/<a>/<b>/<c>")
+        );
+
+        assert_ranked_routing!(
+            to: "/a/b",
+            with: [(0, "/a/b"), (1, "/a/<b..>")],
+            expect: (0, "/a/b"), (1, "/a/<b..>")
+        );
+
+        assert_ranked_routing!(
+            to: "/a/b/c/d/e/f",
+            with: [(1, "/a/<b..>"), (2, "/a/b/<c..>")],
+            expect: (1, "/a/<b..>"), (2, "/a/b/<c..>")
         );
     }
 

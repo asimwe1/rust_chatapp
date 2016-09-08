@@ -44,7 +44,6 @@ impl Rocket {
 
         info!("{}:", request);
         let matches = self.router.route(&request);
-        trace_!("Found {} matches.", matches.len());
         for route in matches {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
@@ -61,6 +60,7 @@ impl Rocket {
             };
         }
 
+        error_!("No matching routes.");
         self.handle_not_found(&request, res);
     }
 

@@ -53,12 +53,14 @@ impl Route {
     // is, whether you can have: /a<a>b/ or even /<a>:<b>/
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     pub fn get_params<'a>(&self, uri: URI<'a>) -> Vec<&'a str> {
-        let route_components = self.path.segments();
-        let uri_components = uri.segments();
+        let route_segs = self.path.segments();
+        let uri_segs = uri.segments();
 
         let mut result = Vec::with_capacity(self.path.segment_count());
-        for (route_seg, uri_seg) in route_components.zip(uri_components) {
-            if route_seg.starts_with('<') { // FIXME: Here.
+        for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
+            if route_seg.ends_with("..>") { // FIXME: Here.
+                break;
+            } else if route_seg.ends_with('>') { // FIXME: Here.
                 result.push(uri_seg);
             }
         }
@@ -83,6 +85,12 @@ impl fmt::Display for Route {
     }
 }
 
+impl fmt::Debug for Route {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        <Route as fmt::Display>::fmt(self, f)
+    }
+}
+
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
@@ -97,31 +105,17 @@ impl<'a> From<&'a StaticRouteInfo> for Route {
 
 impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
-        self.path.segment_count() == b.path.segment_count()
-            && self.method == b.method
+        self.method == b.method
             && self.rank == b.rank
             && self.content_type.collides_with(&b.content_type)
-            && self.path.collides_with(&b.path)
-    }
-}
-
-impl<'a> Collider<Route> for &'a str {
-    fn collides_with(&self, other: &Route) -> bool {
-        let path = URI::new(self);
-        path.collides_with(&other.path)
-    }
-}
-
-impl Collider<str> for Route {
-    fn collides_with(&self, other: &str) -> bool {
-        other.collides_with(self)
+            && self.path.as_uri().collides_with(&b.path.as_uri())
     }
 }
 
 impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request) -> bool {
         self.method == req.method
-            && req.uri.collides_with(&self.path)
-            && req.content_type().collides_with(&self.content_type)
+            && req.uri.as_uri().collides_with(&self.path.as_uri())
+            && req.accepts().collides_with(&self.content_type)
     }
 }

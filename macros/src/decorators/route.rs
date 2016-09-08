@@ -4,11 +4,11 @@ use std::fmt::Display;
 use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
 use utils::{emit_item, span, sep_by_tok, option_as_expr, strip_ty_lifetimes};
 use utils::{SpanExt, IdentExt, ArgExt};
-use parser::RouteParams;
+use parser::{Param, RouteParams};
 
 use syntax::codemap::{Span, Spanned};
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Name, Arg, Ident, Stmt, Expr, MetaItem, Path};
+use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token::{self, str_to_ident};
@@ -117,48 +117,49 @@ impl RouteGenerateExt for RouteParams {
     // TODO: Add some kind of logging facility in Rocket to get be able to log
     // an error/debug message if parsing a parameter fails.
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt> {
-        let params: Vec<_> = self.path_params(ecx).collect();
         let mut fn_param_statements = vec![];
 
-        // Retrieve an iterator over the user's path parameters and ensure that
-        // each parameter appears in the function signature.
-        for param in &params {
-            if self.annotated_fn.find_input(&param.node.name).is_none() {
-                self.missing_declared_err(ecx, &param);
-            }
-        }
+        // Generate a statement for every declared paramter in the path.
+        let mut declared_set = HashSet::new();
+        for (i, param) in self.path_params(ecx).enumerate() {
+            declared_set.insert(param.ident().name.clone());
+            let ty = match self.annotated_fn.find_input(&param.ident().name) {
+                Some(arg) => strip_ty_lifetimes(arg.ty.clone()),
+                None => {
+                    self.missing_declared_err(ecx, param.inner());
+                    continue;
+                }
+            };
 
-        // Create a function thats checks if an argument was declared in `path`.
-        let set: HashSet<&Name> = params.iter().map(|p| &p.node.name).collect();
-        let declared = &|arg: &&Arg| set.contains(&*arg.name().unwrap());
+            let ident = param.ident().prepend(PARAM_PREFIX);
+            let expr = match param {
+                Param::Single(_) => quote_expr!(ecx, _req.get_param($i)),
+                Param::Many(_) => quote_expr!(ecx, _req.get_segments($i)),
+            };
 
-        // These are all of the arguments in the function signature.
-        let all = &self.annotated_fn.decl().inputs;
-
-        // Generate code for each user declared parameter.
-        for (i, arg) in all.iter().filter(declared).enumerate() {
-            let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
-            let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
-                let $ident: $ty = match _req.get_param($i) {
+                let $ident: $ty = match $expr {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Response::forward()
                 };
             ).expect("declared param parsing statement"));
         }
 
-        // A from_request parameter is one that isn't declared, `form`, or query.
+        // A from_request parameter is one that isn't declared, form, or query.
         let from_request = |a: &&Arg| {
-            !declared(a) && self.form_param.as_ref().map_or(true, |p| {
-                !a.named(&p.value().name)
-            }) && self.query_param.as_ref().map_or(true, |p| {
-                !a.named(&p.node.name)
-            })
+            !declared_set.contains(&*a.name().unwrap())
+                && self.form_param.as_ref().map_or(true, |p| {
+                    !a.named(&p.value().name)
+                }) && self.query_param.as_ref().map_or(true, |p| {
+                    !a.named(&p.node.name)
+                })
         };
 
         // Generate the code for `form_request` parameters.
+        let all = &self.annotated_fn.decl().inputs;
         for arg in all.iter().filter(from_request) {
-            let (ident, ty) = (arg.ident().unwrap().prepend(PARAM_PREFIX), &arg.ty);
+            let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
+            let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match
                 <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
