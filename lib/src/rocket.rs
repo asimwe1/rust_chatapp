@@ -12,7 +12,7 @@ use hyper::server::Server as HyperServer;
 use hyper::server::Handler as HyperHandler;
 
 pub struct Rocket {
-    address: &'static str,
+    address: String,
     port: isize,
     router: Router,
     catchers: HashMap<u16, Catcher>,
@@ -81,9 +81,9 @@ impl Rocket {
         catcher.handle(Error::NoRoute, request).respond(response);
     }
 
-    pub fn new(address: &'static str, port: isize) -> Rocket {
+    pub fn new<S: ToString>(address: S, port: isize) -> Rocket {
         Rocket {
-            address: address,
+            address: address.to_string(),
             port: port,
             router: Router::new(),
             catchers: catcher::defaults::get(),
