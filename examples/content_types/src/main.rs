@@ -1,5 +1,5 @@
 #![feature(plugin, custom_derive)]
-#![plugin(rocket_macros, serde_macros)]
+#![plugin(rocket_codegen, serde_macros)]
 
 extern crate rocket;
 extern crate serde_json;

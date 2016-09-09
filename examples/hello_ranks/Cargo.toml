@@ -6,4 +6,4 @@ workspace = "../../"
 
 [dependencies]
 rocket = { path = "../../lib" }
-rocket_macros = { path = "../../macros" }
+rocket_codegen = { path = "../../codegen" }

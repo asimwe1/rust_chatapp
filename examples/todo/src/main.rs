@@ -1,5 +1,5 @@
 #![feature(plugin, custom_derive, custom_attribute)]
-#![plugin(rocket_macros, serde_macros, diesel_codegen)]
+#![plugin(rocket_codegen, serde_macros, diesel_codegen)]
 
 extern crate rocket;
 extern crate tera;

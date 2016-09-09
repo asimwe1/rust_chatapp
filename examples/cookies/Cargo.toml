@@ -6,6 +6,6 @@ workspace = "../../"
 
 [dependencies]
 rocket = { path = "../../lib" }
-rocket_macros = { path = "../../macros" }
+rocket_codegen = { path = "../../codegen" }
 lazy_static = "*"
 tera = { git = "https://github.com/Keats/tera" }

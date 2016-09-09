@@ -1,5 +1,5 @@
 #![feature(plugin)]
-#![plugin(rocket_macros)]
+#![plugin(rocket_codegen)]
 
 #[get("/><")] //~ ERROR malformed
 fn get() -> &'static str { "hi" }

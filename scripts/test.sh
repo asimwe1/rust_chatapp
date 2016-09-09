@@ -3,7 +3,7 @@ set -e
 
 EXAMPLES_DIR="examples"
 LIB_DIR="lib"
-MACROS_DIR="macros"
+CODEGEN_DIR="codegen"
 
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
@@ -17,15 +17,15 @@ function build_and_test() {
 
   pushd ${dir}
   echo ":: Building '${PWD}'..."
-  cargo build --verbose
+  RUST_BACKTRACE=1 cargo build
 
   echo ":: Running unit tests in '${PWD}'..."
-  cargo test --verbose
+  RUST_BACKTRACE=1 cargo test
   popd
 }
 
 build_and_test $LIB_DIR
-build_and_test $MACROS_DIR
+build_and_test $CODEGEN_DIR
 
 for file in ${EXAMPLES_DIR}/*; do
   if [ -d "${file}" ]; then

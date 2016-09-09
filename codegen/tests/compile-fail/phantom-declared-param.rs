@@ -1,5 +1,5 @@
 #![feature(plugin)]
-#![plugin(rocket_macros)]
+#![plugin(rocket_codegen)]
 
 #[get("/<param>")] //~ ERROR declared
 fn get() {  } //~ ERROR isn't in the function signature

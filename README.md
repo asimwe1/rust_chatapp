@@ -8,7 +8,7 @@ application:
 
 ```rust
 #![feature(plugin)]
-#![plugin(rocket_macros)]
+#![plugin(rocket_codegen)]
 
 extern crate rocket;
 use rocket::Rocket;

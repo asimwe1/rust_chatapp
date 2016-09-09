@@ -1,5 +1,5 @@
 [package]
-name = "rocket_macros"
+name = "rocket_codegen"
 version = "0.0.6"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 
