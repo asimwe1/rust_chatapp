@@ -1,0 +1,9 @@
+[package]
+name = "codegen_tests"
+version = "0.1.0"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+
+[dev-dependencies]
+compiletest-rs = "*"
+rocket = "../lib"
+rocket_macros = "../macros"

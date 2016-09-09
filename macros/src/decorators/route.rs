@@ -78,6 +78,11 @@ impl RouteGenerateExt for RouteParams {
         }
 
         let arg = arg.unwrap();
+        if arg.ident().is_none() {
+            ecx.span_err(arg.pat.span, "argument names must be identifiers");
+            return None;
+        };
+
         let name = arg.ident().unwrap().prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
@@ -147,12 +152,14 @@ impl RouteGenerateExt for RouteParams {
 
         // A from_request parameter is one that isn't declared, form, or query.
         let from_request = |a: &&Arg| {
-            !declared_set.contains(&*a.name().unwrap())
-                && self.form_param.as_ref().map_or(true, |p| {
-                    !a.named(&p.value().name)
-                }) && self.query_param.as_ref().map_or(true, |p| {
-                    !a.named(&p.node.name)
-                })
+            a.name().map_or(false, |name| {
+                !declared_set.contains(name)
+                    && self.form_param.as_ref().map_or(true, |p| {
+                        !a.named(&p.value().name)
+                    }) && self.query_param.as_ref().map_or(true, |p| {
+                        !a.named(&p.node.name)
+                    })
+            })
         };
 
         // Generate the code for `form_request` parameters.
@@ -173,9 +180,10 @@ impl RouteGenerateExt for RouteParams {
     }
 
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree> {
-        let args = self.annotated_fn.decl().inputs.iter().map(|a| {
-            a.ident().expect("function decl pat -> ident").prepend(PARAM_PREFIX)
-        }).collect::<Vec<Ident>>();
+        let args = self.annotated_fn.decl().inputs.iter()
+            .filter_map(|a| a.ident())
+            .map(|ident| ident.prepend(PARAM_PREFIX))
+            .collect::<Vec<Ident>>();
 
         sep_by_tok(ecx, &args, token::Comma)
     }

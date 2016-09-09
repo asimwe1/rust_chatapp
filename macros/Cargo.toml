@@ -10,3 +10,6 @@ plugin = true
 rocket = { path = "../lib/" }
 log = "*"
 env_logger = "*"
+
+[dev-dependencies]
+compiletest_rs = "*"
