@@ -3,7 +3,7 @@ use syntax::ext::base::ExtCtxt;
 use syntax::codemap::{Span, Spanned, BytePos};
 use syntax::parse::token::str_to_ident;
 
-use utils::{span, SpanExt};
+use utils::{span, SpanExt, is_valid_ident};
 
 #[derive(Debug)]
 pub enum Param {
@@ -45,16 +45,23 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
     type Item = Param;
 
     fn next(&mut self) -> Option<Param> {
+        let err = |ecx: &ExtCtxt, sp: Span, msg: &str| {
+            ecx.span_err(sp,  msg);
+            return None;
+        };
+
         // Find the start and end indexes for the next parameter, if any.
-        let (start, end) = match (self.string.find('<'), self.string.find('>')) {
-            (Some(i), Some(j)) => (i, j),
+        let (start, end) = match self.string.find('<') {
+            Some(i) => match self.string.find('>') {
+                Some(j) => (i, j),
+                None => return err(self.ctxt, self.span, "malformed parameter list")
+            },
             _ => return None,
         };
 
         // Ensure we found a valid parameter.
         if end <= start {
-            self.ctxt.span_err(self.span, "Parameter list is malformed.");
-            return None;
+            return err(self.ctxt, self.span, "malformed parameter list");
         }
 
         // Calculate the parameter's ident.
@@ -74,11 +81,11 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
 
         // Check for nonemptiness, that the characters are correct, and return.
         if param.is_empty() {
-            self.ctxt.span_err(param_span, "parameter names cannot be empty");
-            None
-        } else if param.contains(|c: char| !c.is_alphanumeric()) {
-            self.ctxt.span_err(param_span, "parameter names must be alphanumeric");
-            None
+            err(self.ctxt, param_span, "parameter names cannot be empty")
+        } else if !is_valid_ident(param) {
+            err(self.ctxt, param_span, "parameter names must be valid identifiers")
+        } else if param.starts_with("_") {
+            err(self.ctxt, param_span, "parameters cannot be ignored")
         } else if is_many && !self.string.is_empty() {
             let sp = self.span.shorten_to(self.string.len() as u32);
             self.ctxt.struct_span_err(sp, "text after a trailing '..' param")

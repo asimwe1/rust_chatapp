@@ -78,12 +78,7 @@ impl RouteGenerateExt for RouteParams {
         }
 
         let arg = arg.unwrap();
-        if arg.ident().is_none() {
-            ecx.span_err(arg.pat.span, "argument names must be identifiers");
-            return None;
-        };
-
-        let name = arg.ident().unwrap().prepend(PARAM_PREFIX);
+        let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
             let $name: $ty =
@@ -152,14 +147,17 @@ impl RouteGenerateExt for RouteParams {
 
         // A from_request parameter is one that isn't declared, form, or query.
         let from_request = |a: &&Arg| {
-            a.name().map_or(false, |name| {
+            if let Some(name) = a.name() {
                 !declared_set.contains(name)
                     && self.form_param.as_ref().map_or(true, |p| {
                         !a.named(&p.value().name)
                     }) && self.query_param.as_ref().map_or(true, |p| {
                         !a.named(&p.node.name)
                     })
-            })
+            } else {
+                ecx.span_err(a.pat.span, "argument names must be identifiers");
+                false
+            }
         };
 
         // Generate the code for `form_request` parameters.

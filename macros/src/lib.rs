@@ -1,5 +1,5 @@
 #![crate_type = "dylib"]
-#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
+#![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
 #![feature(custom_attribute)]
 #![feature(dotdot_in_tuple_patterns)]
 #![allow(unused_attributes)]

@@ -10,6 +10,8 @@ pub use self::parser_ext::ParserExt;
 pub use self::ident_ext::IdentExt;
 pub use self::span_ext::SpanExt;
 
+use std::convert::AsRef;
+
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Item, Expr};
@@ -89,4 +91,35 @@ impl Folder for TyLifetimeRemover {
 
 pub fn strip_ty_lifetimes(ty: P<Ty>) -> P<Ty> {
     TyLifetimeRemover.fold_ty(ty)
+}
+
+// Lifted from Rust's lexer, except this takes a `char`, not an `Option<char>`.
+fn ident_start(c: char) -> bool {
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+    (c > '\x7f' && c.is_xid_start())
+}
+
+// Lifted from Rust's lexer, except this takes a `char`, not an `Option<char>`.
+fn ident_continue(c: char) -> bool {
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+    c == '_' || (c > '\x7f' && c.is_xid_continue())
+}
+
+pub fn is_valid_ident<S: AsRef<str>>(s: S) -> bool {
+    let string = s.as_ref();
+    if string.is_empty() {
+        return false;
+    }
+
+    for (i, c) in string.chars().enumerate() {
+        if i == 0 {
+            if !ident_start(c) {
+                return false;
+            }
+        } else if !ident_continue(c) {
+            return false;
+        }
+    }
+
+    true
 }
