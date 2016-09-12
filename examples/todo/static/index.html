@@ -23,9 +23,9 @@
         <div class="ten columns">
           <input type="text" placeholder="enter a task description..."
             name="description" id="description" value="" autofocus
-            class="u-full-width {% if error %}field-error{% endif %}" />
-          {% if error %}
-            <small class="field-error-msg">
+            class="u-full-width {% if has_msg %}field-{{msg_type}}{% endif %}" />
+          {% if has_msg %}
+            <small class="field-{{msg_type}}-msg">
               {{ msg }}
             </small>
           {% endif %}

@@ -10,6 +10,7 @@ use term_painter::ToStyle;
 
 use hyper::server::Server as HyperServer;
 use hyper::server::Handler as HyperHandler;
+use hyper::header::SetCookie;
 
 pub struct Rocket {
     address: String,
@@ -49,8 +50,12 @@ impl Rocket {
             info_!("Matched: {}", route);
             request.set_params(route);
 
-            // Here's the magic: dispatch the request to the handler.
-            let outcome = (route.handler)(&request).respond(res);
+            // Dispatch the request to the handler and update the cookies.
+            let mut responder = (route.handler)(&request);
+            res.headers_mut().set(SetCookie(request.cookies().delta()));
+
+            // Get the response.
+            let outcome = responder.respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
             // Get the result if we failed so we can try again.

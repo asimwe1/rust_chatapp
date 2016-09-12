@@ -7,8 +7,8 @@ extern crate rocket;
 extern crate tera;
 
 use rocket::Rocket;
-use rocket::response::{Cookied, Redirect};
-use rocket::request::Cookies;
+use rocket::response::Redirect;
+use rocket::request::{Cookie, Cookies};
 
 lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("templates/**/*"););
 
@@ -25,12 +25,13 @@ struct Message {
 }
 
 #[post("/submit", form = "<message>")]
-fn submit(message: Message) -> Cookied<Redirect> {
-    Cookied::new(Redirect::to("/")).add("message", &message.message)
+fn submit(cookies: &Cookies, message: Message) -> Redirect {
+    cookies.add(Cookie::new("message".into(), message.message));
+    Redirect::to("/")
 }
 
 #[get("/")]
-fn index(cookies: Cookies) -> tera::TeraResult<String> {
+fn index(cookies: &Cookies) -> tera::TeraResult<String> {
     let message = cookies.find("message").map(|msg| msg.value);
     TERA.render("index.html", ctxt(message))
 }

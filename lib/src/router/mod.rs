@@ -39,12 +39,12 @@ impl Router {
         // let num_segments = req.uri.segment_count();
         // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
         self.routes.get(&req.method).map_or(vec![], |routes| {
-            trace_!("All possible matches: {:?}", routes);
             let mut matches: Vec<_> = routes.iter().filter(|r| {
                 r.collides_with(req)
             }).collect();
 
             matches.sort_by(|a, b| a.rank.cmp(&b.rank));
+            trace_!("All matches: {:?}", matches);
             matches
         })
     }

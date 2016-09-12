@@ -8,6 +8,16 @@
   margin: -10px 0 10px 0;
 }
 
+.field-success {
+  border: 1px solid #5AB953 !important;
+}
+
+.field-success-msg {
+  color: #5AB953;
+  display: block;
+  margin: -10px 0 10px 0;
+}
+
 span.completed {
     text-decoration: line-through;
 }

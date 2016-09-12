@@ -9,4 +9,5 @@ pub use hyper::header::Headers as HyperHeaders;
 pub use hyper::header::Cookie as HyperCookie;
 use hyper::header::CookieJar;
 
+pub use hyper::header::CookiePair as Cookie;
 pub type Cookies = CookieJar<'static>;

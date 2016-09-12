@@ -3,7 +3,7 @@ mod responder;
 mod redirect;
 mod with_status;
 mod outcome;
-mod cookied;
+mod flash;
 mod data_type;
 
 pub use hyper::server::Response as HyperResponse;
@@ -18,7 +18,7 @@ pub use self::empty::{Empty, Forward};
 pub use self::redirect::Redirect;
 pub use self::with_status::StatusResponse;
 pub use self::outcome::Outcome;
-pub use self::cookied::Cookied;
+pub use self::flash::Flash;
 
 use std::ops::{Deref, DerefMut};
 

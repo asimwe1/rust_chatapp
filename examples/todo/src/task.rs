@@ -35,12 +35,9 @@ impl Task {
             return false;
         }
 
-        Task::update_with_id(id, !task.unwrap().completed.unwrap())
-    }
-
-    pub fn update_with_id(id: i32, completed: bool) -> bool {
-        let task = diesel::update(all_tasks.find(id));
-        task.set(task_completed.eq(completed)).execute(&db()).is_ok()
+        let new_status = !task.unwrap().completed.unwrap();
+        let updated_task = diesel::update(all_tasks.find(id));
+        updated_task.set(task_completed.eq(new_status)).execute(&db()).is_ok()
     }
 
     pub fn delete_with_id(id: i32) -> bool {

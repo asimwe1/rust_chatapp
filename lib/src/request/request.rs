@@ -17,18 +17,19 @@ use router::URI;
 use router::Route;
 
 // Hyper stuff.
-use request::{HyperHeaders, HyperRequest};
+use request::{Cookies, HyperCookie, HyperHeaders, HyperRequest};
 
 pub struct Request<'a> {
     pub method: Method,
     pub uri: URIBuf, // FIXME: Should be URI (without Hyper).
     pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
-    params: RefCell<Option<Vec<&'a str>>>, // This also sucks.
+    cookies: Cookies,
     headers: HyperHeaders, // This sucks.
+    params: RefCell<Option<Vec<&'a str>>>, // This also sucks.
 }
 
 impl<'a> Request<'a> {
-    // FIXME: Don't do the parsing here. I think. Not sure. Decide.
+    // FIXME: Don't do the from_param parsing here. I think. Not sure. Decide.
     pub fn get_param<T: FromParam<'a>>(&self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
         if params.is_none() || n >= params.as_ref().unwrap().len() {
@@ -37,6 +38,10 @@ impl<'a> Request<'a> {
         } else {
             T::from_param(params.as_ref().unwrap()[n])
         }
+    }
+
+    pub fn cookies<'r>(&'r self) -> &'r Cookies {
+        &self.cookies
     }
 
     /// i is the index of the first segment to consider
@@ -58,6 +63,7 @@ impl<'a> Request<'a> {
         Request {
             params: RefCell::new(None),
             method: method,
+            cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
             data: vec![],
             headers: HyperHeaders::new()
@@ -118,6 +124,12 @@ impl<'a> Request<'a> {
             _ => return Err(format!("Bad method: {}", h_method))
         };
 
+        let cookies = match h_headers.get::<HyperCookie>() {
+           // TODO: What to do about key?
+           Some(cookie) => cookie.to_cookie_jar(&[]),
+           None => Cookies::new(&[])
+        };
+
         // FIXME: GRRR.
         let mut data = vec![];
         h_body.read_to_end(&mut data).unwrap();
@@ -125,6 +137,7 @@ impl<'a> Request<'a> {
         let request = Request {
             params: RefCell::new(None),
             method: method,
+            cookies: cookies,
             uri: uri,
             data: data,
             headers: h_headers,
