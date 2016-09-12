@@ -18,3 +18,5 @@ impl_data_type_responder!(JSON: Application/Json);
 impl_data_type_responder!(XML: Application/Xml);
 impl_data_type_responder!(HTML: Text/Html);
 impl_data_type_responder!(Plain: Text/Plain);
+impl_data_type_responder!(CSS: Text/Css);
+impl_data_type_responder!(JavaScript: Application/Javascript);

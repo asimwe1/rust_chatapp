@@ -1,4 +1,3 @@
-// TODO: Allow streamed responses.
 // const CHUNK_SIZE: u32 = 4096;
 // pub struct Stream<T: Read>(T);
 // impl<T> Responder for Stream<T> {

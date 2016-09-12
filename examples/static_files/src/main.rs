@@ -4,18 +4,18 @@
 extern crate rocket;
 use rocket::Rocket;
 
-use std::fs::File;
-use std::io::Error as IOError;
+use std::io;
+use rocket::response::NamedFile;
 use std::path::{Path, PathBuf};
 
 #[get("/")]
-fn index() -> File {
-    File::open("static/index.html").unwrap()
+fn index() -> io::Result<NamedFile> {
+    NamedFile::open("static/index.html")
 }
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Result<File, IOError> {
-    File::open(Path::new("static/").join(file))
+fn files(file: PathBuf) -> io::Result<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file))
 }
 
 fn main() {

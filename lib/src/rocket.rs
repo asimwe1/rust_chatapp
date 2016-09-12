@@ -52,7 +52,10 @@ impl Rocket {
 
             // Dispatch the request to the handler and update the cookies.
             let mut responder = (route.handler)(&request);
-            res.headers_mut().set(SetCookie(request.cookies().delta()));
+            let cookie_delta = request.cookies().delta();
+            if cookie_delta.len() > 0 {
+                res.headers_mut().set(SetCookie(cookie_delta));
+            }
 
             // Get the response.
             let outcome = responder.respond(res);

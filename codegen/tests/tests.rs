@@ -8,8 +8,14 @@ fn run_mode(mode: &'static str) {
 
     config.mode = cfg_mode;
     config.src_base = PathBuf::from(format!("tests/{}", mode));
-    config.target_rustcflags = Some("-L ../target/debug/ -L ../target/debug/deps/".to_owned());
+    let flags = [
+        "-L ../target/debug/",
+        "-L ../target/debug/deps/",
+        "-L target/debug/",
+        "-L target/debug/deps/"
+    ].join(" ");
 
+    config.target_rustcflags = Some(flags);
     compiletest::run_tests(&config);
 }
 

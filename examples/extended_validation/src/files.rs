@@ -1,13 +1,14 @@
-use rocket;
-use std::fs::File;
-use std::io::Error as IOError;
+use rocket::response::NamedFile;
 
-#[get(path = "/")]
-pub fn index() -> File {
-    File::open("static/index.html").unwrap()
+use std::io;
+use std::path::{Path, PathBuf};
+
+#[get("/")]
+fn index() -> io::Result<NamedFile> {
+    NamedFile::open("static/index.html")
 }
 
-#[get("/<file>")]
-pub fn files(file: &str) -> Result<File, IOError> {
-    File::open(format!("static/{}", file))
+#[get("/<file..>")]
+fn files(file: PathBuf) -> io::Result<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file))
 }
