@@ -6,6 +6,7 @@ mod outcome;
 mod flash;
 mod data_type;
 mod named_file;
+mod stream;
 
 pub use hyper::server::Response as HyperResponse;
 pub use hyper::net::Fresh as HyperFresh;
@@ -21,6 +22,7 @@ pub use self::with_status::StatusResponse;
 pub use self::outcome::Outcome;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
+pub use self::stream::Stream;
 
 use std::ops::{Deref, DerefMut};
 

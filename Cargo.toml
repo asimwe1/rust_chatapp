@@ -17,4 +17,5 @@ members = [
   "examples/hello_ranks",
   "examples/testing",
   "examples/from_request",
+  "examples/stream",
 ]

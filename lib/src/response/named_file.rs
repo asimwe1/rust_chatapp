@@ -3,7 +3,9 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use response::mime::{Mime, TopLevel, SubLevel};
 use std::io;
+use std::ops::{Deref, DerefMut};
 
+#[derive(Debug)]
 pub struct NamedFile(PathBuf, File);
 
 impl NamedFile {
@@ -43,6 +45,20 @@ impl Responder for NamedFile {
         }
 
         self.1.respond(res)
+    }
+}
+
+impl Deref for NamedFile {
+    type Target = File;
+
+    fn deref(&self) -> &File {
+        &self.1
+    }
+}
+
+impl DerefMut for NamedFile {
+    fn deref_mut(&mut self) -> &mut File {
+        &mut self.1
     }
 }
 
