@@ -1,0 +1,16 @@
+[package]
+name = "rocket_contrib"
+version = "0.0.8"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+
+[features]
+default = ["json"]
+json = ["serde", "serde_json"]
+
+[dependencies]
+rocket = { path = "../lib/" }
+log = "*"
+
+# JSON module dependencies
+serde = { version = "*", optional = true }
+serde_json = { version = "*", optional = true }

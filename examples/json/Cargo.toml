@@ -1,0 +1,18 @@
+[package]
+name = "json"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+serde = "*"
+serde_json = "*"
+serde_macros = "*"
+lazy_static = "*"
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["json"]

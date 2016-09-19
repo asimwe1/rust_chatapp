@@ -13,7 +13,7 @@ impl<T: Read> Stream<T> {
 }
 
 impl<T: Read> Responder for Stream<T> {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         let mut stream = res.start().unwrap();
         let mut buffer = [0; CHUNK_SIZE];
         let mut complete = false;

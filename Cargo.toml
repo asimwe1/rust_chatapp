@@ -1,5 +1,8 @@
 [workspace]
 members = [
+  "lib/",
+  "codegen/",
+  "contrib/",
   "examples/cookies",
   "examples/errors",
   "examples/extended_validation",
@@ -18,4 +21,8 @@ members = [
   "examples/testing",
   "examples/from_request",
   "examples/stream",
+  "examples/json",
 ]
+
+[replace]
+"aster:0.26.1" = { git = "https://github.com/jchlapinski/aster" }

@@ -4,6 +4,7 @@ set -e
 EXAMPLES_DIR="examples"
 LIB_DIR="lib"
 CODEGEN_DIR="codegen"
+CONTRIB_DIR="contrib"
 
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
@@ -26,6 +27,7 @@ function build_and_test() {
 
 build_and_test $LIB_DIR
 build_and_test $CODEGEN_DIR
+build_and_test $CONTRIB_DIR
 
 for file in ${EXAMPLES_DIR}/*; do
   if [ -d "${file}" ]; then
