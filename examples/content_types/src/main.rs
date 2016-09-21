@@ -5,7 +5,7 @@ extern crate rocket;
 extern crate serde_json;
 
 use rocket::{Rocket, Request, Error, ContentType};
-use rocket::response::JSON;
+use rocket::response::data;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
@@ -14,14 +14,14 @@ struct Person {
 }
 
 #[get("/<name>/<age>", format = "application/json")]
-fn hello(content_type: ContentType, name: String, age: i8) -> JSON<String> {
+fn hello(content_type: ContentType, name: String, age: i8) -> data::JSON<String> {
     let person = Person {
         name: name,
         age: age,
     };
 
     println!("ContentType: {}", content_type);
-    JSON(serde_json::to_string(&person).unwrap())
+    data::JSON(serde_json::to_string(&person).unwrap())
 }
 
 #[error(404)]

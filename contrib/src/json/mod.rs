@@ -4,8 +4,8 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 
 use rocket::request::{Request, FromRequest};
-use rocket::response::{header, Responder, Outcome, FreshHyperResponse};
-use rocket::response::mime::{Mime, TopLevel, SubLevel};
+use rocket::response::{Responder, Outcome, FreshHyperResponse};
+use rocket::response::data;
 
 use self::serde::{Serialize, Deserialize};
 use self::serde_json::Error as JSONError;
@@ -69,11 +69,9 @@ impl<'r, 'c, T: Deserialize> FromRequest<'r, 'c> for JSON<T> {
 }
 
 impl<T: Serialize> Responder for JSON<T> {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        let mime = Mime(TopLevel::Application, SubLevel::Json, vec![]);
-        res.headers_mut().set(header::ContentType(mime));
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         match serde_json::to_string(&self.0) {
-            Ok(mut json_string) => json_string.respond(res),
+            Ok(json_string) => data::JSON(json_string).respond(res),
             Err(e) => {
                 error_!("JSON failed to serialize: {:?}", e);
                 Outcome::FailStop
@@ -128,4 +126,3 @@ macro_rules! map {
         map!($($key => $value),+)
     };
 }
-

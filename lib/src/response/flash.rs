@@ -32,7 +32,7 @@ impl<R: Responder> Flash<R> {
 
     pub fn cookie_pair(&self) -> CookiePair {
         let content = format!("{}{}{}", self.name.len(), self.name, self.message);
-        let mut pair = CookiePair::new("flash".to_string(), content);
+        let mut pair = CookiePair::new("_flash".to_string(), content);
         pair.path = Some("/".to_string());
         pair.max_age = Some(300);
         pair
@@ -78,7 +78,7 @@ impl<'r, 'c> FromRequest<'r, 'c> for Flash<()> {
 
     fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
-        request.cookies().find("flash").ok_or(()).and_then(|cookie| {
+        request.cookies().find("_flash").ok_or(()).and_then(|cookie| {
             // Clear the flash message.
             trace_!("Flash: retrieving message: {:?}", cookie);
             request.cookies().remove("flash");
