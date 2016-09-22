@@ -7,8 +7,8 @@ use std::fmt;
 pub enum Outcome<'h> {
     /// Signifies a response that completed sucessfully.
     Complete,
-    /// Signifies a response that completed unsuccessfully.
-    Bad,
+    /// Signifies a response that failed internally.
+    Bad(HyperResponse<'h, HyperFresh>),
     /// Signifies a failing response where no further processing should happen.
     FailStop,
     /// Signifies a failing response whose request should be processed further.
@@ -20,7 +20,7 @@ impl<'h> Outcome<'h> {
         match *self {
             Outcome::Complete => "Complete",
             Outcome::FailStop => "FailStop",
-            Outcome::Bad => "Bad",
+            Outcome::Bad(..) => "Bad",
             Outcome::FailForward(..) => "FailForward",
         }
     }
@@ -28,7 +28,7 @@ impl<'h> Outcome<'h> {
     fn as_int(&self) -> isize {
         match *self {
             Outcome::Complete => 0,
-            Outcome::Bad => 1,
+            Outcome::Bad(..) => 1,
             Outcome::FailStop => 2,
             Outcome::FailForward(..) => 3,
         }
@@ -53,7 +53,7 @@ impl<'h> fmt::Display for Outcome<'h> {
             Outcome::Complete => {
                 write!(f, "{}", Green.paint("Complete"))
             },
-            Outcome::Bad => {
+            Outcome::Bad(..) => {
                 write!(f, "{}", Yellow.paint("Bad Completion"))
             },
             Outcome::FailStop => {

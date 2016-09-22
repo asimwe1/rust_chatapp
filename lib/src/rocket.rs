@@ -63,8 +63,12 @@ impl Rocket {
 
             // Get the result if we failed forward so we can try again.
             res = match outcome {
-                Outcome::Complete | Outcome::FailStop | Outcome::Bad => return,
+                Outcome::Complete | Outcome::FailStop => return,
                 Outcome::FailForward(r) => r,
+                Outcome::Bad(r) => {
+                    let reason = "Reason: bad response.";
+                    return self.handle_internal_error(reason, &request, r)
+                }
             };
         }
 
