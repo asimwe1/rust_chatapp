@@ -5,8 +5,13 @@ use term_painter::ToStyle;
 use std::fmt;
 
 pub enum Outcome<'h> {
+    /// Signifies a response that completed sucessfully.
     Complete,
+    /// Signifies a response that completed unsuccessfully.
+    Bad,
+    /// Signifies a failing response where no further processing should happen.
     FailStop,
+    /// Signifies a failing response whose request should be processed further.
     FailForward(HyperResponse<'h, HyperFresh>),
 }
 
@@ -15,44 +20,17 @@ impl<'h> Outcome<'h> {
         match *self {
             Outcome::Complete => "Complete",
             Outcome::FailStop => "FailStop",
+            Outcome::Bad => "Bad",
             Outcome::FailForward(..) => "FailForward",
         }
-    }
-
-    pub fn is_forward(&self) -> bool {
-        match *self {
-            Outcome::FailForward(_) => true,
-            _ => false
-        }
-    }
-
-    pub fn map_forward<F>(self, f: F) where F: FnOnce(FreshHyperResponse<'h>) {
-        if let Outcome::FailForward(res) = self {
-            f(res)
-        }
-    }
-
-    pub fn map_forward_or<F, R>(self, default: R, f: F) -> R
-            where F: FnOnce(FreshHyperResponse<'h>) -> R {
-        match self {
-            Outcome::FailForward(res) => f(res),
-            _ => default
-        }
-    }
-
-    pub fn is_failure(&self) -> bool {
-        self == &Outcome::FailStop
-    }
-
-    pub fn is_complete(&self) -> bool {
-        self == &Outcome::Complete
     }
 
     fn as_int(&self) -> isize {
         match *self {
             Outcome::Complete => 0,
-            Outcome::FailStop => 1,
-            Outcome::FailForward(..) => 2,
+            Outcome::Bad => 1,
+            Outcome::FailStop => 2,
+            Outcome::FailForward(..) => 3,
         }
     }
 }
@@ -75,11 +53,14 @@ impl<'h> fmt::Display for Outcome<'h> {
             Outcome::Complete => {
                 write!(f, "{}", Green.paint("Complete"))
             },
+            Outcome::Bad => {
+                write!(f, "{}", Yellow.paint("Bad Completion"))
+            },
             Outcome::FailStop => {
                 write!(f, "{}", Red.paint("Failed"))
             },
             Outcome::FailForward(..) => {
-                write!(f, "{}", Yellow.paint("Forwarding"))
+                write!(f, "{}", Cyan.paint("Forwarding"))
             },
         }
     }

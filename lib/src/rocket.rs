@@ -37,7 +37,7 @@ impl Rocket {
         // Try to create a Rocket request from the hyper request.
         let request = match Request::from_hyp(hyp_req) {
             Ok(req) => req,
-            Err(reason) => {
+            Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
                 return self.handle_internal_error(reason, &mock_request, res);
             }
@@ -61,10 +61,10 @@ impl Rocket {
             let outcome = responder.respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
-            // Get the result if we failed so we can try again.
+            // Get the result if we failed forward so we can try again.
             res = match outcome {
+                Outcome::Complete | Outcome::FailStop | Outcome::Bad => return,
                 Outcome::FailForward(r) => r,
-                Outcome::Complete | Outcome::FailStop => return,
             };
         }
 
@@ -73,7 +73,7 @@ impl Rocket {
     }
 
     // Call on internal server error.
-    fn handle_internal_error<'r>(&self, reason: String, request: &'r Request<'r>,
+    fn handle_internal_error<'r>(&self, reason: &str, request: &'r Request<'r>,
                             response: FreshHyperResponse) {
         error!("Internal server error.");
         debug!("{}", reason);
@@ -146,6 +146,14 @@ impl Rocket {
             logger::init(level);
             self.log_set = true;
         }
+    }
+
+    /// Retrieves the configuration parameter named `name` for the current
+    /// environment. Returns Some(value) if the paremeter exists. Otherwise,
+    /// returns None.
+    pub fn config<S: AsRef<str>>(_name: S) -> Option<&'static str> {
+        // TODO: Implement me.
+        None
     }
 
     pub fn launch(mut self) {
