@@ -1,0 +1,17 @@
+[package]
+name = "handlebars_templates"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+serde = "*"
+serde_macros = "*"
+serde_json = "*"
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["handlebars_templates"]

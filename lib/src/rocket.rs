@@ -39,7 +39,8 @@ impl Rocket {
             Ok(req) => req,
             Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
-                return self.handle_internal_error(reason, &mock_request, res);
+                debug_!("Bad request: {}", reason);
+                return self.handle_internal_error(&mock_request, res);
             }
         };
 
@@ -65,10 +66,7 @@ impl Rocket {
             res = match outcome {
                 Outcome::Complete | Outcome::FailStop => return,
                 Outcome::FailForward(r) => r,
-                Outcome::Bad(r) => {
-                    let reason = "Reason: bad response.";
-                    return self.handle_internal_error(reason, &request, r)
-                }
+                Outcome::Bad(r) => return self.handle_internal_error(&request, r)
             };
         }
 
@@ -77,10 +75,9 @@ impl Rocket {
     }
 
     // Call on internal server error.
-    fn handle_internal_error<'r>(&self, reason: &str, request: &'r Request<'r>,
+    fn handle_internal_error<'r>(&self, request: &'r Request<'r>,
                             response: FreshHyperResponse) {
-        error!("Internal server error.");
-        debug!("{}", reason);
+        error_!("Internal server error.");
         let catcher = self.catchers.get(&500).unwrap();
         catcher.handle(Error::Internal, request).respond(response);
     }

@@ -22,6 +22,7 @@ members = [
   "examples/from_request",
   "examples/stream",
   "examples/json",
+  "examples/handlebars_templates",
 ]
 
 [replace]

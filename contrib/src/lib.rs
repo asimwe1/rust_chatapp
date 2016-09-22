@@ -32,9 +32,19 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate rocket;
 
+#[cfg_attr(feature = "lazy_static_macro", macro_use)]
+#[cfg(feature = "lazy_static_macro")]
+extern crate lazy_static;
+
 #[cfg_attr(feature = "json", macro_use)]
 #[cfg(feature = "json")]
 mod json;
 
+#[cfg(feature = "templates")]
+mod templates;
+
 #[cfg(feature = "json")]
 pub use json::JSON;
+
+#[cfg(feature = "templates")]
+pub use templates::Template;

@@ -44,6 +44,7 @@ use self::serde_json::Error as JSONError;
 /// }
 /// ```
 ///
+#[derive(Debug)]
 pub struct JSON<T>(pub T);
 
 impl<T> JSON<T> {

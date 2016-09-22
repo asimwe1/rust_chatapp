@@ -2,9 +2,9 @@
 #![plugin(rocket_codegen, serde_macros, diesel_codegen)]
 
 extern crate rocket;
-extern crate tera;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate rocket_contrib;
 extern crate serde_json;
 
 mod static_files;
@@ -12,63 +12,64 @@ mod task;
 
 use rocket::Rocket;
 use rocket::response::{Flash, Redirect};
+use rocket_contrib::Template;
 use task::Task;
 
-lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("static/*.html"););
+#[derive(Debug, Serialize)]
+struct Context<'a, 'b>{msg: Option<(&'a str, &'b str)>, tasks: Vec<Task>}
 
-fn ctxt(msg: Option<(&str, &str)>) -> tera::Context {
-    let unwrapped_msg = msg.unwrap_or(("", ""));
-    let mut context = tera::Context::new();
-    context.add("has_msg", &msg.is_some());
-    context.add("msg_type", &unwrapped_msg.0.to_string());
-    context.add("msg", &unwrapped_msg.1.to_string());
-    context.add("tasks", &Task::all());
-    context
+impl<'a, 'b> Context<'a, 'b> {
+    pub fn err(msg: &'a str) -> Context<'static, 'a> {
+        Context{msg: Some(("error", msg)), tasks: Task::all()}
+    }
+
+    pub fn raw(msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
+        Context{msg: msg, tasks: Task::all()}
+    }
 }
 
 #[post("/", form = "<todo>")]
-fn new(todo: Task) -> Result<Flash<Redirect>, tera::TeraResult<String>> {
+fn new(todo: Task) -> Result<Flash<Redirect>, Template> {
     if todo.description.is_empty() {
-        let context = ctxt(Some(("error", "Description cannot be empty.")));
-        Err(TERA.render("index.html", context))
+        Err(Template::render("index", Context::err("Description cannot be empty.")))
     } else if todo.insert() {
         Ok(Flash::success(Redirect::to("/"), "Todo successfully added."))
     } else {
-        let context = ctxt(Some(("error", "Whoops! The server failed.")));
-        Err(TERA.render("index.html", context))
+        Err(Template::render("index", Context::err("Whoops! The server failed.")))
     }
 }
 
 // Should likely do something to simulate PUT.
 #[get("/<id>/toggle")]
-fn toggle(id: i32) -> Result<Redirect, tera::TeraResult<String>> {
+fn toggle(id: i32) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id) {
         Ok(Redirect::to("/"))
     } else {
-        let context = ctxt(Some(("error", "Could not toggle that task.")));
-        Err(TERA.render("index.html", context))
+        Err(Template::render("index", Context::err("Couldn't toggle task.")))
     }
 }
 
 // Should likely do something to simulate DELETE.
 #[get("/<id>/delete")]
-fn delete(id: i32) -> Result<Flash<Redirect>, tera::TeraResult<String>> {
+fn delete(id: i32) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id) {
         Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
     } else {
-        let context = ctxt(Some(("error", "Could not delete that task.")));
-        Err(TERA.render("index.html", context))
+        Err(Template::render("index", Context::err("Couldn't delete task.")))
     }
 }
 
 #[get("/")]
-fn index(msg: Option<Flash<()>>) -> tera::TeraResult<String> {
-    TERA.render("index.html", ctxt(msg.as_ref().map(|m| (m.name(), m.msg()))))
+fn index(msg: Option<Flash<()>>) -> Template {
+    Template::render("index", match msg {
+        Some(ref msg) => Context::raw(Some((msg.name(), msg.msg()))),
+        None => Context::raw(None),
+    })
 }
 
 fn main() {
     let mut rocket = Rocket::new("127.0.0.1", 8000);
     rocket.mount("/", routes![index, static_files::all])
-          .mount("/todo/", routes![new, delete, toggle]);
+          .mount("/todo/", routes![new, toggle, delete]);
     rocket.launch();
 }
