@@ -3,10 +3,10 @@ extern crate serde_json;
 extern crate glob;
 
 #[cfg(feature = "tera_templates")]
-pub mod tera_templates;
+mod tera_templates;
 
 #[cfg(feature = "handlebars_templates")]
-pub mod handlebars_templates;
+mod handlebars_templates;
 
 #[macro_use] mod macros;
 
