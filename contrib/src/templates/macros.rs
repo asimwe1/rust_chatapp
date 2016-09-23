@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! engine_set {
-    ($($feature:expr => $engine:ident),+) => ({
+    ($($feature:expr => $engine:ident),+,) => ({
         use std::collections::HashSet;
         let mut set = HashSet::new();
         $(
@@ -20,7 +20,7 @@ macro_rules! engine_set {
 
 #[macro_export]
 macro_rules! render_set {
-    ($name:expr, $info:expr, $ctxt:expr, $($feature:expr => $engine:ident),+) => ({$(
+    ($name:expr, $info:expr, $ctxt:expr, $($feature:expr => $engine:ident),+,) => ({$(
         #[cfg(feature = $feature)]
         fn $engine<T: Serialize>(name: &str, info: &TemplateInfo, c: &T)
                 -> Option<Template> {

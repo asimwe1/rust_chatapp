@@ -20,6 +20,7 @@ use self::glob::glob;
 
 lazy_static! {
     static ref TEMPLATES: HashMap<String, TemplateInfo> = discover_templates();
+    // FIXME: Ensure template_dir is an absolute path starting at crate root.
     static ref TEMPLATE_DIR: String =
         Rocket::config("template_dir").unwrap_or("templates").to_string();
 }
@@ -33,7 +34,7 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
     // Keep this set in-sync with the `render_set` invocation.
     let engines = engine_set![
         "tera_templates" => tera_templates,
-        "handlebars_templates" => handlebars_templates
+        "handlebars_templates" => handlebars_templates,
     ];
 
     let mut templates = HashMap::new();
@@ -83,7 +84,7 @@ impl Template {
         // Keep this set in-sync with the `engine_set` invocation.
         render_set!(name, template.unwrap(), context,
             "tera_templates" => tera_templates,
-            "handlebars_templates" => handlebars_templates
+            "handlebars_templates" => handlebars_templates,
         );
 
         unreachable!("A template extension was discovered but not rendered.")
