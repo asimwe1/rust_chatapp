@@ -11,7 +11,7 @@ fn hello(name: &str, age: i8) -> String {
 
 #[get("/hello/<name>/<age>", rank = 2)]
 fn hi(name: &str, age: &str) -> String {
-    format!("Hi {}! You age ({}) is kind of funky.", name, age)
+    format!("Hi {}! Your age ({}) is kind of funky.", name, age)
 }
 
 fn main() {
