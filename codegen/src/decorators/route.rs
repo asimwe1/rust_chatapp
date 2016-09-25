@@ -105,7 +105,6 @@ impl RouteGenerateExt for RouteParams {
         let param = self.query_param.as_ref();
         let expr = quote_expr!(ecx,
            match _req.uri().query() {
-               // FIXME: Don't reinterpret as UTF8 again.
                Some(query) => query,
                None => return ::rocket::Response::forward()
            }

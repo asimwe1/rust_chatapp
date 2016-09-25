@@ -49,6 +49,8 @@ impl ContentType {
     is_some!(is_xml: Application/Xml);
     is_some!(is_any: Star/Star);
     is_some!(is_html: Application/Html);
+    is_some!(is_form: Application/WwwFormUrlEncoded);
+    is_some!(is_data: Multipart/FormData);
 }
 
 impl Default for ContentType {

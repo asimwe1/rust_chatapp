@@ -42,8 +42,8 @@ pub fn plugin_registrar(reg: &mut Registry) {
 
     register_decorators!(reg,
         "derive_FromForm" => from_form_derive,
-        "error" => error_decorator,
 
+        "error" => error_decorator,
         "route" => route_decorator,
         "get" => get_decorator,
         "put" => put_decorator,

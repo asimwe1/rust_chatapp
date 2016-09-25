@@ -19,7 +19,7 @@
 
     <div class="row">
       <h4>Rocket Todo</h4>
-      <form action="/todo" method="post" accept-charset="utf-8">
+      <form action="/todo" method="post">
         <div class="ten columns">
           <input type="text" placeholder="enter a task description..."
             name="description" id="description" value="" autofocus
@@ -43,12 +43,21 @@
           {% if task.completed %}
             <li>
               <span class="completed">{{ task.description }}</span>
-              <a href="/todo/{{ task.id }}/toggle">undo</a>
-              <a href="/todo/{{ task.id }}/delete">delete</a>
+              <form class="inline" action="/todo/{{task.id}}" method="post">
+                <input type="hidden" name="_method" value="put" />
+                <button class="small" type="submit">undo</button>
+              </form>
+              <form class="inline" action="/todo/{{task.id}}" method="post">
+                <input type="hidden" name="_method" value="delete" />
+                <button class="primary small" type="submit">delete</button>
+              </form>
             </li>
           {% else %}
             <li>
-              <a href="/todo/{{ task.id }}/toggle">{{ task.description }}</a>
+              <form class="link" action="/todo/{{task.id}}" method="post">
+                <input type="hidden" name="_method" value="put" />
+                <button class="link" type="submit">{{ task.description }}</button>
+              </form>
             </li>
           {% endif %}
         {% endfor %}

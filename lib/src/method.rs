@@ -48,15 +48,15 @@ impl FromStr for Method {
 
     fn from_str(s: &str) -> Result<Method, Error> {
         match s {
-            "GET" => Ok(Get),
-            "PUT" => Ok(Put),
-            "POST" => Ok(Post),
-            "DELETE" => Ok(Delete),
-            "OPTIONS" => Ok(Options),
-            "HEAD" => Ok(Head),
-            "TRACE" => Ok(Trace),
-            "CONNECT" => Ok(Connect),
-            "PATCH" => Ok(Patch),
+            "GET" | "get" => Ok(Get),
+            "PUT" | "put" => Ok(Put),
+            "POST" | "post" => Ok(Post),
+            "DELETE" | "delete" => Ok(Delete),
+            "OPTIONS" | "options" => Ok(Options),
+            "HEAD" | "head" => Ok(Head),
+            "TRACE" | "trace" => Ok(Trace),
+            "CONNECT" | "connect" => Ok(Connect),
+            "PATCH" | "patch" => Ok(Patch),
             _ => Err(Error::BadMethod),
         }
     }

@@ -4,6 +4,8 @@ use request::HyperRequest;
 use catcher;
 
 use std::collections::HashMap;
+use std::str::from_utf8_unchecked;
+use std::cmp::min;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -36,7 +38,10 @@ impl Rocket {
 
         // Try to create a Rocket request from the hyper request.
         let request = match Request::from_hyp(hyp_req) {
-            Ok(req) => req,
+            Ok(mut req) => {
+                self.preprocess_request(&mut req);
+                req
+            },
             Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
                 debug_!("Bad request: {}", reason);
@@ -72,6 +77,27 @@ impl Rocket {
 
         error_!("No matching routes.");
         self.handle_not_found(&request, res);
+    }
+
+    /// Preprocess the request for Rocket-specific things. At this time, we're
+    /// only checking for _method in forms.
+    fn preprocess_request(&self, req: &mut Request) {
+        // Check if this is a form and if the form contains the special _method
+        // field which we use to reinterpret the request's method.
+        let data_len = req.data.len();
+        let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
+        if req.content_type().is_form() && data_len >= min_len {
+            let form = unsafe {
+                from_utf8_unchecked(&req.data.as_slice()[..min(data_len, max_len)])
+            };
+
+            let mut form_items = form::FormItems(form);
+            if let Some(("_method", value)) = form_items.next() {
+                if let Ok(method) = value.parse() {
+                    req.method = method;
+                }
+            }
+        }
     }
 
     // Call on internal server error.

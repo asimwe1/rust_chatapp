@@ -40,7 +40,7 @@ fn new(todo: Task) -> Result<Flash<Redirect>, Template> {
 }
 
 // Should likely do something to simulate PUT.
-#[get("/<id>/toggle")]
+#[put("/<id>")]
 fn toggle(id: i32) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id) {
         Ok(Redirect::to("/"))
@@ -50,7 +50,7 @@ fn toggle(id: i32) -> Result<Redirect, Template> {
 }
 
 // Should likely do something to simulate DELETE.
-#[get("/<id>/delete")]
+#[delete("/<id>")]
 fn delete(id: i32) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id) {
         Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))

@@ -202,6 +202,7 @@ input[type="button"]:focus {
   outline: 0; }
 .button.button-primary,
 button.button-primary,
+button.primary,
 input[type="submit"].button-primary,
 input[type="reset"].button-primary,
 input[type="button"].button-primary {
@@ -210,11 +211,13 @@ input[type="button"].button-primary {
   border-color: #33C3F0; }
 .button.button-primary:hover,
 button.button-primary:hover,
+button.primary:hover,
 input[type="submit"].button-primary:hover,
 input[type="reset"].button-primary:hover,
 input[type="button"].button-primary:hover,
 .button.button-primary:focus,
 button.button-primary:focus,
+button.primary:focus,
 input[type="submit"].button-primary:focus,
 input[type="reset"].button-primary:focus,
 input[type="button"].button-primary:focus {
