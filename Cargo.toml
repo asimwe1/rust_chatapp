@@ -24,6 +24,3 @@ members = [
   "examples/json",
   "examples/handlebars_templates",
 ]
-
-[replace]
-"aster:0.26.1" = { git = "https://github.com/jchlapinski/aster" }
