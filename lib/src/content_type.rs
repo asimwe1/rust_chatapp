@@ -12,6 +12,14 @@ use router::Collider;
 pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
 
 macro_rules! is_some {
+    ($ct:ident, $name:ident: $top:ident/$sub:ident) => {
+        pub fn $ct() -> ContentType {
+            ContentType::of(TopLevel::$top, SubLevel::$sub)
+        }
+
+        is_some!($name: $top/$sub);
+    };
+
     ($name:ident: $top:ident/$sub:ident) => {
         pub fn $name(&self) -> bool {
             self.0 == TopLevel::$top && self.1 == SubLevel::$sub
@@ -45,10 +53,10 @@ impl ContentType {
         }
     }
 
-    is_some!(is_json: Application/Json);
-    is_some!(is_xml: Application/Xml);
+    is_some!(json, is_json: Application/Json);
+    is_some!(xml, is_xml: Application/Xml);
     is_some!(is_any: Star/Star);
-    is_some!(is_html: Application/Html);
+    is_some!(html, is_html: Application/Html);
     is_some!(is_form: Application/WwwFormUrlEncoded);
     is_some!(is_data: Multipart/FormData);
 

@@ -23,6 +23,7 @@ pub use self::outcome::Outcome;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
+pub use self::data::Content;
 
 use std::ops::{Deref, DerefMut};
 

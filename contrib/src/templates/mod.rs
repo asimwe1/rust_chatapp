@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use self::serde::Serialize;
-use rocket::response::{data, Outcome, FreshHyperResponse, Responder};
-use rocket::Rocket;
+use rocket::response::{Content, Outcome, FreshHyperResponse, Responder};
+use rocket::{Rocket, ContentType};
 use self::glob::glob;
 
 lazy_static! {
@@ -93,10 +93,13 @@ impl Template {
 
 impl Responder for Template {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
+        let content_type = match self.1 {
+            Some(ref ext) => ContentType::from_extension(ext),
+            None => ContentType::html()
+        };
+
         match self.0 {
-            // FIXME: Detect the data type using the extension in self.1.
-            // Refactor response::named_file to use the extension map there.
-            Some(ref render) => data::HTML(render.as_str()).respond(res),
+            Some(ref render) => Content(content_type, render.as_str()).respond(res),
             None => Outcome::Bad(res),
         }
     }
