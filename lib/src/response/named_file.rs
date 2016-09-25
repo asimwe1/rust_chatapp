@@ -14,6 +14,17 @@ impl NamedFile {
         Ok(NamedFile(path.as_ref().to_path_buf(), file))
     }
 
+    #[inline(always)]
+    pub fn file(&self) -> &File {
+        &self.1
+    }
+
+    #[inline(always)]
+    pub fn file_mut(&mut self) -> &mut File {
+        &mut self.1
+    }
+
+    #[inline(always)]
     pub fn path(&self) -> &Path {
         self.0.as_path()
     }
@@ -29,7 +40,7 @@ impl Responder for NamedFile {
             }
         }
 
-        self.1.respond(res)
+        self.file_mut().respond(res)
     }
 }
 
@@ -47,3 +58,50 @@ impl DerefMut for NamedFile {
     }
 }
 
+impl io::Read for NamedFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.file().read(buf)
+    }
+
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> io::Result<usize> {
+        self.file().read_to_end(buf)
+    }
+}
+
+impl io::Write for NamedFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.file().write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> { self.file().flush() }
+}
+
+impl io::Seek for NamedFile {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.file().seek(pos)
+    }
+}
+
+impl<'a> io::Read for &'a NamedFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.file().read(buf)
+    }
+
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> io::Result<usize> {
+        self.file().read_to_end(buf)
+    }
+}
+
+impl<'a> io::Write for &'a NamedFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.file().write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> { self.file().flush() }
+}
+
+impl<'a> io::Seek for &'a NamedFile {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.file().seek(pos)
+    }
+}
