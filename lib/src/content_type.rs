@@ -51,6 +51,26 @@ impl ContentType {
     is_some!(is_html: Application/Html);
     is_some!(is_form: Application/WwwFormUrlEncoded);
     is_some!(is_data: Multipart/FormData);
+
+    pub fn from_extension(ext: &str) -> ContentType {
+        let (top_level, sub_level) = match ext {
+            "txt" => (TopLevel::Text, SubLevel::Plain),
+            "html" => (TopLevel::Text, SubLevel::Html),
+            "xml" => (TopLevel::Application, SubLevel::Xml),
+            "js" => (TopLevel::Application, SubLevel::Javascript),
+            "css" => (TopLevel::Text, SubLevel::Css),
+            "json" => (TopLevel::Application, SubLevel::Json),
+            "png" => (TopLevel::Image, SubLevel::Png),
+            "gif" => (TopLevel::Image, SubLevel::Gif),
+            "bmp" => (TopLevel::Image, SubLevel::Bmp),
+            "jpeg" => (TopLevel::Image, SubLevel::Jpeg),
+            "jpg" => (TopLevel::Image, SubLevel::Jpeg),
+            "pdf" => (TopLevel::Application, SubLevel::Ext("pdf".into())),
+            _ => (TopLevel::Star, SubLevel::Star),
+        };
+
+        ContentType::of(top_level, sub_level)
+    }
 }
 
 impl Default for ContentType {

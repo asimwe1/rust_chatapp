@@ -1,7 +1,7 @@
 use response::*;
+use content_type::ContentType;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use response::mime::{Mime, TopLevel, SubLevel};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
@@ -23,24 +23,9 @@ impl Responder for NamedFile {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
         if let Some(ext) = self.path().extension() {
             let ext_string = ext.to_string_lossy().to_lowercase();
-            let (top_level, sub_level) = match ext_string.as_str() {
-                "txt" => (TopLevel::Text, SubLevel::Plain),
-                "html" => (TopLevel::Text, SubLevel::Html),
-                "xml" => (TopLevel::Application, SubLevel::Xml),
-                "js" => (TopLevel::Application, SubLevel::Javascript),
-                "css" => (TopLevel::Text, SubLevel::Css),
-                "json" => (TopLevel::Application, SubLevel::Json),
-                "png" => (TopLevel::Image, SubLevel::Png),
-                "gif" => (TopLevel::Image, SubLevel::Gif),
-                "bmp" => (TopLevel::Image, SubLevel::Bmp),
-                "jpeg" => (TopLevel::Image, SubLevel::Jpeg),
-                "jpg" => (TopLevel::Image, SubLevel::Jpeg),
-                _ => (TopLevel::Star, SubLevel::Star),
-            };
-
-            if top_level != TopLevel::Star && sub_level != SubLevel::Star {
-                let mime = Mime(top_level, sub_level, vec![]);
-                res.headers_mut().set(header::ContentType(mime));
+            let content_type = ContentType::from_extension(&ext_string);
+            if !content_type.is_any() {
+                res.headers_mut().set(header::ContentType(content_type.into()));
             }
         }
 
