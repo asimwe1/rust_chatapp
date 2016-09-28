@@ -9,10 +9,9 @@ detailed guide](guide). If you want to get started immediately, see
 [quickstart](guide/quickstart) or the [getting started
 guide](guide/getting_started). Otherwise, welcome!
 
-Rocket makes writing web applications easy, fast, and fun. Rather than just
-_talk_ about how, we'd rather show you. Below is a complete Rocket application.
-In fact, it's [one of many](thisexample) complete, runnable examples in
-[Rocket's GitHub](github). Try to see if you can figure it what it does.
+Rocket makes writing web applications easy, fast, and fun. Below is a complete
+Rocket application. In fact, it's [one of many](thisexample) complete, runnable
+examples in [Rocket's git repository](github). Can you figure out what it does?
 
 ```rust
 #![feature(plugin)]
@@ -41,42 +40,44 @@ If you were to run this application, your console would show:
 🚀  Rocket has launched from localhost:8000...
 ```
 
-Here's a quick summary: this Rocket applications declares the `hello` route to
-`GET /<name>/<age>`, which returns a `String` formatted with `name` and `age`
-from the dynamic path, on lines 7 - 10. Then, in the `main` function, it creates
+Here's a quick summary of what it does: first, on lines 7 - 10, it declares the
+`hello` route to `GET /<name>/<age>`, which returns a `String` formatted with
+`name` and `age` from the dynamic path. Then, in the `main` function, it creates
 a new `Rocket` instance, mounts the `hello` route at `"/hello"`, and launches
 the application. That's it! Let's break it down.
 
-Let's start at the beginning: lines 1 and 2. Rocket depends on Rust nightly; it
-makes extensive use of Rust's code generation facilities through compiler
-plugins. Plugins are still experimental, so we have to tell Rust that we're okay
-with that by writing `#![feature(plugin)]`. We also have to tell the compiler to
-use Rocket's code generation crate during compilation with
-`#![plugin(rocket_codegen)]`.
+Let's start with lines 1 and 2. Rocket depends on Rust nightly; it makes
+extensive use of Rust's code generation facilities through compiler plugins.
+Plugins are still experimental, so we have to tell Rust that we're okay with
+that by writing `#![feature(plugin)]`. We also have to tell the compiler to use
+Rocket's code generation crate during compilation with
+`#![plugin(rocket_codegen)]`. Lines 4 and 5 bring `rocket::Rocket` into the
+namespace.
 
 # Routes
 
-Lines 4 and 5 bring `rocket::Rocket` into the namespace. The fun begins on line
-7, where the `hello` route is declared. Let's talk about routes for a bit.
+The fun begins on line 7, where the `hello` route and request handler are
+declared.
 
-Every Rocket application is composed of some number of routes. A route is a
-combination of:
+Rocket applications are composed primarily of request handlers and routes. A
+_request handler_ is a function that takes an arbitrary number of parameters and
+returns a response. A _route_ is a combination of:
 
   * A set of parameters to match an incoming request against.
   * A request handler to process the request and return a response.
 
 The set of parameters to match against includes static paths, dynamic paths,
-path segments, forms, query strings, and format specifiers. Rocket uses Rust
-attributes, which look like function decorators in other languages, to make
-declaring routes easy. In Rocket, you declare a route by annotating a function
-with the set of parameters to match against. A complete route declaration looks
-like:
+path segments, forms, query strings, and request format specifiers. Rocket uses
+Rust attributes, which look like function decorators in other languages, to make
+declaring routes easy. Routes are declares by annotating a function with the set
+of parameters to match against. A complete route declaration looks like:
 
 ```rust
-#[get("/path/to/match/against")]
+#[get("/index")]
+fn index() -> &str { "Hello, World!" }
 ```
 
-You can use `put`, `post`, `delete`, and `patch` in place of `get`.
+You can also use `put`, `post`, `delete`, and `patch` in place of `get`.
 
 ## Dynamic Paths
 
@@ -97,23 +98,24 @@ these segments won't be known until someone visits a URL that matches. For
 example, if someone visit `Mike/21`, `<name>` will be `"Mike"`, and `<age>` will
 be `21`. If someone else visits `Bob/91`, `<name>` and `<age>` will be `"Bob"`
 and `91`, respectively. Rocket automatically parses dynamic path segments and
-passes them your request handler. You can immediately use the `name` and `age`
-in the handler - no parsing, no checking.
+passes them to the request handler in variables with matching names. This means
+that `name` and `age` can be used immediately in the handler - no parsing, no
+checking.
 
 But wait: what happens if someone goes to a URL with an `<age>` that isn't a
-valid `u8`? In that case, Rocket doesn't call the handler. Instead, it tries
-other matching routes and ultimately returns a `404` if all of them fail. If you
-want to know if the user passed in a bad `<age>`, use a `Result<u8, &str>` or an
-`Option<u8>` instead. Rocket has mechanisms to handle route collisions, where
-multiple routes can match the same URLs, too. For more details on routing, see
-the [routing](guide/routing) chapter of the guide.
+valid `u8`? In that case, Rocket doesn't call the handler. Instead, it
+_forwards_ the request to the next matching route, if any, and ultimately
+returns a `404` if all of them fail. If you want to know if the user passed in a
+bad `<age>`, simply use a `Result<u8, &str>` or an `Option<u8>` type for `age`
+instead. For more details on routing, route collisions, and more see the
+[routing](guide/routing) chapter of the guide.
 
 Oh, one more thing before we move on! Notice how dynamic path parameters can be
 of different types? Actually, path parameters can be of _any_ type, as long as
 that type implements Rocket's `FromParam` trait. Rocket uses the `FromParam`
 implementation to parse and validate the parameter for you automatically. We've
-implemented `FromParam` for every reasonable type in the standard library. See
-the [FromParam](/docs/FromParam) documentation for more.
+implemented `FromParam` for plenty of types in the standard library. See the
+[FromParam](docs) documentation for more.
 
 ## Mounting
 
