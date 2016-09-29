@@ -46,6 +46,7 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
     }
 }
 
+// TODO: Use proper logging to emit the error messages.
 pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
     let struct_lifetime = get_struct_lifetime(ecx, annotated, span);

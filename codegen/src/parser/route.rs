@@ -164,7 +164,7 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
                 return span(method, word.span());
             }
         } else {
-            let msg = format!("{} is not a valid method.", word.name());
+            let msg = format!("{} is not a valid HTTP method.", word.name());
             ecx.span_err(word.span(), &msg);
         }
     }
@@ -224,7 +224,8 @@ fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
         }
     }
 
-    ecx.struct_span_err(kv.span, r#"expected `form = "<name>"`"#)
+    let err_string = r#"`form` value must be a parameter, e.g: "<name>"`"#;
+    ecx.struct_span_fatal(kv.span, err_string)
         .help(r#"form, if specified, must be a key-value pair where
               the key is `form` and the value is a string with a single
               parameter inside '<' '>'. e.g: form = "<login>""#)
@@ -243,7 +244,7 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
             ecx.span_err(kv.value.span, msg.as_str());
         }
     } else {
-        ecx.struct_span_err(kv.span, r#"expected `rank = int`"#)
+        ecx.struct_span_err(kv.span, r#"`rank` value must be an int"#)
             .help(r#"the rank, if specified, must be a key-value pair where
                   the key is `rank` and the value is an integer.
                   e.g: rank = 1, or e.g: rank = 10"#)
@@ -267,7 +268,7 @@ fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
         }
     }
 
-    ecx.struct_span_err(kv.span, r#"expected `format = "content/type"`"#)
+    ecx.struct_span_err(kv.span, r#"`format` must be a "content/type"`"#)
         .help(r#"format, if specified, must be a key-value pair where
               the key is `format` and the value is a string representing the
               content-type accepted. e.g: format = "application/json""#)
