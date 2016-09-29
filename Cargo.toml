@@ -23,5 +23,5 @@ members = [
   "examples/stream",
   "examples/json",
   "examples/handlebars_templates",
-  "examples/form_types",
+  "examples/form_kitchen_sink",
 ]
