@@ -162,25 +162,21 @@ mod test {
 
     #[test]
     fn test_form_string() {
-        let results = &[("username", "user"), ("password", "pass")];
-        check_form!("username=user&password=pass", results);
+        check_form!("username=user&password=pass",
+                    &[("username", "user"), ("password", "pass")]);
 
-        let results = &[("user", "user"), ("user", "pass")];
-        check_form!("user=user&user=pass", results);
+        check_form!("user=user&user=pass",
+                    &[("user", "user"), ("user", "pass")]);
 
-        let results = &[("user", ""), ("password", "pass")];
-        check_form!("user=&password=pass", results);
+        check_form!("user=&password=pass",
+                    &[("user", ""), ("password", "pass")]);
 
-        let results = &[("", ""), ("", "")];
-        check_form!("=&=", results);
+        check_form!("=&=", &[("", ""), ("", "")]);
 
-        let results = &[("a", "b")];
-        check_form!("a=b", results);
+        check_form!("a=b", &[("a", "b")]);
 
-        let results = &[("a", "b")];
-        check_form!("a=b&a", results);
+        check_form!("a=b&a", &[("a", "b")]);
 
-        let results = &[("a", "b"), ("a", "")];
-        check_form!("a=b&a=", results);
+        check_form!("a=b&a=", &[("a", "b"), ("a", "")]);
     }
 }
