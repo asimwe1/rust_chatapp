@@ -146,19 +146,6 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         return Err(::rocket::Error::BadParse)
     );
 
-    // Generating the code that checks that the number of fields is correct.
-    let num_fields = fields_and_types.len();
-    let initial_block = quote_block!(cx, {
-        let mut items = [("", ""); $num_fields];
-        let form_count = ::rocket::form::form_items($arg, &mut items);
-        // if form_count != items.len() {
-        //     println!("\t Form parse: Wrong number of items!");
-        //     $return_err_stmt;
-        // };
-    });
-
-    stmts.extend(initial_block.unwrap().stmts);
-
     // Generate the let bindings for parameters that will be unwrapped and
     // placed into the final struct. They start out as `None` and are changed
     // to Some when a parse completes, or some default value if the parse was
@@ -178,17 +165,20 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         arms.push(quote_tokens!(cx,
             $id_str => $ident = match ::rocket::form::FromFormValue::parse(v) {
                 Ok(v) => Some(v),
-                Err(_) => $return_err_stmt
+                Err(e) => {
+                    println!("\tError parsing form value '{}': {:?}", $id_str, e);
+                    $return_err_stmt
+                }
             },
         ));
     }
 
-    // The actual match statement. Uses the $arms generated above.
+    // The actual match statement. Iterate through all of the fields in the form
+    // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
-        for &(k, v) in &items[..form_count] {
+        for (k, v) in ::rocket::form::FormItems($arg) {
             match k {
                 $arms
-                // Return error when a field is in the form but not in struct.
                 _ => {
                     println!("\t{}={} has no matching field in struct.", k, v);
                     $return_err_stmt
@@ -201,12 +191,18 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
     for (i, &(ref ident, ty)) in (&fields_and_types).iter().enumerate() {
+        // Pushing an "||" (or) between every condition.
         if i > 0 {
             failure_conditions.push(quote_tokens!(cx, ||));
         }
 
-        failure_conditions.push(quote_tokens!(cx, $ident.is_none() &&
-            <$ty as ::rocket::form::FromFormValue>::default().is_none()));
+        failure_conditions.push(quote_tokens!(cx,
+            if $ident.is_none() &&
+                <$ty as ::rocket::form::FromFormValue>::default().is_none() {
+                println!("\t'{}' did not parse.", stringify!($ident));
+                true
+            } else { false }
+        ));
     }
 
     // The fields of the struct, which are just the let bindings declared above
@@ -225,7 +221,6 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     let self_ident = substr.type_ident;
     let final_block = quote_block!(cx, {
         if $failure_conditions {
-            println!("\tOne of the fields didn't parse.");
             $return_err_stmt;
         }
 

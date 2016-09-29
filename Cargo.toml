@@ -23,4 +23,5 @@ members = [
   "examples/stream",
   "examples/json",
   "examples/handlebars_templates",
+  "examples/form_types",
 ]

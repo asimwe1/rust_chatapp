@@ -8,6 +8,14 @@ pub trait FromForm<'f>: Sized {
     fn from_form_string(s: &'f str) -> Result<Self, Error>;
 }
 
+// This implementation should only be ued during debugging!
+#[doc(hidden)]
+impl<'f> FromForm<'f> for &'f str {
+    fn from_form_string(s: &'f str) -> Result<Self, Error> {
+        Ok(s)
+    }
+}
+
 pub trait FromFormValue<'v>: Sized {
     type Error;
 
@@ -53,6 +61,18 @@ impl<'v> FromFormValue<'v> for String {
     }
 }
 
+impl<'v> FromFormValue<'v> for bool {
+    type Error = &'v str;
+
+    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+        match v {
+            "on" | "true" => Ok(true),
+            "off" | "false" => Ok(false),
+            _ => Err(v)
+        }
+    }
+}
+
 macro_rules! impl_with_fromstr {
     ($($T:ident),+) => ($(
         impl<'v> FromFormValue<'v> for $T {
@@ -65,8 +85,7 @@ macro_rules! impl_with_fromstr {
 }
 
 impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
-       bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
-       SocketAddr);
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = Error;
@@ -117,28 +136,14 @@ impl<'f> Iterator for FormItems<'f> {
     }
 }
 
-
-pub fn form_items<'f>(string: &'f str, items: &mut [(&'f str, &'f str)]) -> usize {
-    let mut param_count = 0;
-    for (i, item) in FormItems(string).take(items.len()).enumerate() {
-        items[i] = item;
-        param_count += 1;
-    }
-
-    param_count
-}
-
 #[cfg(test)]
 mod test {
-    use super::form_items;
+    use super::FormItems;
 
     macro_rules! check_form {
         ($string:expr, $expected: expr) => ({
-            let mut output = Vec::with_capacity($expected.len());
-            unsafe { output.set_len($expected.len()); }
-
-            let results = output.as_mut_slice();
-            assert_eq!($expected.len(), form_items($string, results));
+            let results: Vec<(&str, &str)> = FormItems($string).collect();
+            assert_eq!($expected.len(), results.len());
 
             for i in 0..results.len() {
                 let (expected_key, actual_key) = ($expected[i].0, results[i].0);
