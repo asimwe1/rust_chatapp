@@ -164,7 +164,7 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
                 return span(method, word.span());
             }
         } else {
-            let msg = format!("{} is not a valid HTTP method.", word.name());
+            let msg = format!("'{}' is not a valid HTTP method.", word.name());
             ecx.span_err(word.span(), &msg);
         }
     }
