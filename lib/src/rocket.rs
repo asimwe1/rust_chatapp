@@ -23,15 +23,17 @@ pub struct Rocket {
 }
 
 impl HyperHandler for Rocket {
-    fn handle<'h, 'k>(&self, req: HyperRequest<'h, 'k>,
-            mut res: FreshHyperResponse<'h>) {
+    fn handle<'h, 'k>(&self,
+                      req: HyperRequest<'h, 'k>,
+                      mut res: FreshHyperResponse<'h>) {
         res.headers_mut().set(response::header::Server("rocket".to_string()));
         self.dispatch(req, res)
     }
 }
 
 impl Rocket {
-    fn dispatch<'h, 'k>(&self, hyp_req: HyperRequest<'h, 'k>,
+    fn dispatch<'h, 'k>(&self,
+                        hyp_req: HyperRequest<'h, 'k>,
                         mut res: FreshHyperResponse<'h>) {
         // Get a copy of the URI for later use.
         let uri = hyp_req.uri.to_string();
@@ -41,7 +43,7 @@ impl Rocket {
             Ok(mut req) => {
                 self.preprocess_request(&mut req);
                 req
-            },
+            }
             Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
                 debug_!("Bad request: {}", reason);
@@ -71,7 +73,7 @@ impl Rocket {
             res = match outcome {
                 Outcome::Complete | Outcome::FailStop => return,
                 Outcome::FailForward(r) => r,
-                Outcome::Bad(r) => return self.handle_internal_error(&request, r)
+                Outcome::Bad(r) => return self.handle_internal_error(&request, r),
             };
         }
 
@@ -101,15 +103,17 @@ impl Rocket {
     }
 
     // Call on internal server error.
-    fn handle_internal_error<'r>(&self, request: &'r Request<'r>,
-                            response: FreshHyperResponse) {
+    fn handle_internal_error<'r>(&self,
+                                 request: &'r Request<'r>,
+                                 response: FreshHyperResponse) {
         error_!("Internal server error.");
         let catcher = self.catchers.get(&500).unwrap();
         catcher.handle(Error::Internal, request).respond(response);
     }
 
     // Call when no route was found.
-    fn handle_not_found<'r>(&self, request: &'r Request<'r>,
+    fn handle_not_found<'r>(&self,
+                            request: &'r Request<'r>,
                             response: FreshHyperResponse) {
         error_!("{} dispatch failed: 404.", request);
         let catcher = self.catchers.get(&404).unwrap();
@@ -126,8 +130,7 @@ impl Rocket {
         }
     }
 
-    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>)
-            -> &mut Self {
+    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>) -> &mut Self {
         self.enable_normal_logging_if_disabled();
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
@@ -190,8 +193,9 @@ impl Rocket {
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
-        info!("🚀  {} {}...", White.paint("Rocket has launched from"),
-            White.bold().paint(&full_addr));
+        info!("🚀  {} {}...",
+              White.paint("Rocket has launched from"),
+              White.bold().paint(&full_addr));
         let _ = HyperServer::http(full_addr.as_str()).unwrap().handle(self);
     }
 

@@ -50,18 +50,10 @@ impl<'h> fmt::Debug for Outcome<'h> {
 impl<'h> fmt::Display for Outcome<'h> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Outcome::Complete => {
-                write!(f, "{}", Green.paint("Complete"))
-            },
-            Outcome::Bad(..) => {
-                write!(f, "{}", Yellow.paint("Bad Completion"))
-            },
-            Outcome::FailStop => {
-                write!(f, "{}", Red.paint("Failed"))
-            },
-            Outcome::FailForward(..) => {
-                write!(f, "{}", Cyan.paint("Forwarding"))
-            },
+            Outcome::Complete => write!(f, "{}", Green.paint("Complete")),
+            Outcome::Bad(..) => write!(f, "{}", Yellow.paint("Bad Completion")),
+            Outcome::FailStop => write!(f, "{}", Red.paint("Failed")),
+            Outcome::FailForward(..) => write!(f, "{}", Cyan.paint("Forwarding")),
         }
     }
 }

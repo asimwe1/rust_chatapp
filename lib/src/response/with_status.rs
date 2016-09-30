@@ -2,14 +2,14 @@ use response::*;
 
 pub struct StatusResponse<R: Responder> {
     status: StatusCode,
-    responder: R
+    responder: R,
 }
 
 impl<R: Responder> StatusResponse<R> {
     pub fn new(status: StatusCode, responder: R) -> StatusResponse<R> {
         StatusResponse {
             status: status,
-            responder: responder
+            responder: responder,
         }
     }
 }
@@ -20,4 +20,3 @@ impl<R: Responder> Responder for StatusResponse<R> {
         self.responder.respond(res)
     }
 }
-

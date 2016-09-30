@@ -31,7 +31,7 @@ impl Method {
             HyperMethod::Trace => Some(Trace),
             HyperMethod::Connect => Some(Connect),
             HyperMethod::Patch => Some(Patch),
-            HyperMethod::Extension(_) => None
+            HyperMethod::Extension(_) => None,
         }
     }
 

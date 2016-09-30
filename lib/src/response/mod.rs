@@ -35,8 +35,9 @@ impl<'a> Response<'a> {
         Response(Box::new(body))
     }
 
-    pub fn with_status<T: Responder + 'a>(status: StatusCode, body: T)
-            -> Response<'a> {
+    pub fn with_status<T: Responder + 'a>(status: StatusCode,
+                                          body: T)
+                                          -> Response<'a> {
         Response(Box::new(StatusResponse::new(status, body)))
     }
 
@@ -44,8 +45,7 @@ impl<'a> Response<'a> {
         Response(Box::new(Forward))
     }
 
-    pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T)
-            -> Response<'a> {
+    pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T) -> Response<'a> {
         let status_code = StatusCode::from_u16(status);
         Response(Box::new(StatusResponse::new(status_code, body)))
     }

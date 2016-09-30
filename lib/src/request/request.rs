@@ -1,4 +1,4 @@
-use std::io::{Read};
+use std::io::Read;
 use std::cell::RefCell;
 use std::fmt;
 
@@ -45,8 +45,9 @@ impl<'a> Request<'a> {
     }
 
     /// i is the index of the first segment to consider
-    pub fn get_segments<'r: 'a, T: FromSegments<'a>>(&'r self, i: usize)
-            -> Result<T, Error> {
+    pub fn get_segments<'r: 'a, T: FromSegments<'a>>(&'r self,
+                                                     i: usize)
+                                                     -> Result<T, Error> {
         if i >= self.uri().segment_count() {
             debug!("{} is >= segment count {}", i, self.uri().segment_count());
             Err(Error::NoKey)
@@ -55,6 +56,7 @@ impl<'a> Request<'a> {
             // but the std lib doesn't implement it for Skip.
             let mut segments = self.uri.segments();
             for _ in segments.by_ref().take(i) { /* do nothing */ }
+
             T::from_segments(segments).map_err(|_| Error::BadParse)
         }
     }
@@ -66,7 +68,7 @@ impl<'a> Request<'a> {
             cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
             data: vec![],
-            headers: HyperHeaders::new()
+            headers: HyperHeaders::new(),
         }
     }
 
@@ -90,7 +92,7 @@ impl<'a> Request<'a> {
             if items.len() < 1 {
                 return ContentType::any();
             } else {
-                return ContentType::from(items[0].item.clone())
+                return ContentType::from(items[0].item.clone());
             }
         })
     }
@@ -111,23 +113,23 @@ impl<'a> Request<'a> {
     }
 
     pub fn from_hyp<'h, 'k>(hyper_req: HyperRequest<'h, 'k>)
-            -> Result<Request<'a>, String> {
+                            -> Result<Request<'a>, String> {
         let (_, h_method, h_headers, h_uri, _, mut h_body) = hyper_req.deconstruct();
 
         let uri = match h_uri {
             HyperRequestUri::AbsolutePath(s) => URIBuf::from(s),
-            _ => return Err(format!("Bad URI: {}", h_uri))
+            _ => return Err(format!("Bad URI: {}", h_uri)),
         };
 
         let method = match Method::from_hyp(&h_method) {
             Some(m) => m,
-            _ => return Err(format!("Bad method: {}", h_method))
+            _ => return Err(format!("Bad method: {}", h_method)),
         };
 
         let cookies = match h_headers.get::<HyperCookie>() {
-           // TODO: What to do about key?
-           Some(cookie) => cookie.to_cookie_jar(&[]),
-           None => Cookies::new(&[])
+            // TODO: What to do about key?
+            Some(cookie) => cookie.to_cookie_jar(&[]),
+            None => Cookies::new(&[]),
         };
 
         // FIXME: GRRR.

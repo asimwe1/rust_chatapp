@@ -1,5 +1,5 @@
 pub use response::mime::{Mime, TopLevel, SubLevel};
-use response::mime::{Param};
+use response::mime::Param;
 use std::default::Default;
 
 use std::str::FromStr;
@@ -105,7 +105,7 @@ impl From<Mime> for ContentType {
     fn from(mime: Mime) -> ContentType {
         let params = match mime.2.len() {
             0 => None,
-            _ => Some(mime.2)
+            _ => Some(mime.2),
         };
 
         ContentType(mime.0, mime.1, params)
@@ -115,14 +115,14 @@ impl From<Mime> for ContentType {
 fn is_valid_first_char(c: char) -> bool {
     match c {
         'a'...'z' | 'A'...'Z' | '0'...'9' | '*' => true,
-        _ => false
+        _ => false,
     }
 }
 
 fn is_valid_char(c: char) -> bool {
     is_valid_first_char(c) || match c {
         '!' | '#' | '$' | '&' | '-' | '^' | '.' | '+' | '_' => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -132,33 +132,34 @@ impl FromStr for ContentType {
     fn from_str(raw: &str) -> Result<ContentType, &'static str> {
         let slash = match raw.find('/') {
             Some(i) => i,
-            None => return Err("Missing / in MIME type.")
+            None => return Err("Missing / in MIME type."),
         };
 
-		let top_str = &raw[..slash];
-		let (sub_str, _rest) = match raw.find(';') {
-			Some(j) => (&raw[(slash + 1)..j], Some(&raw[(j + 1)..])),
-			None => (&raw[(slash + 1)..], None)
-		};
+        let top_s = &raw[..slash];
+        let (sub_s, _rest) = match raw.find(';') {
+            Some(j) => (&raw[(slash + 1)..j], Some(&raw[(j + 1)..])),
+            None => (&raw[(slash + 1)..], None),
+        };
 
-        if top_str.len() < 1 || sub_str.len() < 1 {
-            return Err("Empty string.")
+        if top_s.len() < 1 || sub_s.len() < 1 {
+            return Err("Empty string.");
         }
 
-        if !is_valid_first_char(top_str.chars().next().unwrap())
-            || !is_valid_first_char(sub_str.chars().next().unwrap()) {
-            return Err("Invalid first char.")
+        if !is_valid_first_char(top_s.chars().next().unwrap())
+                || !is_valid_first_char(sub_s.chars().next().unwrap()) {
+            return Err("Invalid first char.");
         }
 
-        if top_str.contains(|c| !is_valid_char(c))
-            || sub_str.contains(|c| !is_valid_char(c)) {
-            return Err("Invalid character in string.")
+        if top_s.contains(|c| !is_valid_char(c))
+                || sub_s.contains(|c| !is_valid_char(c)) {
+            return Err("Invalid character in string.");
         }
 
-        let (top_str, sub_str) = (&*top_str.to_lowercase(), &*sub_str.to_lowercase());
-        let top_level = TopLevel::from_str(top_str).map_err(|_| "Bad TopLevel")?;
-        let sub_level = SubLevel::from_str(sub_str).map_err(|_| "Bad SubLevel")?;
-		// FIXME: Use `rest` to find params.
+        let (top_s, sub_s) = (&*top_s.to_lowercase(), &*sub_s.to_lowercase());
+        let top_level = TopLevel::from_str(top_s).map_err(|_| "Bad TopLevel")?;
+        let sub_level = SubLevel::from_str(sub_s).map_err(|_| "Bad SubLevel")?;
+
+        // FIXME: Use `rest` to find params.
         Ok(ContentType::new(top_level, sub_level, None))
     }
 }
@@ -186,17 +187,13 @@ impl Collider for ContentType {
 
 impl Collider for TopLevel {
     fn collides_with(&self, other: &TopLevel) -> bool {
-        *self == TopLevel::Star
-            || *other == TopLevel::Star
-            || *self == *other
+        *self == TopLevel::Star || *other == TopLevel::Star || *self == *other
     }
 }
 
 impl Collider for SubLevel {
     fn collides_with(&self, other: &SubLevel) -> bool {
-        *self == SubLevel::Star
-            || *other == SubLevel::Star
-            || *self == *other
+        *self == SubLevel::Star || *other == SubLevel::Star || *self == *other
     }
 }
 

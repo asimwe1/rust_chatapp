@@ -22,14 +22,11 @@ extern crate url;
 extern crate mime;
 #[macro_use] extern crate log;
 
-#[doc(hidden)]
-#[macro_use]
-pub mod logger;
+#[doc(hidden)] #[macro_use] pub mod logger;
+#[doc(hidden)] pub mod content_type;
 pub mod form;
 pub mod request;
 pub mod response;
-#[doc(hidden)]
-pub mod content_type;
 
 mod method;
 mod error;
@@ -49,17 +46,14 @@ pub mod handler {
     pub type ErrorHandler = for<'r> fn(error: Error, &'r Request<'r>) -> Response<'r>;
 }
 
+#[doc(inline)] pub use response::{Response, Responder};
+#[doc(inline)] pub use handler::{Handler, ErrorHandler};
+#[doc(inline)] pub use logger::LoggingLevel;
 pub use content_type::ContentType;
 pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use request::Request;
 pub use method::Method;
-#[doc(inline)]
-pub use response::{Response, Responder};
 pub use error::Error;
 pub use router::{Router, Route};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
-#[doc(inline)]
-pub use handler::{Handler, ErrorHandler};
-#[doc(inline)]
-pub use logger::LoggingLevel;

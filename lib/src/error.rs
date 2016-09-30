@@ -4,5 +4,5 @@ pub enum Error {
     BadParse,
     NoRoute, // FIXME: Add a chain of routes attempted.
     Internal,
-    NoKey
+    NoKey,
 }

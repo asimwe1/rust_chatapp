@@ -5,8 +5,11 @@ pub trait Collider<T: ?Sized = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
 
-pub fn index_match_until(break_c: char, a: &str, b: &str, dir: bool)
-        -> Option<(isize, isize)> {
+pub fn index_match_until(break_c: char,
+                         a: &str,
+                         b: &str,
+                         dir: bool)
+                         -> Option<(isize, isize)> {
     let (a_len, b_len) = (a.len() as isize, b.len() as isize);
     let (mut i, mut j, delta) = if dir {
         (0, 0, 1)

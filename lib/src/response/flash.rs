@@ -8,7 +8,7 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 pub struct Flash<R> {
     name: String,
     message: String,
-    responder: R
+    responder: R,
 }
 
 impl<R: Responder> Flash<R> {
@@ -89,7 +89,7 @@ impl<'r, 'c> FromRequest<'r, 'c> for Flash<()> {
             let content = cookie.pair().1;
             let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
                 Some(i) => (&content[..i], &content[i..]),
-                None => (content, "")
+                None => (content, ""),
             };
 
             let name_len: usize = len_str.parse().map_err(|_| ())?;
@@ -98,4 +98,3 @@ impl<'r, 'c> FromRequest<'r, 'c> for Flash<()> {
         })
     }
 }
-

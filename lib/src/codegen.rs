@@ -11,6 +11,5 @@ pub struct StaticRouteInfo {
 
 pub struct StaticCatchInfo {
     pub code: u16,
-    pub handler: ErrorHandler
+    pub handler: ErrorHandler,
 }
-

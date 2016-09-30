@@ -8,7 +8,7 @@ pub struct URI<'a> {
     uri: &'a str,
     path: &'a str,
     query: Option<&'a str>,
-    segment_count: Cell<Option<usize>>
+    segment_count: Cell<Option<usize>>,
 }
 
 impl<'a> URI<'a> {
@@ -17,7 +17,7 @@ impl<'a> URI<'a> {
 
         let (path, query) = match uri.find('?') {
             Some(index) => (&uri[..index], Some(&uri[(index + 1)..])),
-            None => (uri, None)
+            None => (uri, None),
         };
 
         URI {
@@ -53,7 +53,10 @@ impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut last = '\0';
         for c in self.uri.chars() {
-            if !(c == '/' && last == '/') { f.write_char(c)?; }
+            if !(c == '/' && last == '/') {
+                f.write_char(c)?;
+            }
+
             last = c;
         }
 
@@ -66,7 +69,7 @@ unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URIBuf {
     uri: String,
-    segment_count: Cell<Option<usize>>
+    segment_count: Cell<Option<usize>>,
 }
 
 // I don't like repeating all of this stuff. Is there a better way?
@@ -160,7 +163,7 @@ impl<'a> Iterator for Segments<'a> {
         // Find the start of the next segment (first that's not '/').
         let i = match self.0.find(|c| c != '/') {
             Some(index) => index,
-            None => return None
+            None => return None,
         };
 
         // Get the index of the first character that _is_ a '/' after start.

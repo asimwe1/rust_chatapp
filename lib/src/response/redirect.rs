@@ -34,4 +34,3 @@ impl<'a> Responder for Redirect {
         Outcome::Complete
     }
 }
-

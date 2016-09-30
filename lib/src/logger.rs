@@ -23,7 +23,7 @@ impl LoggingLevel {
         match *self {
             LoggingLevel::Critical => LogLevel::Warn,
             LoggingLevel::Normal => LogLevel::Info,
-            LoggingLevel::Debug => LogLevel::Trace
+            LoggingLevel::Debug => LogLevel::Trace,
         }
     }
 }

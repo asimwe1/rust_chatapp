@@ -69,8 +69,7 @@ impl<T: Responder> Responder for Option<T> {
 
 impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
     // prepend with `default` when using impl specialization
-    default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>)
-            -> Outcome<'a> {
+    default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         if self.is_err() {
             error_!("{:?}", self.as_ref().err().unwrap());
             // TODO: Should this be a 404 or 500?
@@ -85,7 +84,7 @@ impl<T: Responder, E: Responder + fmt::Debug> Responder for Result<T, E> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         match *self {
             Ok(ref mut responder) => responder.respond(res),
-            Err(ref mut responder) => responder.respond(res)
+            Err(ref mut responder) => responder.respond(res),
         }
     }
 }

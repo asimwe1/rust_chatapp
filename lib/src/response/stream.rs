@@ -12,15 +12,15 @@ impl<T: Read> Stream<T> {
         Stream(Box::new(reader))
     }
 
-//     pub fn chunked(mut self, size: usize) -> Self {
-//         self.1 = size;
-//         self
-//     }
+    //     pub fn chunked(mut self, size: usize) -> Self {
+    //         self.1 = size;
+    //         self
+    //     }
 
-//     #[inline(always)]
-//     pub fn chunk_size(&self) -> usize {
-//         self.1
-//     }
+    //     #[inline(always)]
+    //     pub fn chunk_size(&self) -> usize {
+    //         self.1
+    //     }
 }
 
 impl<T: Read> Responder for Stream<T> {

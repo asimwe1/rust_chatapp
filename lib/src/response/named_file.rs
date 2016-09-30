@@ -73,7 +73,9 @@ impl io::Write for NamedFile {
         self.file().write(buf)
     }
 
-    fn flush(&mut self) -> io::Result<()> { self.file().flush() }
+    fn flush(&mut self) -> io::Result<()> {
+        self.file().flush()
+    }
 }
 
 impl io::Seek for NamedFile {
@@ -97,7 +99,9 @@ impl<'a> io::Write for &'a NamedFile {
         self.file().write(buf)
     }
 
-    fn flush(&mut self) -> io::Result<()> { self.file().flush() }
+    fn flush(&mut self) -> io::Result<()> {
+        self.file().flush()
+    }
 }
 
 impl<'a> io::Seek for &'a NamedFile {

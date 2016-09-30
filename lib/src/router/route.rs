@@ -24,8 +24,9 @@ fn default_rank(path: &str) -> isize {
 }
 
 impl Route {
-    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler)
-            -> Route where S: AsRef<str> {
+    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler) -> Route
+        where S: AsRef<str>
+    {
         Route {
             method: m,
             path: URIBuf::from(path.as_ref()),
@@ -35,7 +36,9 @@ impl Route {
         }
     }
 
-    pub fn new<S>(m: Method, path: S, handler: Handler) -> Route where S: AsRef<str> {
+    pub fn new<S>(m: Method, path: S, handler: Handler) -> Route
+        where S: AsRef<str>
+    {
         Route {
             method: m,
             handler: handler,
@@ -45,7 +48,9 @@ impl Route {
         }
     }
 
-    pub fn set_path<S>(&mut self, path: S) where S: AsRef<str> {
+    pub fn set_path<S>(&mut self, path: S)
+        where S: AsRef<str>
+    {
         self.path = URIBuf::from(path.as_ref());
     }
 
@@ -58,9 +63,11 @@ impl Route {
 
         let mut result = Vec::with_capacity(self.path.segment_count());
         for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
-            if route_seg.ends_with("..>") { // FIXME: Here.
+            if route_seg.ends_with("..>") {
+                // FIXME: Here.
                 break;
-            } else if route_seg.ends_with('>') { // FIXME: Here.
+            } else if route_seg.ends_with('>') {
+                // FIXME: Here.
                 result.push(uri_seg);
             }
         }

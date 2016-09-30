@@ -15,7 +15,7 @@ type Selector = Method;
 
 #[derive(Default)]
 pub struct Router {
-    routes: HashMap<Selector, Vec<Route>> // using 'selector' for now
+    routes: HashMap<Selector, Vec<Route>>, // using 'selector' for now
 }
 
 impl Router {
@@ -39,9 +39,9 @@ impl Router {
         // let num_segments = req.uri.segment_count();
         // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
         self.routes.get(&req.method).map_or(vec![], |routes| {
-            let mut matches: Vec<_> = routes.iter().filter(|r| {
-                r.collides_with(req)
-            }).collect();
+            let mut matches: Vec<_> = routes.iter()
+                .filter(|r| r.collides_with(req))
+                .collect();
 
             matches.sort_by(|a, b| a.rank.cmp(&b.rank));
             trace_!("All matches: {:?}", matches);
@@ -149,7 +149,10 @@ mod test {
         assert!(!default_rank_route_collisions(&["/a/b", "/a/b/<c..>"]));
     }
 
-    fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
+    fn route<'a>(router: &'a Router,
+                 method: Method,
+                 uri: &str)
+                 -> Option<&'a Route> {
         let request = Request::mock(method, uri);
         let matches = router.route(&request);
         if matches.len() > 0 {

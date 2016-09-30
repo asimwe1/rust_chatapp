@@ -46,7 +46,7 @@ impl<'r, 'c, T: FromRequest<'r, 'c>> FromRequest<'r, 'c> for Option<T> {
     fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
         let opt = match T::from_request(request) {
             Ok(v) => Some(v),
-            Err(_) => None
+            Err(_) => None,
         };
 
         Ok(opt)

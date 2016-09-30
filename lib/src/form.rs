@@ -118,6 +118,7 @@ pub trait FromFormValue<'v>: Sized {
 impl<'v> FromFormValue<'v> for &'v str {
     type Error = Error;
 
+    // This just gives the raw string.
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         Ok(v)
     }
@@ -154,7 +155,7 @@ impl<'v> FromFormValue<'v> for bool {
         match v {
             "on" | "true" => Ok(true),
             "off" | "false" => Ok(false),
-            _ => Err(v)
+            _ => Err(v),
         }
     }
 }
@@ -179,7 +180,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         match T::from_form_value(v) {
             Ok(v) => Ok(Some(v)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 
@@ -195,7 +196,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         match T::from_form_value(v) {
             ok@Ok(_) => Ok(ok),
-            e@Err(_) => Ok(e)
+            e@Err(_) => Ok(e),
         }
     }
 }
@@ -238,12 +239,12 @@ impl<'f> Iterator for FormItems<'f> {
         let string = self.0;
         let (key, rest) = match string.find('=') {
             Some(index) => (&string[..index], &string[(index + 1)..]),
-            None => return None
+            None => return None,
         };
 
         let (value, remainder) = match rest.find('&') {
             Some(index) => (&rest[..index], &rest[(index + 1)..]),
-            None => (rest, "")
+            None => (rest, ""),
         };
 
         self.0 = remainder;
