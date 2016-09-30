@@ -10,7 +10,7 @@ use rocket::response::data;
 use self::serde::{Serialize, Deserialize};
 use self::serde_json::Error as JSONError;
 
-/// The JSON datatype, which implements both `FromRequest` and `Responder`. This
+/// The JSON type, which implements both `FromRequest` and `Responder`. This
 /// type allows you to trivially consume and respond with JSON in your Rocket
 /// application.
 ///
