@@ -9,6 +9,7 @@ CONTRIB_DIR="contrib"
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
 
+# Builds and tests the Cargo project at $1
 function build_and_test() {
   local dir=$1
   if [ -z "${dir}" ] || ! [ -d "${dir}" ]; then
@@ -25,9 +26,31 @@ function build_and_test() {
   popd
 }
 
-build_and_test $LIB_DIR
-build_and_test $CODEGEN_DIR
-build_and_test $CONTRIB_DIR
+# Checks that the versions for Cargo projects $@ all match
+function check_versions_match() {
+  local last_version=""
+  for dir in $@; do
+    local cargo_toml="${dir}/Cargo.toml"
+    if ! [ -f "${cargo_toml}" ]; then
+      echo "Cargo configuration file '${cargo_toml}' does not exist."
+      exit 1
+    fi
+
+    local version=$(grep version ${cargo_toml} | head -n 1 | cut -d' ' -f3)
+    if [ -z "${last_version}" ]; then
+      last_version="${version}"
+    elif ! [ "${version}" = "${last_version}" ]; then
+      echo "Versions differ in '${cargo_toml}'. ${version} != ${last_version}"
+      exit 1
+    fi
+  done
+}
+
+build_and_test "${LIB_DIR}"
+build_and_test "${CODEGEN_DIR}"
+build_and_test "${CONTRIB_DIR}"
+
+check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 
 for file in ${EXAMPLES_DIR}/*; do
   if [ -d "${file}" ]; then
