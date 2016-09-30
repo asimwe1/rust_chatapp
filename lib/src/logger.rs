@@ -84,6 +84,7 @@ impl Log for RocketLogger {
     }
 }
 
+#[doc(hidden)]
 pub fn init(level: LoggingLevel) {
     let result = log::set_logger(|max_log_level| {
         max_log_level.set(level.max_log_level().to_log_level_filter());

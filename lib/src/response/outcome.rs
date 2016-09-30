@@ -8,11 +8,11 @@ pub enum Outcome<'h> {
     /// Signifies a response that completed sucessfully.
     Complete,
     /// Signifies a response that failed internally.
-    Bad(HyperResponse<'h, HyperFresh>),
+    Bad(FreshHyperResponse<'h>),
     /// Signifies a failing response where no further processing should happen.
     FailStop,
     /// Signifies a failing response whose request should be processed further.
-    FailForward(HyperResponse<'h, HyperFresh>),
+    FailForward(FreshHyperResponse<'h>),
 }
 
 impl<'h> Outcome<'h> {

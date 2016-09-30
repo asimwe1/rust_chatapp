@@ -19,6 +19,7 @@ pub enum Method {
 }
 
 impl Method {
+    #[doc(hidden)]
     pub fn from_hyp(method: &HyperMethod) -> Option<Method> {
         match *method {
             HyperMethod::Get => Some(Get),
@@ -34,7 +35,7 @@ impl Method {
         }
     }
 
-    /// Whether the method supports a payload or not.
+    /// Whether an HTTP request with the given method supports a payload.
     pub fn supports_payload(&self) -> bool {
         match *self {
             Put | Post | Delete | Patch => true,

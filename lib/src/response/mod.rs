@@ -9,7 +9,6 @@ mod stream;
 
 pub mod data;
 
-pub use hyper::server::Response as HyperResponse;
 pub use hyper::net::Fresh as HyperFresh;
 pub use hyper::status::StatusCode;
 pub use hyper::header;
@@ -27,7 +26,7 @@ pub use self::data::Content;
 
 use std::ops::{Deref, DerefMut};
 
-pub type FreshHyperResponse<'a> = HyperResponse<'a, HyperFresh>;
+pub type FreshHyperResponse<'a> = ::hyper::server::Response<'a, HyperFresh>;
 
 pub struct Response<'a>(Box<Responder + 'a>);
 
