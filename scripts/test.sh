@@ -46,6 +46,9 @@ function check_versions_match() {
   done
 }
 
+# Update dependencies first.
+cargo update
+
 build_and_test "${LIB_DIR}"
 build_and_test "${CODEGEN_DIR}"
 build_and_test "${CONTRIB_DIR}"
