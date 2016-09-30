@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [features]
@@ -15,16 +15,16 @@ lazy_static_macro = ["lazy_static"]
 
 [dependencies]
 rocket = { path = "../lib/" }
-log = "*"
+log = "^0.3"
 
 # JSON and templating dependencies.
-serde = { version = "*", optional = true }
-serde_json = { version = "*", optional = true }
+serde = { version = "^0.8", optional = true }
+serde_json = { version = "^0.8", optional = true }
 
 # Templating dependencies only.
-handlebars = { version = "*", optional = true, features = ["serde_type"] }
-glob = { version = "*", optional = true }
-lazy_static = { version = "*", optional = true }
+handlebars = { version = "^0.21", optional = true, features = ["serde_type"] }
+glob = { version = "^0.2", optional = true }
+lazy_static = { version = "^0.2", optional = true }
 
 # Tera dependency
 [dependencies.tera]
