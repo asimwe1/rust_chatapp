@@ -6,7 +6,7 @@ use term_painter::Color::*;
 use term_painter::ToStyle;
 
 use error::Error;
-use param::{FromParam, FromSegments};
+use super::{FromParam, FromSegments};
 use method::Method;
 
 use content_type::ContentType;
@@ -36,7 +36,7 @@ impl<'a> Request<'a> {
             debug!("{} is >= param count {}", n, params.as_ref().unwrap().len());
             Err(Error::NoKey)
         } else {
-            T::from_param(params.as_ref().unwrap()[n])
+            T::from_param(params.as_ref().unwrap()[n]).map_err(|_| Error::BadParse)
         }
     }
 
@@ -55,7 +55,7 @@ impl<'a> Request<'a> {
             // but the std lib doesn't implement it for Skip.
             let mut segments = self.uri.segments();
             for _ in segments.by_ref().take(i) { /* do nothing */ }
-            T::from_segments(segments)
+            T::from_segments(segments).map_err(|_| Error::BadParse)
         }
     }
 

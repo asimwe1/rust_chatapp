@@ -17,7 +17,7 @@ enum FormOption {
 impl<'v> FromFormValue<'v> for FormOption {
     type Error = &'v str;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         let variant = match v {
             "a" => FormOption::A,
             "b" => FormOption::B,

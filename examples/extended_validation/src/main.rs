@@ -25,7 +25,7 @@ struct UserLogin<'r> {
 impl<'v> FromFormValue<'v> for StrongPassword<'v> {
     type Error = &'static str;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         if v.len() < 8 {
             Err("Too short!")
         } else {
@@ -37,8 +37,8 @@ impl<'v> FromFormValue<'v> for StrongPassword<'v> {
 impl<'v> FromFormValue<'v> for AdultAge {
     type Error = &'static str;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
-        let age = match isize::parse(v) {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+        let age = match isize::from_form_value(v) {
             Ok(v) => v,
             Err(_) => return Err("Age value is not a number."),
         };

@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::{Rocket, Error};
+use rocket::Rocket;
 
 #[derive(FromForm)]
 struct Person<'r> {

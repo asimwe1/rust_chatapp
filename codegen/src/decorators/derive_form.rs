@@ -2,6 +2,7 @@
 
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
+use syntax::parse::token::{str_to_ident};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
@@ -58,6 +59,9 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
             })
     };
 
+    // The error type in the derived implementation.
+    let error_type = ty::Ty::Literal(ty::Path::new(vec!["rocket", "Error"]));
+
     let trait_def = TraitDef {
         is_unsafe: false,
         supports_unions: false,
@@ -88,9 +92,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                         lifetime: None,
                         params: vec![
                             Box::new(ty::Ty::Self_),
-                            Box::new(ty::Ty::Literal(
-                                ty::Path::new(vec!["rocket", "Error"])
-                            )),
+                            Box::new(error_type.clone())
                         ],
                         global: true,
                     }
@@ -101,7 +103,9 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                 unify_fieldless_variants: false,
             }
         ],
-        associated_types: vec![],
+        associated_types: vec![
+            (str_to_ident("Error"), error_type.clone())
+        ],
     };
 
     trait_def.expand(ecx, meta_item, annotated, push);
@@ -164,12 +168,14 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         let ident_string = ident.to_string();
         let id_str = ident_string.as_str();
         arms.push(quote_tokens!(cx,
-            $id_str => $ident = match ::rocket::form::FromFormValue::parse(v) {
-                Ok(v) => Some(v),
-                Err(e) => {
-                    println!("\tError parsing form value '{}': {:?}", $id_str, e);
-                    $return_err_stmt
-                }
+            $id_str => {
+                $ident = match ::rocket::form::FromFormValue::from_form_value(v) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        println!("\tError parsing form val '{}': {:?}", $id_str, e);
+                        $return_err_stmt
+                    }
+                };
             },
         ));
     }

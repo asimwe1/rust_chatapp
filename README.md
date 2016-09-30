@@ -92,9 +92,10 @@ Contributions are absolutely, positively welcome and encouraged! Contributions
 come in many forms. You could:
 
   1. Submit a feature request or bug report as an [issue](https://github.com/SergioBenitez/Rocket/issues).
-  2. Comment on [issues that require
+  2. Ask for improved documentation as an [issue](https://github.com/SergioBenitez/Rocket/issues).
+  3. Comment on [issues that require
         feedback](https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
-  3. Contribute code via [pull requests](https://github.com/SergioBenitez/Rocket/pulls).
+  4. Contribute code via [pull requests](https://github.com/SergioBenitez/Rocket/pulls).
 
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:

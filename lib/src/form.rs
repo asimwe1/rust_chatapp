@@ -1,25 +1,111 @@
+//! Types and traits to handle form processing.
+//!
+//! In general, you will deal with forms in Rocket via the `form` parameter in
+//! routes:
+//!
+//! ```rust,ignore
+//! #[post("/", form = <my_form>)]
+//! fn form_submit(my_form: MyType) -> ...
+//! ```
+//!
+//! Form parameter types must implement the [FromForm](trait.FromForm.html)
+//! trait, which is automatically derivable. Automatically deriving `FromForm`
+//! for a structure requires that all of its fields implement
+//! [FromFormValue](trait.FormFormValue.html). See the
+//! [codegen](/rocket_codegen/) documentation or the [forms guide](/guide/forms)
+//! for more information on forms and on deriving `FromForm`.
+
+use url;
+use error::Error;
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
-use url;
 
-use error::Error;
-
+/// Trait to create instance of some type from an HTTP form; used by code
+/// generation for `form` route parameters.
+///
+/// This trait can be automatically derived via the
+/// [rocket_codegen](/rocket_codegen) plugin:
+///
+/// ```rust,ignore
+/// #![feature(plugin, custom_derive)]
+/// #![plugin(rocket_codegen)]
+///
+/// extern crate rocket;
+///
+/// #[derive(FromForm)]
+/// struct TodoTask {
+///     description: String,
+///     completed: bool
+/// }
+/// ```
+///
+/// When deriving `FromForm`, every field in the structure must implement
+/// [FromFormValue](trait.FromFormValue.html). If you implement `FormForm`
+/// yourself, use the [FormItems](struct.FormItems.html) iterator to iterate
+/// through the form key/value pairs.
 pub trait FromForm<'f>: Sized {
-    fn from_form_string(s: &'f str) -> Result<Self, Error>;
+    /// The associated error which can be returned from parsing.
+    type Error;
+
+    /// Parses an instance of `Self` from a raw HTTP form
+    /// (`application/x-www-form-urlencoded data`) or returns an `Error` if one
+    /// cannot be parsed.
+    fn from_form_string(form_string: &'f str) -> Result<Self, Self::Error>;
 }
 
-// This implementation should only be ued during debugging!
-#[doc(hidden)]
+/// This implementation should only be used during debugging!
 impl<'f> FromForm<'f> for &'f str {
+    type Error = Error;
     fn from_form_string(s: &'f str) -> Result<Self, Error> {
         Ok(s)
     }
 }
 
+/// Trait to create instance of some type from a form value; expected from field
+/// types in structs deriving `FromForm`.
+///
+/// # Examples
+///
+/// This trait is generally implemented when verifying form inputs. For example,
+/// if you'd like to verify that some user is over some age in a form, then you
+/// might define a new type and implement `FromFormValue` as follows:
+///
+/// ```rust
+/// use rocket::form::FromFormValue;
+/// use rocket::Error;
+///
+/// struct AdultAge(usize);
+///
+/// impl<'v> FromFormValue<'v> for AdultAge {
+///     type Error = &'v str;
+///
+///     fn from_form_value(form_value: &'v str) -> Result<AdultAge, &'v str> {
+///         match usize::from_form_value(form_value) {
+///             Ok(age) if age >= 21 => Ok(AdultAge(age)),
+///             _ => Err(form_value),
+///         }
+///     }
+/// }
+/// ```
+///
+/// This type can then be used in a `FromForm` struct as follows:
+///
+/// ```rust,ignore
+/// #[derive(FromForm)]
+/// struct User {
+///     age: AdultAge,
+///     ...
+/// }
+/// ```
 pub trait FromFormValue<'v>: Sized {
+    /// The associated error which can be returned from parsing. It is a good
+    /// idea to have the return type be or contain an `&'v str` so that the
+    /// unparseable string can be examined after a bad parse.
     type Error;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error>;
+    /// Parses an instance of `Self` from an HTTP form field value or returns an
+    /// `Error` if one cannot be parsed.
+    fn from_form_value(form_value: &'v str) -> Result<Self, Self::Error>;
 
     /// Returns a default value to be used when the form field does not exist.
     /// If this returns None, then the field is required. Otherwise, this should
@@ -32,7 +118,7 @@ pub trait FromFormValue<'v>: Sized {
 impl<'v> FromFormValue<'v> for &'v str {
     type Error = Error;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         Ok(v)
     }
 }
@@ -41,7 +127,7 @@ impl<'v> FromFormValue<'v> for String {
     type Error = &'v str;
 
     // This actually parses the value according to the standard.
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         let decoder = url::percent_encoding::percent_decode(v.as_bytes());
         let res = decoder.decode_utf8().map_err(|_| v).map(|s| s.into_owned());
         match res {
@@ -64,7 +150,7 @@ impl<'v> FromFormValue<'v> for String {
 impl<'v> FromFormValue<'v> for bool {
     type Error = &'v str;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         match v {
             "on" | "true" => Ok(true),
             "off" | "false" => Ok(false),
@@ -77,7 +163,7 @@ macro_rules! impl_with_fromstr {
     ($($T:ident),+) => ($(
         impl<'v> FromFormValue<'v> for $T {
             type Error = &'v str;
-            fn parse(v: &'v str) -> Result<Self, Self::Error> {
+            fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
                 $T::from_str(v).map_err(|_| v)
             }
         }
@@ -90,8 +176,8 @@ impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = Error;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
-        match T::parse(v) {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+        match T::from_form_value(v) {
             Ok(v) => Ok(Some(v)),
             Err(_) => Ok(None)
         }
@@ -106,14 +192,43 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
     type Error = Error;
 
-    fn parse(v: &'v str) -> Result<Self, Self::Error> {
-        match T::parse(v) {
+    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+        match T::from_form_value(v) {
             ok@Ok(_) => Ok(ok),
             e@Err(_) => Ok(e)
         }
     }
 }
 
+/// Iterator over the key/value pairs of a given HTTP form string. You'll likely
+/// want to use this if you're implementing [FromForm](trait.FromForm.html)
+/// manually, for whatever reason, by iterating over the items in `form_string`.
+///
+/// # Examples
+///
+/// `FormItems` can be used directly as an iterator:
+///
+/// ```rust
+/// use rocket::form::FormItems;
+///
+/// // prints "greeting = hello" then "username = jake"
+/// let form_string = "greeting=hello&username=jake";
+/// for (key, value) in FormItems(form_string) {
+///     println!("{} = {}", key, value);
+/// }
+/// ```
+///
+/// This is the same example as above, but the iterator is used explicitly.
+///
+/// ```rust
+/// use rocket::form::FormItems;
+///
+/// let form_string = "greeting=hello&username=jake";
+/// let mut items = FormItems(form_string);
+/// assert_eq!(items.next(), Some(("greeting", "hello")));
+/// assert_eq!(items.next(), Some(("username", "jake")));
+/// assert_eq!(items.next(), None);
+/// ```
 pub struct FormItems<'f>(pub &'f str);
 
 impl<'f> Iterator for FormItems<'f> {
