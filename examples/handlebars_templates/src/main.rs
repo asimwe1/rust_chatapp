@@ -27,14 +27,14 @@ fn get(name: String) -> Template {
         items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
     };
 
-    Template::render("index", context)
+    Template::render("index", &context)
 }
 
 #[error(404)]
 fn not_found<'r>(_: Error, req: &'r Request<'r>) -> Template {
     let mut map = std::collections::HashMap::new();
     map.insert("path", req.uri().as_str());
-    Template::render("404", map)
+    Template::render("404", &map)
 }
 
 fn main() {

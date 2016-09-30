@@ -31,11 +31,11 @@ impl<'a, 'b> Context<'a, 'b> {
 #[post("/", form = "<todo>")]
 fn new(todo: Task) -> Result<Flash<Redirect>, Template> {
     if todo.description.is_empty() {
-        Err(Template::render("index", Context::err("Description cannot be empty.")))
+        Err(Template::render("index", &Context::err("Description cannot be empty.")))
     } else if todo.insert() {
         Ok(Flash::success(Redirect::to("/"), "Todo successfully added."))
     } else {
-        Err(Template::render("index", Context::err("Whoops! The server failed.")))
+        Err(Template::render("index", &Context::err("Whoops! The server failed.")))
     }
 }
 
@@ -45,7 +45,7 @@ fn toggle(id: i32) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id) {
         Ok(Redirect::to("/"))
     } else {
-        Err(Template::render("index", Context::err("Couldn't toggle task.")))
+        Err(Template::render("index", &Context::err("Couldn't toggle task.")))
     }
 }
 
@@ -55,13 +55,13 @@ fn delete(id: i32) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id) {
         Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
     } else {
-        Err(Template::render("index", Context::err("Couldn't delete task.")))
+        Err(Template::render("index", &Context::err("Couldn't delete task.")))
     }
 }
 
 #[get("/")]
 fn index(msg: Option<Flash<()>>) -> Template {
-    Template::render("index", match msg {
+    Template::render("index", &match msg {
         Some(ref msg) => Context::raw(Some((msg.name(), msg.msg()))),
         None => Context::raw(None),
     })
