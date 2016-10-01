@@ -8,11 +8,20 @@ use std::fmt;
 
 use router::Collider;
 
-#[derive(Debug, Clone)]
-pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
+/// Rocket's representation of HTTP Content-Types.
+///
+/// This type wraps raw HTTP `Content-Type`s in a type-safe manner. It provides
+/// methods to create and test against common HTTP content-types. It also
+/// provides methods to parse HTTP Content-Type values
+/// ([from_str](#method.from_str)) and to return the ContentType associated with
+/// a file extension ([from_ext](#method.from_extension)).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContentType(pub TopLevel, pub SubLevel, Option<Vec<Param>>);
 
 macro_rules! is_some {
     ($ct:ident, $name:ident: $top:ident/$sub:ident) => {
+        /// Returns a new ContentType that matches the MIME for this method's
+        /// name.
         pub fn $ct() -> ContentType {
             ContentType::of(TopLevel::$top, SubLevel::$sub)
         }
@@ -21,6 +30,8 @@ macro_rules! is_some {
     };
 
     ($name:ident: $top:ident/$sub:ident) => {
+        /// Returns true if `self` is the content type matching the method's
+        /// name.
         pub fn $name(&self) -> bool {
             self.0 == TopLevel::$top && self.1 == SubLevel::$sub
         }
@@ -28,21 +39,37 @@ macro_rules! is_some {
 }
 
 impl ContentType {
+    #[doc(hidden)]
     #[inline(always)]
     pub fn new(t: TopLevel, s: SubLevel, params: Option<Vec<Param>>) -> ContentType {
         ContentType(t, s, params)
     }
 
+    /// Constructs a new content type of the given top level and sub level
+    /// types.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    /// use rocket::response::mime::{TopLevel, SubLevel};
+    ///
+    /// let html = ContentType::of(TopLevel::Application, SubLevel::Html);
+    /// assert!(html.is_html());
+    /// ```
     #[inline(always)]
     pub fn of(t: TopLevel, s: SubLevel) -> ContentType {
         ContentType(t, s, None)
     }
 
+    /// Returns a new ContentType for `*/*`, i.e., any.
     #[inline(always)]
     pub fn any() -> ContentType {
         ContentType::of(TopLevel::Star, SubLevel::Star)
     }
 
+    /// Returns true if this content type is not one of the standard content
+    /// types, that if, if it is an "extended" content type.
     pub fn is_ext(&self) -> bool {
         if let TopLevel::Ext(_) = self.0 {
             true
@@ -53,13 +80,49 @@ impl ContentType {
         }
     }
 
+    /// Returns true if the content type is JSON, i.e: `application/json`.
     is_some!(json, is_json: Application/Json);
+
+    /// Returns true if the content type is XML, i.e: `application/xml`.
     is_some!(xml, is_xml: Application/Xml);
+
+    /// Returns true if the content type is any, i.e.: `*/*`.
     is_some!(is_any: Star/Star);
+
+    /// Returns true if the content type is HTML, i.e.: `application/html`.
     is_some!(html, is_html: Application/Html);
+
+    /// Returns true if the content type is that for non-data HTTP forms, i.e.:
+    /// `application/x-www-form-urlencoded`.
     is_some!(is_form: Application/WwwFormUrlEncoded);
+
+    /// Returns true if the content type is that for data HTTP forms, i.e.:
+    /// `multipart/form-data`.
     is_some!(is_data: Multipart/FormData);
 
+    /// Returns the Content-Type associated with the extension `ext`. Not all
+    /// extensions are recognized. If an extensions is not recognized, then this
+    /// method returns a ContentType of `any`.
+    ///
+    /// # Example
+    ///
+    /// A recognized content type:
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    ///
+    /// let xml = ContentType::from_extension("xml");
+    /// assert!(xml.is_xml());
+    /// ```
+    ///
+    /// An unrecognized content type:
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    ///
+    /// let foo = ContentType::from_extension("foo");
+    /// assert!(foo.is_any());
+    /// ```
     pub fn from_extension(ext: &str) -> ContentType {
         let (top_level, sub_level) = match ext {
             "txt" => (TopLevel::Text, SubLevel::Plain),
@@ -82,18 +145,21 @@ impl ContentType {
 }
 
 impl Default for ContentType {
+    /// Returns a ContentType of `any`, or `*/*`.
     #[inline(always)]
     fn default() -> ContentType {
         ContentType::any()
     }
 }
 
+#[doc(hidden)]
 impl Into<Mime> for ContentType {
     fn into(self) -> Mime {
         Mime(self.0, self.1, self.2.unwrap_or_default())
     }
 }
 
+#[doc(hidden)]
 impl<T: Borrow<Mime>> From<T> for ContentType {
     default fn from(mime: T) -> ContentType {
         let mime: Mime = mime.borrow().clone();
@@ -101,6 +167,7 @@ impl<T: Borrow<Mime>> From<T> for ContentType {
     }
 }
 
+#[doc(hidden)]
 impl From<Mime> for ContentType {
     fn from(mime: Mime) -> ContentType {
         let params = match mime.2.len() {
@@ -129,6 +196,42 @@ fn is_valid_char(c: char) -> bool {
 impl FromStr for ContentType {
     type Err = &'static str;
 
+    /// Parses a ContentType from a given Content-Type header value.
+    ///
+    /// # Examples
+    ///
+    /// Parsing an `application/json`:
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    /// use std::str::FromStr;
+    ///
+    /// let json = ContentType::from_str("application/json");
+    /// assert_eq!(json, Ok(ContentType::json()));
+    /// ```
+    ///
+    /// Parsing a content-type extension:
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    /// use std::str::FromStr;
+    /// use rocket::response::mime::{TopLevel, SubLevel};
+    ///
+    /// let custom = ContentType::from_str("application/x-custom").unwrap();
+    /// assert!(custom.is_ext());
+    /// assert_eq!(custom.0, TopLevel::Application);
+    /// assert_eq!(custom.1, SubLevel::Ext("x-custom".into()));
+    /// ```
+    ///
+    /// Parsing an invalid Content-Type value:
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    /// use std::str::FromStr;
+    ///
+    /// let custom = ContentType::from_str("application//x-custom");
+    /// assert!(custom.is_err());
+    /// ```
     fn from_str(raw: &str) -> Result<ContentType, &'static str> {
         let slash = match raw.find('/') {
             Some(i) => i,
@@ -165,6 +268,16 @@ impl FromStr for ContentType {
 }
 
 impl fmt::Display for ContentType {
+    /// Formats the ContentType as an HTTP Content-Type value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::ContentType;
+    ///
+    /// let http_ct = format!("{}", ContentType::xml());
+    /// assert_eq!(http_ct, "application/xml".to_string());
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}/{}", self.0.as_str(), self.1.as_str())?;
 
