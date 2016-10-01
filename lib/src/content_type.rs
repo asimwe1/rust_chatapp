@@ -16,7 +16,7 @@ use router::Collider;
 /// ([from_str](#method.from_str)) and to return the ContentType associated with
 /// a file extension ([from_ext](#method.from_extension)).
 #[derive(Debug, Clone, PartialEq)]
-pub struct ContentType(pub TopLevel, pub SubLevel, Option<Vec<Param>>);
+pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
 
 macro_rules! is_some {
     ($ct:ident, $name:ident: $top:ident/$sub:ident) => {
