@@ -9,8 +9,8 @@
 //! There's an [overview](https://rocket.rs/overview) of Rocket on the main site
 //! as well as a [full, detailed guide](https://rocket.rs/guide). If you'd like
 //! pointers on getting started, see the
-//! [quickstart](https://rocket.rs/guide/quickstart) or [getting started
-//! chapter](https://rocket.rs/guide/getting_started) of the guide.
+//! [quickstart](https://rocket.rs/guide/quickstart) or [getting
+//! started](https://rocket.rs/guide/getting_started) chapters of the guide.
 //!
 //! You may also be interested in looking at the [contrib API
 //! documentation](../rocket_contrib), which contains JSON and templating

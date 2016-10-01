@@ -19,9 +19,27 @@ use router::Route;
 // Hyper stuff.
 use request::{Cookies, HyperCookie, HyperHeaders, HyperRequest};
 
+/// The type for all incoming web requests.
+///
+/// This should be used sparingly in Rocket applications. In particular, it
+/// should likely only be used when writing
+/// [FromRequest](trait.FromRequest.html) implementations. It contains all of
+/// the information for a given web request. This includes the HTTP method, URI,
+/// cookies, headers, and more.
 pub struct Request<'a> {
+    /// The HTTP method associated with the request.
     pub method: Method,
+    /// The URI associated with the request.
     pub uri: URIBuf, // FIXME: Should be URI (without Hyper).
+    /// <div class="stability" style="margin-left: 0;">
+    ///   <em class="stab unstable">
+	///     Unstable
+    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
+    ///     The underlying HTTP library/types are likely to change before v1.0.
+    ///   </em>
+    /// </div>
+    ///
+    /// The data in the request.
     pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
     cookies: Cookies,
     headers: HyperHeaders, // This sucks.
@@ -29,7 +47,22 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
-    // FIXME: Don't do the from_param parsing here. I think. Not sure. Decide.
+    /// Retrieves and parses into `T` the `n`th dynamic parameter from the
+    /// request. Returns `Error::NoKey` if `n` is greater than the number of
+    /// params. Returns `Error::BadParse` if the parameter type `T` can't be
+    /// parsed from the parameter.
+    ///
+    /// # Example
+    ///
+    /// To retrieve parameter `n` as some type `T` that implements
+    /// [FromParam](trait.FromParam.html) inside a
+    /// [FromRequest](trait.FromRequest.html) implementation:
+    ///
+    /// ```rust,ignore
+    /// fn from_request(request: &'r Request<'c>) -> .. {
+    ///     let my_param: T = request.get_param(n);
+    /// }
+    /// ```
     pub fn get_param<T: FromParam<'a>>(&self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
         if params.is_none() || n >= params.as_ref().unwrap().len() {
@@ -40,11 +73,21 @@ impl<'a> Request<'a> {
         }
     }
 
+    /// Returns a borrow to the cookies sent with this request. Note that
+    /// `Cookie` implements internal mutability, so this method allows you to
+    /// get _and_ set cookies in the given Request.
     pub fn cookies<'r>(&'r self) -> &'r Cookies {
         &self.cookies
     }
 
-    /// i is the index of the first segment to consider
+    /// Retrieves and parses into `T` all of the path segments in the request
+    /// URI beginning and including the 0-indexed `i`. `T` must implement
+    /// [FromSegments](trait.FromSegments.html), which is used to parse the
+    /// segments.
+    ///
+    /// For example, if the request URI is `"/hello/there/i/am/here"`, then
+    /// `request.get_segments::<T>(1)` will attempt to parse the segments
+    /// `"there/i/am/here"` as type `T`.
     pub fn get_segments<'r: 'a, T: FromSegments<'a>>(&'r self,
                                                      i: usize)
                                                      -> Result<T, Error> {
@@ -61,6 +104,8 @@ impl<'a> Request<'a> {
         }
     }
 
+    // FIXME: Implement a testing framework for Rocket.
+    #[doc(hidden)]
     pub fn mock(method: Method, uri: &str) -> Request {
         Request {
             params: RefCell::new(None),
@@ -72,13 +117,32 @@ impl<'a> Request<'a> {
         }
     }
 
-    // FIXME: Get rid of Hyper.
-    #[inline(always)]
+    /// <div class="stability" style="margin-left: 0;">
+    ///   <em class="stab unstable">
+	///     Unstable
+    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
+    ///     The underlying HTTP library/types are likely to change before v1.0.
+    ///   </em>
+    /// </div>
+    ///
+    /// Returns the headers in this request.
     pub fn headers(&self) -> &HyperHeaders {
+        // FIXME: Get rid of Hyper.
         &self.headers
     }
 
-    // FIXME: This should be an Option. Not all requests have content types.
+    /// <div class="stability" style="margin-left: 0;">
+    ///   <em class="stab unstable">
+	///     Unstable
+    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
+    ///     The underlying HTTP library/types are likely to change before v1.0.
+    ///   </em>
+    /// </div>
+    ///
+    /// Returns the Content-Type from the request. Althought you can retrieve
+    /// the content-type from the headers directly, this method is considered to
+    /// be more stable. If no Content-Type was specified in the request, a
+    /// Content-Type of [any](struct.ContentType.html#method.any) is returned.
     pub fn content_type(&self) -> ContentType {
         let hyp_ct = self.headers().get::<header::ContentType>();
         hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))
@@ -97,21 +161,27 @@ impl<'a> Request<'a> {
         })
     }
 
+    /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
+    /// the URI will be absolute.
     pub fn uri(&'a self) -> URI<'a> {
         self.uri.as_uri()
     }
 
     // FIXME: Don't need a refcell for this.
+    #[doc(hidden)]
     pub fn set_params(&'a self, route: &Route) {
         *self.params.borrow_mut() = Some(route.get_params(self.uri.as_uri()))
     }
 
+    #[doc(hidden)]
     #[cfg(test)]
     pub fn set_content_type(&mut self, ct: ContentType) {
         let hyper_ct = header::ContentType(ct.into());
         self.headers.set::<header::ContentType>(hyper_ct)
     }
 
+    /// Create a Rocket Request from a Hyper Request.
+    #[doc(hidden)]
     pub fn from_hyp<'h, 'k>(hyper_req: HyperRequest<'h, 'k>)
                             -> Result<Request<'a>, String> {
         let (_, h_method, h_headers, h_uri, _, mut h_body) = hyper_req.deconstruct();
@@ -150,6 +220,8 @@ impl<'a> Request<'a> {
 }
 
 impl<'r> fmt::Display for Request<'r> {
+    /// Pretty prints a Request. This is primarily used by Rocket's logging
+    /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))
     }
