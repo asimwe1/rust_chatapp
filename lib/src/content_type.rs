@@ -8,7 +8,7 @@ use std::fmt;
 
 use router::Collider;
 
-/// Rocket's representation of HTTP Content-Types.
+/// Typed representation of HTTP Content-Types.
 ///
 /// This type wraps raw HTTP `Content-Type`s in a type-safe manner. It provides
 /// methods to create and test against common HTTP content-types. It also
