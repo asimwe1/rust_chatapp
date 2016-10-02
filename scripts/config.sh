@@ -4,7 +4,13 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function relative() {
   local full_path="${SCRIPT_DIR}/../${1}"
-  echo $(realpath "${full_path}")
+
+  # Use readlink as a fallback to readpath for cross-platform compat.
+  if ! command -v realpath >/dev/null 2>&1; then
+    echo $(readlink -f "${full_path}")
+  else
+    echo $(realpath "${full_path}")
+  fi
 }
 
 EXAMPLES_DIR=$(relative "examples")
