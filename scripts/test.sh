@@ -1,10 +1,9 @@
 #!/bin/bash
 set -e
 
-EXAMPLES_DIR="examples"
-LIB_DIR="lib"
-CODEGEN_DIR="codegen"
-CONTRIB_DIR="contrib"
+# Brings in: EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, and CONTRIB_DIR, DOC_DIR
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $SCRIPT_DIR/config.sh
 
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
@@ -61,7 +60,7 @@ for file in ${EXAMPLES_DIR}/*; do
     if [ -x "${bootstrap_script}" ]; then
       echo ":: Bootstrapping ${file}..."
 
-      if ! ./${bootstrap_script}; then
+      if ! ${bootstrap_script}; then
         echo ":: Running bootstrap script (${bootstrap_script}) failed!"
         echo ":: Skipping ${file}."
         continue
