@@ -1,7 +1,7 @@
 #![feature(question_mark)]
 #![feature(specialization)]
 
-//! # Rocket
+//! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!
 //!
@@ -15,7 +15,49 @@
 //! You may also be interested in looking at the [contrib API
 //! documentation](../rocket_contrib), which contains JSON and templating
 //! support.
-
+//!
+//! ## Libraries
+//!
+//! Rocket's functionality is split into three crates:
+//!
+//!   1. [Core](/rocket) - The core library. Needed by every Rocket application.
+//!   2. [Codegen](/rocket_codegen) - Core code generation plugin. Should always
+//!      be used alongsize `rocket`, though it's not necessary.
+//!   3. [Contrib](/rocket_contrib) - Provides useful functionality for many
+//!      Rocket application. Completely optional.
+//!
+//! ## Usage
+//!
+//! The sanctioned way to use Rocket is via the code generation plugin. This
+//! makes Rocket easier to use and allows a somewhat stable API as Rust matures.
+//! To use Rocket in your Cargo-based project, add the following to
+//! `Cargo.toml`:
+//!
+//! ```rust,ignore
+//! [dependencies]
+//! rocket = "*"
+//! rocket_codegen = "*"
+//! ```
+//!
+//! If you'll be deploying your project to Crates.io, you'll need to change the
+//! "*" to the current version of Rocket.
+//!
+//! Then, add the following to top of your `main.rs` file:
+//!
+//! ```rust,ignore
+//! #![feature(plugin)]
+//! #![plugin(rocket_codegen)]
+//!
+//! extern crate rocket;
+//! ```
+//!
+//! See the [guide](https://guide.rocket.rs) for more information on how to
+//! write Rocket application.
+//!
+//! ## Configuration
+//!
+//! Rocket is configured via the `Rocket.toml` file.
+//!
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
