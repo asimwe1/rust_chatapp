@@ -17,6 +17,9 @@ function mk_doc() {
   popd > /dev/null
 }
 
+# We need to clean-up beforehand so we don't get all of the dependencies.
+cargo clean
+
 mk_doc $LIB_DIR
 mk_doc $CODEGEN_DIR
 mk_doc $CONTRIB_DIR
