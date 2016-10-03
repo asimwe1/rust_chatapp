@@ -24,4 +24,5 @@ members = [
   "examples/json",
   "examples/handlebars_templates",
   "examples/form_kitchen_sink",
+  "examples/config",
 ]

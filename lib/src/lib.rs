@@ -62,6 +62,7 @@ extern crate term_painter;
 extern crate hyper;
 extern crate url;
 extern crate mime;
+extern crate toml;
 #[macro_use] extern crate log;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
@@ -76,6 +77,7 @@ mod router;
 mod rocket;
 mod codegen;
 mod catcher;
+mod config;
 
 /// Defines the types for request and error handlers.
 pub mod handler {
@@ -99,3 +101,8 @@ pub use error::Error;
 pub use router::{Router, Route};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
+
+/// Alias to Rocket::ignite().
+pub fn ignite() -> Rocket {
+    Rocket::ignite()
+}

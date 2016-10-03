@@ -1,0 +1,9 @@
+[package]
+name = "config"
+version = "0.0.1"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }

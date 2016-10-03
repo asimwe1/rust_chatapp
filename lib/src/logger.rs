@@ -1,5 +1,7 @@
 //! Rocket's logging infrastructure.
 
+use std::str::FromStr;
+
 use log::{self, Log, LogLevel, LogRecord, LogMetadata};
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -7,7 +9,7 @@ use term_painter::ToStyle;
 struct RocketLogger(LoggingLevel);
 
 /// Defines the different levels for log messages.
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum LoggingLevel {
     /// Only shows errors and warning.
     Critical,
@@ -25,6 +27,20 @@ impl LoggingLevel {
             LoggingLevel::Normal => LogLevel::Info,
             LoggingLevel::Debug => LogLevel::Trace,
         }
+    }
+}
+
+impl FromStr for LoggingLevel {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let level = match s {
+            "critical" => LoggingLevel::Critical,
+            "normal" => LoggingLevel::Normal,
+            "debug" => LoggingLevel::Debug,
+            _ => return Err(())
+        };
+
+        Ok(level)
     }
 }
 

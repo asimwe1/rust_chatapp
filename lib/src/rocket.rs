@@ -2,10 +2,12 @@ use super::*;
 use response::{FreshHyperResponse, Outcome};
 use request::HyperRequest;
 use catcher;
+use config::RocketConfig;
 
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
+use std::process;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -16,7 +18,7 @@ use hyper::header::SetCookie;
 
 pub struct Rocket {
     address: String,
-    port: isize,
+    port: usize,
     router: Router,
     catchers: HashMap<u16, Catcher>,
     log_set: bool,
@@ -120,7 +122,7 @@ impl Rocket {
         catcher.handle(Error::NoRoute, request).respond(response);
     }
 
-    pub fn new<S: ToString>(address: S, port: isize) -> Rocket {
+    pub fn new<S: ToString>(address: S, port: usize) -> Rocket {
         Rocket {
             address: address.to_string(),
             port: port,
@@ -193,14 +195,59 @@ impl Rocket {
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
+        let server = match HyperServer::http(full_addr.as_str()) {
+            Ok(hyper_server) => hyper_server,
+            Err(e) => {
+                error!("failed to start server.");
+                error_!("{}", e);
+                process::exit(1);
+            }
+        };
+
         info!("🚀  {} {}...",
               White.paint("Rocket has launched from"),
               White.bold().paint(&full_addr));
-        let _ = HyperServer::http(full_addr.as_str()).unwrap().handle(self);
+
+        server.handle(self).unwrap();
     }
 
     pub fn mount_and_launch(mut self, base: &'static str, routes: Vec<Route>) {
         self.mount(base, routes);
         self.launch();
+    }
+
+    pub fn ignite() -> Rocket {
+        use config::ConfigError::*;
+        let config = match RocketConfig::read() {
+            Ok(config) => config,
+            Err(e@ParseError(..)) | Err(e@BadEntry(..)) |
+            Err(e@BadEnv(..)) | Err(e@BadType(..))  => {
+                logger::init(LoggingLevel::Debug);
+                e.pretty_print();
+                process::exit(1)
+            }
+            Err(IOError) | Err(BadCWD) => {
+                warn!("error reading Rocket config file; using defaults.");
+                RocketConfig::default()
+            }
+            Err(NotFound) => RocketConfig::default()
+        };
+
+        logger::init(config.active().log_level);
+        info!("🔧  Configured for {}.", config.active_env);
+        info_!("listening: {}:{}",
+               White.paint(&config.active().address),
+               White.paint(&config.active().port));
+        info_!("logging: {:?}", White.paint(config.active().log_level));
+        info_!("session key: {}",
+               White.paint(config.active().session_key.is_some()));
+
+        Rocket {
+            address: config.active().address.clone(),
+            port: config.active().port,
+            router: Router::new(),
+            catchers: catcher::defaults::get(),
+            log_set: true,
+        }
     }
 }
