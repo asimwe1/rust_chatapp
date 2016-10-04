@@ -18,7 +18,6 @@ examples in [Rocket's git repository](github). Can you figure out what it does?
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("/<name>/<age>")]
 fn hello(name: &str, age: u8) -> String {
@@ -26,15 +25,19 @@ fn hello(name: &str, age: u8) -> String {
 }
 
 fn main() {
-    let mut rocket = Rocket::ignite();
-    rocket.mount("/hello", routes![hello]);
-    rocket.launch()
+    rocket::ignite()
+       .mount("/hello", routes![hello])
+       .launch();
 }
 ```
 
 If you were to run this application, your console would show:
 
 ```sh
+🔧  Configured for development.
+    => listening: localhost:8000
+    => logging: Normal
+    => session key: false
 🛰  Mounting '/hello':
     => GET /hello/<name>/<age>
 🚀  Rocket has launched from localhost:8000...
@@ -135,8 +138,8 @@ about the `route!` macro, see the [internals guide](guide/internals).
 Let's look at lines 13 - 14 again, which we reproduce below:
 
 ```rust
-let mut rocket = Rocket::ignite();
-rocket.mount(“/hello”, routes![hello]);
+rocket::ignite()
+    .mount(“/hello”, routes![hello])
 ```
 
 Line 13 creates the new `Rocket` instance, and line 14 mounts the `hello` route

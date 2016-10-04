@@ -131,7 +131,6 @@ program, which we reproduce below:
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("/")]
 fn hello() -> &'static str {
@@ -139,7 +138,7 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    Rocket::mount_and_launch("/hello", routes![hello]);
+    rocket::ignite().mount("/hello", routes![hello]).launch();
 }
 ```
 
@@ -147,6 +146,10 @@ Run the program by using `cargo run`. You should see the following in your
 terminal:
 
 ```sh
+🔧  Configured for development.
+    => listening: localhost:8000
+    => logging: Normal
+    => session key: false
 🛰  Mounting '/hello':
     => GET /hello/
 🚀  Rocket has launched from localhost:8000...
@@ -154,8 +157,6 @@ terminal:
 
 Finally, visit `http://localhost:8000` to see your first Rocket application in
 action.
-
-## "Hello, world!" Explained
 
 # Introduction
 
@@ -186,7 +187,6 @@ simple application. Let's begin.
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("hi/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -204,9 +204,10 @@ fn not_found() -> &'static str {
 }
 
 fn main() {
-    Rocket::ignite().mount("/", routes![hello, goodbye])
-                    .catch(errors![not_found])
-                    .launch();
+    rocket::ignite()
+        .mount("/", routes![hello, goodbye])
+        .catch(errors![not_found])
+        .launch();
 }
 ```
 
@@ -239,23 +240,13 @@ request is of type `&'static str` whose value is `Hello, world!`.
 
 Rocket route attributes have the following grammar:
 
-```python
-METHOD '(' PATH?, ('path' = PATH)? ('rank' = INT)? ('form' = STR)? ('format' = STR)? ')'
+```ebnf
+route := METHOD '(' path, kv_param* ')'
+
+path := PATH
+      | 'path' = PATH
+
+kv_param := 'rank' = INTEGER
+          | 'form' = STRING
+          | 'format' = STRING
 ```
-
-## Outline
-
-* Request/Response Cycle
-* Routes and Handlers
-* Mounting
-* Dynamic Parameters
-* Path Parameters
-* Colliding and Ranks
-* FromParam
-* FromSegments
-* FromRequest
-* Responses
-* Responder
-* Contrib
-* JSON
-* Templates
