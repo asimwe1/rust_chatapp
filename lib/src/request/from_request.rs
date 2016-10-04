@@ -1,7 +1,7 @@
-use request::*;
-use method::Method;
 use std::fmt::Debug;
-use content_type::ContentType;
+
+use request::Request;
+use http::{ContentType, Method, Cookies};
 
 pub trait FromRequest<'r, 'c>: Sized {
     type Error: Debug;

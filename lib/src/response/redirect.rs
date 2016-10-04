@@ -1,4 +1,5 @@
-use response::*;
+use response::{Outcome, Responder};
+use http::hyper::{header, FreshHyperResponse, StatusCode};
 
 #[derive(Debug)]
 pub struct Redirect(StatusCode, String);

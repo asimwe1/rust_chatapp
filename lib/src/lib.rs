@@ -58,20 +58,20 @@
 //!
 //! Rocket is configured via the `Rocket.toml` file.
 //!
+
+#[macro_use] extern crate log;
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
-extern crate mime;
+// extern crate mime;
 extern crate toml;
-#[macro_use] extern crate log;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
-#[doc(hidden)] pub mod content_type;
+#[doc(hidden)] pub mod http;
 pub mod form;
 pub mod request;
 pub mod response;
 
-mod method;
 mod error;
 mod router;
 mod rocket;
@@ -81,7 +81,9 @@ mod config;
 
 /// Defines the types for request and error handlers.
 pub mod handler {
-    use super::{Request, Response, Error};
+    use request::Request;
+    use response::Response;
+    use error::Error;
 
     /// The type of a request handler.
     pub type Handler = for<'r> fn(&'r Request<'r>) -> Response<'r>;
@@ -93,12 +95,10 @@ pub mod handler {
 #[doc(inline)] pub use response::{Response, Responder};
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
 #[doc(inline)] pub use logger::LoggingLevel;
-pub use content_type::ContentType;
 pub use codegen::{StaticRouteInfo, StaticCatchInfo};
+pub use router::Route;
 pub use request::Request;
-pub use method::Method;
 pub use error::Error;
-pub use router::{Router, Route};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 

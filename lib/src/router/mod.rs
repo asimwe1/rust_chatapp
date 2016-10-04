@@ -7,7 +7,8 @@ pub use self::uri::{URI, URIBuf, Segments};
 pub use self::route::Route;
 
 use std::collections::hash_map::HashMap;
-use method::Method;
+
+use http::Method;
 use request::Request;
 
 // type Selector = (Method, usize);
@@ -68,11 +69,11 @@ impl Router {
 
 #[cfg(test)]
 mod test {
-    use method::Method;
-    use method::Method::*;
-    use super::{Router, Route};
+    use super::{Router, Route, URI};
+
+    use http::Method;
+    use http::Method::*;
     use {Response, Request};
-    use super::URI;
 
     fn dummy_handler(_req: &Request) -> Response<'static> {
         Response::empty()

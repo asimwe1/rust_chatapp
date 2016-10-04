@@ -1,5 +1,5 @@
-use ::{Method, Handler, ErrorHandler};
-use content_type::ContentType;
+use handler::{Handler, ErrorHandler};
+use http::{Method, ContentType};
 
 pub struct StaticRouteInfo {
     pub method: Method,

@@ -1,9 +1,9 @@
-use super::*;
-use self::Method::*;
-
 use std::fmt;
 use std::str::FromStr;
-use hyper::method::Method as HyperMethod;
+
+use error::Error;
+use http::hyper::HyperMethod;
+use self::Method::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {

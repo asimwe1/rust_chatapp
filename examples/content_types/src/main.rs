@@ -4,7 +4,8 @@
 extern crate rocket;
 extern crate serde_json;
 
-use rocket::{Rocket, Request, Error, ContentType};
+use rocket::{Rocket, Request, Error};
+use rocket::http::ContentType;
 use rocket::response::data;
 
 #[derive(Debug, Serialize, Deserialize)]

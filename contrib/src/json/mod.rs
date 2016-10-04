@@ -4,8 +4,8 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 
 use rocket::request::{Request, FromRequest};
-use rocket::response::{Responder, Outcome, FreshHyperResponse};
-use rocket::response::data;
+use rocket::response::{Responder, Outcome, data};
+use rocket::http::hyper::FreshHyperResponse;
 
 use self::serde::{Serialize, Deserialize};
 use self::serde_json::Error as JSONError;

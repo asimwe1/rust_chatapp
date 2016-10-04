@@ -1,11 +1,10 @@
-pub use response::mime::{Mime, TopLevel, SubLevel};
-use response::mime::Param;
 use std::default::Default;
 
 use std::str::FromStr;
 use std::borrow::Borrow;
 use std::fmt;
 
+use http::mime::{Mime, Param, TopLevel, SubLevel};
 use router::Collider;
 
 /// Typed representation of HTTP Content-Types.
@@ -51,8 +50,8 @@ impl ContentType {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::ContentType;
-    /// use rocket::response::mime::{TopLevel, SubLevel};
+    /// use rocket::http::ContentType;
+    /// use rocket::http::mime::{TopLevel, SubLevel};
     ///
     /// let html = ContentType::of(TopLevel::Application, SubLevel::Html);
     /// assert!(html.is_html());
@@ -109,7 +108,7 @@ impl ContentType {
     /// A recognized content type:
     ///
     /// ```rust
-    /// use rocket::ContentType;
+    /// use rocket::http::ContentType;
     ///
     /// let xml = ContentType::from_extension("xml");
     /// assert!(xml.is_xml());
@@ -118,7 +117,7 @@ impl ContentType {
     /// An unrecognized content type:
     ///
     /// ```rust
-    /// use rocket::ContentType;
+    /// use rocket::http::ContentType;
     ///
     /// let foo = ContentType::from_extension("foo");
     /// assert!(foo.is_any());
@@ -203,8 +202,8 @@ impl FromStr for ContentType {
     /// Parsing an `application/json`:
     ///
     /// ```rust
-    /// use rocket::ContentType;
     /// use std::str::FromStr;
+    /// use rocket::http::ContentType;
     ///
     /// let json = ContentType::from_str("application/json");
     /// assert_eq!(json, Ok(ContentType::json()));
@@ -213,9 +212,9 @@ impl FromStr for ContentType {
     /// Parsing a content-type extension:
     ///
     /// ```rust
-    /// use rocket::ContentType;
     /// use std::str::FromStr;
-    /// use rocket::response::mime::{TopLevel, SubLevel};
+    /// use rocket::http::ContentType;
+    /// use rocket::http::mime::{TopLevel, SubLevel};
     ///
     /// let custom = ContentType::from_str("application/x-custom").unwrap();
     /// assert!(custom.is_ext());
@@ -226,8 +225,8 @@ impl FromStr for ContentType {
     /// Parsing an invalid Content-Type value:
     ///
     /// ```rust
-    /// use rocket::ContentType;
     /// use std::str::FromStr;
+    /// use rocket::http::ContentType;
     ///
     /// let custom = ContentType::from_str("application//x-custom");
     /// assert!(custom.is_err());
@@ -273,7 +272,7 @@ impl fmt::Display for ContentType {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::ContentType;
+    /// use rocket::http::ContentType;
     ///
     /// let http_ct = format!("{}", ContentType::xml());
     /// assert_eq!(http_ct, "application/xml".to_string());

@@ -1,8 +1,9 @@
-use response::*;
+use std::fmt;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
-use std::fmt;
+
+use http::hyper::FreshHyperResponse;
 
 pub enum Outcome<'h> {
     /// Signifies a response that completed sucessfully.

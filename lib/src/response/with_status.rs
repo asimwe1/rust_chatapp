@@ -1,4 +1,5 @@
-use response::*;
+use response::{Responder, Outcome};
+use http::hyper::{StatusCode, FreshHyperResponse};
 
 pub struct StatusResponse<R: Responder> {
     status: StatusCode,

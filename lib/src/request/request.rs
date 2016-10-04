@@ -7,17 +7,14 @@ use term_painter::ToStyle;
 
 use error::Error;
 use super::{FromParam, FromSegments};
-use method::Method;
 
-use content_type::ContentType;
-use hyper::uri::RequestUri as HyperRequestUri;
 use hyper::header;
 use router::URIBuf;
 use router::URI;
 use router::Route;
 
-// Hyper stuff.
-use request::{Cookies, HyperCookie, HyperHeaders, HyperRequest};
+use http::hyper::{HyperCookie, HyperHeaders, HyperRequest, HyperRequestUri};
+use http::{Method, ContentType, Cookies};
 
 /// The type for all incoming web requests.
 ///

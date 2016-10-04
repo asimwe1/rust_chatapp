@@ -1,9 +1,11 @@
-use response::*;
-use content_type::ContentType;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
+
+use response::{Responder, Outcome};
+use http::hyper::{header, FreshHyperResponse};
+use http::ContentType;
 
 #[derive(Debug)]
 pub struct NamedFile(PathBuf, File);

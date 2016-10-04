@@ -14,29 +14,29 @@ use syntax::ext::build::AstBuilder;
 use syntax::parse::token::{self, str_to_ident};
 use syntax::ptr::P;
 
-use rocket::{Method, ContentType};
-use rocket::content_type::{TopLevel, SubLevel};
+use rocket::http::{Method, ContentType};
+use rocket::http::mime::{TopLevel, SubLevel};
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
-    quote_enum!(ecx, method => ::rocket::Method {
+    quote_enum!(ecx, method => ::rocket::http::Method {
         Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch;
     })
 }
 
 // FIXME: This should return an Expr! (Ext is not a path.)
 fn top_level_to_expr(ecx: &ExtCtxt, level: &TopLevel) -> Path {
-    quote_enum!(ecx, *level => ::rocket::content_type::TopLevel {
+    quote_enum!(ecx, *level => ::rocket::http::mime::TopLevel {
         Star, Text, Image, Audio, Video, Application, Multipart, Model, Message;
-        Ext(ref s) => quote_path!(ecx, ::rocket::content_type::TopLevel::Ext($s))
+        Ext(ref s) => quote_path!(ecx, ::rocket::http::mime::TopLevel::Ext($s))
     })
 }
 
 // FIXME: This should return an Expr! (Ext is not a path.)
 fn sub_level_to_expr(ecx: &ExtCtxt, level: &SubLevel) -> Path {
-    quote_enum!(ecx, *level => ::rocket::content_type::SubLevel {
+    quote_enum!(ecx, *level => ::rocket::http::mime::SubLevel {
         Star, Plain, Html, Xml, Javascript, Css, EventStream, Json,
         WwwFormUrlEncoded, Msgpack, OctetStream, FormData, Png, Gif, Bmp, Jpeg;
-        Ext(ref s) => quote_path!(ecx, ::rocket::content_type::SubLevel::Ext($s))
+        Ext(ref s) => quote_path!(ecx, ::rocket::http::mime::SubLevel::Ext($s))
     })
 }
 
@@ -44,7 +44,7 @@ fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr
     ct.map(|ct| {
         let top_level = top_level_to_expr(ecx, &ct.0);
         let sub_level = sub_level_to_expr(ecx, &ct.1);
-        quote_expr!(ecx, ::rocket::ContentType($top_level, $sub_level, None))
+        quote_expr!(ecx, ::rocket::http::ContentType($top_level, $sub_level, None))
     })
 }
 

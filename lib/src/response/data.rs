@@ -1,6 +1,7 @@
-use response::{header, Responder, FreshHyperResponse, Outcome};
-use response::mime::{Mime, TopLevel, SubLevel};
-use ::ContentType;
+use response::{Responder, Outcome};
+use http::hyper::{header, FreshHyperResponse};
+use http::mime::{Mime, TopLevel, SubLevel};
+use http::ContentType;
 
 pub struct Content<T: Responder>(pub ContentType, pub T);
 

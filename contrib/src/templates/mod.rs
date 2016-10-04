@@ -10,13 +10,16 @@ mod handlebars_templates;
 
 #[macro_use] mod macros;
 
+use self::serde::Serialize;
+use self::glob::glob;
+
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use self::serde::Serialize;
-use rocket::response::{Content, Outcome, FreshHyperResponse, Responder};
-use rocket::{Rocket, ContentType};
-use self::glob::glob;
+use rocket::Rocket;
+use rocket::response::{Content, Outcome, Responder};
+use rocket::http::hyper::FreshHyperResponse;
+use rocket::http::ContentType;
 
 /// The Template type implements generic support for template rendering in
 /// Rocket.

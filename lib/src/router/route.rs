@@ -1,13 +1,15 @@
-use ::{Method, Handler, StaticRouteInfo};
-use content_type::ContentType;
-use super::{Collider, URI, URIBuf}; // :D
+use std::fmt;
+use std::convert::From;
 
 use term_painter::ToStyle;
 use term_painter::Color::*;
 
-use std::fmt;
-use std::convert::From;
+use super::{Collider, URI, URIBuf}; // :D
+
+use codegen::StaticRouteInfo;
+use handler::Handler;
 use request::Request;
+use http::{Method, ContentType};
 
 pub struct Route {
     pub method: Method,

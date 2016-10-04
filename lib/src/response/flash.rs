@@ -1,7 +1,8 @@
-use response::*;
 use std::convert::AsRef;
-use hyper::header::{SetCookie, CookiePair};
+
+use response::{Outcome, Responder};
 use request::{Request, FromRequest};
+use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
 
 const FLASH_COOKIE_NAME: &'static str = "_flash";
 
@@ -32,9 +33,9 @@ impl<R: Responder> Flash<R> {
         Flash::new(responder, "error", msg)
     }
 
-    fn cookie_pair(&self) -> CookiePair {
+    fn cookie_pair(&self) -> HyperCookiePair {
         let content = format!("{}{}{}", self.name.len(), self.name, self.message);
-        let mut pair = CookiePair::new(FLASH_COOKIE_NAME.to_string(), content);
+        let mut pair = HyperCookiePair::new(FLASH_COOKIE_NAME.to_string(), content);
         pair.path = Some("/".to_string());
         pair.max_age = Some(300);
         pair
@@ -44,7 +45,7 @@ impl<R: Responder> Flash<R> {
 impl<R: Responder> Responder for Flash<R> {
     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
-        res.headers_mut().set(SetCookie(vec![self.cookie_pair()]));
+        res.headers_mut().set(HyperSetCookie(vec![self.cookie_pair()]));
         self.responder.respond(res)
     }
 }

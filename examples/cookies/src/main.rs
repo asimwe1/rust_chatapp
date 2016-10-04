@@ -8,7 +8,7 @@ extern crate tera;
 
 use rocket::Rocket;
 use rocket::response::Redirect;
-use rocket::request::{Cookie, Cookies};
+use rocket::http::{Cookie, Cookies};
 
 lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("templates/**/*"););
 

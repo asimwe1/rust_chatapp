@@ -1,9 +1,3 @@
-use super::*;
-use response::{FreshHyperResponse, Outcome};
-use request::HyperRequest;
-use catcher;
-use config::RocketConfig;
-
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
@@ -12,9 +6,18 @@ use std::process;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-use hyper::server::Server as HyperServer;
-use hyper::server::Handler as HyperHandler;
-use hyper::header::SetCookie;
+use logger::{self, LoggingLevel};
+use request::Request;
+use router::{Router, Route};
+use catcher::{self, Catcher};
+use response::Outcome;
+use config::RocketConfig;
+use form::FormItems;
+use error::Error;
+
+use http::Method;
+use http::hyper::{HyperRequest, FreshHyperResponse};
+use http::hyper::{HyperServer, HyperHandler, HyperSetCookie, header};
 
 pub struct Rocket {
     address: String,
@@ -28,7 +31,7 @@ impl HyperHandler for Rocket {
     fn handle<'h, 'k>(&self,
                       req: HyperRequest<'h, 'k>,
                       mut res: FreshHyperResponse<'h>) {
-        res.headers_mut().set(response::header::Server("rocket".to_string()));
+        res.headers_mut().set(header::Server("rocket".to_string()));
         self.dispatch(req, res)
     }
 }
@@ -64,7 +67,7 @@ impl Rocket {
             let mut responder = (route.handler)(&request);
             let cookie_delta = request.cookies().delta();
             if cookie_delta.len() > 0 {
-                res.headers_mut().set(SetCookie(cookie_delta));
+                res.headers_mut().set(HyperSetCookie(cookie_delta));
             }
 
             // Get the response.
@@ -95,7 +98,7 @@ impl Rocket {
                 from_utf8_unchecked(&req.data.as_slice()[..min(data_len, max_len)])
             };
 
-            let mut form_items = form::FormItems(form);
+            let mut form_items = FormItems(form);
             if let Some(("_method", value)) = form_items.next() {
                 if let Ok(method) = value.parse() {
                     req.method = method;

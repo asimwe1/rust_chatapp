@@ -1,5 +1,7 @@
-use response::*;
 use std::io::{Read, Write, ErrorKind};
+
+use response::{Responder, Outcome};
+use http::hyper::FreshHyperResponse;
 
 // TODO: Support custom chunk sizes.
 /// The default size of each chunk in the streamed response.

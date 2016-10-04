@@ -1,5 +1,8 @@
-use response::*;
 use std::io::Write;
+
+use response::{Outcome, Responder};
+use http::hyper::{header, FreshHyperResponse};
+use http::hyper::StatusCode;
 
 pub struct Empty(StatusCode);
 

@@ -46,14 +46,15 @@ impl<'a> Collider<str> for &'a str {
 
 #[cfg(test)]
 mod tests {
-    use router::Collider;
-    use router::route::Route;
-    use Method;
-    use Method::*;
-    use {Request, Response};
-    use content_type::ContentType;
     use std::str::FromStr;
-    use router::URI;
+
+    use router::{Collider, URI};
+    use request::Request;
+    use response::Response;
+    use router::route::Route;
+    use http::{Method, ContentType};
+
+    use http::Method::*;
 
     type SimpleRoute = (Method, &'static str);
 

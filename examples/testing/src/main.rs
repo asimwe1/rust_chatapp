@@ -15,7 +15,8 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use super::rocket::{Rocket, Request, Method};
+    use super::rocket::{Rocket, Request};
+    use super::rocket::http::Method;
 
     fn run_test<F>(f: F) where F: Fn(Rocket) {
         let mut rocket = Rocket::new("_", 0);

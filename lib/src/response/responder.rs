@@ -1,8 +1,10 @@
-use response::*;
-use response::mime::{Mime, TopLevel, SubLevel};
 use std::io::{Read, Write};
 use std::fs::File;
 use std::fmt;
+
+use response::Outcome;
+use http::mime::{Mime, TopLevel, SubLevel};
+use http::hyper::{header, FreshHyperResponse, StatusCode};
 
 // TODO: Have this return something saying whether every was okay. Need
 // something like to be able to forward requests on when things don't work out.

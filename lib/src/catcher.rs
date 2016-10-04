@@ -53,12 +53,15 @@ impl fmt::Display for Catcher {
 }
 
 pub mod defaults {
-    use request::Request;
-    use response::{StatusCode, Response};
-    use response::data;
     use super::Catcher;
-    use error::Error;
+
     use std::collections::HashMap;
+
+    use request::Request;
+    use response::Response;
+    use response::data;
+    use error::Error;
+    use http::hyper::StatusCode;
 
     pub fn not_found<'r>(_error: Error, _request: &'r Request<'r>) -> Response<'r> {
         Response::with_status(StatusCode::NotFound, data::HTML(r#"

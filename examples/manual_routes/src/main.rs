@@ -1,7 +1,7 @@
 extern crate rocket;
 
 use rocket::{Rocket, Request, Response, Route};
-use rocket::Method::*;
+use rocket::http::Method::*;
 
 fn root<'r>(req: &'r Request<'r>) -> Response<'r> {
     let name = req.get_param(0).unwrap_or("unnamed");
