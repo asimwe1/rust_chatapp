@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::{Error, Request};
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -10,10 +9,10 @@ fn hello(name: &str, age: i8) -> String {
 }
 
 #[error(404)]
-fn not_found<'r>(_error: Error, request: &'r Request<'r>) -> String {
+fn not_found(req: &rocket::Request) -> String {
     format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            request.uri)
+            req.uri)
 }
 
 fn main() {
