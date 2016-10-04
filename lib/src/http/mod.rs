@@ -1,4 +1,5 @@
 pub mod hyper;
+pub mod uri;
 
 mod cookies;
 mod method;

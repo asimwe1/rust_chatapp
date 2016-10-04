@@ -1,9 +1,9 @@
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::path::PathBuf;
-
-use router::Segments;
 use url;
+
+use http::uri::Segments;
 
 pub trait FromParam<'a>: Sized {
     type Error;

@@ -1,15 +1,16 @@
 use std::fmt;
 use std::convert::From;
 
+use super::Collider; // :D
+
 use term_painter::ToStyle;
 use term_painter::Color::*;
-
-use super::{Collider, URI, URIBuf}; // :D
 
 use codegen::StaticRouteInfo;
 use handler::Handler;
 use request::Request;
 use http::{Method, ContentType};
+use http::uri::{URI, URIBuf};
 
 pub struct Route {
     pub method: Method,

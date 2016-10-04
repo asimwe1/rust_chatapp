@@ -1,7 +1,8 @@
 use std::cell::Cell;
-use super::Collider;
 use std::convert::From;
 use std::fmt::{self, Write};
+
+use router::Collider;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {

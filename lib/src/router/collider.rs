@@ -48,11 +48,12 @@ impl<'a> Collider<str> for &'a str {
 mod tests {
     use std::str::FromStr;
 
-    use router::{Collider, URI};
+    use router::Collider;
     use request::Request;
     use response::Response;
     use router::route::Route;
     use http::{Method, ContentType};
+    use http::uri::URI;
 
     use http::Method::*;
 

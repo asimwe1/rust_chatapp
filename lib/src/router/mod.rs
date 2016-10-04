@@ -1,15 +1,13 @@
 mod collider;
 mod route;
-mod uri;
 
 pub use self::collider::Collider;
-pub use self::uri::{URI, URIBuf, Segments};
 pub use self::route::Route;
 
 use std::collections::hash_map::HashMap;
 
-use http::Method;
 use request::Request;
+use http::Method;
 
 // type Selector = (Method, usize);
 type Selector = Method;
@@ -69,10 +67,11 @@ impl Router {
 
 #[cfg(test)]
 mod test {
-    use super::{Router, Route, URI};
+    use super::{Router, Route};
 
     use http::Method;
     use http::Method::*;
+    use http::uri::URI;
     use {Response, Request};
 
     fn dummy_handler(_req: &Request) -> Response<'static> {
