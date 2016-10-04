@@ -193,10 +193,7 @@ mod test {
 
     macro_rules! check_config {
         ($rconfig:expr => { $($param:tt)+ }) => (
-            match $rconfig {
-                Ok(config) => assert_eq!(config.active(), &Config { $($param)+ }),
-                Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
-            }
+            check_config!($rconfig, Config { $($param)+ })
         );
 
         ($rconfig:expr, $econfig:expr) => (
