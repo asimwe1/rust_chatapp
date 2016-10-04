@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -15,5 +14,5 @@ fn hi(name: &str, age: &str) -> String {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![hi, hello]);
+    rocket::ignite().mount_and_launch("/", routes![hi, hello]);
 }

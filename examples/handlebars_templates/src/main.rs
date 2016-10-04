@@ -6,7 +6,7 @@ extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 
-use rocket::{Rocket, Request, Error};
+use rocket::{Request, Error};
 use rocket::response::Redirect;
 use rocket_contrib::Template;
 
@@ -39,7 +39,7 @@ fn not_found<'r>(_: Error, req: &'r Request<'r>) -> Template {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
     rocket.catch(errors![not_found]);
     rocket.mount_and_launch("/", routes![index, get]);
 }

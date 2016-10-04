@@ -3,7 +3,6 @@
 
 extern crate rocket;
 
-use rocket::Rocket;
 use rocket::response::{data, Stream};
 
 use std::io::{self, repeat, Repeat, Read, Take};
@@ -24,5 +23,5 @@ fn file() -> io::Result<Stream<File>> {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![root, file]);
+    rocket::ignite().mount_and_launch("/", routes![root, file]);
 }

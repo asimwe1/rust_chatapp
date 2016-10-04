@@ -134,6 +134,11 @@ impl RocketConfig {
     }
 }
 
+/// Read the Rocket config file from the current directory or any of its
+/// parents. If there is no such file, return the default config. A returned
+/// config will have its active environment set to whatever was passed in with
+/// the rocket config env variable. If there is a problem doing any of this,
+/// print a nice error message and bail.
 pub fn read_or_default() -> RocketConfig {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);

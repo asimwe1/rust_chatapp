@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("/")]
 fn hello() -> &'static str {
@@ -10,7 +9,7 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![hello]);
+    rocket::ignite().mount_and_launch("/", routes![hello]);
 }
 
 #[cfg(test)]
@@ -19,7 +18,7 @@ mod test {
     use super::rocket::http::Method;
 
     fn run_test<F>(f: F) where F: Fn(Rocket) {
-        let mut rocket = Rocket::new("_", 0);
+        let mut rocket = Rocket::ignite();
         rocket.mount("/", routes![super::hello]);
         f(rocket);
     }

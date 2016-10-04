@@ -2,7 +2,7 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::{Rocket, Error, Request};
+use rocket::{Error, Request};
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -17,7 +17,7 @@ fn not_found<'r>(_error: Error, request: &'r Request<'r>) -> String {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/", routes![hello]);
     rocket.catch(errors![not_found]);
     rocket.launch();

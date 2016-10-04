@@ -11,7 +11,6 @@ extern crate serde_json;
 mod static_files;
 mod task;
 
-use rocket::Rocket;
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::Template;
 use task::Task;
@@ -69,7 +68,7 @@ fn index(msg: Option<Flash<()>>) -> Template {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("127.0.0.1", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/", routes![index, static_files::all])
           .mount("/todo/", routes![new, toggle, delete]);
     rocket.launch();

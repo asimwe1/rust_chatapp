@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 extern crate rocket;
 
-use rocket::Rocket;
 use rocket::response::Redirect;
 
 #[get("/")]
@@ -24,6 +23,5 @@ fn login() -> &'static str {
 }
 
 fn main() {
-    let rocket = Rocket::new("localhost", 8000);
-    rocket.mount_and_launch("/", routes![root, user, login]);
+    rocket::ignite().mount_and_launch("/", routes![root, user, login])
 }

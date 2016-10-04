@@ -3,8 +3,6 @@
 
 extern crate rocket;
 
-use rocket::Rocket;
-
 #[derive(FromForm)]
 struct Person<'r> {
     name: &'r str,
@@ -21,5 +19,5 @@ fn hello(person: Person) -> String {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![hello]);
+    rocket::ignite().mount_and_launch("/", routes![hello]);
 }

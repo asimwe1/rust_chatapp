@@ -6,7 +6,6 @@ extern crate lazy_static;
 extern crate rocket;
 extern crate tera;
 
-use rocket::Rocket;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, Cookies};
 
@@ -37,7 +36,7 @@ fn index(cookies: &Cookies) -> tera::TeraResult<String> {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("127.0.0.1", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/", routes![submit, index]);
     rocket.launch();
 }

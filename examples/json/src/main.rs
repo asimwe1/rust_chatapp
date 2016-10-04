@@ -7,7 +7,7 @@ extern crate serde_json;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
-use rocket::{Rocket, Request, Error};
+use rocket::{Request, Error};
 use rocket_contrib::JSON;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -86,7 +86,7 @@ fn not_found<'r>(_: Error, _: &'r Request<'r>) -> JSON<SimpleMap> {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/message", routes![new, update, get]);
     rocket.catch(errors![not_found]);
     rocket.launch();

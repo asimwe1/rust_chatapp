@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 use std::io;
 use rocket::response::NamedFile;
@@ -19,5 +18,5 @@ fn files(file: PathBuf) -> io::Result<NamedFile> {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![index, files]);
+    rocket::ignite().mount_and_launch("/", routes![index, files]);
 }

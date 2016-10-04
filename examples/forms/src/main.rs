@@ -5,7 +5,6 @@ extern crate rocket;
 
 mod files;
 
-use rocket::Rocket;
 use rocket::response::Redirect;
 
 #[derive(FromForm)]
@@ -42,7 +41,7 @@ fn user_page(username: &str) -> String {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/", routes![files::index, files::files, user_page, login]);
     rocket.launch();
 }

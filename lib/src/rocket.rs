@@ -7,7 +7,7 @@ use term_painter::Color::*;
 use term_painter::ToStyle;
 
 use config;
-use logger::{self, LoggingLevel};
+use logger;
 use request::Request;
 use router::{Router, Route};
 use catcher::{self, Catcher};
@@ -24,7 +24,6 @@ pub struct Rocket {
     port: usize,
     router: Router,
     catchers: HashMap<u16, Catcher>,
-    log_set: bool,
 }
 
 impl HyperHandler for Rocket {
@@ -125,18 +124,7 @@ impl Rocket {
         catcher.handle(Error::NoRoute, request).respond(response);
     }
 
-    pub fn new<S: ToString>(address: S, port: usize) -> Rocket {
-        Rocket {
-            address: address.to_string(),
-            port: port,
-            router: Router::new(),
-            catchers: catcher::defaults::get(),
-            log_set: false,
-        }
-    }
-
     pub fn mount(&mut self, base: &'static str, routes: Vec<Route>) -> &mut Self {
-        self.enable_normal_logging_if_disabled();
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());
@@ -150,7 +138,6 @@ impl Rocket {
     }
 
     pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
-        self.enable_normal_logging_if_disabled();
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.contains_key(&c.code) &&
@@ -167,32 +154,7 @@ impl Rocket {
         self
     }
 
-    fn enable_normal_logging_if_disabled(&mut self) {
-        if !self.log_set {
-            logger::init(LoggingLevel::Normal);
-            self.log_set = true;
-        }
-    }
-
-    pub fn log(&mut self, level: LoggingLevel) {
-        if self.log_set {
-            warn!("Log level already set! Not overriding.");
-        } else {
-            logger::init(level);
-            self.log_set = true;
-        }
-    }
-
-    /// Retrieves the configuration parameter named `name` for the current
-    /// environment. Returns Some(value) if the paremeter exists. Otherwise,
-    /// returns None.
-    pub fn config<S: AsRef<str>>(_name: S) -> Option<&'static str> {
-        // TODO: Implement me.
-        None
-    }
-
-    pub fn launch(mut self) {
-        self.enable_normal_logging_if_disabled();
+    pub fn launch(self) {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
         }
@@ -219,6 +181,14 @@ impl Rocket {
         self.launch();
     }
 
+    /// Retrieves the configuration parameter named `name` for the current
+    /// environment. Returns Some(value) if the paremeter exists. Otherwise,
+    /// returns None.
+    pub fn config<S: AsRef<str>>(_name: S) -> Option<&'static str> {
+        // TODO: Implement me.
+        None
+    }
+
     pub fn ignite() -> Rocket {
         // Note: read_or_default will exit the process under errors.
         let config = config::read_or_default();
@@ -237,7 +207,6 @@ impl Rocket {
             port: config.active().port,
             router: Router::new(),
             catchers: catcher::defaults::get(),
-            log_set: true,
         }
     }
 }

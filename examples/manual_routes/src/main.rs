@@ -1,6 +1,6 @@
 extern crate rocket;
 
-use rocket::{Rocket, Request, Response, Route};
+use rocket::{Request, Response, Route};
 use rocket::http::Method::*;
 
 fn root<'r>(req: &'r Request<'r>) -> Response<'r> {
@@ -14,7 +14,7 @@ fn echo_url<'a>(req: &'a Request<'a>) -> Response<'a> {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
 
     let first = Route::new(Get, "/hello", root);
     let second = Route::new(Get, "/hello/<any>", root);

@@ -4,7 +4,6 @@
 extern crate rocket;
 
 use std::fmt;
-use rocket::Rocket;
 use rocket::request::{Request, FromRequest};
 
 #[derive(Debug)]
@@ -29,5 +28,5 @@ fn header_count(header_count: HeaderCount) -> String {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/", routes![header_count]);
+    rocket::ignite().mount_and_launch("/", routes![header_count]);
 }

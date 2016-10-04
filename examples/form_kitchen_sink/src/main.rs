@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::{Rocket, Request};
+use rocket::Request;
 use rocket::response::NamedFile;
 use rocket::form::FromFormValue;
 use std::io;
@@ -56,7 +56,7 @@ fn index() -> io::Result<NamedFile> {
 }
 
 fn main() {
-    let mut rocket = Rocket::new("localhost", 8000);
+    let mut rocket = rocket::ignite();
     rocket.mount("/", routes![index, sink, sink2]);
     rocket.launch();
 }
