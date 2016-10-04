@@ -3,7 +3,7 @@ use super::Environment;
 use term_painter::Color::White;
 use term_painter::ToStyle;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ParsingError {
     pub byte_range: (usize, usize),
     pub start: (usize, usize),
@@ -11,7 +11,7 @@ pub struct ParsingError {
     pub desc: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ConfigError {
     BadCWD,
     NotFound,

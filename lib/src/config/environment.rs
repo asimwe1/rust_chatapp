@@ -6,7 +6,7 @@ use std::env;
 
 use self::Environment::*;
 
-const CONFIG_ENV: &'static str = "ROCKET_ENV";
+pub const CONFIG_ENV: &'static str = "ROCKET_ENV";
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Environment {

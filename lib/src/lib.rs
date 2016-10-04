@@ -66,6 +66,8 @@ extern crate url;
 // extern crate mime;
 extern crate toml;
 
+#[cfg(test)] #[macro_use] extern crate lazy_static;
+
 #[doc(hidden)] #[macro_use] pub mod logger;
 #[doc(hidden)] pub mod http;
 pub mod form;

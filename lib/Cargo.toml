@@ -10,3 +10,6 @@ hyper = { version = "^0.9", default-features = false }
 url = "^1"
 # mime = "^0.2"
 toml = "^0.2"
+
+[dev-dependencies]
+lazy_static = "*"

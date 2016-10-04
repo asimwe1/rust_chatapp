@@ -1,12 +1,13 @@
+use std::collections::HashMap;
+use std::net::ToSocketAddrs;
+
 use super::Environment::*;
 use super::Environment;
 
 use logger::LoggingLevel;
 use toml::Value;
 
-use std::collections::HashMap;
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub address: String,
     pub port: usize,
@@ -66,9 +67,21 @@ impl Config {
 
     pub fn set(&mut self, name: &str, value: &Value) -> Result<(), &'static str> {
         if name == "address" {
-            self.address = parse!(value, as_str).to_string();
+            let address_str = parse!(value, as_str).to_string();
+            if address_str.contains(":") {
+                return Err("an IP address with no port")
+            } else if format!("{}:{}", address_str, 80).to_socket_addrs().is_err() {
+                return Err("a valid IP address")
+            }
+
+            self.address = address_str;
         } else if name == "port" {
-            self.port = parse!(value, as_integer) as usize;
+            let port = parse!(value, as_integer);
+            if port < 0 {
+                return Err("an unsigned integer");
+            }
+
+            self.port = port as usize;
         } else if name == "session_key" {
             let key = parse!(value, as_str);
             if key.len() != 32 {
