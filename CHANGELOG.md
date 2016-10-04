@@ -34,7 +34,7 @@
 
 ## Breaking
 
-  * Rename `response::data_type` to `data`.
+  * Rename `response::data_type` to `response::data`.
 
 ## Core
 
