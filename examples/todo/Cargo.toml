@@ -10,7 +10,7 @@ rocket_codegen = { path = "../../codegen" }
 lazy_static = "*"
 serde = "0.8"
 serde_json = "0.8"
-serde_macros = "0.8"
+serde_derive = "0.8"
 diesel = { git = "https://github.com/SergioBenitez/diesel", features = ["sqlite"] }
 diesel_codegen = { git = "https://github.com/SergioBenitez/diesel", default_features = false, features = ["sqlite"] }
 

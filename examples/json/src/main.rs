@@ -1,10 +1,11 @@
-#![feature(plugin, custom_derive)]
-#![plugin(rocket_codegen, serde_macros)]
+#![feature(plugin, rustc_macro)]
+#![plugin(rocket_codegen)]
 
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate rocket_contrib;
 extern crate rocket;
 extern crate serde_json;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate rocket_contrib;
+#[macro_use] extern crate serde_derive;
 
 use rocket::{Rocket, Request, Error};
 use rocket_contrib::JSON;

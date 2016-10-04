@@ -8,7 +8,7 @@ workspace = "../../"
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
 serde = "*"
-serde_macros = "*"
+serde_derive = "*"
 serde_json = "*"
 
 [dependencies.rocket_contrib]

@@ -9,7 +9,7 @@ rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
 serde = "*"
 serde_json = "*"
-serde_macros = "*"
+serde_derive = "*"
 lazy_static = "*"
 
 [dependencies.rocket_contrib]

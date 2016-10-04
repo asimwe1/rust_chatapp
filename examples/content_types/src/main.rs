@@ -1,8 +1,9 @@
-#![feature(plugin, custom_derive)]
-#![plugin(rocket_codegen, serde_macros)]
+#![feature(plugin, rustc_macro)]
+#![plugin(rocket_codegen)]
 
 extern crate rocket;
 extern crate serde_json;
+#[macro_use] extern crate serde_derive;
 
 use rocket::{Rocket, Request, Error};
 use rocket::http::ContentType;
@@ -26,18 +27,14 @@ fn hello(content_type: ContentType, name: String, age: i8) -> data::JSON<String>
 }
 
 #[error(404)]
-fn not_found<'r>(error: Error, request: &'r Request<'r>) -> String {
-    match error {
-        Error::BadMethod if !request.content_type().is_json() => {
-            format!("<p>This server only supports JSON requests, not '{}'.</p>",
-                    request.content_type())
-        }
-        Error::NoRoute => {
-            format!("<p>Sorry, '{}' is not a valid path!</p>
+fn not_found<'r>(_: Error, request: &'r Request<'r>) -> String {
+    if !request.content_type().is_json() {
+        format!("<p>This server only supports JSON requests, not '{}'.</p>",
+                request.content_type())
+    } else {
+        format!("<p>Sorry, '{}' is not a valid path!</p>
                     <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
                     request.uri())
-        }
-        _ => format!("<p>Bad Request</p>"),
     }
 }
 

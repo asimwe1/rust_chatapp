@@ -1,11 +1,12 @@
-#![feature(plugin, custom_derive, custom_attribute)]
-#![plugin(rocket_codegen, serde_macros, diesel_codegen)]
+#![feature(plugin, custom_derive, custom_attribute, rustc_macro)]
+#![plugin(rocket_codegen, diesel_codegen)]
 
 extern crate rocket;
+extern crate serde_json;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rocket_contrib;
-extern crate serde_json;
+#[macro_use] extern crate serde_derive;
 
 mod static_files;
 mod task;
