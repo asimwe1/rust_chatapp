@@ -9,7 +9,7 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![hello]);
+    rocket::ignite().mount("/", routes![hello]).launch()
 }
 
 #[cfg(test)]
@@ -18,8 +18,7 @@ mod test {
     use super::rocket::http::Method;
 
     fn run_test<F>(f: F) where F: Fn(Rocket) {
-        let mut rocket = Rocket::ignite();
-        rocket.mount("/", routes![super::hello]);
+        let rocket = Rocket::ignite().mount("/", routes![super::hello]);
         f(rocket);
     }
 

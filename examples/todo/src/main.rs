@@ -68,8 +68,8 @@ fn index(msg: Option<Flash<()>>) -> Template {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/", routes![index, static_files::all])
-          .mount("/todo/", routes![new, toggle, delete]);
-    rocket.launch();
+    rocket::ignite()
+        .mount("/", routes![index, static_files::all])
+        .mount("/todo/", routes![new, toggle, delete])
+        .launch();
 }

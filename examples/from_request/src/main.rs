@@ -28,5 +28,5 @@ fn header_count(header_count: HeaderCount) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![header_count]);
+    rocket::ignite().mount("/", routes![header_count]).launch()
 }

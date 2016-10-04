@@ -39,7 +39,7 @@ fn not_found<'r>(_: Error, request: &'r Request<'r>) -> String {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/hello", routes![hello]).catch(errors![not_found]);
-    rocket.launch();
+    rocket::ignite()
+        .mount("/hello", routes![hello]).catch(errors![not_found])
+        .launch();
 }

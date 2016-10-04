@@ -76,7 +76,7 @@ fn user_page(username: &str) -> String {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/", routes![files::index, files::files, user_page, login]);
-    rocket.launch();
+    rocket::ignite()
+        .mount("/", routes![files::index, files::files, user_page, login])
+        .launch();
 }

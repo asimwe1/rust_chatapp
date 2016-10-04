@@ -39,7 +39,8 @@ fn not_found<'r>(_: Error, req: &'r Request<'r>) -> Template {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.catch(errors![not_found]);
-    rocket.mount_and_launch("/", routes![index, get]);
+    rocket::ignite()
+        .mount("/", routes![index, get])
+        .catch(errors![not_found])
+        .launch();
 }

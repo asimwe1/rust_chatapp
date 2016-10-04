@@ -18,5 +18,5 @@ fn files(file: PathBuf) -> io::Result<NamedFile> {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![index, files]);
+    rocket::ignite().mount("/", routes![index, files]).launch();
 }

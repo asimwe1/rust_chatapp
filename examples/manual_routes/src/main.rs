@@ -14,14 +14,12 @@ fn echo_url<'a>(req: &'a Request<'a>) -> Response<'a> {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-
     let first = Route::new(Get, "/hello", root);
     let second = Route::new(Get, "/hello/<any>", root);
-    rocket.mount("/", vec![first, second]);
-
     let echo = Route::new(Get, "/", echo_url);
-    rocket.mount("/echo:<str>", vec![echo]);
 
-    rocket.launch();
+    rocket::ignite()
+        .mount("/", vec![first, second])
+        .mount("/echo:<str>", vec![echo])
+        .launch();
 }

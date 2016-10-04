@@ -56,7 +56,7 @@ fn index() -> io::Result<NamedFile> {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/", routes![index, sink, sink2]);
-    rocket.launch();
+    rocket::ignite()
+        .mount("/", routes![index, sink, sink2])
+        .launch();
 }

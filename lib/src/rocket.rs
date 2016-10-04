@@ -124,7 +124,7 @@ impl Rocket {
         catcher.handle(Error::NoRoute, request).respond(response);
     }
 
-    pub fn mount(&mut self, base: &'static str, routes: Vec<Route>) -> &mut Self {
+    pub fn mount(mut self, base: &'static str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());
@@ -137,7 +137,7 @@ impl Rocket {
         self
     }
 
-    pub fn catch(&mut self, catchers: Vec<Catcher>) -> &mut Self {
+    pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.contains_key(&c.code) &&
@@ -174,11 +174,6 @@ impl Rocket {
               White.bold().paint(&full_addr));
 
         server.handle(self).unwrap();
-    }
-
-    pub fn mount_and_launch(mut self, base: &'static str, routes: Vec<Route>) {
-        self.mount(base, routes);
-        self.launch();
     }
 
     /// Retrieves the configuration parameter named `name` for the current

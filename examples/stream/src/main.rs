@@ -23,5 +23,5 @@ fn file() -> io::Result<Stream<File>> {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![root, file]);
+    rocket::ignite().mount("/", routes![root, file]).launch();
 }

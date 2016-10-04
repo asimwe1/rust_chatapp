@@ -9,5 +9,5 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/hello", routes![hello]);
+    rocket::ignite().mount("/hello", routes![hello]).launch()
 }

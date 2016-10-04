@@ -19,5 +19,5 @@ fn hello(person: Person) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![hello]);
+    rocket::ignite().mount("/", routes![hello]).launch()
 }

@@ -14,5 +14,5 @@ fn hi(name: &str, age: &str) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![hi, hello]);
+    rocket::ignite().mount("/", routes![hi, hello]).launch();
 }

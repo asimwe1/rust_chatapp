@@ -13,5 +13,5 @@ fn user(name: &str) -> Option<&'static str> {
 }
 
 fn main() {
-    rocket::ignite().mount_and_launch("/", routes![user]);
+    rocket::ignite().mount("/", routes![user]).launch();
 }

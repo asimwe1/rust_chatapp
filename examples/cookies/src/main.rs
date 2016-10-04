@@ -36,7 +36,5 @@ fn index(cookies: &Cookies) -> tera::TeraResult<String> {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/", routes![submit, index]);
-    rocket.launch();
+    rocket::ignite().mount("/", routes![submit, index]).launch()
 }

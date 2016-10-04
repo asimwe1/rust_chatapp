@@ -86,8 +86,8 @@ fn not_found<'r>(_: Error, _: &'r Request<'r>) -> JSON<SimpleMap> {
 }
 
 fn main() {
-    let mut rocket = rocket::ignite();
-    rocket.mount("/message", routes![new, update, get]);
-    rocket.catch(errors![not_found]);
-    rocket.launch();
+    rocket::ignite()
+        .mount("/message", routes![new, update, get])
+        .catch(errors![not_found])
+        .launch();
 }
