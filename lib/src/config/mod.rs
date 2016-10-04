@@ -2,19 +2,20 @@ mod error;
 mod environment;
 mod config;
 
-pub use self::error::{ConfigError, ParsingError};
-pub use self::environment::Environment;
-
-use toml::{self, Table};
-
-use self::Environment::*;
-use self::config::Config;
-
 use std::fs::{self, File};
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
+use std::process;
 use std::env;
+
+pub use self::error::{ConfigError, ParsingError};
+pub use self::environment::Environment;
+use self::Environment::*;
+use self::config::Config;
+
+use toml::{self, Table};
+use logger::{self, LoggingLevel};
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
 
@@ -87,8 +88,7 @@ impl RocketConfig {
         ))?;
 
         // Create a config with the defaults, but the set the env to the active
-        let mut config = RocketConfig::default();
-        config.active_env = Environment::active()?;
+        let mut config = RocketConfig::active_default()?;
 
         // Parse the values from the TOML file.
         for (entry, value) in toml {
@@ -126,6 +126,31 @@ impl RocketConfig {
         // Parse the contents from the file.
         RocketConfig::parse(contents, &file.to_string_lossy())
     }
+
+    pub fn active_default() -> Result<RocketConfig, ConfigError> {
+        let mut default = RocketConfig::default();
+        default.active_env = Environment::active()?;
+        Ok(default)
+    }
+}
+
+pub fn read_or_default() -> RocketConfig {
+    let bail = |e: ConfigError| -> ! {
+        logger::init(LoggingLevel::Debug);
+        e.pretty_print();
+        process::exit(1)
+    };
+
+    use self::ConfigError::*;
+    RocketConfig::read().unwrap_or_else(|e| {
+        match e {
+            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)  => bail(e),
+            IOError | BadCWD => warn!("failed reading Rocket.toml. using defaults"),
+            NotFound => { /* try using the default below */ }
+        }
+
+        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
+    })
 }
 
 impl Default for RocketConfig {

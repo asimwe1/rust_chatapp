@@ -41,7 +41,7 @@ impl ConfigError {
                 info_!("valid environments are: {}", White.paint(valid_envs));
             }
             BadEnv(ref name) => {
-                error!("'{}' is not a valid ROCKET_ENV", name);
+                error!("'{}' is not a valid ROCKET_ENV value", name);
                 info_!("valid environments are: {}", White.paint(valid_envs));
             }
             BadType(ref name, ref expected, ref actual, ref filename) => {

@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::Rocket;
 
 #[get("/")]
 fn hello() -> &'static str {
@@ -10,5 +9,5 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    Rocket::new("localhost", 8000).mount_and_launch("/hello", routes![hello]);
+    rocket::ignite().mount_and_launch("/", routes![hello]);
 }

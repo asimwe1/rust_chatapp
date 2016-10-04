@@ -1,5 +1,5 @@
-# None of these are actually needed as Rocket has sane defaults for each. We
-# show all of them here explicitly for demonstrative purposes.
+# Except for the session key, none of these are actually needed; Rocket has sane
+# defaults. We show all of them here explicitly for demonstrative purposes.
 
 [development]
 address = "localhost"

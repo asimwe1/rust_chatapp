@@ -6,12 +6,12 @@ use std::process;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
+use config;
 use logger::{self, LoggingLevel};
 use request::Request;
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use response::Outcome;
-use config::RocketConfig;
 use form::FormItems;
 use error::Error;
 
@@ -220,21 +220,8 @@ impl Rocket {
     }
 
     pub fn ignite() -> Rocket {
-        use config::ConfigError::*;
-        let config = match RocketConfig::read() {
-            Ok(config) => config,
-            Err(e@ParseError(..)) | Err(e@BadEntry(..)) |
-            Err(e@BadEnv(..)) | Err(e@BadType(..))  => {
-                logger::init(LoggingLevel::Debug);
-                e.pretty_print();
-                process::exit(1)
-            }
-            Err(IOError) | Err(BadCWD) => {
-                warn!("error reading Rocket config file; using defaults.");
-                RocketConfig::default()
-            }
-            Err(NotFound) => RocketConfig::default()
-        };
+        // Note: read_or_default will exit the process under errors.
+        let config = config::read_or_default();
 
         logger::init(config.active().log_level);
         info!("🔧  Configured for {}.", config.active_env);
