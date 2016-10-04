@@ -5,11 +5,16 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function relative() {
   local full_path="${SCRIPT_DIR}/../${1}"
 
-  # Use readlink as a fallback to readpath for cross-platform compat.
-  if ! command -v realpath >/dev/null 2>&1; then
-    echo $(readlink -f "${full_path}")
+  if [ -d "${full_path}" ]; then
+    # Use readlink as a fallback to readpath for cross-platform compat.
+    if ! command -v realpath >/dev/null 2>&1; then
+      echo $(readlink -f "${full_path}")
+    else
+      echo $(realpath "${full_path}")
+    fi
   else
-    echo $(realpath "${full_path}")
+    # when the directory doesn't exist, fallback to this.
+    echo "${full_path}"
   fi
 }
 
