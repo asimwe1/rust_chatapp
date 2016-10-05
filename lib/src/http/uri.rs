@@ -132,8 +132,8 @@ impl<'a> From<&'a str> for URIBuf {
     }
 }
 
-impl<'a> Collider for URI<'a> {
-    fn collides_with(&self, other: &URI) -> bool {
+impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
+    fn collides_with(&self, other: &URI<'b>) -> bool {
         let mut trailing = false;
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {

@@ -23,8 +23,6 @@ use http::{Method, ContentType, Cookies};
 pub struct Request<'a> {
     /// The HTTP method associated with the request.
     pub method: Method,
-    /// The URI associated with the request.
-    pub uri: URIBuf, // FIXME: Should be URI (without Hyper).
     /// <div class="stability" style="margin-left: 0;">
     ///   <em class="stab unstable">
 	///     Unstable
@@ -35,9 +33,12 @@ pub struct Request<'a> {
     ///
     /// The data in the request.
     pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
+    uri: URIBuf, // FIXME: Should be URI (without Hyper).
     cookies: Cookies,
     headers: HyperHeaders, // This sucks.
-    params: RefCell<Option<Vec<&'a str>>>, // This also sucks.
+    /// Indexes into the URI.
+    // params: RefCell<Vec<(usize, usize)>>,
+    params: RefCell<Option<Vec<&'a str>>>,
 }
 
 impl<'a> Request<'a> {
@@ -157,7 +158,7 @@ impl<'a> Request<'a> {
 
     /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
     /// the URI will be absolute.
-    pub fn uri(&'a self) -> URI<'a> {
+    pub fn uri(&self) -> URI {
         self.uri.as_uri()
     }
 

@@ -12,7 +12,7 @@ fn hello(name: &str, age: i8) -> String {
 fn not_found(req: &rocket::Request) -> String {
     format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            req.uri)
+            req.uri())
 }
 
 fn main() {
