@@ -52,8 +52,14 @@ impl<'a> Response<'a> {
         Response(Box::new(Empty::new(StatusCode::NotFound)))
     }
 
-    pub fn server_error() -> Response<'a> {
+    pub fn server_error(reason: &str) -> Response<'a> {
+        warn_!("internal server error: {}", reason);
         Response(Box::new(Empty::new(StatusCode::InternalServerError)))
+    }
+
+    pub fn bad_request(reason: &str) -> Response<'a> {
+        warn_!("bad request from user: {}", reason);
+        Response(Box::new(Empty::new(StatusCode::BadRequest)))
     }
 }
 

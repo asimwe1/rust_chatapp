@@ -94,7 +94,7 @@ impl RouteGenerateExt for RouteParams {
         let expr = quote_expr!(ecx,
             match ::std::str::from_utf8(_req.data.as_slice()) {
                 Ok(s) => s,
-                Err(_) => return ::rocket::Response::server_error()
+                Err(_) => return ::rocket::Response::bad_request("form isn't utf8")
             }
         );
 
