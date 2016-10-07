@@ -32,7 +32,7 @@ fn get(name: String) -> Template {
 }
 
 #[error(404)]
-fn not_found<'r>(_: Error, req: &'r Request<'r>) -> Template {
+fn not_found(req: &Request) -> Template {
     let mut map = std::collections::HashMap::new();
     map.insert("path", req.uri().as_str());
     Template::render("404", &map)

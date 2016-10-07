@@ -219,8 +219,8 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let user_fn_name = route.annotated_fn.ident();
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
     emit_item(push, quote_item!(ecx,
-         fn $route_fn_name<'rocket>(_req: &'rocket ::rocket::Request<'rocket>)
-                -> ::rocket::Response<'rocket> {
+         fn $route_fn_name<'_b, '_r>(_req: &'_b ::rocket::Request<'_r>)
+                -> ::rocket::Response<'_b> {
              $form_statement
              $query_statement
              $param_statements

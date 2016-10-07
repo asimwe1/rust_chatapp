@@ -83,9 +83,7 @@ impl<'a> Request<'a> {
     /// For example, if the request URI is `"/hello/there/i/am/here"`, then
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
     /// `"there/i/am/here"` as type `T`.
-    pub fn get_segments<'r: 'a, T: FromSegments<'a>>(&'r self,
-                                                     i: usize)
-                                                     -> Result<T, Error> {
+    pub fn get_segments<'r, T: FromSegments<'r>>(&'r self, i: usize) -> Result<T, Error> {
         if i >= self.uri().segment_count() {
             debug!("{} is >= segment count {}", i, self.uri().segment_count());
             Err(Error::NoKey)

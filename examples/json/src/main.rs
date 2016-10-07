@@ -78,7 +78,7 @@ fn get(id: ID) -> Option<JSON<Message>> {
 }
 
 #[error(404)]
-fn not_found<'r>(_: Error, _: &'r Request<'r>) -> JSON<SimpleMap> {
+fn not_found() -> JSON<SimpleMap> {
     JSON(map! {
         "status" => "error",
         "reason" => "Resource was not found."

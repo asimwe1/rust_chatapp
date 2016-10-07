@@ -35,7 +35,7 @@ impl<'a> Response<'a> {
         Response(Box::new(StatusResponse::new(status, body)))
     }
 
-    pub fn forward() -> Response<'a> {
+    pub fn forward() -> Response<'static> {
         Response(Box::new(Forward))
     }
 
@@ -44,20 +44,20 @@ impl<'a> Response<'a> {
         Response(Box::new(StatusResponse::new(status_code, body)))
     }
 
-    pub fn empty() -> Response<'a> {
+    pub fn empty() -> Response<'static> {
         Response(Box::new(Empty::new(StatusCode::Ok)))
     }
 
-    pub fn not_found() -> Response<'a> {
+    pub fn not_found() -> Response<'static> {
         Response(Box::new(Empty::new(StatusCode::NotFound)))
     }
 
-    pub fn server_error(reason: &str) -> Response<'a> {
+    pub fn server_error(reason: &str) -> Response<'static> {
         warn_!("internal server error: {}", reason);
         Response(Box::new(Empty::new(StatusCode::InternalServerError)))
     }
 
-    pub fn bad_request(reason: &str) -> Response<'a> {
+    pub fn bad_request(reason: &str) -> Response<'static> {
         warn_!("bad request from user: {}", reason);
         Response(Box::new(Empty::new(StatusCode::BadRequest)))
     }

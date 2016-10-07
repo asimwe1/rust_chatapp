@@ -23,7 +23,7 @@ impl Catcher {
         Catcher::new_with_default(code, handler, false)
     }
 
-    pub fn handle<'r>(&self, err: Error, request: &'r Request<'r>) -> Response<'r> {
+    pub fn handle<'b, 'r>(&self, err: Error, request: &'b Request<'r>) -> Response<'b> {
         (self.handler)(err, request)
     }
 
@@ -63,7 +63,7 @@ pub mod defaults {
     use error::Error;
     use http::hyper::StatusCode;
 
-    pub fn not_found<'r>(_error: Error, _request: &'r Request<'r>) -> Response<'r> {
+    pub fn not_found<'r>(_error: Error, _request: &'r Request) -> Response<'r> {
         Response::with_status(StatusCode::NotFound, data::HTML(r#"
             <!DOCTYPE html>
             <html>
@@ -84,7 +84,7 @@ pub mod defaults {
     }
 
     pub fn internal_error<'r>(_error: Error,
-                              _request: &'r Request<'r>)
+                              _request: &'r Request)
                               -> Response<'r> {
         Response::with_status(StatusCode::InternalServerError, data::HTML(r#"
             <!DOCTYPE html>

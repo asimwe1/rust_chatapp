@@ -88,10 +88,10 @@ pub mod handler {
     use error::Error;
 
     /// The type of a request handler.
-    pub type Handler = for<'r> fn(&'r Request<'r>) -> Response<'r>;
+    pub type Handler = for<'b, 'r: 'b> fn(&'b Request<'r>) -> Response<'b>;
 
     /// The type of an error handler.
-    pub type ErrorHandler = for<'r> fn(error: Error, &'r Request<'r>) -> Response<'r>;
+    pub type ErrorHandler = for<'b, 'r: 'b> fn(error: Error, &'b Request<'r>) -> Response<'b>;
 }
 
 #[doc(inline)] pub use response::{Response, Responder};

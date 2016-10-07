@@ -27,7 +27,7 @@ fn hello(content_type: ContentType, name: String, age: i8) -> data::JSON<String>
 }
 
 #[error(404)]
-fn not_found<'r>(_: Error, request: &'r Request<'r>) -> String {
+fn not_found(_: Error, request: &Request) -> String {
     if !request.content_type().is_json() {
         format!("<p>This server only supports JSON requests, not '{}'.</p>",
                 request.content_type())
