@@ -34,11 +34,10 @@ pub struct Request<'a> {
     /// The data in the request.
     pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
     uri: URIBuf, // FIXME: Should be URI (without Hyper).
+    params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
     headers: HyperHeaders, // This sucks.
-    /// Indexes into the URI.
-    // params: RefCell<Vec<(usize, usize)>>,
-    params: RefCell<Option<Vec<&'a str>>>,
+    _phantom: Option<&'a str>,
 }
 
 impl<'a> Request<'a> {
@@ -58,13 +57,13 @@ impl<'a> Request<'a> {
     ///     let my_param: T = request.get_param(n);
     /// }
     /// ```
-    pub fn get_param<T: FromParam<'a>>(&self, n: usize) -> Result<T, Error> {
+    pub fn get_param<'r, T: FromParam<'r>>(&'r self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
-        if params.is_none() || n >= params.as_ref().unwrap().len() {
-            debug!("{} is >= param count {}", n, params.as_ref().unwrap().len());
+        if n >= params.len() {
+            debug!("{} is >= param count {}", n, params.len());
             Err(Error::NoKey)
         } else {
-            T::from_param(params.as_ref().unwrap()[n]).map_err(|_| Error::BadParse)
+            T::from_param(params[n]).map_err(|_| Error::BadParse)
         }
     }
 
@@ -101,12 +100,13 @@ impl<'a> Request<'a> {
     #[doc(hidden)]
     pub fn mock(method: Method, uri: &str) -> Request {
         Request {
-            params: RefCell::new(None),
+            params: RefCell::new(vec![]),
             method: method,
             cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
             data: vec![],
             headers: HyperHeaders::new(),
+            _phantom: None,
         }
     }
 
@@ -160,10 +160,18 @@ impl<'a> Request<'a> {
         self.uri.as_uri()
     }
 
-    // FIXME: Don't need a refcell for this.
     #[doc(hidden)]
-    pub fn set_params(&'a self, route: &Route) {
-        *self.params.borrow_mut() = Some(route.get_params(self.uri.as_uri()))
+    pub fn set_params(&self, route: &Route) {
+        // We use transmute to cast the lifetime of self.uri.as_uri() to
+        // 'static. This is because that lifetime refers to the String in URIBuf
+        // in this structure, which is (obviously) guaranteed to live as long as
+        // the structure AS LONG AS it is not moved out or changed. AS A RESULT,
+        // the `uri` fields MUST NEVER be changed once it is set.
+        // TODO: Find a way to enforce these. Look at OwningRef for inspiration.
+        use ::std::mem::transmute;
+        *self.params.borrow_mut() = unsafe {
+            transmute(route.get_params(self.uri.as_uri()))
+        };
     }
 
     #[doc(hidden)]
@@ -200,12 +208,13 @@ impl<'a> Request<'a> {
         h_body.read_to_end(&mut data).unwrap();
 
         let request = Request {
-            params: RefCell::new(None),
+            params: RefCell::new(vec![]),
             method: method,
             cookies: cookies,
             uri: uri,
             data: data,
             headers: h_headers,
+            _phantom: None,
         };
 
         Ok(request)
