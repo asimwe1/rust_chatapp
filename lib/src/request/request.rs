@@ -57,6 +57,7 @@ impl<'a> Request<'a> {
     ///     let my_param: T = request.get_param(n);
     /// }
     /// ```
+    #[inline(always)]
     pub fn get_param<'r, T: FromParam<'r>>(&'r self, n: usize) -> Result<T, Error> {
         let params = self.params.borrow();
         if n >= params.len() {
@@ -70,6 +71,7 @@ impl<'a> Request<'a> {
     /// Returns a borrow to the cookies sent with this request. Note that
     /// `Cookie` implements internal mutability, so this method allows you to
     /// get _and_ set cookies in the given Request.
+    #[inline(always)]
     pub fn cookies<'r>(&'r self) -> &'r Cookies {
         &self.cookies
     }
@@ -119,6 +121,7 @@ impl<'a> Request<'a> {
     /// </div>
     ///
     /// Returns the headers in this request.
+    #[inline(always)]
     pub fn headers(&self) -> &HyperHeaders {
         // FIXME: Get rid of Hyper.
         &self.headers
@@ -136,6 +139,7 @@ impl<'a> Request<'a> {
     /// the content-type from the headers directly, this method is considered to
     /// be more stable. If no Content-Type was specified in the request, a
     /// Content-Type of [any](struct.ContentType.html#method.any) is returned.
+    #[inline(always)]
     pub fn content_type(&self) -> ContentType {
         let hyp_ct = self.headers().get::<header::ContentType>();
         hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))
@@ -156,11 +160,13 @@ impl<'a> Request<'a> {
 
     /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
     /// the URI will be absolute.
+    #[inline(always)]
     pub fn uri(&self) -> URI {
         self.uri.as_uri()
     }
 
     #[doc(hidden)]
+    #[inline(always)]
     pub fn set_params(&self, route: &Route) {
         // We use transmute to cast the lifetime of self.uri.as_uri() to
         // 'static. This is because that lifetime refers to the String in URIBuf
@@ -176,6 +182,7 @@ impl<'a> Request<'a> {
 
     #[doc(hidden)]
     #[cfg(test)]
+    #[inline(always)]
     pub fn set_content_type(&mut self, ct: ContentType) {
         let hyper_ct = header::ContentType(ct.into());
         self.headers.set::<header::ContentType>(hyper_ct)
