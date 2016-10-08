@@ -1,6 +1,6 @@
 use std::convert::AsRef;
 
-use response::{Outcome, Responder};
+use response::{ResponseOutcome, Responder};
 use request::{Request, FromRequest};
 use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
 
@@ -43,7 +43,7 @@ impl<R: Responder> Flash<R> {
 }
 
 impl<R: Responder> Responder for Flash<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> ResponseOutcome<'b> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         res.headers_mut().set(HyperSetCookie(vec![self.cookie_pair()]));
         self.responder.respond(res)

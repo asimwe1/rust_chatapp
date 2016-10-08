@@ -1,4 +1,4 @@
-use response::{Responder, Outcome};
+use response::{Responder, ResponseOutcome};
 use http::hyper::{StatusCode, FreshHyperResponse};
 
 pub struct StatusResponse<R: Responder> {
@@ -16,7 +16,7 @@ impl<R: Responder> StatusResponse<R> {
 }
 
 impl<R: Responder> Responder for StatusResponse<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> ResponseOutcome<'b> {
         *(res.status_mut()) = self.status;
         self.responder.respond(res)
     }

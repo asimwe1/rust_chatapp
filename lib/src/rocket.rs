@@ -75,7 +75,7 @@ impl Rocket {
 
             // Get the result if we failed forward so we can try again.
             res = match outcome {
-                Outcome::Complete | Outcome::FailStop => return,
+                Outcome::Success | Outcome::FailStop => return,
                 Outcome::FailForward(r) => r,
                 Outcome::Bad(r) => return self.handle_internal_error(&request, r),
             };

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use response::{Responder, Outcome};
+use response::{Responder, ResponseOutcome};
 use http::hyper::{header, FreshHyperResponse};
 use http::ContentType;
 
@@ -33,7 +33,7 @@ impl NamedFile {
 }
 
 impl Responder for NamedFile {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
+    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
         if let Some(ext) = self.path().extension() {
             let ext_string = ext.to_string_lossy().to_lowercase();
             let content_type = ContentType::from_extension(&ext_string);

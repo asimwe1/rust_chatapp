@@ -13,7 +13,7 @@ pub use self::responder::Responder;
 pub use self::empty::{Empty, Forward};
 pub use self::redirect::Redirect;
 pub use self::with_status::StatusResponse;
-pub use self::outcome::Outcome;
+pub use self::outcome::{Outcome, ResponseOutcome};
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;

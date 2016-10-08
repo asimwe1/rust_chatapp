@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use rocket::Rocket;
-use rocket::response::{Content, Outcome, Responder};
+use rocket::response::{Content, Outcome, ResponseOutcome, Responder};
 use rocket::http::hyper::FreshHyperResponse;
 use rocket::http::ContentType;
 
@@ -133,7 +133,7 @@ impl Template {
 }
 
 impl Responder for Template {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
         let content_type = match self.1 {
             Some(ref ext) => ContentType::from_extension(ext),
             None => ContentType::html()
