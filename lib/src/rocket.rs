@@ -91,7 +91,7 @@ impl Rocket {
             let outcome = responder.respond(res);
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
-            // Get the result if we failed forward so we can try again.
+            // Check if the responder wants to forward to a catcher.
             match outcome {
                 Outcome::Forward((c, r)) => return self.handle_error(c, &request, r),
                 Outcome::Success | Outcome::Failure => return,
@@ -128,16 +128,18 @@ impl Rocket {
                         code: StatusCode,
                         req: &'r Request,
                         response: FreshHyperResponse) {
-        error_!("dispatch failed: {}.", code);
+        error_!("Dispatch failed: {}.", code);
         let catcher = self.catchers.get(&code.to_u16()).unwrap();
 
         if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
             if responder.respond(response) != Outcome::Success {
-                error_!("catcher outcome was unsuccessul; aborting response");
+                error_!("Catcher outcome was unsuccessul; aborting response.");
+            } else {
+                info_!("Responded with catcher.");
             }
         } else {
-            error_!("catcher returned an incomplete response");
-            warn_!("using default error response");
+            error_!("Catcher returned an incomplete response.");
+            warn_!("Using default error response.");
             let catcher = self.default_catchers.get(&code.to_u16()).unwrap();
             let responder = catcher.handle(Error::Internal, req).responder();
             responder.unwrap().respond(response).expect_success()
