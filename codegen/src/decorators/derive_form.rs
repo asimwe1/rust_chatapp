@@ -68,7 +68,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         span: span,
         attributes: Vec::new(),
         path: ty::Path {
-            path: vec!["rocket", "form", "FromForm"],
+            path: vec!["rocket", "request", "FromForm"],
             lifetime: lifetime_var,
             params: vec![],
             global: true,
@@ -169,7 +169,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         let id_str = ident_string.as_str();
         arms.push(quote_tokens!(cx,
             $id_str => {
-                $ident = match ::rocket::form::FromFormValue::from_form_value(v) {
+                $ident = match ::rocket::request::FromFormValue::from_form_value(v) {
                     Ok(v) => Some(v),
                     Err(e) => {
                         println!("\tError parsing form val '{}': {:?}", $id_str, e);
@@ -183,7 +183,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The actual match statement. Iterate through all of the fields in the form
     // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
-        for (k, v) in ::rocket::form::FormItems($arg) {
+        for (k, v) in ::rocket::request::FormItems($arg) {
             match k {
                 $arms
                 _ => {
@@ -205,7 +205,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
         failure_conditions.push(quote_tokens!(cx,
             if $ident.is_none() &&
-                <$ty as ::rocket::form::FromFormValue>::default().is_none() {
+                <$ty as ::rocket::request::FromFormValue>::default().is_none() {
                 println!("\t'{}' did not parse.", stringify!($ident));
                 true
             } else { false }
@@ -218,7 +218,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     for &(ref ident, ty) in &fields_and_types {
         result_fields.push(quote_tokens!(cx,
             $ident: $ident.unwrap_or_else(||
-                <$ty as ::rocket::form::FromFormValue>::default().unwrap()
+                <$ty as ::rocket::request::FromFormValue>::default().unwrap()
             ),
         ));
     }

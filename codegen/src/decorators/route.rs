@@ -82,7 +82,7 @@ impl RouteGenerateExt for RouteParams {
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
             let $name: $ty =
-                match ::rocket::form::FromForm::from_form_string($form_string) {
+                match ::rocket::request::FromForm::from_form_string($form_string) {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Response::forward()
                 };

@@ -3,9 +3,8 @@
 
 extern crate rocket;
 
-use rocket::Request;
+use rocket::request::{Request, FromFormValue};
 use rocket::response::NamedFile;
-use rocket::form::FromFormValue;
 use std::io;
 
 // TODO: Make deriving `FromForm` for this enum possible.

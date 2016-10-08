@@ -7,7 +7,6 @@ extern crate serde_json;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
-use rocket::{Request, Error};
 use rocket_contrib::JSON;
 use std::collections::HashMap;
 use std::sync::Mutex;

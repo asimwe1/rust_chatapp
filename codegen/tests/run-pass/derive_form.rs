@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::form::FromForm;
+use rocket::request::{FromForm, FromFormValue};
 
 #[derive(Debug, PartialEq, FromForm)]
 struct TodoTask {
@@ -16,8 +16,6 @@ struct TodoTask {
 enum FormOption {
     A, B, C
 }
-
-use rocket::form::FromFormValue;
 
 impl<'v> FromFormValue<'v> for FormOption {
     type Error = &'v str;

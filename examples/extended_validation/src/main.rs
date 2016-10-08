@@ -6,7 +6,7 @@ extern crate rocket;
 mod files;
 
 use rocket::response::Redirect;
-use rocket::form::FromFormValue;
+use rocket::request::FromFormValue;
 
 #[derive(Debug)]
 struct StrongPassword<'r>(&'r str);

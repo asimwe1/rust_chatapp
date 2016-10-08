@@ -71,7 +71,7 @@ impl<'f> FromForm<'f> for &'f str {
 /// might define a new type and implement `FromFormValue` as follows:
 ///
 /// ```rust
-/// use rocket::form::FromFormValue;
+/// use rocket::request::FromFormValue;
 /// use rocket::Error;
 ///
 /// struct AdultAge(usize);
@@ -210,7 +210,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
 /// `FormItems` can be used directly as an iterator:
 ///
 /// ```rust
-/// use rocket::form::FormItems;
+/// use rocket::request::FormItems;
 ///
 /// // prints "greeting = hello" then "username = jake"
 /// let form_string = "greeting=hello&username=jake";
@@ -222,7 +222,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
 /// This is the same example as above, but the iterator is used explicitly.
 ///
 /// ```rust
-/// use rocket::form::FormItems;
+/// use rocket::request::FormItems;
 ///
 /// let form_string = "greeting=hello&username=jake";
 /// let mut items = FormItems(form_string);

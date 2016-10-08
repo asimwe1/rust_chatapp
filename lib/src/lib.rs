@@ -70,9 +70,9 @@ extern crate toml;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
 #[doc(hidden)] pub mod http;
-pub mod form;
 pub mod request;
 pub mod response;
+pub mod outcome;
 
 mod error;
 mod router;
