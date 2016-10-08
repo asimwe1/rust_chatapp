@@ -10,8 +10,8 @@ struct User {
     name: String
 }
 
-#[post("/<name>", format = "application/json", form = "<user>", rank = 2)]
-fn get(name: &str, user: User, cookies: &Cookies) -> &'static str { "hi" }
+#[post("/<name>?<query>", format = "application/json", form = "<user>", rank = 2)]
+fn get(name: &str, query: User, user: User, cookies: &Cookies) -> &'static str { "hi" }
 
 fn main() {
     let _ = routes![get];
