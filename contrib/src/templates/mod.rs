@@ -44,9 +44,10 @@ use rocket::http::ContentType;
 /// right) given that the template is at the path on the left.
 ///
 ///   * `{template_dir}/index.html.hbs` => index
+///   * `{template_dir}/index.tera` => index
 ///   * `{template_dir}/index.hbs` => index
 ///   * `{template_dir}/dir/index.hbs` => dir/index
-///   * `{template_dir}/dir/index.html.hbs` => dir/index
+///   * `{template_dir}/dir/index.html.tera` => dir/index
 ///   * `{template_dir}/index.template.html.hbs` => index.template
 ///   * `{template_dir}/subdir/index.template.html.hbs` => subdir/index.template
 ///
@@ -59,6 +60,19 @@ use rocket::http::ContentType;
 /// can be any type that implements `Serialize` from
 /// [Serde](https://github.com/serde-rs/json) and would serialize to an `Object`
 /// value.
+///
+/// # Usage
+///
+/// To use, add the `handlebars_templates` feature, the `tera_templates`
+/// feature, or both, to the `rocket_contrib` dependencies section of your
+/// `Cargo.toml`:
+///
+/// ```toml,ignore
+/// [dependencies.rocket_contrib]
+/// version = "*"
+/// default-features = false
+/// features = ["handlebars_templates", "tera_templates"]
+/// ```
 ///
 /// # Examples
 ///

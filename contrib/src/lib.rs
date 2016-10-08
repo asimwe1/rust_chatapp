@@ -21,7 +21,7 @@
 //! `Cargo.toml` file, setting `default-features` to false, and specifying
 //! features manually. For example, to use the JSON module, you would add:
 //!
-//! ```rust,ignore
+//! ```toml,ignore
 //! [dependencies.rocket_contrib]
 //! version = "*"
 //! default-features = false
