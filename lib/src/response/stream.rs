@@ -39,20 +39,20 @@ impl<T: Read> Responder for Stream<T> {
                     Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
                     Err(ref e) => {
                         error_!("Error streaming response: {:?}", e);
-                        return Outcome::FailStop;
+                        return Outcome::Failure;
                     }
                 }
             }
 
             if let Err(e) = stream.write_all(&buffer[..read]) {
                 error_!("Stream write_all() failed: {:?}", e);
-                return Outcome::FailStop;
+                return Outcome::Failure;
             }
         }
 
         if let Err(e) = stream.end() {
             error_!("Stream end() failed: {:?}", e);
-            return Outcome::FailStop;
+            return Outcome::Failure;
         }
 
         Outcome::Success

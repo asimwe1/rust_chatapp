@@ -57,9 +57,9 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let fn_arguments = error.generate_fn_arguments(ecx, err_ident, req_ident);
 
     emit_item(push, quote_item!(ecx,
-        fn $catch_fn_name<'_b, '_r>($err_ident: ::rocket::Error,
-                                   $req_ident: &'_b ::rocket::Request<'_r>)
-                                   -> ::rocket::Response<'_b> {
+        fn $catch_fn_name<'_b>($err_ident: ::rocket::Error,
+                               $req_ident: &'_b ::rocket::Request)
+                               -> ::rocket::Response<'_b> {
             let result = $user_fn_name($fn_arguments);
             rocket::Response::with_raw_status($code, result)
         }

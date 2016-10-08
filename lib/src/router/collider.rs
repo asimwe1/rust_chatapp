@@ -49,7 +49,7 @@ mod tests {
     use std::str::FromStr;
 
     use router::Collider;
-    use request::Request;
+    use request::{Request, Data};
     use response::Response;
     use router::route::Route;
     use http::{Method, ContentType};
@@ -59,8 +59,8 @@ mod tests {
 
     type SimpleRoute = (Method, &'static str);
 
-    fn dummy_handler(_req: &Request) -> Response<'static> {
-        Response::empty()
+    fn dummy_handler(_req: &Request, _: Data) -> Response<'static> {
+        Response::new("hi")
     }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {

@@ -76,10 +76,10 @@ impl Flash<()> {
 // be dropped needlessly. This may or may not be the intended behavior.
 // Alternatively, provide a guarantee about the order that from_request params
 // will be evaluated and recommend that Flash is last.
-impl<'r, 'c> FromRequest<'r, 'c> for Flash<()> {
+impl<'r> FromRequest<'r> for Flash<()> {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
         request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             // Clear the flash message.

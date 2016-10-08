@@ -72,10 +72,10 @@ mod test {
     use http::Method;
     use http::Method::*;
     use http::uri::URI;
-    use {Response, Request};
+    use {Response, Request, Data};
 
-    fn dummy_handler(_req: &Request) -> Response<'static> {
-        Response::empty()
+    fn dummy_handler(_req: &Request, _: Data) -> Response<'static> {
+        Response::new("hi")
     }
 
     fn router_with_routes(routes: &[&'static str]) -> Router {

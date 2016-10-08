@@ -37,10 +37,6 @@ impl Responder for String {
     }
 }
 
-// FIXME: Should we set a content-type here? Safari needs text/html to render.
-// Unfortunately, the file name is gone at this point. Should fix this. There's
-// a way to retrieve a file based on its fd, strangely enough. See...
-// https://stackoverflow.com/questions/1188757/getting-filename-from-file-descriptor-in-c
 impl Responder for File {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
         let size = self.metadata().unwrap().len();
@@ -60,9 +56,8 @@ impl Responder for File {
 impl<T: Responder> Responder for Option<T> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
         if self.is_none() {
-            trace!("Option is none.");
-            // TODO: Should this be a 404 or 500?
-            return Outcome::FailForward(res);
+            warn_!("response was `None`");
+            return Outcome::Forward((StatusCode::NotFound, res));
         }
 
         self.as_mut().unwrap().respond(res)
@@ -74,8 +69,7 @@ impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
     default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
         if self.is_err() {
             error_!("{:?}", self.as_ref().err().unwrap());
-            // TODO: Should this be a 404 or 500?
-            return Outcome::FailForward(res);
+            return Outcome::Forward((StatusCode::InternalServerError, res));
         }
 
         self.as_mut().unwrap().respond(res)

@@ -5,6 +5,7 @@ use std::ops::{Deref, DerefMut};
 
 use rocket::request::{Request, FromRequest};
 use rocket::response::{Responder, Outcome, ResponseOutcome, data};
+use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;
 
 use self::serde::{Serialize, Deserialize};
@@ -62,9 +63,9 @@ impl<T> JSON<T> {
     }
 }
 
-impl<'r, 'c, T: Deserialize> FromRequest<'r, 'c> for JSON<T> {
+impl<'r, T: Deserialize> FromRequest<'r> for JSON<T> {
     type Error = JSONError;
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(JSON(serde_json::from_slice(request.data.as_slice())?))
     }
 }
@@ -75,7 +76,7 @@ impl<T: Serialize> Responder for JSON<T> {
             Ok(json_string) => data::JSON(json_string).respond(res),
             Err(e) => {
                 error_!("JSON failed to serialize: {:?}", e);
-                Outcome::FailStop
+                Outcome::Forward((StatusCode::BadRequest, res))
             }
         }
     }

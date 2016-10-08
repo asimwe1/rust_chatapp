@@ -79,6 +79,18 @@ impl Route {
     }
 }
 
+impl Clone for Route {
+    fn clone(&self) -> Route {
+        Route {
+            method: self.method,
+            handler: self.handler,
+            rank: self.rank,
+            path: self.path.clone(),
+            content_type: self.content_type.clone(),
+        }
+    }
+}
+
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))?;
@@ -122,7 +134,7 @@ impl Collider for Route {
     }
 }
 
-impl<'r> Collider<Request<'r>> for Route {
+impl Collider<Request> for Route {
     fn collides_with(&self, req: &Request) -> bool {
         self.method == req.method
             && req.uri().collides_with(&self.path.as_uri())

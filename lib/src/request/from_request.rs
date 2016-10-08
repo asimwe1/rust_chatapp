@@ -3,47 +3,47 @@ use std::fmt::Debug;
 use request::Request;
 use http::{ContentType, Method, Cookies};
 
-pub trait FromRequest<'r, 'c>: Sized {
+pub trait FromRequest<'r>: Sized {
     type Error: Debug;
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error>;
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error>;
 }
 
-impl<'r, 'c> FromRequest<'r, 'c> for &'r Request<'c> {
+impl<'r> FromRequest<'r> for &'r Request {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(request)
     }
 }
 
-impl<'r, 'c> FromRequest<'r, 'c> for Method {
+impl<'r> FromRequest<'r> for Method {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(request.method)
     }
 }
 
-impl<'r, 'c> FromRequest<'r, 'c> for &'r Cookies {
+impl<'r> FromRequest<'r> for &'r Cookies {
     type Error = ();
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(request.cookies())
     }
 }
 
-impl<'r, 'c> FromRequest<'r, 'c> for ContentType {
+impl<'r> FromRequest<'r> for ContentType {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(request.content_type())
     }
 }
 
-impl<'r, 'c, T: FromRequest<'r, 'c>> FromRequest<'r, 'c> for Option<T> {
+impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         let opt = match T::from_request(request) {
             Ok(v) => Some(v),
             Err(_) => None,
@@ -53,10 +53,10 @@ impl<'r, 'c, T: FromRequest<'r, 'c>> FromRequest<'r, 'c> for Option<T> {
     }
 }
 
-impl<'r, 'c, T: FromRequest<'r, 'c>> FromRequest<'r, 'c> for Result<T, T::Error> {
+impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
     type Error = ();
 
-    fn from_request(request: &'r Request<'c>) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
         Ok(T::from_request(request))
     }
 }

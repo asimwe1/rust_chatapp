@@ -20,7 +20,7 @@ use http::{Method, ContentType, Cookies};
 /// [FromRequest](trait.FromRequest.html) implementations. It contains all of
 /// the information for a given web request. This includes the HTTP method, URI,
 /// cookies, headers, and more.
-pub struct Request<'a> {
+pub struct Request {
     /// The HTTP method associated with the request.
     pub method: Method,
     /// <div class="stability" style="margin-left: 0;">
@@ -37,10 +37,9 @@ pub struct Request<'a> {
     params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
     headers: HyperHeaders, // This sucks.
-    _phantom: Option<&'a str>,
 }
 
-impl<'a> Request<'a> {
+impl Request {
     /// Retrieves and parses into `T` the `n`th dynamic parameter from the
     /// request. Returns `Error::NoKey` if `n` is greater than the number of
     /// params. Returns `Error::BadParse` if the parameter type `T` can't be
@@ -108,7 +107,6 @@ impl<'a> Request<'a> {
             uri: URIBuf::from(uri),
             data: vec![],
             headers: HyperHeaders::new(),
-            _phantom: None,
         }
     }
 
@@ -191,7 +189,7 @@ impl<'a> Request<'a> {
     /// Create a Rocket Request from a Hyper Request.
     #[doc(hidden)]
     pub fn from_hyp<'h, 'k>(hyper_req: HyperRequest<'h, 'k>)
-                            -> Result<Request<'a>, String> {
+                            -> Result<Request, String> {
         let (_, h_method, h_headers, h_uri, _, mut h_body) = hyper_req.deconstruct();
 
         let uri = match h_uri {
@@ -221,14 +219,13 @@ impl<'a> Request<'a> {
             uri: uri,
             data: data,
             headers: h_headers,
-            _phantom: None,
         };
 
         Ok(request)
     }
 }
 
-impl<'r> fmt::Display for Request<'r> {
+impl fmt::Display for Request {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -9,69 +9,60 @@ mod stream;
 pub mod data;
 
 pub use self::responder::Responder;
-pub use self::empty::{Empty, Forward};
+pub use self::empty::Empty;
 pub use self::redirect::Redirect;
 pub use self::with_status::StatusResponse;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
 pub use self::data::Content;
-pub use outcome::{Outcome, ResponseOutcome};
+pub use outcome::Outcome;
 
-use std::ops::{Deref, DerefMut};
-use http::hyper::StatusCode;
+use std::fmt;
+use request::Data;
+use http::hyper::{StatusCode, FreshHyperResponse};
+use term_painter::Color::*;
+use term_painter::ToStyle;
 
-pub struct Response<'a>(Box<Responder + 'a>);
+pub type ResponseOutcome<'a> = Outcome<(StatusCode, FreshHyperResponse<'a>)>;
+
+pub enum Response<'a> {
+    Forward(Data),
+    Complete(Box<Responder + 'a>)
+}
 
 impl<'a> Response<'a> {
+    #[inline(always)]
     pub fn new<T: Responder + 'a>(body: T) -> Response<'a> {
-        Response(Box::new(body))
+        Response::Complete(Box::new(body))
     }
 
-    pub fn with_status<T: Responder + 'a>(status: StatusCode,
-                                          body: T)
-                                          -> Response<'a> {
-        Response(Box::new(StatusResponse::new(status, body)))
+    #[inline(always)]
+    pub fn forward(data: Data) -> Response<'static> {
+        Response::Forward(data)
     }
 
-    pub fn forward() -> Response<'static> {
-        Response(Box::new(Forward))
-    }
-
+    #[inline(always)]
     pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T) -> Response<'a> {
         let status_code = StatusCode::from_u16(status);
-        Response(Box::new(StatusResponse::new(status_code, body)))
+        Response::new(StatusResponse::new(status_code, body))
     }
 
-    pub fn empty() -> Response<'static> {
-        Response(Box::new(Empty::new(StatusCode::Ok)))
-    }
-
-    pub fn not_found() -> Response<'static> {
-        Response(Box::new(Empty::new(StatusCode::NotFound)))
-    }
-
-    pub fn server_error(reason: &str) -> Response<'static> {
-        warn_!("internal server error: {}", reason);
-        Response(Box::new(Empty::new(StatusCode::InternalServerError)))
-    }
-
-    pub fn bad_request(reason: &str) -> Response<'static> {
-        warn_!("bad request from user: {}", reason);
-        Response(Box::new(Empty::new(StatusCode::BadRequest)))
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn responder(self) -> Option<Box<Responder + 'a>> {
+        match self {
+            Response::Complete(responder) => Some(responder),
+            _ => None
+        }
     }
 }
 
-impl<'a> Deref for Response<'a> {
-    type Target = Box<Responder + 'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'a> DerefMut for Response<'a> {
-    fn deref_mut(&mut self) -> &mut Box<Responder + 'a> {
-        &mut self.0
+impl<'a> fmt::Display for Response<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Response::Complete(..) => write!(f, "{}", Green.paint("Complete")),
+            Response::Forward(..) => write!(f, "{}", Yellow.paint("Forwarding")),
+        }
     }
 }

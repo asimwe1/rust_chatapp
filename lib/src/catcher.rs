@@ -14,16 +14,12 @@ pub struct Catcher {
     is_default: bool,
 }
 
-// TODO: Should `Catcher` be an interface? Should there be an `ErrorHandler`
-// that takes in a `RoutingError` and returns a `Response`? What's the right
-// interface here?
-
 impl Catcher {
     pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code: code, handler: handler, is_default: false }
     }
 
-    pub fn handle<'b, 'r>(&self, err: Error, request: &'b Request<'r>) -> Response<'b> {
+    pub fn handle<'r>(&self, err: Error, request: &'r Request) -> Response<'r> {
         (self.handler)(err, request)
     }
 
@@ -59,7 +55,7 @@ macro_rules! error_page_template {
             </head>
             <body align="center">
                 <div align="center">
-                    <h1>"#, $code, " ", $name, r#"</hi>
+                    <h1>"#, $code, ": ", $name, r#"</h1>
                     <p>"#, $description, r#"</p>
                     <hr />
                     <small>Rocket</small>
@@ -77,8 +73,7 @@ macro_rules! default_errors {
 
         $(
             fn $fn_name<'r>(_: Error, _r: &'r Request) -> Response<'r> {
-                Response::with_status(
-                    StatusCode::Unregistered($code),
+                Response::with_raw_status($code,
                     data::HTML(error_page_template!($code, $name, $description))
                 )
             }
@@ -96,10 +91,8 @@ pub mod defaults {
     use std::collections::HashMap;
 
     use request::Request;
-    use response::Response;
-    use response::data;
+    use response::{Response, data};
     use error::Error;
-    use http::hyper::StatusCode;
 
     pub fn get() -> HashMap<u16, Catcher> {
         default_errors! {

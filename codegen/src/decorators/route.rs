@@ -84,7 +84,7 @@ impl RouteGenerateExt for RouteParams {
             let $name: $ty =
                 match ::rocket::request::FromForm::from_form_string($form_string) {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Response::forward()
+                    Err(_) => return ::rocket::Response::forward(_data)
                 };
         ).expect("form statement"))
     }
@@ -94,7 +94,8 @@ impl RouteGenerateExt for RouteParams {
         let expr = quote_expr!(ecx,
             match ::std::str::from_utf8(_req.data.as_slice()) {
                 Ok(s) => s,
-                Err(_) => return ::rocket::Response::bad_request("form isn't utf8")
+                Err(_) => return ::rocket::Response::new(
+                    ::rocket::response::Empty::bad_request("form isn't utf8"))
             }
         );
 
@@ -106,7 +107,7 @@ impl RouteGenerateExt for RouteParams {
         let expr = quote_expr!(ecx,
            match _req.uri().query() {
                Some(query) => query,
-               None => return ::rocket::Response::forward()
+               None => return ::rocket::Response::forward(_data)
            }
         );
 
@@ -139,7 +140,7 @@ impl RouteGenerateExt for RouteParams {
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Response::forward()
+                    Err(_) => return ::rocket::Response::forward(_data)
                 };
             ).expect("declared param parsing statement"));
         }
@@ -168,7 +169,7 @@ impl RouteGenerateExt for RouteParams {
                 let $ident: $ty = match
                 <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
                     Ok(v) => v,
-                    Err(_e) => return ::rocket::Response::forward()
+                    Err(_e) => return ::rocket::Response::forward(_data)
                 };
             ).expect("undeclared param parsing statement"));
         }
@@ -219,7 +220,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let user_fn_name = route.annotated_fn.ident();
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
     emit_item(push, quote_item!(ecx,
-         fn $route_fn_name<'_b, '_r>(_req: &'_b ::rocket::Request<'_r>)
+         fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
                 -> ::rocket::Response<'_b> {
              $form_statement
              $query_statement
