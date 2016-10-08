@@ -83,6 +83,7 @@ mod catcher;
 mod config;
 
 /// Defines the types for request and error handlers.
+#[doc(hidden)]
 pub mod handler {
     use request::{Request, Data};
     use response::Response;
@@ -95,10 +96,10 @@ pub mod handler {
     pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> Response<'r>;
 }
 
-#[doc(inline)] pub use response::{Response, Responder};
+#[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
 #[doc(inline)] pub use logger::LoggingLevel;
-pub use codegen::{StaticRouteInfo, StaticCatchInfo};
+#[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 pub use router::Route;
 pub use request::{Request, Data};
 pub use error::Error;

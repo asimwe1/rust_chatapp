@@ -27,6 +27,7 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
 }
 
+#[doc(hidden)]
 impl HyperHandler for Rocket {
     fn handle<'h, 'k>(&self,
                       req: HyperRequest<'h, 'k>,
@@ -146,7 +147,7 @@ impl Rocket {
         }
     }
 
-    pub fn mount(mut self, base: &'static str, routes: Vec<Route>) -> Self {
+    pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_str());
