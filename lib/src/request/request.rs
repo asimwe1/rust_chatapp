@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::cell::RefCell;
 use std::fmt;
 
@@ -10,7 +9,7 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, URIBuf};
-use http::hyper::{header, HyperCookie, HyperHeaders, HyperRequest, HyperRequestUri};
+use http::hyper::{header, HyperCookie, HyperHeaders, HyperMethod, HyperRequestUri};
 use http::{Method, ContentType, Cookies};
 
 /// The type for all incoming web requests.
@@ -186,38 +185,33 @@ impl Request {
         self.headers.set::<header::ContentType>(hyper_ct)
     }
 
-    /// Create a Rocket Request from a Hyper Request.
     #[doc(hidden)]
-    pub fn from_hyp<'h, 'k>(hyper_req: HyperRequest<'h, 'k>)
-                            -> Result<Request, String> {
-        let (_, h_method, h_headers, h_uri, _, mut h_body) = hyper_req.deconstruct();
-
+    pub fn new(h_method: HyperMethod,
+               h_headers: HyperHeaders,
+               h_uri: HyperRequestUri)
+               -> Result<Request, String> {
         let uri = match h_uri {
             HyperRequestUri::AbsolutePath(s) => URIBuf::from(s),
             _ => return Err(format!("Bad URI: {}", h_uri)),
         };
 
         let method = match Method::from_hyp(&h_method) {
-            Some(m) => m,
+            Some(method) => method,
             _ => return Err(format!("Bad method: {}", h_method)),
         };
 
         let cookies = match h_headers.get::<HyperCookie>() {
-            // TODO: What to do about key?
+            // TODO: Retrieve key from config.
             Some(cookie) => cookie.to_cookie_jar(&[]),
             None => Cookies::new(&[]),
         };
-
-        // FIXME: GRRR.
-        let mut data = vec![];
-        h_body.read_to_end(&mut data).unwrap();
 
         let request = Request {
             params: RefCell::new(vec![]),
             method: method,
             cookies: cookies,
             uri: uri,
-            data: data,
+            data: vec![], // TODO: Remove me.
             headers: h_headers,
         };
 

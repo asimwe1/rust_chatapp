@@ -1,8 +1,8 @@
 use std::io::{BufRead, Read, Cursor, BufReader};
 
 pub struct Data {
+    buffer: Vec<u8>,
     stream: Cursor<Vec<u8>>,
-    buffer: Vec<u8>
 }
 
 impl Data {

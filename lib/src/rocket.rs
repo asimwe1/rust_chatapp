@@ -44,8 +44,11 @@ impl Rocket {
         // Get a copy of the URI for later use.
         let uri = hyp_req.uri.to_string();
 
-        // Try to create a Rocket request from the hyper request.
-        let request = match Request::from_hyp(hyp_req) {
+        // Get all of the information from Hyper.
+        let (_, h_method, h_headers, h_uri, _, mut _body) = hyp_req.deconstruct();
+
+        // Try to create a Rocket request from the hyper request info.
+        let request = match Request::new(h_method, h_headers, h_uri) {
             Ok(mut req) => {
                 self.preprocess_request(&mut req);
                 req
