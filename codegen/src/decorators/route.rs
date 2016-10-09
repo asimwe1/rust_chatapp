@@ -94,8 +94,11 @@ impl RouteGenerateExt for RouteParams {
         let expr = quote_expr!(ecx,
             match ::std::str::from_utf8(_req.data.as_slice()) {
                 Ok(s) => s,
-                Err(_) => return ::rocket::Response::new(
-                    ::rocket::response::Empty::bad_request("form isn't utf8"))
+                Err(_) => {
+                    println!("    => Form is not valid UTF8.");
+                    return ::rocket::Response::failed(
+                        ::rocket::http::StatusCode::BadRequest);
+                }
             }
         );
 
@@ -226,7 +229,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
              $query_statement
              $param_statements
              let result = $user_fn_name($fn_arguments);
-             ::rocket::Response::new(result)
+             ::rocket::Response::complete(result)
          }
     ).unwrap());
 

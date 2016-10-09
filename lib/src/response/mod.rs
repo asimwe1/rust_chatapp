@@ -5,6 +5,7 @@ mod with_status;
 mod flash;
 mod named_file;
 mod stream;
+mod failure;
 
 pub mod data;
 
@@ -16,6 +17,7 @@ pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
 pub use self::data::Content;
+pub use self::failure::Failure;
 pub use outcome::Outcome;
 
 use std::fmt;
@@ -33,7 +35,7 @@ pub enum Response<'a> {
 
 impl<'a> Response<'a> {
     #[inline(always)]
-    pub fn new<T: Responder + 'a>(body: T) -> Response<'a> {
+    pub fn complete<T: Responder + 'a>(body: T) -> Response<'a> {
         Response::Complete(Box::new(body))
     }
 
@@ -43,9 +45,14 @@ impl<'a> Response<'a> {
     }
 
     #[inline(always)]
+    pub fn failed(code: StatusCode) -> Response<'static> {
+        Response::complete(Failure::new(code))
+    }
+
+    #[inline(always)]
     pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T) -> Response<'a> {
         let status_code = StatusCode::from_u16(status);
-        Response::new(StatusResponse::new(status_code, body))
+        Response::complete(StatusResponse::new(status_code, body))
     }
 
     #[doc(hidden)]

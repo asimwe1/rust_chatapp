@@ -1,6 +1,10 @@
 extern crate rocket;
 
+use std::io;
+use std::fs::File;
+
 use rocket::{Request, Response, Route, Data};
+use rocket::http::StatusCode;
 use rocket::request::FromParam;
 use rocket::http::Method::*;
 
@@ -9,17 +13,35 @@ fn forward(_req: &Request, data: Data) -> Response<'static> {
 }
 
 fn hi(_req: &Request, _: Data) -> Response<'static> {
-    Response::new("Hello!")
+    Response::complete("Hello!")
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Response<'a> {
-    Response::new(req.get_param(0).unwrap_or("unnamed"))
+    Response::complete(req.get_param(0).unwrap_or("unnamed"))
 }
 
-#[allow(dead_code)]
 fn echo_url<'a>(req: &'a Request, _: Data) -> Response<'a> {
     let param = req.uri().as_str().split_at(6).1;
-    Response::new(String::from_param(param))
+    Response::complete(String::from_param(param))
+}
+
+fn upload(req: &Request, data: Data) -> Response {
+    if !req.content_type().is_text() {
+        return Response::failed(StatusCode::BadRequest);
+    }
+
+    let file = File::create("upload.txt");
+    if let Ok(mut file) = file {
+        if io::copy(&mut data.open(), &mut file).is_ok() {
+            return Response::complete("Upload successful.");
+        }
+
+        println!("    => Failed copying.");
+        Response::failed(StatusCode::InternalServerError)
+    } else {
+        println!("    => Couldn't open file: {:?}", file.unwrap_err());
+        Response::failed(StatusCode::InternalServerError)
+    }
 }
 
 fn main() {
@@ -28,9 +50,10 @@ fn main() {
 
     let echo = Route::new(Get, "/", echo_url);
     let name = Route::new(Get, "/<name>", name);
+    let upload_route = Route::new(Post, "/upload", upload);
 
     rocket::ignite()
-        .mount("/", vec![always_forward, hello])
+        .mount("/", vec![always_forward, hello, upload_route])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
         .mount("/echo:<str>", vec![echo])

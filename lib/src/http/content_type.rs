@@ -79,6 +79,9 @@ impl ContentType {
         }
     }
 
+    /// Returns true if the content type is plain text, i.e.: `text/plain`.
+    is_some!(is_text: Text/Plain);
+
     /// Returns true if the content type is JSON, i.e: `application/json`.
     is_some!(json, is_json: Application/Json);
 

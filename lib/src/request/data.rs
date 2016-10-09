@@ -1,7 +1,4 @@
 use std::io::{BufRead, Read, Cursor, BufReader};
-use std::net::TcpStream;
-
-use request::Request;
 
 pub struct Data {
     stream: Cursor<Vec<u8>>,
@@ -9,11 +6,11 @@ pub struct Data {
 }
 
 impl Data {
-    fn open(self) -> impl BufRead {
+    pub fn open(self) -> impl BufRead {
         Cursor::new(self.buffer).chain(BufReader::new(self.stream))
     }
 
-    fn peek(&self) -> &[u8] {
+    pub fn peek(&self) -> &[u8] {
         &self.buffer
     }
 

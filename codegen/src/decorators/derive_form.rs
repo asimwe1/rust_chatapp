@@ -172,7 +172,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
                 $ident = match ::rocket::request::FromFormValue::from_form_value(v) {
                     Ok(v) => Some(v),
                     Err(e) => {
-                        println!("\tError parsing form val '{}': {:?}", $id_str, e);
+                        println!("    => Error parsing form val '{}': {:?}",
+                                 $id_str, e);
                         $return_err_stmt
                     }
                 };
@@ -187,7 +188,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
             match k {
                 $arms
                 _ => {
-                    println!("\t{}={} has no matching field in struct.", k, v);
+                    println!("    => {}={} has no matching field in struct.",
+                             k, v);
                     $return_err_stmt
                 }
            };
@@ -206,7 +208,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         failure_conditions.push(quote_tokens!(cx,
             if $ident.is_none() &&
                 <$ty as ::rocket::request::FromFormValue>::default().is_none() {
-                println!("\t'{}' did not parse.", stringify!($ident));
+                println!("    => '{}' did not parse.", stringify!($ident));
                 true
             } else { false }
         ));
