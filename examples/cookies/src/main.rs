@@ -3,20 +3,14 @@
 
 #[macro_use]
 extern crate lazy_static;
+extern crate rocket_contrib;
 extern crate rocket;
-extern crate tera;
+
+use std::collections::HashMap;
 
 use rocket::response::Redirect;
 use rocket::http::{Cookie, Cookies};
-
-lazy_static!(static ref TERA: tera::Tera = tera::Tera::new("templates/**/*"););
-
-fn ctxt(message: Option<String>) -> tera::Context {
-    let mut context = tera::Context::new();
-    context.add("have_message", &message.is_some());
-    context.add("message", &message.unwrap_or("".to_string()));
-    context
-}
+use rocket_contrib::Template;
 
 #[derive(FromForm)]
 struct Message {
@@ -30,9 +24,13 @@ fn submit(cookies: &Cookies, message: Message) -> Redirect {
 }
 
 #[get("/")]
-fn index(cookies: &Cookies) -> tera::TeraResult<String> {
-    let message = cookies.find("message").map(|msg| msg.value);
-    TERA.render("index.html", ctxt(message))
+fn index(cookies: &Cookies) -> Template {
+    let mut context = HashMap::new();
+    if let Some(msg) = cookies.find("message").map(|msg| msg.value) {
+        context.insert("message", msg);
+    }
+
+    Template::render("index", &context)
 }
 
 fn main() {

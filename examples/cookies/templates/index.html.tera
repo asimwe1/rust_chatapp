@@ -7,7 +7,7 @@
   </head>
   <body>
     <h1>Rocket Cookie Examples</h1>
-    {% if have_message %}
+    {% if message is defined %}
       <p>{{ message }}</p>
     {% else %}
       <p>No message yet.</p>

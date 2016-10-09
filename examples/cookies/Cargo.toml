@@ -8,4 +8,8 @@ workspace = "../../"
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
 lazy_static = "*"
-tera = { git = "https://github.com/Keats/tera" }
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["tera_templates"]
