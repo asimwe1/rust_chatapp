@@ -1,4 +1,3 @@
-mod empty;
 mod responder;
 mod redirect;
 mod with_status;
@@ -10,7 +9,6 @@ mod failure;
 pub mod data;
 
 pub use self::responder::Responder;
-pub use self::empty::Empty;
 pub use self::redirect::Redirect;
 pub use self::with_status::StatusResponse;
 pub use self::flash::Flash;
