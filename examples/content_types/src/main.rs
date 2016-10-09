@@ -1,4 +1,4 @@
-#![feature(plugin, rustc_macro)]
+#![feature(plugin, proc_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;

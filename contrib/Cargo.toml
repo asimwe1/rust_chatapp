@@ -29,5 +29,4 @@ lazy_static = { version = "^0.2", optional = true }
 # Tera dependency
 [dependencies.tera]
 git = "https://github.com/SergioBenitez/tera"
-branch = "array-get-filter"
 optional = true

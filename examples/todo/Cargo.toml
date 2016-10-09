@@ -14,10 +14,6 @@ serde_derive = "0.8"
 diesel = { git = "https://github.com/SergioBenitez/diesel", features = ["sqlite"] }
 diesel_codegen = { git = "https://github.com/SergioBenitez/diesel", default_features = false, features = ["sqlite"] }
 
-[dependencies.tera]
-git = "https://github.com/SergioBenitez/tera"
-branch = "array-get-filter"
-
 [dependencies.rocket_contrib]
 path = "../../contrib"
 default_features = false

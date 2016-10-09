@@ -23,10 +23,10 @@
         <div class="ten columns">
           <input type="text" placeholder="enter a task description..."
             name="description" id="description" value="" autofocus
-            class="u-full-width {% if msg %}field-{{msg|first}}{% endif %}" />
+            class="u-full-width {% if msg %}field-{{msg.0}}{% endif %}" />
           {% if msg %}
-            <small class="field-{{msg|first}}-msg">
-              {{ msg | get(i=1) }}
+            <small class="field-{{msg.0}}-msg">
+              {{ msg.1 }}
             </small>
           {% endif %}
         </div>
