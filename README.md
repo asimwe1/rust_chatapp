@@ -33,7 +33,7 @@ Rocket is extensively documented:
   * [Getting Started](guide/getting_started): How to start your first project.
   * [Overview](overview): A brief introduction.
   * [Guide](guide): A detailed guide and reference to every component.
-  * [API Documentation](http://api.rocket.rs/rocket): The "rustdocs" (API documentation).
+  * [API Documentation](https://api.rocket.rs): The "rustdocs" (API documentation).
 
 ## Building
 
