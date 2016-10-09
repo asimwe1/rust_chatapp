@@ -30,10 +30,10 @@ fn upload(req: &Request, data: Data) -> Response {
         return Response::failed(StatusCode::BadRequest);
     }
 
-    let file = File::create("upload.txt");
+    let file = File::create("/tmp/upload.txt");
     if let Ok(mut file) = file {
-        if io::copy(&mut data.open(), &mut file).is_ok() {
-            return Response::complete("Upload successful.");
+        if let Ok(n) = io::copy(&mut data.open(), &mut file) {
+            return Response::complete(format!("OK: {} bytes uploaded.", n));
         }
 
         println!("    => Failed copying.");

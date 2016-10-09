@@ -25,4 +25,5 @@ members = [
   "examples/handlebars_templates",
   "examples/form_kitchen_sink",
   "examples/config",
+  "examples/hello_alt_methods",
 ]

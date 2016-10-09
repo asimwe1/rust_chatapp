@@ -6,10 +6,14 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 [dependencies]
 term-painter = "^0.2"
 log = "^0.3"
-hyper = { version = "^0.9", default-features = false }
 url = "^1"
 # mime = "^0.2"
 toml = "^0.2"
+
+[dependencies.hyper]
+git = "https://github.com/SergioBenitez/hyper"
+default-features = false
+branch = "0.9.x"
 
 [dev-dependencies]
 lazy_static = "*"

@@ -74,6 +74,12 @@ impl Log for RocketLogger {
             return;
         }
 
+        // Don't print Hyper's messages unless Debug is enabled.
+        let from_hyper = record.location().module_path().starts_with("hyper::");
+        if from_hyper && self.0 != LoggingLevel::Debug {
+            return;
+        }
+
         // In Rocket, we abuse target with value "_" to indicate indentation.
         if record.target() == "_" && self.0 != LoggingLevel::Critical {
             print!("    {} ", White.paint("=>"));

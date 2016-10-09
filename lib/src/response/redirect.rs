@@ -31,7 +31,6 @@ impl<'a> Responder for Redirect {
         res.headers_mut().set(header::ContentLength(0));
         res.headers_mut().set(header::Location(self.1.clone()));
         *(res.status_mut()) = self.0;
-        res.send(b"").unwrap();
-        Outcome::Success
+        Outcome::of(res.send(b""))
     }
 }

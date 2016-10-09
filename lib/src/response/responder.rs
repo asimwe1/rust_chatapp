@@ -21,8 +21,7 @@ impl<'a> Responder for &'a str {
             res.headers_mut().set(header::ContentType(mime));
         }
 
-        res.send(self.as_bytes()).unwrap();
-        Outcome::Success
+        Outcome::of(res.send(self.as_bytes()))
     }
 }
 
@@ -32,47 +31,53 @@ impl Responder for String {
             let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
             res.headers_mut().set(header::ContentType(mime));
         }
-        res.send(self.as_bytes()).unwrap();
-        Outcome::Success
+
+        Outcome::of(res.send(self.as_bytes()))
     }
 }
 
 impl Responder for File {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
-        let size = self.metadata().unwrap().len();
-
-        res.headers_mut().set(header::ContentLength(size));
-        *(res.status_mut()) = StatusCode::Ok;
+        let size = match self.metadata() {
+            Ok(md) => md.len(),
+            Err(e) => {
+                error_!("Failed to read file metadata: {:?}", e);
+                return Outcome::Forward((StatusCode::InternalServerError, res));
+            }
+        };
 
         let mut v = Vec::new();
-        self.read_to_end(&mut v).unwrap();
+        if let Err(e) = self.read_to_end(&mut v) {
+            error_!("Failed to read file: {:?}", e);
+            return Outcome::Forward((StatusCode::InternalServerError, res));
+        }
 
-        let mut stream = res.start().unwrap();
-        stream.write_all(&v).unwrap();
-        Outcome::Success
+        res.headers_mut().set(header::ContentLength(size));
+        Outcome::of(res.start().and_then(|mut stream| stream.write_all(&v)))
     }
 }
 
 impl<T: Responder> Responder for Option<T> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
-        if self.is_none() {
-            warn_!("response was `None`");
-            return Outcome::Forward((StatusCode::NotFound, res));
+        if let Some(ref mut val) = *self {
+            val.respond(res)
+        } else {
+            warn_!("Response was `None`.");
+            Outcome::Forward((StatusCode::NotFound, res))
         }
-
-        self.as_mut().unwrap().respond(res)
     }
 }
 
 impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
     // prepend with `default` when using impl specialization
     default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
-        if self.is_err() {
-            error_!("{:?}", self.as_ref().err().unwrap());
-            return Outcome::Forward((StatusCode::InternalServerError, res));
+        match *self {
+            Ok(ref mut val) => val.respond(res),
+            Err(ref e) => {
+                error_!("{:?}", e);
+                Outcome::Forward((StatusCode::InternalServerError, res))
+            }
         }
-
-        self.as_mut().unwrap().respond(res)
     }
 }
 

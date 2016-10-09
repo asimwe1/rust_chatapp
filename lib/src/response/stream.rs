@@ -27,7 +27,14 @@ impl<T: Read> Stream<T> {
 
 impl<T: Read> Responder for Stream<T> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
-        let mut stream = res.start().unwrap();
+        let mut stream = match res.start() {
+            Ok(s) => s,
+            Err(e) => {
+                error_!("Failed opening response stream: {:?}", e);
+                return Outcome::Failure;
+            }
+        };
+
         let mut buffer = [0; CHUNK_SIZE];
         let mut complete = false;
         while !complete {

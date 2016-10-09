@@ -9,7 +9,7 @@ use term_painter::ToStyle;
 use config;
 use logger;
 use request::{Request, Data, FormItems};
-use response::{Response};
+use response::Response;
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
@@ -45,14 +45,11 @@ impl Rocket {
         let uri = hyp_req.uri.to_string();
 
         // Get all of the information from Hyper.
-        let (_, h_method, h_headers, h_uri, _, mut _body) = hyp_req.deconstruct();
+        let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
         // Try to create a Rocket request from the hyper request info.
-        let request = match Request::new(h_method, h_headers, h_uri) {
-            Ok(mut req) => {
-                self.preprocess_request(&mut req);
-                req
-            }
+        let mut request = match Request::new(h_method, h_headers, h_uri) {
+            Ok(req) => req,
             Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
                 debug_!("Bad request: {}", reason);
@@ -62,9 +59,20 @@ impl Rocket {
         };
 
         // Retrieve the data from the request.
-        let mut data = Data::new();
+        let mut data = match Data::from_hyp(h_body) {
+            Ok(data) => data,
+            Err(reason) => {
+                debug_!("Bad data in request: {}", reason);
+                return self.handle_error(StatusCode::InternalServerError,
+                                         &request, res);
+            }
+        };
+
+        // Preprocess the request.
+        self.preprocess_request(&mut request, &data);
 
         info!("{}:", request);
+        info_!("Peek size: {} bytes", data.peek().len());
         let matches = self.router.route(&request);
         for route in matches {
             // Retrieve and set the requests parameters.
@@ -108,14 +116,14 @@ impl Rocket {
 
     /// Preprocess the request for Rocket-specific things. At this time, we're
     /// only checking for _method in forms.
-    fn preprocess_request(&self, req: &mut Request) {
+    fn preprocess_request(&self, req: &mut Request, data: &Data) {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
-        let data_len = req.data.len();
+        let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
         if req.content_type().is_form() && data_len >= min_len {
             let form = unsafe {
-                from_utf8_unchecked(&req.data.as_slice()[..min(data_len, max_len)])
+                from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
 
             let mut form_items = FormItems(form);
@@ -132,8 +140,13 @@ impl Rocket {
                         code: StatusCode,
                         req: &'r Request,
                         response: FreshHyperResponse) {
-        error_!("Dispatch failed: {}.", code);
-        let catcher = self.catchers.get(&code.to_u16()).unwrap();
+
+        // Find the catcher or use the one for internal server errors.
+        let catcher = self.catchers.get(&code.to_u16()).unwrap_or_else(|| {
+            error_!("No catcher found for {}.", code);
+            warn_!("Using internal server error catcher.");
+            self.catchers.get(&500).expect("500 Catcher")
+        });
 
         if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
             if responder.respond(response) != Outcome::Success {
@@ -144,7 +157,8 @@ impl Rocket {
         } else {
             error_!("Catcher returned an incomplete response.");
             warn_!("Using default error response.");
-            let catcher = self.default_catchers.get(&code.to_u16()).unwrap();
+            let catcher = self.default_catchers.get(&code.to_u16())
+                .unwrap_or(self.default_catchers.get(&500).expect("500 default"));
             let responder = catcher.handle(Error::Internal, req).responder();
             responder.unwrap().respond(response).expect_success()
         }
@@ -166,8 +180,7 @@ impl Rocket {
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
-            if self.catchers.contains_key(&c.code) &&
-                    !self.catchers.get(&c.code).unwrap().is_default() {
+            if self.catchers.get(&c.code).map_or(false, |e| e.is_default()) {
                 let msg = format!("warning: overrides {} catcher!", c.code);
                 warn!("{} ({})", c, Yellow.paint(msg.as_str()));
             } else {

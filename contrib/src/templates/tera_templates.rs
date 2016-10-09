@@ -1,10 +1,8 @@
 extern crate tera;
 
 use std::path::PathBuf;
-use self::tera::Renderer;
 
 use super::serde::Serialize;
-use super::serde_json;
 use super::{TemplateInfo, TEMPLATE_DIR};
 
 lazy_static! {
@@ -19,17 +17,13 @@ pub const EXT: &'static str = "tera";
 pub fn render<T>(name: &str, info: &TemplateInfo, context: &T) -> Option<String>
     where T: Serialize
 {
-    let template = match TERA.get_template(&info.path.to_string_lossy()) {
-        Ok(template) => template,
-        Err(_) => {
-            error_!("Tera template '{}' does not exist.", name);
-            return None;
-        }
+    let template_name = &info.path.to_string_lossy();
+    if TERA.get_template(template_name).is_err() {
+        error_!("Tera template '{}' does not exist.", template_name);
+        return None;
     };
 
-    let value = serde_json::to_value(&context);
-    let mut renderer = Renderer::new_with_json(template, &TERA, value);
-    match renderer.render() {
+    match TERA.value_render(template_name, &context) {
         Ok(string) => Some(string),
         Err(e) => {
             error_!("Error rendering Tera template '{}': {}", name, e);

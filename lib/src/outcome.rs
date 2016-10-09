@@ -16,6 +16,15 @@ pub enum Outcome<T> {
 }
 
 impl<T> Outcome<T> {
+    pub fn of<A, B: fmt::Debug>(result: Result<A, B>) -> Outcome<T> {
+        if let Err(e) = result {
+            error_!("{:?}", e);
+            return Outcome::Failure;
+        }
+
+        Outcome::Success
+    }
+
     pub fn as_str(&self) -> &'static str {
         match *self {
             Outcome::Success => "Success",
