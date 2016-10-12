@@ -1,9 +1,10 @@
 #![feature(plugin, custom_derive, custom_attribute, proc_macro)]
-#![plugin(rocket_codegen, diesel_codegen)]
+#![plugin(rocket_codegen)]
 
 extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate diesel;
+#[macro_use] extern crate diesel_codegen;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;

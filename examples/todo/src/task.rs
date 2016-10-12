@@ -1,19 +1,19 @@
+mod schema {
+    infer_schema!("db/db.sql");
+}
+
 use diesel;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use self::schema::tasks;
 use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
-mod schema {
-    infer_schema!("db/db.sql");
-}
-
 fn db() -> SqliteConnection {
     SqliteConnection::establish("db/db.sql").expect("Failed to connect to db.")
 }
 
-#[insertable_into(tasks)]
-#[derive(Serialize, Queryable, FromForm, Debug, Clone)]
+#[table_name = "tasks"]
+#[derive(Serialize, Queryable, Insertable, FromForm, Debug, Clone)]
 pub struct Task {
     id: Option<i32>,
     pub description: String,
