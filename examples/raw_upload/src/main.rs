@@ -5,15 +5,10 @@ extern crate rocket;
 
 use rocket::request::Data;
 use rocket::response::Failure;
-use rocket::http::{StatusCode, ContentType};
+use rocket::http::StatusCode;
 
-#[post("/upload", data = "<data>")]
-fn upload(content_type: ContentType, data: Data) -> Result<String, Failure> {
-    if !content_type.is_text() {
-        println!("    => Content-Type of upload must be text. Ignoring.");
-        return Err(Failure(StatusCode::BadRequest));
-    }
-
+#[post("/upload", format = "text/plain", data = "<data>")]
+fn upload(data: Data) -> Result<String, Failure> {
     match data.stream_to_file("/tmp/upload.txt") {
         Ok(n) => Ok(format!("OK: {} bytes uploaded.", n)),
         Err(e) => {
