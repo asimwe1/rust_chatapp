@@ -31,7 +31,6 @@ pub struct Request {
     /// </div>
     ///
     /// The data in the request.
-    pub data: Vec<u8>, // FIXME: Don't read this! (bad Hyper.)
     uri: URIBuf, // FIXME: Should be URI (without Hyper).
     params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
@@ -104,7 +103,6 @@ impl Request {
             method: method,
             cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
-            data: vec![],
             headers: HyperHeaders::new(),
         }
     }
@@ -211,7 +209,6 @@ impl Request {
             method: method,
             cookies: cookies,
             uri: uri,
-            data: vec![], // TODO: Remove me.
             headers: h_headers,
         };
 

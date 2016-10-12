@@ -26,4 +26,5 @@ members = [
   "examples/form_kitchen_sink",
   "examples/config",
   "examples/hello_alt_methods",
+  "examples/raw_upload",
 ]

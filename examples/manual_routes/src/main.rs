@@ -27,6 +27,7 @@ fn echo_url<'a>(req: &'a Request, _: Data) -> Response<'a> {
 
 fn upload(req: &Request, data: Data) -> Response {
     if !req.content_type().is_text() {
+        println!("    => Content-Type of upload must be data. Ignoring.");
         return Response::failed(StatusCode::BadRequest);
     }
 

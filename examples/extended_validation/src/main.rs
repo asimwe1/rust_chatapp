@@ -6,7 +6,7 @@ extern crate rocket;
 mod files;
 
 use rocket::response::Redirect;
-use rocket::request::FromFormValue;
+use rocket::request::{Form, FromFormValue};
 
 #[derive(Debug)]
 struct StrongPassword<'r>(&'r str);
@@ -49,24 +49,26 @@ impl<'v> FromFormValue<'v> for AdultAge {
     }
 }
 
-#[post("/login", form = "<user>")]
-fn login(user: UserLogin) -> Result<Redirect, String> {
-    if user.age.is_err() {
-        return Err(String::from(user.age.unwrap_err()));
+#[post("/login", data = "<user_form>")]
+fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
+    let user = user_form.get();
+
+    if let Err(e) = user.age {
+        return Err(format!("Age is invalid: {}", e));
     }
 
-    if user.password.is_err() {
-        return Err(String::from(user.password.unwrap_err()));
+    if let Err(e) = user.password {
+        return Err(format!("Password is invalid: {}", e));
     }
 
-    match user.username {
-        "Sergio" => {
-            match user.password.unwrap().0 {
-                "password" => Ok(Redirect::other("/user/Sergio")),
-                _ => Err("Wrong password!".to_string()),
-            }
+    if user.username == "Sergio" {
+        if let Ok(StrongPassword("password")) = user.password {
+            Ok(Redirect::other("/user/Sergio"))
+        } else {
+            Err("Wrong password!".to_string())
         }
-        _ => Err(format!("Unrecognized user, '{}'.", user.username)),
+    } else {
+        Err(format!("Unrecognized user, '{}'.", user.username))
     }
 }
 

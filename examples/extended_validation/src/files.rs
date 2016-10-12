@@ -8,7 +8,7 @@ fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
 }
 
-#[get("/<file..>")]
+#[get("/<file..>", rank = 2)]
 fn files(file: PathBuf) -> io::Result<NamedFile> {
     NamedFile::open(Path::new("static/").join(file))
 }

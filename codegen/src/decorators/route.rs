@@ -52,7 +52,7 @@ trait RouteGenerateExt {
     fn gen_form(&self, &ExtCtxt, Option<&Spanned<Ident>>, P<Expr>) -> Option<Stmt>;
     fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>);
 
-    fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
+    fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
@@ -89,20 +89,31 @@ impl RouteGenerateExt for RouteParams {
         ).expect("form statement"))
     }
 
-    fn generate_form_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
-        let param = self.form_param.as_ref().map(|p| &p.value);
-        let expr = quote_expr!(ecx,
-            match ::std::str::from_utf8(_req.data.as_slice()) {
-                Ok(s) => s,
-                Err(_) => {
-                    println!("    => Form is not valid UTF8.");
-                    return ::rocket::Response::failed(
-                        ::rocket::http::StatusCode::BadRequest);
-                }
-            }
-        );
+    fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
+        let param = self.data_param.as_ref().map(|p| &p.value);
+        let arg = param.and_then(|p| self.annotated_fn.find_input(&p.node.name));
+        if param.is_none() {
+            return None;
+        } else if arg.is_none() {
+            self.missing_declared_err(ecx, &param.unwrap());
+            return None;
+        }
 
-        self.gen_form(ecx, param, expr)
+        let arg = arg.unwrap();
+        let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
+        let ty = strip_ty_lifetimes(arg.ty.clone());
+        Some(quote_stmt!(ecx,
+            let $name: $ty =
+                match ::rocket::request::FromData::from_data(&_req, _data) {
+                    ::rocket::request::DataOutcome::Success(d) => d,
+                    ::rocket::request::DataOutcome::Forward(d) =>
+                        return ::rocket::Response::forward(d),
+                    ::rocket::request::DataOutcome::Failure(_) => {
+                        let code = ::rocket::http::StatusCode::BadRequest;
+                        return ::rocket::Response::failed(code);
+                    }
+                };
+        ).expect("data statement"))
     }
 
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
@@ -148,11 +159,11 @@ impl RouteGenerateExt for RouteParams {
             ).expect("declared param parsing statement"));
         }
 
-        // A from_request parameter is one that isn't declared, form, or query.
+        // A from_request parameter is one that isn't declared, data, or query.
         let from_request = |a: &&Arg| {
             if let Some(name) = a.name() {
                 !declared_set.contains(name)
-                    && self.form_param.as_ref().map_or(true, |p| {
+                    && self.data_param.as_ref().map_or(true, |p| {
                         !a.named(&p.value().name)
                     }) && self.query_param.as_ref().map_or(true, |p| {
                         !a.named(&p.node.name)
@@ -163,7 +174,7 @@ impl RouteGenerateExt for RouteParams {
             }
         };
 
-        // Generate the code for `form_request` parameters.
+        // Generate the code for `from_request` parameters.
         let all = &self.annotated_fn.decl().inputs;
         for arg in all.iter().filter(from_request) {
             let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
@@ -214,9 +225,9 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let route = RouteParams::from(ecx, sp, known_method, meta_item, annotated);
     debug!("Route params: {:?}", route);
 
-    let form_statement = route.generate_form_statement(ecx);
-    let query_statement = route.generate_query_statement(ecx);
     let param_statements = route.generate_param_statements(ecx);
+    let query_statement = route.generate_query_statement(ecx);
+    let data_statement = route.generate_data_statement(ecx);
     let fn_arguments = route.generate_fn_arguments(ecx);
 
     // Generate and emit the wrapping function with the Rocket handler signature.
@@ -225,9 +236,9 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     emit_item(push, quote_item!(ecx,
          fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
                 -> ::rocket::Response<'_b> {
-             $form_statement
-             $query_statement
              $param_statements
+             $query_statement
+             $data_statement
              let result = $user_fn_name($fn_arguments);
              ::rocket::Response::complete(result)
          }

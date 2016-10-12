@@ -40,7 +40,7 @@ struct Message {
 //     None
 // }
 
-#[post("/<id>", format = "application/json")]
+#[post("/<id>", format = "application/json", data = "<message>")]
 fn new(id: ID, message: JSON<Message>) -> JSON<SimpleMap> {
     let mut hashmap = MAP.lock().unwrap();
     if hashmap.contains_key(&id) {
@@ -54,7 +54,7 @@ fn new(id: ID, message: JSON<Message>) -> JSON<SimpleMap> {
     }
 }
 
-#[put("/<id>", format = "application/json")]
+#[put("/<id>", format = "application/json", data = "<message>")]
 fn update(id: ID, message: JSON<Message>) -> Option<JSON<SimpleMap>> {
     let mut hashmap = MAP.lock().unwrap();
     if hashmap.contains_key(&id) {

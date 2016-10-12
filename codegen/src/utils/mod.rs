@@ -87,6 +87,10 @@ impl Folder for TyLifetimeRemover {
     fn fold_lifetime_defs(&mut self, _: Vec<LifetimeDef>) -> Vec<LifetimeDef> {
         vec![]
     }
+
+    fn fold_lifetimes(&mut self, _: Vec<Lifetime>) -> Vec<Lifetime> {
+        vec![]
+    }
 }
 
 pub fn strip_ty_lifetimes(ty: P<Ty>) -> P<Ty> {

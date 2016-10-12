@@ -1,5 +1,7 @@
 #![allow(unused_imports)] // FIXME: Why is this coming from quote_tokens?
 
+use std::mem::transmute;
+
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
 use syntax::parse::token::{str_to_ident};
@@ -7,11 +9,12 @@ use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
-use std::mem::transmute;
 
 use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
+
+use utils::strip_ty_lifetimes;
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
@@ -113,11 +116,12 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
 
 fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
     // Check that we specified the methods to the argument correctly.
-    let arg = if substr.nonself_args.len() == 1 {
+    const EXPECTED_ARGS: usize = 1;
+    let arg = if substr.nonself_args.len() == EXPECTED_ARGS {
         &substr.nonself_args[0]
     } else {
         let msg = format!("incorrect number of arguments in `from_form_string`: \
-            expected {}, found {}", 1, substr.nonself_args.len());
+            expected {}, found {}", EXPECTED_ARGS, substr.nonself_args.len());
         cx.span_bug(trait_span, msg.as_str());
     };
 
@@ -140,7 +144,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
             None => cx.span_fatal(trait_span, ONLY_STRUCTS_ERR)
         };
 
-        fields_and_types.push((ident, &field.ty));
+        let stripped_ty = strip_ty_lifetimes(field.ty.clone());
+        fields_and_types.push((ident, stripped_ty));
     }
 
     debug!("Fields and types: {:?}", fields_and_types);
@@ -155,7 +160,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // placed into the final struct. They start out as `None` and are changed
     // to Some when a parse completes, or some default value if the parse was
     // unsuccessful and default() returns Some.
-    for &(ref ident, ty) in &fields_and_types {
+    for &(ref ident, ref ty) in &fields_and_types {
         stmts.push(quote_stmt!(cx,
             let mut $ident: ::std::option::Option<$ty> = None;
         ).unwrap());
@@ -199,11 +204,13 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // This looks complicated but just generates the boolean condition checking
     // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
-    for (i, &(ref ident, ty)) in (&fields_and_types).iter().enumerate() {
+
+    // Start with `false` in case there are no fields.
+    failure_conditions.push(quote_tokens!(cx, false));
+
+    for &(ref ident, ref ty) in (&fields_and_types).iter() {
         // Pushing an "||" (or) between every condition.
-        if i > 0 {
-            failure_conditions.push(quote_tokens!(cx, ||));
-        }
+        failure_conditions.push(quote_tokens!(cx, ||));
 
         failure_conditions.push(quote_tokens!(cx,
             if $ident.is_none() &&
@@ -217,7 +224,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The fields of the struct, which are just the let bindings declared above
     // or the default value.
     let mut result_fields = vec![];
-    for &(ref ident, ty) in &fields_and_types {
+    for &(ref ident, ref ty) in &fields_and_types {
         result_fields.push(quote_tokens!(cx,
             $ident: $ident.unwrap_or_else(||
                 <$ty as ::rocket::request::FromFormValue>::default().unwrap()

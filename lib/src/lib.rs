@@ -1,6 +1,7 @@
 #![feature(question_mark)]
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
+#![feature(associated_type_defaults)]
 
 //! # Rocket - Core API Documentation
 //!

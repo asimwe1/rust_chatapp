@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::request::{Request, FromFormValue};
+use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
 use std::io;
 
@@ -29,24 +29,22 @@ impl<'v> FromFormValue<'v> for FormOption {
 }
 
 #[derive(Debug, FromForm)]
-struct FormInput<'r> {
+struct FormInput {
     checkbox: bool,
     number: usize,
     radio: FormOption,
-    password: &'r str,
+    password: String,
     textarea: String,
     select: FormOption,
 }
 
-#[post("/", form = "<sink>")]
-fn sink(sink: FormInput) -> String {
-    format!("{:?}", sink)
-}
-
-#[post("/", rank = 2)]
-fn sink2(request: &Request) -> &'static str {
-    println!("form: {:?}", std::str::from_utf8(request.data.as_slice()));
-    "Sorry, the form is invalid."
+#[post("/", data = "<sink>")]
+fn sink(sink: Result<Form<FormInput>, Option<String>>) -> String {
+    match sink {
+        Ok(form) => format!("{:?}", form.get()),
+        Err(Some(f)) => format!("Invalid form input: {}", f),
+        Err(None) => format!("Form input was invalid UTF8."),
+    }
 }
 
 #[get("/")]
@@ -56,6 +54,6 @@ fn index() -> io::Result<NamedFile> {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![index, sink, sink2])
+        .mount("/", routes![index, sink])
         .launch();
 }

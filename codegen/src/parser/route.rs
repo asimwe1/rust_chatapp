@@ -6,7 +6,7 @@ use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::parse::token::str_to_ident;
 
-use utils::{span, MetaItemExt, SpanExt};
+use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
 use super::{Function, ParamIter};
 use super::keyvalue::KVSpanned;
 use rocket::http::{Method, ContentType};
@@ -22,7 +22,7 @@ pub struct RouteParams {
     pub annotated_fn: Function,
     pub method: Spanned<Method>,
     pub path: Spanned<String>,
-    pub form_param: Option<KVSpanned<Ident>>,
+    pub data_param: Option<KVSpanned<Ident>>,
     pub query_param: Option<Spanned<Ident>>,
     pub format: Option<KVSpanned<ContentType>>,
     pub rank: Option<KVSpanned<isize>>,
@@ -74,7 +74,7 @@ impl RouteParams {
 
         // Parse all of the optional parameters.
         let mut seen_keys = HashSet::new();
-        let (mut rank, mut form, mut format) = Default::default();
+        let (mut rank, mut data, mut format) = Default::default();
         for param in &attr_params[1..] {
             let kv_opt = kv_from_nested(&param);
             if kv_opt.is_none() {
@@ -85,7 +85,7 @@ impl RouteParams {
             let kv = kv_opt.unwrap();
             match kv.key().as_str() {
                 "rank" => rank = parse_opt(ecx, &kv, parse_rank),
-                "form" => form = parse_opt(ecx, &kv, parse_form),
+                "data" => data = parse_opt(ecx, &kv, parse_data),
                 "format" => format = parse_opt(ecx, &kv, parse_format),
                 _ => {
                     let msg = format!("'{}' is not a known parameter", kv.key());
@@ -107,7 +107,7 @@ impl RouteParams {
         RouteParams {
             method: method,
             path: path,
-            form_param: form,
+            data_param: data,
             query_param: query,
             format: format,
             rank: rank,
@@ -145,7 +145,7 @@ fn param_string_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Ident> {
     let string = s.node;
     if string.starts_with('<') && string.ends_with('>') {
         let param = &string[1..(string.len() - 1)];
-        if param.chars().all(char::is_alphanumeric) {
+        if is_valid_ident(param) {
             return Some(str_to_ident(param));
         }
 
@@ -217,21 +217,23 @@ fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanne
     Some(kv.map_ref(|_| f(ecx, kv)))
 }
 
-fn parse_form(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
+fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
+    let mut str_name = "unknown";
     if let LitKind::Str(ref s, _) = *kv.value() {
+        str_name = s;
         if let Some(ident) = param_string_to_ident(ecx, span(s, kv.value.span)) {
             return ident;
         }
     }
 
-    let err_string = r#"`form` value must be a parameter, e.g: "<name>"`"#;
+    let err_string = r#"`data` value must be a parameter, e.g: "<name>"`"#;
     ecx.struct_span_fatal(kv.span, err_string)
-        .help(r#"form, if specified, must be a key-value pair where
-              the key is `form` and the value is a string with a single
-              parameter inside '<' '>'. e.g: form = "<login>""#)
+        .help(r#"data, if specified, must be a key-value pair where
+              the key is `data` and the value is a string with a single
+              parameter inside '<' '>'. e.g: data = "<user_form>""#)
         .emit();
 
-    str_to_ident("")
+    str_to_ident(str_name)
 }
 
 fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {

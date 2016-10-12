@@ -72,7 +72,7 @@ impl Rocket {
         self.preprocess_request(&mut request, &data);
 
         info!("{}:", request);
-        info_!("Peek size: {} bytes", data.peek().len());
+        trace_!("Peek size: {} bytes", data.peek().len());
         let matches = self.router.route(&request);
         for route in matches {
             // Retrieve and set the requests parameters.
@@ -180,9 +180,9 @@ impl Rocket {
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| e.is_default()) {
-                let msg = format!("warning: overrides {} catcher!", c.code);
-                warn!("{} ({})", c, Yellow.paint(msg.as_str()));
+            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
+                let msg = "(warning: duplicate catcher!)";
+                info_!("{} {}", c, Yellow.paint(msg));
             } else {
                 info_!("{}", c);
             }

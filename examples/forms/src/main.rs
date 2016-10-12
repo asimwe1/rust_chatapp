@@ -5,37 +5,38 @@ extern crate rocket;
 
 mod files;
 
+use rocket::request::Form;
 use rocket::response::Redirect;
 
 #[derive(FromForm)]
 struct UserLogin<'r> {
     username: &'r str,
     password: &'r str,
-    age: Result<isize, &'r str>,
+    age: Result<usize, &'r str>,
 }
 
-#[post("/login", form = "<user>")]
-fn login(user: UserLogin) -> Result<Redirect, String> {
-    if user.age.is_err() {
-        let input = user.age.unwrap_err();
-        return Err(format!("'{}' is not a valid age integer.", input));
-    }
+#[post("/login", data = "<user_form>")]
+fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
+    let user = user_form.get();
+    match user.age {
+        Ok(age) if age < 21 => return Err(format!("Sorry, {} is too young!", age)),
+        Ok(age) if age > 120 => return Err(format!("Are you sure you're {}?", age)),
+        Err(e) => return Err(format!("'{}' is not a valid integer.", e)),
+        Ok(_) => { /* Move along, adult. */ }
+    };
 
-    let age = user.age.unwrap();
-    if age < 20 {
-        return Err(format!("Sorry, {} is too young!", age));
-    }
-
-    match user.username {
-        "Sergio" => match user.password {
+    if user.username == "Sergio" {
+        match user.password {
             "password" => Ok(Redirect::other("/user/Sergio")),
             _ => Err("Wrong password!".to_string())
-        },
-        _ => Err(format!("Unrecognized user, '{}'.", user.username))
+        }
+    } else {
+        Err(format!("Unrecognized user, '{}'.", user.username))
     }
 }
 
-#[post("/user/<username>")]
+
+#[get("/user/<username>")]
 fn user_page(username: &str) -> String {
     format!("This is {}'s page.", username)
 }

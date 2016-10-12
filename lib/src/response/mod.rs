@@ -44,7 +44,7 @@ impl<'a> Response<'a> {
 
     #[inline(always)]
     pub fn failed(code: StatusCode) -> Response<'static> {
-        Response::complete(Failure::new(code))
+        Response::complete(Failure(code))
     }
 
     #[inline(always)]

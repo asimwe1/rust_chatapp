@@ -11,12 +11,13 @@ extern crate serde_json;
 mod static_files;
 mod task;
 
+use rocket::request::Form;
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::Template;
 use task::Task;
 
 #[derive(Debug, Serialize)]
-struct Context<'a, 'b>{msg: Option<(&'a str, &'b str)>, tasks: Vec<Task>}
+struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
 
 impl<'a, 'b> Context<'a, 'b> {
     pub fn err(msg: &'a str) -> Context<'static, 'a> {
@@ -28,14 +29,15 @@ impl<'a, 'b> Context<'a, 'b> {
     }
 }
 
-#[post("/", form = "<todo>")]
-fn new(todo: Task) -> Result<Flash<Redirect>, Template> {
+#[post("/", data = "<todo_form>")]
+fn new(todo_form: Form<Task>) -> Flash<Redirect> {
+    let todo = todo_form.into_inner();
     if todo.description.is_empty() {
-        Err(Template::render("index", &Context::err("Description cannot be empty.")))
+        Flash::error(Redirect::to("/"), "Description cannot be empty.")
     } else if todo.insert() {
-        Ok(Flash::success(Redirect::to("/"), "Todo successfully added."))
+        Flash::success(Redirect::to("/"), "Todo successfully added.")
     } else {
-        Err(Template::render("index", &Context::err("Whoops! The server failed.")))
+        Flash::error(Redirect::to("/"), "Whoops! The server failed.")
     }
 }
 

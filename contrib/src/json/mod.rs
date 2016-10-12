@@ -2,39 +2,39 @@ extern crate serde;
 extern crate serde_json;
 
 use std::ops::{Deref, DerefMut};
+use std::io::Read;
 
-use rocket::request::{Request, FromRequest};
+use rocket::request::{Request, Data, FromData, DataOutcome};
 use rocket::response::{Responder, Outcome, ResponseOutcome, data};
 use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;
 
 use self::serde::{Serialize, Deserialize};
-use self::serde_json::Error as JSONError;
+use self::serde_json::error::Error as SerdeError;
 
-/// The JSON type, which implements both `FromRequest` and `Responder`. This
-/// type allows you to trivially consume and respond with JSON in your Rocket
-/// application.
+/// The JSON type, which implements `FromData` and `Responder`. This type allows
+/// you to trivially consume and respond with JSON in your Rocket application.
 ///
-/// If you're receiving JSON data, simple add a `JSON<T>` type to your function
-/// signature where `T` is some type you'd like to parse from JSON. `T` must
-/// implement `Deserialize` from [Serde](https://github.com/serde-rs/json). The
-/// data is parsed from the HTTP request body.
+/// If you're receiving JSON data, simple add a `data` parameter to your route
+/// arguments and ensure the type o the parameter is a `JSON<T>`, where `T` is
+/// some type you'd like to parse from JSON. `T` must implement `Deserialize`
+/// from [Serde](https://github.com/serde-rs/json). The data is parsed from the
+/// HTTP request body.
 ///
 /// ```rust,ignore
-/// #[post("/users/", format = "application/json")]
+/// #[post("/users/", format = "application/json", data = "<user>")]
 /// fn new_user(user: JSON<User>) {
 ///     ...
 /// }
 /// ```
 /// You don't _need_ to use `format = "application/json"`, but it _may_ be what
 /// you want. Using `format = application/json` means that any request that
-/// doesn't specify "application/json" as its first `Accept:` header parameter
-/// will not be routed to this handler.
+/// doesn't specify "application/json" as its first `Content-Type:` header
+/// parameter will not be routed to this handler.
 ///
 /// If you're responding with JSON data, return a `JSON<T>` type, where `T`
-/// implements implements `Serialize` from
-/// [Serde](https://github.com/serde-rs/json). The content type is set to
-/// `application/json` automatically.
+/// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
+/// content type of the response is set to `application/json` automatically.
 ///
 /// ```rust,ignore
 /// #[get("/users/<id>")]
@@ -63,10 +63,21 @@ impl<T> JSON<T> {
     }
 }
 
-impl<'r, T: Deserialize> FromRequest<'r> for JSON<T> {
-    type Error = JSONError;
-    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
-        Ok(JSON(serde_json::from_slice(request.data.as_slice())?))
+/// Maximum size of JSON is 1MB.
+/// TODO: Determine this size from some configuration parameter.
+const MAX_SIZE: u64 = 1048576;
+
+impl<T: Deserialize> FromData for JSON<T> {
+    type Error = SerdeError;
+
+    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, SerdeError> {
+        if !request.content_type().is_json() {
+            error_!("Content-Type is not JSON.");
+            return DataOutcome::Forward(data);
+        }
+
+        let reader = data.open().take(MAX_SIZE);
+        DataOutcome::from(serde_json::from_reader(reader).map(|val| JSON(val)))
     }
 }
 

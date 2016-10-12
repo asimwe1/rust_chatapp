@@ -25,8 +25,4 @@ serde_json = { version = "^0.8", optional = true }
 handlebars = { version = "^0.21", optional = true, features = ["serde_type"] }
 glob = { version = "^0.2", optional = true }
 lazy_static = { version = "^0.2", optional = true }
-
-# Tera dependency
-[dependencies.tera]
-git = "https://github.com/SergioBenitez/tera"
-optional = true
+tera = { version = "^0.3", optional = true }

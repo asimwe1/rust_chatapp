@@ -18,10 +18,10 @@ function build_and_test() {
 
   pushd ${dir}
   echo ":: Building '${PWD}'..."
-  RUST_BACKTRACE=1 cargo build
+  RUST_BACKTRACE=1 cargo build --all-features
 
   echo ":: Running unit tests in '${PWD}'..."
-  RUST_BACKTRACE=1 cargo test
+  RUST_BACKTRACE=1 cargo test --all-features
   popd
 }
 

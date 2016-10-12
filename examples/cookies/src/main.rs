@@ -8,6 +8,7 @@ extern crate rocket;
 
 use std::collections::HashMap;
 
+use rocket::request::Form;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, Cookies};
 use rocket_contrib::Template;
@@ -17,9 +18,9 @@ struct Message {
     message: String
 }
 
-#[post("/submit", form = "<message>")]
-fn submit(cookies: &Cookies, message: Message) -> Redirect {
-    cookies.add(Cookie::new("message".into(), message.message));
+#[post("/submit", data = "<message>")]
+fn submit(cookies: &Cookies, message: Form<Message>) -> Redirect {
+    cookies.add(Cookie::new("message".into(), message.into_inner().message));
     Redirect::to("/")
 }
 
