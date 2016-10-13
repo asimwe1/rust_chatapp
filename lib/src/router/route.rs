@@ -138,6 +138,6 @@ impl Collider<Request> for Route {
     fn collides_with(&self, req: &Request) -> bool {
         self.method == req.method
             && req.uri().collides_with(&self.path.as_uri())
-            && req.accepts().collides_with(&self.content_type)
+            && req.content_type().collides_with(&self.content_type)
     }
 }

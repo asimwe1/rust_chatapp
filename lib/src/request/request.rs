@@ -220,6 +220,11 @@ impl fmt::Display for Request {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))
+        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
+        if self.method.supports_payload() && !self.content_type().is_any() {
+            write!(f, " {}", Yellow.paint(self.content_type()))?;
+        }
+
+        Ok(())
     }
 }
