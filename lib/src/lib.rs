@@ -1,7 +1,6 @@
 #![feature(question_mark)]
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
-#![feature(associated_type_defaults)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -31,9 +30,9 @@
 //! ## Usage
 //!
 //! The sanctioned way to use Rocket is via the code generation plugin. This
-//! makes Rocket easier to use and allows a somewhat stable API as Rust matures.
-//! To use Rocket in your Cargo-based project, add the following to
-//! `Cargo.toml`:
+//! makes Rocket easier to use and allows a somewhat stable API as Rocket
+//! matures. To use Rocket with the code generation plugin in your Cargo-based
+//! project, add the following to `Cargo.toml`:
 //!
 //! ```rust,ignore
 //! [dependencies]
@@ -54,7 +53,7 @@
 //! ```
 //!
 //! See the [guide](https://guide.rocket.rs) for more information on how to
-//! write Rocket application.
+//! write Rocket applications.
 //!
 //! ## Configuration
 //!
@@ -65,7 +64,6 @@
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
-// extern crate mime;
 extern crate toml;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;

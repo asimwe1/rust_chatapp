@@ -13,35 +13,35 @@ fn forward(_req: &Request, data: Data) -> Response<'static> {
 }
 
 fn hi(_req: &Request, _: Data) -> Response<'static> {
-    Response::complete("Hello!")
+    Response::success("Hello!")
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Response<'a> {
-    Response::complete(req.get_param(0).unwrap_or("unnamed"))
+    Response::success(req.get_param(0).unwrap_or("unnamed"))
 }
 
 fn echo_url<'a>(req: &'a Request, _: Data) -> Response<'a> {
     let param = req.uri().as_str().split_at(6).1;
-    Response::complete(String::from_param(param))
+    Response::success(String::from_param(param))
 }
 
 fn upload(req: &Request, data: Data) -> Response {
     if !req.content_type().is_text() {
         println!("    => Content-Type of upload must be data. Ignoring.");
-        return Response::failed(StatusCode::BadRequest);
+        return Response::failure(StatusCode::BadRequest);
     }
 
     let file = File::create("/tmp/upload.txt");
     if let Ok(mut file) = file {
         if let Ok(n) = io::copy(&mut data.open(), &mut file) {
-            return Response::complete(format!("OK: {} bytes uploaded.", n));
+            return Response::success(format!("OK: {} bytes uploaded.", n));
         }
 
         println!("    => Failed copying.");
-        Response::failed(StatusCode::InternalServerError)
+        Response::failure(StatusCode::InternalServerError)
     } else {
         println!("    => Couldn't open file: {:?}", file.unwrap_err());
-        Response::failed(StatusCode::InternalServerError)
+        Response::failure(StatusCode::InternalServerError)
     }
 }
 

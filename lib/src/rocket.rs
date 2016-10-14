@@ -9,7 +9,6 @@ use term_painter::ToStyle;
 use config;
 use logger;
 use request::{Request, Data, FormItems};
-use response::Response;
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
@@ -86,8 +85,11 @@ impl Rocket {
             // to be forwarded. If it does, continue the loop to try again.
             info_!("{} {}", White.paint("Response:"), response);
             let mut responder = match response {
-                Response::Complete(responder) => responder,
-                Response::Forward(unused_data) => {
+                Outcome::Success(responder) => responder,
+                Outcome::Failure(status_code) => {
+                    return self.handle_error(status_code, &request, res);
+                }
+                Outcome::Forward(unused_data) => {
                     data = unused_data;
                     continue;
                 }
@@ -104,9 +106,9 @@ impl Rocket {
             info_!("{} {}", White.paint("Outcome:"), outcome);
 
             // Check if the responder wants to forward to a catcher.
-            match outcome {
-                Outcome::Forward((c, r)) => return self.handle_error(c, &request, r),
-                Outcome::Success | Outcome::Failure => return,
+            match outcome.forwarded() {
+                Some((c, r)) => return self.handle_error(c, &request, r),
+                None => return
             };
         }
 
@@ -149,7 +151,7 @@ impl Rocket {
         });
 
         if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
-            if responder.respond(response) != Outcome::Success {
+            if !responder.respond(response).is_success() {
                 error_!("Catcher outcome was unsuccessul; aborting response.");
             } else {
                 info_!("Responded with catcher.");
@@ -160,7 +162,7 @@ impl Rocket {
             let catcher = self.default_catchers.get(&code.to_u16())
                 .unwrap_or(self.default_catchers.get(&500).expect("500 default"));
             let responder = catcher.handle(Error::Internal, req).responder();
-            responder.unwrap().respond(response).expect_success()
+            responder.unwrap().respond(response).unwrap()
         }
     }
 

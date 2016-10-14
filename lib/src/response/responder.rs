@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::fs::File;
 use std::fmt;
 
-use response::{Outcome, ResponseOutcome};
+use response::ResponseOutcome;
 use http::mime::{Mime, TopLevel, SubLevel};
 use http::hyper::{header, FreshHyperResponse, StatusCode};
 
@@ -21,7 +21,7 @@ impl<'a> Responder for &'a str {
             res.headers_mut().set(header::ContentType(mime));
         }
 
-        Outcome::of(res.send(self.as_bytes()))
+        ResponseOutcome::of(res.send(self.as_bytes()))
     }
 }
 
@@ -32,7 +32,7 @@ impl Responder for String {
             res.headers_mut().set(header::ContentType(mime));
         }
 
-        Outcome::of(res.send(self.as_bytes()))
+        ResponseOutcome::of(res.send(self.as_bytes()))
     }
 }
 
@@ -42,18 +42,18 @@ impl Responder for File {
             Ok(md) => md.len(),
             Err(e) => {
                 error_!("Failed to read file metadata: {:?}", e);
-                return Outcome::Forward((StatusCode::InternalServerError, res));
+                return ResponseOutcome::forward(StatusCode::InternalServerError, res);
             }
         };
 
         let mut v = Vec::new();
         if let Err(e) = self.read_to_end(&mut v) {
             error_!("Failed to read file: {:?}", e);
-            return Outcome::Forward((StatusCode::InternalServerError, res));
+            return ResponseOutcome::forward(StatusCode::InternalServerError, res);
         }
 
         res.headers_mut().set(header::ContentLength(size));
-        Outcome::of(res.start().and_then(|mut stream| stream.write_all(&v)))
+        ResponseOutcome::of(res.start().and_then(|mut stream| stream.write_all(&v)))
     }
 }
 
@@ -63,7 +63,7 @@ impl<T: Responder> Responder for Option<T> {
             val.respond(res)
         } else {
             warn_!("Response was `None`.");
-            Outcome::Forward((StatusCode::NotFound, res))
+            ResponseOutcome::forward(StatusCode::NotFound, res)
         }
     }
 }
@@ -75,7 +75,7 @@ impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
             Ok(ref mut val) => val.respond(res),
             Err(ref e) => {
                 error_!("{:?}", e);
-                Outcome::Forward((StatusCode::InternalServerError, res))
+                ResponseOutcome::forward(StatusCode::InternalServerError, res)
             }
         }
     }

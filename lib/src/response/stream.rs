@@ -1,6 +1,6 @@
 use std::io::{Read, Write, ErrorKind};
 
-use response::{Responder, Outcome, ResponseOutcome};
+use response::{Responder, ResponseOutcome};
 use http::hyper::FreshHyperResponse;
 
 // TODO: Support custom chunk sizes.
@@ -31,7 +31,7 @@ impl<T: Read> Responder for Stream<T> {
             Ok(s) => s,
             Err(e) => {
                 error_!("Failed opening response stream: {:?}", e);
-                return Outcome::Failure;
+                return ResponseOutcome::failure();
             }
         };
 
@@ -46,22 +46,22 @@ impl<T: Read> Responder for Stream<T> {
                     Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
                     Err(ref e) => {
                         error_!("Error streaming response: {:?}", e);
-                        return Outcome::Failure;
+                        return ResponseOutcome::failure();
                     }
                 }
             }
 
             if let Err(e) = stream.write_all(&buffer[..read]) {
                 error_!("Stream write_all() failed: {:?}", e);
-                return Outcome::Failure;
+                return ResponseOutcome::failure();
             }
         }
 
         if let Err(e) = stream.end() {
             error_!("Stream end() failed: {:?}", e);
-            return Outcome::Failure;
+            return ResponseOutcome::failure();
         }
 
-        Outcome::Success
+        ResponseOutcome::success()
     }
 }

@@ -105,12 +105,11 @@ impl RouteGenerateExt for RouteParams {
         Some(quote_stmt!(ecx,
             let $name: $ty =
                 match ::rocket::request::FromData::from_data(&_req, _data) {
-                    ::rocket::request::DataOutcome::Success(d) => d,
-                    ::rocket::request::DataOutcome::Forward(d) =>
+                    ::rocket::outcome::Outcome::Success(d) => d,
+                    ::rocket::outcome::Outcome::Forward(d) =>
                         return ::rocket::Response::forward(d),
-                    ::rocket::request::DataOutcome::Failure(_) => {
-                        let code = ::rocket::http::StatusCode::BadRequest;
-                        return ::rocket::Response::failed(code);
+                    ::rocket::outcome::Outcome::Failure((code, _)) => {
+                        return ::rocket::Response::failure(code);
                     }
                 };
         ).expect("data statement"))
@@ -181,9 +180,13 @@ impl RouteGenerateExt for RouteParams {
             let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match
-                <$ty as ::rocket::request::FromRequest>::from_request(&_req) {
-                    Ok(v) => v,
-                    Err(_e) => return ::rocket::Response::forward(_data)
+                        ::rocket::request::FromRequest::from_request(&_req) {
+                    ::rocket::outcome::Outcome::Success(v) => v,
+                    ::rocket::outcome::Outcome::Forward(_) =>
+                        return ::rocket::Response::forward(_data),
+                    ::rocket::outcome::Outcome::Failure((code, _)) => {
+                        return ::rocket::Response::failure(code)
+                    },
                 };
             ).expect("undeclared param parsing statement"));
         }
@@ -240,7 +243,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
              $query_statement
              $data_statement
              let result = $user_fn_name($fn_arguments);
-             ::rocket::Response::complete(result)
+             ::rocket::Response::success(result)
          }
     ).unwrap());
 

@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use rocket::Rocket;
-use rocket::response::{Content, Outcome, ResponseOutcome, Responder};
+use rocket::response::{Content, ResponseOutcome, Responder};
 use rocket::http::hyper::FreshHyperResponse;
 use rocket::http::{ContentType, StatusCode};
 
@@ -155,7 +155,7 @@ impl Responder for Template {
 
         match self.0 {
             Some(ref render) => Content(content_type, render.as_str()).respond(res),
-            None => Outcome::Forward((StatusCode::InternalServerError, res)),
+            None => ResponseOutcome::forward(StatusCode::InternalServerError, res),
         }
     }
 }

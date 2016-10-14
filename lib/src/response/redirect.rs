@@ -1,4 +1,4 @@
-use response::{ResponseOutcome, Outcome, Responder};
+use response::{ResponseOutcome, Responder};
 use http::hyper::{header, FreshHyperResponse, StatusCode};
 
 #[derive(Debug)]
@@ -31,6 +31,6 @@ impl<'a> Responder for Redirect {
         res.headers_mut().set(header::ContentLength(0));
         res.headers_mut().set(header::Location(self.1.clone()));
         *(res.status_mut()) = self.0;
-        Outcome::of(res.send(b""))
+        ResponseOutcome::of(res.send(b""))
     }
 }

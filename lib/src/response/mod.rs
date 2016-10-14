@@ -18,56 +18,63 @@ pub use self::data::Content;
 pub use self::failure::Failure;
 pub use outcome::Outcome;
 
-use std::fmt;
 use request::Data;
 use http::hyper::{StatusCode, FreshHyperResponse};
-use term_painter::Color::*;
-use term_painter::ToStyle;
 
-pub type ResponseOutcome<'a> = Outcome<(StatusCode, FreshHyperResponse<'a>)>;
+pub type ResponseOutcome<'a> = Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)>;
 
-pub enum Response<'a> {
-    Forward(Data),
-    Complete(Box<Responder + 'a>)
+impl<'a> ResponseOutcome<'a> {
+    #[inline(always)]
+    pub fn of<A, B>(result: Result<A, B>) -> Self {
+        match result {
+            Ok(_) => Outcome::Success(()),
+            Err(_) => Outcome::Failure(())
+        }
+    }
+
+    #[inline(always)]
+    pub fn success() -> ResponseOutcome<'a> {
+        Outcome::Success(())
+    }
+
+    #[inline(always)]
+    pub fn failure() -> ResponseOutcome<'a> {
+        Outcome::Failure(())
+    }
+
+    #[inline(always)]
+    pub fn forward(s: StatusCode, r: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
+        Outcome::Forward((s, r))
+    }
 }
+
+pub type Response<'a> = Outcome<Box<Responder + 'a>, StatusCode, Data>;
 
 impl<'a> Response<'a> {
     #[inline(always)]
-    pub fn complete<T: Responder + 'a>(body: T) -> Response<'a> {
-        Response::Complete(Box::new(body))
+    pub fn success<T: Responder + 'a>(responder: T) -> Response<'a> {
+        Outcome::Success(Box::new(responder))
+    }
+
+    #[inline(always)]
+    pub fn failure(code: StatusCode) -> Response<'static> {
+        Outcome::Failure(code)
     }
 
     #[inline(always)]
     pub fn forward(data: Data) -> Response<'static> {
-        Response::Forward(data)
-    }
-
-    #[inline(always)]
-    pub fn failed(code: StatusCode) -> Response<'static> {
-        Response::complete(Failure(code))
+        Outcome::Forward(data)
     }
 
     #[inline(always)]
     pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T) -> Response<'a> {
         let status_code = StatusCode::from_u16(status);
-        Response::complete(StatusResponse::new(status_code, body))
+        Response::success(StatusResponse::new(status_code, body))
     }
 
     #[doc(hidden)]
     #[inline(always)]
     pub fn responder(self) -> Option<Box<Responder + 'a>> {
-        match self {
-            Response::Complete(responder) => Some(responder),
-            _ => None
-        }
-    }
-}
-
-impl<'a> fmt::Display for Response<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Response::Complete(..) => write!(f, "{}", Green.paint("Complete")),
-            Response::Forward(..) => write!(f, "{}", Yellow.paint("Forwarding")),
-        }
+        self.succeeded()
     }
 }

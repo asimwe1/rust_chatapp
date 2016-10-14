@@ -155,7 +155,9 @@ impl Drop for Data {
 }
 
 impl FromData for Data {
+    type Error = ();
+
     fn from_data(_: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
-        DataOutcome::Success(data)
+        DataOutcome::success(data)
     }
 }

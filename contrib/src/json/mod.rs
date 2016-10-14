@@ -5,7 +5,7 @@ use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
 use rocket::request::{Request, Data, FromData, DataOutcome};
-use rocket::response::{Responder, Outcome, ResponseOutcome, data};
+use rocket::response::{Responder, ResponseOutcome, data};
 use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;
 
@@ -73,11 +73,11 @@ impl<T: Deserialize> FromData for JSON<T> {
     fn from_data(request: &Request, data: Data) -> DataOutcome<Self, SerdeError> {
         if !request.content_type().is_json() {
             error_!("Content-Type is not JSON.");
-            return DataOutcome::Forward(data);
+            return DataOutcome::forward(data);
         }
 
         let reader = data.open().take(MAX_SIZE);
-        DataOutcome::from(serde_json::from_reader(reader).map(|val| JSON(val)))
+        DataOutcome::of(serde_json::from_reader(reader).map(|val| JSON(val)))
     }
 }
 
@@ -87,7 +87,7 @@ impl<T: Serialize> Responder for JSON<T> {
             Ok(json_string) => data::JSON(json_string).respond(res),
             Err(e) => {
                 error_!("JSON failed to serialize: {:?}", e);
-                Outcome::Forward((StatusCode::BadRequest, res))
+                ResponseOutcome::forward(StatusCode::BadRequest, res)
             }
         }
     }

@@ -9,7 +9,7 @@
 //! ```
 //!
 //! Form parameter types must implement the [FromForm](trait.FromForm.html)
-//! trait, which is automatically derivable. Automatically deriving `FromForm`
+//! trait, which is automaForwarp derivable. Automatically deriving `FromForm`
 //! for a structure requires that all of its fields implement
 //! [FromFormValue](trait.FormFormValue.html). See the
 //! [codegen](/rocket_codegen/) documentation or the [forms guide](/guide/forms)
@@ -27,6 +27,7 @@ use std::marker::PhantomData;
 use std::fmt::{self, Debug};
 use std::io::Read;
 
+use http::StatusCode;
 use request::{Request, FromData, Data, DataOutcome};
 
 // This works, and it's safe, but it sucks to have the lifetime appear twice.
@@ -103,20 +104,20 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
     fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
         if !request.content_type().is_form() {
             warn_!("Form data does not have form content type.");
-            return DataOutcome::Forward(data);
+            return DataOutcome::forward(data);
         }
 
         let mut form_string = String::with_capacity(4096);
         let mut stream = data.open().take(32768);
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
-            DataOutcome::Failure(None)
+            DataOutcome::failure(StatusCode::InternalServerError, None)
         } else {
             match Form::new(form_string) {
-                Ok(form) => DataOutcome::Success(form),
+                Ok(form) => DataOutcome::success(form),
                 Err((form_string, e)) => {
                     error_!("Failed to parse value from form: {:?}", e);
-                    DataOutcome::Failure(Some(form_string))
+                    DataOutcome::failure(StatusCode::BadRequest, Some(form_string))
                 }
             }
         }

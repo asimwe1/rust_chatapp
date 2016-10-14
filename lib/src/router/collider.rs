@@ -60,7 +60,7 @@ mod tests {
     type SimpleRoute = (Method, &'static str);
 
     fn dummy_handler(_req: &Request, _: Data) -> Response<'static> {
-        Response::complete("hi")
+        Response::success("hi")
     }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {

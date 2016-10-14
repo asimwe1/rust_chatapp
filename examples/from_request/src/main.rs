@@ -4,7 +4,7 @@
 extern crate rocket;
 
 use std::fmt;
-use rocket::request::{Request, FromRequest};
+use rocket::request::{Request, FromRequest, RequestOutcome};
 
 #[derive(Debug)]
 struct HeaderCount(usize);
@@ -17,8 +17,8 @@ impl fmt::Display for HeaderCount {
 
 impl<'r> FromRequest<'r> for HeaderCount {
     type Error = ();
-    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
-        Ok(HeaderCount(request.headers().len()))
+    fn from_request(request: &'r Request) -> RequestOutcome<Self, Self::Error> {
+        RequestOutcome::success(HeaderCount(request.headers().len()))
     }
 }
 

@@ -1,7 +1,7 @@
 use std::convert::AsRef;
 
 use response::{ResponseOutcome, Responder};
-use request::{Request, FromRequest};
+use request::{Request, FromRequest, RequestOutcome};
 use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
 
 const FLASH_COOKIE_NAME: &'static str = "_flash";
@@ -70,18 +70,12 @@ impl Flash<()> {
 
 // TODO: Using Flash<()> is ugly. Either create a type FlashMessage = Flash<()>
 // or create a Flash under request that does this.
-// TODO: Consider not removing the 'flash' cookie until after this thing is
-// dropped. This is because, at the moment, if Flash is including as a
-// from_request param, and some other param fails, then the flash message will
-// be dropped needlessly. This may or may not be the intended behavior.
-// Alternatively, provide a guarantee about the order that from_request params
-// will be evaluated and recommend that Flash is last.
 impl<'r> FromRequest<'r> for Flash<()> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Result<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> RequestOutcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
-        request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+        let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             // Clear the flash message.
             trace_!("Flash: retrieving message: {:?}", cookie);
             request.cookies().remove(FLASH_COOKIE_NAME);
@@ -96,6 +90,8 @@ impl<'r> FromRequest<'r> for Flash<()> {
             let name_len: usize = len_str.parse().map_err(|_| ())?;
             let (name, msg) = (&rest[..name_len], &rest[name_len..]);
             Ok(Flash::named(name, msg))
-        })
+        });
+
+        RequestOutcome::of(r)
     }
 }
