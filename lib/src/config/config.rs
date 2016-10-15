@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
+use std::path::Path;
 
-use super::Environment::*;
-use super::Environment;
+use config::Environment::*;
+use config::{self, Environment, ConfigError};
 
 use logger::LoggingLevel;
 use toml::Value;
@@ -13,28 +14,28 @@ pub struct Config {
     pub port: usize,
     pub log_level: LoggingLevel,
     pub session_key: Option<String>,
-    pub extra: HashMap<String, Value>,
+    pub env: Environment,
+    extra: HashMap<String, Value>,
+    filename: String,
 }
 
 macro_rules! parse {
-    ($val:expr, as_str) => (
-        match $val.as_str() {
-            Some(v) => v,
-            None => return Err("a string")
-        }
-    );
-
-    ($val:expr, as_integer) => (
-        match $val.as_integer() {
-            Some(v) => v,
-            None => return Err("an integer")
-        }
+    ($conf:expr, $name:expr, $val:expr, $method:ident, $expect: expr) => (
+        $val.$method().ok_or_else(|| {
+            $conf.bad_type($name, $val, $expect)
+        })
     );
 }
 
 impl Config {
-    pub fn default_for(env: Environment) -> Config {
-        match env {
+    pub fn default_for(env: Environment, filename: &str) -> config::Result<Config> {
+        let file_path = Path::new(filename);
+        if file_path.parent().is_none() {
+            return Err(ConfigError::BadFilePath(filename.to_string(),
+                "Configuration files must be rooted in a directory."));
+        }
+
+        Ok(match env {
             Development => {
                 Config {
                     address: "localhost".to_string(),
@@ -42,6 +43,8 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     session_key: None,
                     extra: HashMap::new(),
+                    env: env,
+                    filename: filename.to_string(),
                 }
             }
             Staging => {
@@ -51,6 +54,8 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     session_key: None,
                     extra: HashMap::new(),
+                    env: env,
+                    filename: filename.to_string(),
                 }
             }
             Production => {
@@ -60,44 +65,118 @@ impl Config {
                     log_level: LoggingLevel::Critical,
                     session_key: None,
                     extra: HashMap::new(),
+                    env: env,
+                    filename: filename.to_string(),
                 }
             }
-        }
+        })
     }
 
-    pub fn set(&mut self, name: &str, value: &Value) -> Result<(), &'static str> {
+    #[inline(always)]
+    fn bad_type(&self, name: &str, val: &Value, expect: &'static str) -> ConfigError {
+        let id = format!("{}.{}", self.env, name);
+        ConfigError::BadType(id, expect, val.type_str(), self.filename.clone())
+    }
+
+    pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
-            let address_str = parse!(value, as_str).to_string();
+            let address_str = parse!(self, name, val, as_str, "a string")?;
             if address_str.contains(":") {
-                return Err("an IP address with no port")
+                return Err(self.bad_type(name, val, "an IP address with no port"));
             } else if format!("{}:{}", address_str, 80).to_socket_addrs().is_err() {
-                return Err("a valid IP address")
+                return Err(self.bad_type(name, val, "a valid IP address"));
             }
 
-            self.address = address_str;
+            self.address = address_str.to_string();
         } else if name == "port" {
-            let port = parse!(value, as_integer);
+            let port = parse!(self, name, val, as_integer, "an integer")?;
             if port < 0 {
-                return Err("an unsigned integer");
+                return Err(self.bad_type(name, val, "an unsigned integer"));
             }
 
             self.port = port as usize;
         } else if name == "session_key" {
-            let key = parse!(value, as_str);
+            let key = parse!(self, name, val, as_str, "a string")?;
             if key.len() != 32 {
-                return Err("a 192-bit base64 encoded string")
+                return Err(self.bad_type(name, val, "a 192-bit base64 string"));
             }
 
             self.session_key = Some(key.to_string());
         } else if name == "log" {
-            self.log_level = match parse!(value, as_str).parse() {
+            let level_str = parse!(self, name, val, as_str, "a string")?;
+            self.log_level = match level_str.parse() {
                 Ok(level) => level,
-                Err(_) => return Err("log level ('normal', 'critical', 'debug')"),
+                Err(_) => return Err(self.bad_type(name, val,
+                                "log level ('normal', 'critical', 'debug')"))
             };
         } else {
-            self.extra.insert(name.into(), value.clone());
+            self.extra.insert(name.into(), val.clone());
         }
 
         Ok(())
+    }
+
+    pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
+        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_str, "a string")
+    }
+
+    pub fn get_int<'a>(&'a self, name: &str) -> config::Result<i64> {
+        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_integer, "an integer")
+    }
+
+    pub fn get_bool<'a>(&'a self, name: &str) -> config::Result<bool> {
+        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_bool, "a boolean")
+    }
+
+    pub fn get_float<'a>(&'a self, name: &str) -> config::Result<f64> {
+        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_float, "a float")
+    }
+
+    pub fn root(&self) -> &Path {
+        match Path::new(self.filename.as_str()).parent() {
+            Some(parent) => &parent,
+            None => panic!("root(): filename {} has no parent", self.filename)
+        }
+    }
+
+    #[inline(always)]
+    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a String, &'a Value)> {
+        self.extra.iter()
+    }
+
+    // Builder pattern below, mostly for testing.
+
+    #[inline(always)]
+    pub fn address(mut self, var: String) -> Self {
+        self.address = var;
+        self
+    }
+
+    #[inline(always)]
+    pub fn port(mut self, var: usize) -> Self {
+        self.port = var;
+        self
+    }
+
+    #[inline(always)]
+    pub fn log_level(mut self, var: LoggingLevel) -> Self {
+        self.log_level = var;
+        self
+    }
+
+    #[inline(always)]
+    pub fn session_key(mut self, var: String) -> Self {
+        self.session_key = Some(var);
+        self
+    }
+
+    #[inline(always)]
+    pub fn env(mut self, var: Environment) -> Self {
+        self.env = var;
+        self
     }
 }

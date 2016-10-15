@@ -16,6 +16,8 @@ pub enum ConfigError {
     BadCWD,
     NotFound,
     IOError,
+    /// (path, reason)
+    BadFilePath(String, &'static str),
     /// (environment_name)
     BadEnv(String),
     /// (environment_name, filename)
@@ -35,6 +37,10 @@ impl ConfigError {
             BadCWD => error!("couldn't get current working directory"),
             NotFound => error!("config file was not found"),
             IOError => error!("failed reading the config file: IO error"),
+            BadFilePath(ref path, ref reason) => {
+                error!("configuration file path '{}' is invalid", path);
+                info_!("{}", reason);
+            }
             BadEntry(ref name, ref filename) => {
                 error!("[{}] is not a known configuration environment", name);
                 info_!("in {}", White.paint(filename));
@@ -61,6 +67,14 @@ impl ConfigError {
                     trace_!("'{}' - {}", error_source, White.paint(&error.desc));
                 }
             }
+        }
+    }
+
+    pub fn is_not_found(&self) -> bool {
+        use self::ConfigError::*;
+        match *self {
+            NotFound => true,
+            _ => false
         }
     }
 }

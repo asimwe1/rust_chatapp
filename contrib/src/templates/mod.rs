@@ -16,7 +16,7 @@ use self::glob::glob;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use rocket::Rocket;
+use rocket::config;
 use rocket::response::{Content, ResponseOutcome, Responder};
 use rocket::http::hyper::FreshHyperResponse;
 use rocket::http::{ContentType, StatusCode};
@@ -114,11 +114,22 @@ pub struct TemplateInfo {
     data_type: Option<String>
 }
 
+const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
+
 lazy_static! {
     static ref TEMPLATES: HashMap<String, TemplateInfo> = discover_templates();
-    // FIXME: Ensure template_dir is an absolute path starting at crate root.
-    static ref TEMPLATE_DIR: String =
-        Rocket::config("template_dir").unwrap_or("templates").to_string();
+    static ref TEMPLATE_DIR: String = {
+        config::active().map(|config| {
+            let dir = config.get_str("template_dir").map_err(|e| {
+                if !e.is_not_found() {
+                    e.pretty_print();
+                    warn_!("Using default directory '{}'", DEFAULT_TEMPLATE_DIR);
+                }
+            }).unwrap_or(DEFAULT_TEMPLATE_DIR);
+
+            config.root().join(dir).to_string_lossy().into_owned()
+        }).unwrap_or("templates".to_string())
+    };
 }
 
 impl Template {
@@ -133,6 +144,7 @@ impl Template {
         let template = TEMPLATES.get(name);
         if template.is_none() {
             error_!("Template '{}' does not exist.", name);
+            info_!("Searched in '{}'.", *TEMPLATE_DIR);
             return Template(None, None);
         }
 

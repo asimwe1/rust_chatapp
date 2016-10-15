@@ -154,7 +154,7 @@ impl Rocket {
             if !responder.respond(response).is_success() {
                 error_!("Catcher outcome was unsuccessul; aborting response.");
             } else {
-                info_!("Responded with catcher.");
+                info_!("Responded with {} catcher.", White.paint(code));
             }
         } else {
             error_!("Catcher returned an incomplete response.");
@@ -226,21 +226,23 @@ impl Rocket {
     }
 
     pub fn ignite() -> Rocket {
-        // Note: read_or_default will exit the process under errors.
-        let config = config::read_or_default();
+        // Note: init() will exit the process under config errors.
+        let config = config::init();
 
-        logger::init(config.active().log_level);
-        info!("🔧  Configured for {}.", config.active_env);
+        logger::init(config.log_level);
+        info!("🔧  Configured for {}.", config.env);
         info_!("listening: {}:{}",
-               White.paint(&config.active().address),
-               White.paint(&config.active().port));
-        info_!("logging: {:?}", White.paint(config.active().log_level));
-        info_!("session key: {}",
-               White.paint(config.active().session_key.is_some()));
+               White.paint(&config.address),
+               White.paint(&config.port));
+        info_!("logging: {:?}", White.paint(config.log_level));
+        info_!("session key: {}", White.paint(config.session_key.is_some()));
+        for (name, value) in config.extras() {
+            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+        }
 
         Rocket {
-            address: config.active().address.clone(),
-            port: config.active().port,
+            address: config.address.clone(),
+            port: config.port,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),

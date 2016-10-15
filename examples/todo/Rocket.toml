@@ -1,0 +1,12 @@
+# TODO: Allow a `global` pseudo-environment that overrides all environments.
+# [global]
+# template_dir = "static"
+
+[dev]
+template_dir = "static"
+
+[stage]
+template_dir = "static"
+
+[prod]
+template_dir = "static"

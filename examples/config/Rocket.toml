@@ -5,6 +5,8 @@
 address = "localhost"
 port = 8000
 log = "normal"
+hi = "Hello!"
+is_extra = true
 
 [staging]
 address = "0.0.0.0"

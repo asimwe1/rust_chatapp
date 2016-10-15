@@ -1,6 +1,7 @@
 #![feature(question_mark)]
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
+#![feature(drop_types_in_const)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -73,13 +74,13 @@ pub mod http;
 pub mod request;
 pub mod response;
 pub mod outcome;
+pub mod config;
 
 mod error;
 mod router;
 mod rocket;
 mod codegen;
 mod catcher;
-mod config;
 
 /// Defines the types for request and error handlers.
 #[doc(hidden)]
