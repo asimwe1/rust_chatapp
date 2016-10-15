@@ -1,5 +1,3 @@
-#![feature(question_mark)]
-
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
 //!
