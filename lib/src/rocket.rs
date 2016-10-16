@@ -9,6 +9,7 @@ use term_painter::ToStyle;
 use config;
 use logger;
 use request::{Request, Data, FormItems};
+use response::Responder;
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
@@ -29,49 +30,68 @@ pub struct Rocket {
 #[doc(hidden)]
 impl HyperHandler for Rocket {
     fn handle<'h, 'k>(&self,
-                      req: HyperRequest<'h, 'k>,
+                      hyp_req: HyperRequest<'h, 'k>,
                       mut res: FreshHyperResponse<'h>) {
-        res.headers_mut().set(header::Server("rocket".to_string()));
-        self.dispatch(req, res)
-    }
-}
-
-impl Rocket {
-    fn dispatch<'h, 'k>(&self,
-                        hyp_req: HyperRequest<'h, 'k>,
-                        mut res: FreshHyperResponse<'h>) {
-        // Get a copy of the URI for later use.
-        let uri = hyp_req.uri.to_string();
-
         // Get all of the information from Hyper.
         let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
+
+        // Get a copy of the URI for later use.
+        let uri = h_uri.to_string();
 
         // Try to create a Rocket request from the hyper request info.
         let mut request = match Request::new(h_method, h_headers, h_uri) {
             Ok(req) => req,
             Err(ref reason) => {
                 let mock_request = Request::mock(Method::Get, uri.as_str());
-                debug_!("Bad request: {}", reason);
+                error!("{}: bad request ({}).", mock_request, reason);
                 return self.handle_error(StatusCode::InternalServerError,
                                          &mock_request, res);
             }
         };
 
-        // Retrieve the data from the request.
-        let mut data = match Data::from_hyp(h_body) {
+        // Retrieve the data from the hyper body.
+        let data = match Data::from_hyp(h_body) {
             Ok(data) => data,
             Err(reason) => {
-                debug_!("Bad data in request: {}", reason);
+                error_!("Bad data in request: {}", reason);
                 return self.handle_error(StatusCode::InternalServerError,
                                          &request, res);
             }
         };
 
-        // Preprocess the request.
+        // Set the common response headers and preprocess the request.
+        res.headers_mut().set(header::Server("rocket".to_string()));
         self.preprocess_request(&mut request, &data);
 
+        // Now that we've Rocket-ized everything, actually dispath the request.
         info!("{}:", request);
-        trace_!("Peek size: {} bytes", data.peek().len());
+        let mut responder = match self.dispatch(&request, data) {
+            Ok(responder) => responder,
+            Err(code) => return self.handle_error(code, &request, res)
+        };
+
+        // We have a responder. Update the cookies in the header.
+        let cookie_delta = request.cookies().delta();
+        if cookie_delta.len() > 0 {
+            res.headers_mut().set(HyperSetCookie(cookie_delta));
+        }
+
+        // Actually call the responder.
+        let outcome = responder.respond(res);
+        info_!("{} {}", White.paint("Outcome:"), outcome);
+
+        // Check if the responder wants to forward to a catcher. If it doesn't,
+        // it's a success or failure, so we can't do any more processing.
+        if let Some((code, f_res)) = outcome.forwarded() {
+            return self.handle_error(code, &request, f_res);
+        }
+    }
+}
+
+impl Rocket {
+    fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
+            -> Result<Box<Responder + 'r>, StatusCode> {
+        // Go through the list of matching routes until we fail or succeed.
         let matches = self.router.route(&request);
         for route in matches {
             // Retrieve and set the requests parameters.
@@ -84,36 +104,15 @@ impl Rocket {
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
             info_!("{} {}", White.paint("Response:"), response);
-            let mut responder = match response {
-                Outcome::Success(responder) => responder,
-                Outcome::Failure(status_code) => {
-                    return self.handle_error(status_code, &request, res);
-                }
-                Outcome::Forward(unused_data) => {
-                    data = unused_data;
-                    continue;
-                }
-            };
-
-            // We have a responder. Update the cookies in the header.
-            let cookie_delta = request.cookies().delta();
-            if cookie_delta.len() > 0 {
-                res.headers_mut().set(HyperSetCookie(cookie_delta));
-            }
-
-            // Actually process the response.
-            let outcome = responder.respond(res);
-            info_!("{} {}", White.paint("Outcome:"), outcome);
-
-            // Check if the responder wants to forward to a catcher.
-            match outcome.forwarded() {
-                Some((c, r)) => return self.handle_error(c, &request, r),
-                None => return
+            match response {
+                Outcome::Success(responder) => return Ok(responder),
+                Outcome::Failure(status_code) => return Err(status_code),
+                Outcome::Forward(unused_data) => data = unused_data,
             };
         }
 
         error_!("No matching routes.");
-        self.handle_error(StatusCode::NotFound, &request, res);
+        Err(StatusCode::NotFound)
     }
 
     /// Preprocess the request for Rocket-specific things. At this time, we're
@@ -142,7 +141,6 @@ impl Rocket {
                         code: StatusCode,
                         req: &'r Request,
                         response: FreshHyperResponse) {
-
         // Find the catcher or use the one for internal server errors.
         let catcher = self.catchers.get(&code.to_u16()).unwrap_or_else(|| {
             error_!("No catcher found for {}.", code);
