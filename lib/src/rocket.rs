@@ -91,6 +91,27 @@ impl HyperHandler for Rocket {
 }
 
 impl Rocket {
+    /// Preprocess the request for Rocket-specific things. At this time, we're
+    /// only checking for _method in forms.
+    fn preprocess_request(&self, req: &mut Request, data: &Data) {
+        // Check if this is a form and if the form contains the special _method
+        // field which we use to reinterpret the request's method.
+        let data_len = data.peek().len();
+        let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
+        if req.content_type().is_form() && data_len >= min_len {
+            let form = unsafe {
+                from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
+            };
+
+            let mut form_items = FormItems(form);
+            if let Some(("_method", value)) = form_items.next() {
+                if let Ok(method) = value.parse() {
+                    req.method = method;
+                }
+            }
+        }
+    }
+
     #[doc(hidden)]
     pub fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
             -> Result<Box<Responder + 'r>, StatusCode> {
@@ -117,27 +138,6 @@ impl Rocket {
 
         error_!("No matching routes.");
         Err(StatusCode::NotFound)
-    }
-
-    /// Preprocess the request for Rocket-specific things. At this time, we're
-    /// only checking for _method in forms.
-    fn preprocess_request(&self, req: &mut Request, data: &Data) {
-        // Check if this is a form and if the form contains the special _method
-        // field which we use to reinterpret the request's method.
-        let data_len = data.peek().len();
-        let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
-        if req.content_type().is_form() && data_len >= min_len {
-            let form = unsafe {
-                from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
-            };
-
-            let mut form_items = FormItems(form);
-            if let Some(("_method", value)) = form_items.next() {
-                if let Ok(method) = value.parse() {
-                    req.method = method;
-                }
-            }
-        }
     }
 
     // Call when no route was found. Returns true if there was a response.
@@ -221,14 +221,6 @@ impl Rocket {
               White.bold().paint(&full_addr));
 
         server.handle(self).unwrap();
-    }
-
-    /// Retrieves the configuration parameter named `name` for the current
-    /// environment. Returns Some(value) if the paremeter exists. Otherwise,
-    /// returns None.
-    pub fn config<S: AsRef<str>>(_name: S) -> Option<&'static str> {
-        // TODO: Implement me.
-        None
     }
 
     pub fn ignite() -> Rocket {
