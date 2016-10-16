@@ -16,3 +16,6 @@ branch = "0.9.x"
 
 [dev-dependencies]
 lazy_static = "*"
+
+[features]
+testing = []

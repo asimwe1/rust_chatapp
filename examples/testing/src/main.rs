@@ -14,21 +14,15 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use super::rocket::{Rocket, Request};
-    use super::rocket::http::Method;
-
-    fn run_test<F>(f: F) where F: Fn(Rocket) {
-        let rocket = Rocket::ignite().mount("/", routes![super::hello]);
-        f(rocket);
-    }
+    use super::rocket;
+    use rocket::testing::MockRequest;
+    use rocket::http::Method::*;
 
     #[test]
     fn test_hello() {
-        run_test(|_rocket: Rocket| {
-            let _req = Request::mock(Method::Get, "/");
-            // TODO: Allow something like this:
-            // let result = rocket.route(&req);
-            // assert_eq!(result.as_str(), "Hello, world!")
-        });
+        let rocket = rocket::ignite().mount("/", routes![super::hello]);
+        let req = MockRequest::new(Get, "/");
+        let result = req.dispatch_with(&rocket);
+        assert_eq!(result.unwrap().as_str(), "Hello, world!");
     }
 }

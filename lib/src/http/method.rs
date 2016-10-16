@@ -35,6 +35,12 @@ impl Method {
         }
     }
 
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn to_hyp(&self) -> HyperMethod {
+        self.to_string().as_str().parse().unwrap()
+    }
+
     /// Whether an HTTP request with the given method supports a payload.
     pub fn supports_payload(&self) -> bool {
         match *self {

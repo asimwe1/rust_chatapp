@@ -36,6 +36,13 @@ pub trait FromData: Sized {
     fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error>;
 }
 
+impl FromData for Data {
+    type Error = ();
+    fn from_data(_: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
+        DataOutcome::success(data)
+    }
+}
+
 impl<T: FromData> FromData for Result<T, T::Error> {
     type Error = ();
 

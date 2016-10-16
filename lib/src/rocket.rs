@@ -42,10 +42,10 @@ impl HyperHandler for Rocket {
         let mut request = match Request::new(h_method, h_headers, h_uri) {
             Ok(req) => req,
             Err(ref reason) => {
-                let mock_request = Request::mock(Method::Get, uri.as_str());
-                error!("{}: bad request ({}).", mock_request, reason);
-                return self.handle_error(StatusCode::InternalServerError,
-                                         &mock_request, res);
+                let mock = Request::mock(Method::Get, uri.as_str());
+                error!("{}: bad request ({}).", mock, reason);
+                self.handle_error(StatusCode::InternalServerError, &mock, res);
+                return;
             }
         };
 
@@ -54,8 +54,8 @@ impl HyperHandler for Rocket {
             Ok(data) => data,
             Err(reason) => {
                 error_!("Bad data in request: {}", reason);
-                return self.handle_error(StatusCode::InternalServerError,
-                                         &request, res);
+                self.handle_error(StatusCode::InternalServerError, &request, res);
+                return;
             }
         };
 
@@ -64,10 +64,12 @@ impl HyperHandler for Rocket {
         self.preprocess_request(&mut request, &data);
 
         // Now that we've Rocket-ized everything, actually dispath the request.
-        info!("{}:", request);
         let mut responder = match self.dispatch(&request, data) {
             Ok(responder) => responder,
-            Err(code) => return self.handle_error(code, &request, res)
+            Err(code) => {
+                self.handle_error(code, &request, res);
+                return;
+            }
         };
 
         // We have a responder. Update the cookies in the header.
@@ -83,15 +85,17 @@ impl HyperHandler for Rocket {
         // Check if the responder wants to forward to a catcher. If it doesn't,
         // it's a success or failure, so we can't do any more processing.
         if let Some((code, f_res)) = outcome.forwarded() {
-            return self.handle_error(code, &request, f_res);
+            self.handle_error(code, &request, f_res);
         }
     }
 }
 
 impl Rocket {
-    fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
+    #[doc(hidden)]
+    pub fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
             -> Result<Box<Responder + 'r>, StatusCode> {
         // Go through the list of matching routes until we fail or succeed.
+        info!("{}:", request);
         let matches = self.router.route(&request);
         for route in matches {
             // Retrieve and set the requests parameters.
@@ -136,11 +140,12 @@ impl Rocket {
         }
     }
 
-    // Call when no route was found.
-    fn handle_error<'r>(&self,
+    // Call when no route was found. Returns true if there was a response.
+    #[doc(hidden)]
+    pub fn handle_error<'r>(&self,
                         code: StatusCode,
                         req: &'r Request,
-                        response: FreshHyperResponse) {
+                        response: FreshHyperResponse) -> bool {
         // Find the catcher or use the one for internal server errors.
         let catcher = self.catchers.get(&code.to_u16()).unwrap_or_else(|| {
             error_!("No catcher found for {}.", code);
@@ -151,6 +156,7 @@ impl Rocket {
         if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
             if !responder.respond(response).is_success() {
                 error_!("Catcher outcome was unsuccessul; aborting response.");
+                return false;
             } else {
                 info_!("Responded with {} catcher.", White.paint(code));
             }
@@ -162,6 +168,8 @@ impl Rocket {
             let responder = catcher.handle(Error::Internal, req).responder();
             responder.unwrap().respond(response).unwrap()
         }
+
+        true
     }
 
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
@@ -225,9 +233,11 @@ impl Rocket {
 
     pub fn ignite() -> Rocket {
         // Note: init() will exit the process under config errors.
-        let config = config::init();
+        let (config, initted) = config::init();
+        if initted {
+            logger::init(config.log_level);
+        }
 
-        logger::init(config.log_level);
         info!("🔧  Configured for {}.", config.env);
         info_!("listening: {}:{}",
                White.paint(&config.address),

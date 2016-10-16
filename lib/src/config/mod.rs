@@ -2,6 +2,7 @@ mod error;
 mod environment;
 mod config;
 
+use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
 use std::collections::HashMap;
 use std::io::Read;
@@ -17,6 +18,7 @@ use self::Environment::*;
 use toml::{self, Table};
 use logger::{self, LoggingLevel};
 
+static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
@@ -142,6 +144,9 @@ impl RocketConfig {
     }
 }
 
+/// Returns the active configuration and whether this call initialized the
+/// configuration. The configuration can only be initialized once.
+///
 /// Initializes the global RocketConfig by reading the Rocket config file from
 /// the current directory or any of its parents. Returns the active
 /// configuration, which is determined by the config env variable. If there as a
@@ -152,18 +157,21 @@ impl RocketConfig {
 ///
 /// # Panics
 ///
-/// If there is a problem, prints a nice error message and bails. This function
-/// also panics if it is called more than once.
-///
-/// # Thread-Safety
-///
-/// This function is _not_ thread-safe. It should be called by a single thread.
+/// If there is a problem, prints a nice error message and bails.
 #[doc(hidden)]
-pub fn init() -> &'static Config {
-    if active().is_some() {
-        panic!("Configuration has already been initialized!")
-    }
+pub fn init() -> (&'static Config, bool) {
+    let mut this_init = false;
+    unsafe {
+        INIT.call_once(|| {
+            private_init();
+            this_init = true;
+        });
 
+        (CONFIG.as_ref().unwrap().active(), this_init)
+    }
+}
+
+unsafe fn private_init() {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
         e.pretty_print();
@@ -188,10 +196,7 @@ pub fn init() -> &'static Config {
         RocketConfig::active_default(&filename).unwrap_or_else(|e| bail(e))
     });
 
-    unsafe {
-        CONFIG = Some(config);
-        CONFIG.as_ref().unwrap().active()
-    }
+    CONFIG = Some(config);
 }
 
 /// Retrieve the active configuration, if there is one.

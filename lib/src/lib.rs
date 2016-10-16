@@ -69,6 +69,7 @@ extern crate toml;
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
+#[cfg(any(test, feature = "testing"))] pub mod testing;
 pub mod http;
 pub mod request;
 pub mod response;

@@ -176,11 +176,16 @@ impl Request {
     }
 
     #[doc(hidden)]
-    #[cfg(test)]
     #[inline(always)]
-    pub fn set_content_type(&mut self, ct: ContentType) {
-        let hyper_ct = header::ContentType(ct.into());
-        self.headers.set::<header::ContentType>(hyper_ct)
+    pub fn set_headers(&mut self, h_headers: HyperHeaders) {
+        let cookies = match h_headers.get::<HyperCookie>() {
+            // TODO: Retrieve key from config.
+            Some(cookie) => cookie.to_cookie_jar(&[]),
+            None => Cookies::new(&[]),
+        };
+
+        self.headers = h_headers;
+        self.cookies = cookies;
     }
 
     #[doc(hidden)]
