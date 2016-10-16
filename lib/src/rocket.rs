@@ -235,7 +235,7 @@ impl Rocket {
                White.paint(&config.address),
                White.paint(&config.port));
         info_!("logging: {:?}", White.paint(config.log_level));
-        info_!("session key: {}", White.paint(config.session_key.is_some()));
+        info_!("session key: {}", White.paint(config.take_session_key().is_some()));
         for (name, value) in config.extras() {
             info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
         }

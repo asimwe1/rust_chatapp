@@ -11,8 +11,8 @@ use std::env;
 
 pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;
+pub use self::config::Config;
 use self::Environment::*;
-use self::config::Config;
 
 use toml::{self, Table};
 use logger::{self, LoggingLevel};
@@ -23,7 +23,7 @@ const CONFIG_FILENAME: &'static str = "Rocket.toml";
 
 pub type Result<T> = ::std::result::Result<T, ConfigError>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub struct RocketConfig {
     pub active_env: Environment,
     config: HashMap<Environment, Config>,
@@ -152,14 +152,16 @@ impl RocketConfig {
 ///
 /// # Panics
 ///
-/// If there is a problem, prints a nice error message and bails.
+/// If there is a problem, prints a nice error message and bails. This function
+/// also panics if it is called more than once.
 ///
 /// # Thread-Safety
 ///
 /// This function is _not_ thread-safe. It should be called by a single thread.
+#[doc(hidden)]
 pub fn init() -> &'static Config {
-    if let Some(config) = active() {
-        return config;
+    if active().is_some() {
+        panic!("Configuration has already been initialized!")
     }
 
     let bail = |e: ConfigError| -> ! {
@@ -192,6 +194,7 @@ pub fn init() -> &'static Config {
     }
 }
 
+/// Retrieve the active configuration, if there is one.
 pub fn active() -> Option<&'static Config> {
     unsafe { CONFIG.as_ref().map(|c| c.active()) }
 }
@@ -225,9 +228,9 @@ mod test {
         );
 
         ($env:expr, $rconfig:expr, $econfig:expr) => (
-            match $rconfig.clone() {
-                Ok(config) => assert_eq!(config.get($env), &$econfig),
-                Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
+            match $rconfig {
+                Ok(ref config) => assert_eq!(config.get($env), &$econfig),
+                Err(ref e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
             }
         );
     }
@@ -306,11 +309,12 @@ mod test {
             pi = 3.14
         "#;
 
-        let mut expected = default_config(Development);
-        expected.address = "1.2.3.4".to_string();
-        expected.port = 7810;
-        expected.log_level = LoggingLevel::Critical;
-        expected.session_key = Some("01234567890123456789012345678901".to_string());
+        let mut expected = default_config(Development)
+                .address("1.2.3.4".to_string())
+                .port(7810)
+                .log_level(LoggingLevel::Critical)
+                .session_key("01234567890123456789012345678901".into());
+
         expected.set("template_dir", &Value::String("mine".into())).unwrap();
         expected.set("json", &Value::Boolean(true)).unwrap();
         expected.set("pi", &Value::Float(3.14)).unwrap();

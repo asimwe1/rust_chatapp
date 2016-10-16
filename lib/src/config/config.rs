@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::path::Path;
+use std::cell::RefCell;
+use std::fmt;
 
 use config::Environment::*;
 use config::{self, Environment, ConfigError};
@@ -8,13 +10,13 @@ use config::{self, Environment, ConfigError};
 use logger::LoggingLevel;
 use toml::Value;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq)]
 pub struct Config {
     pub address: String,
     pub port: usize,
     pub log_level: LoggingLevel,
-    pub session_key: Option<String>,
     pub env: Environment,
+    session_key: RefCell<Option<String>>,
     extra: HashMap<String, Value>,
     filename: String,
 }
@@ -41,7 +43,7 @@ impl Config {
                     address: "localhost".to_string(),
                     port: 8000,
                     log_level: LoggingLevel::Normal,
-                    session_key: None,
+                    session_key: RefCell::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -52,7 +54,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     log_level: LoggingLevel::Normal,
-                    session_key: None,
+                    session_key: RefCell::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -63,7 +65,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     log_level: LoggingLevel::Critical,
-                    session_key: None,
+                    session_key: RefCell::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -101,7 +103,7 @@ impl Config {
                 return Err(self.bad_type(name, val, "a 192-bit base64 string"));
             }
 
-            self.session_key = Some(key.to_string());
+            self.session_key = RefCell::new(Some(key.to_string()));
         } else if name == "log" {
             let level_str = parse!(self, name, val, as_str, "a string")?;
             self.log_level = match level_str.parse() {
@@ -114,6 +116,16 @@ impl Config {
         }
 
         Ok(())
+    }
+
+    #[inline(always)]
+    pub fn take_session_key(&self) -> Option<String> {
+        self.session_key.borrow_mut().take()
+    }
+
+    #[inline(always)]
+    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a String, &'a Value)> {
+        self.extra.iter()
     }
 
     pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
@@ -143,11 +155,6 @@ impl Config {
         }
     }
 
-    #[inline(always)]
-    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a String, &'a Value)> {
-        self.extra.iter()
-    }
-
     // Builder pattern below, mostly for testing.
 
     #[inline(always)]
@@ -170,7 +177,7 @@ impl Config {
 
     #[inline(always)]
     pub fn session_key(mut self, var: String) -> Self {
-        self.session_key = Some(var);
+        self.session_key = RefCell::new(Some(var));
         self
     }
 
@@ -178,5 +185,12 @@ impl Config {
     pub fn env(mut self, var: Environment) -> Self {
         self.env = var;
         self
+    }
+}
+
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Config[{}] {{ address: {}, port: {}, log_level: {:?} }}",
+               self.env, self.address, self.port, self.log_level)
     }
 }
