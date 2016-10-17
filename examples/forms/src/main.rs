@@ -4,6 +4,7 @@
 extern crate rocket;
 
 mod files;
+#[cfg(test)] mod tests;
 
 use rocket::request::Form;
 use rocket::response::Redirect;

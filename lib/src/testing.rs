@@ -67,9 +67,7 @@ impl MockRequest {
         match String::from_utf8(response.into_inner()) {
             Ok(string) => {
                 // TODO: Expose the full response (with headers) somewhow.
-                string.find("\r\n\r\n").map(|i| {
-                    string[(i + 4)..].to_string()
-                })
+                string.find("\r\n\r\n").map(|i| string[(i + 4)..].to_string())
             }
             Err(e) => {
                 error_!("Could not create string from response: {:?}", e);
