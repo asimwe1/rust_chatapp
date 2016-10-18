@@ -1,14 +1,19 @@
+//! Borrowed and owned string types for absolute URIs.
+//!
+
 use std::cell::Cell;
 use std::convert::From;
 use std::fmt::{self, Write};
 
 use router::Collider;
 
+// TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {
     uri: &'a str,
     path: &'a str,
     query: Option<&'a str>,
+    fragment: Option<&'a str>,
     segment_count: Cell<Option<usize>>,
 }
 
@@ -16,9 +21,15 @@ impl<'a> URI<'a> {
     pub fn new<T: AsRef<str> + ?Sized>(uri: &'a T) -> URI<'a> {
         let uri = uri.as_ref();
 
-        let (path, query) = match uri.find('?') {
-            Some(index) => (&uri[..index], Some(&uri[(index + 1)..])),
-            None => (uri, None),
+        let qmark = uri.find('?');
+        let hmark = qmark.map(|i| uri[(i + 1)..].find('#').map(|j| j + i + 1))
+            .unwrap_or_else(|| uri.find('#'));
+
+        let (path, query, fragment) = match (qmark, hmark) {
+            (Some(i), Some(j)) => (&uri[..i], Some(&uri[(i+1)..j]), Some(&uri[(j+1)..])),
+            (Some(i), None) => (&uri[..i], Some(&uri[(i+1)..]), None),
+            (None, Some(j)) => (&uri[..j], None, Some(&uri[(j+1)..])),
+            (None, None) => (uri, None, None),
         };
 
         URI {
@@ -26,9 +37,11 @@ impl<'a> URI<'a> {
             uri: uri,
             path: path,
             query: query,
+            fragment: fragment,
         }
     }
 
+    #[inline(always)]
     pub fn segment_count(&self) -> usize {
         self.segment_count.get().unwrap_or_else(|| {
             let count = self.segments().count();
@@ -37,14 +50,22 @@ impl<'a> URI<'a> {
         })
     }
 
+    #[inline(always)]
     pub fn segments(&self) -> Segments<'a> {
         Segments(self.path)
     }
 
+    #[inline(always)]
     pub fn query(&self) -> Option<&'a str> {
         self.query
     }
 
+    #[inline(always)]
+    pub fn fragment(&self) -> Option<&'a str> {
+        self.fragment
+    }
+
+    #[inline(always)]
     pub fn as_str(&self) -> &'a str {
         self.uri
     }
@@ -83,24 +104,29 @@ impl URIBuf {
         })
     }
 
+    #[inline(always)]
     pub fn segments(&self) -> Segments {
         self.as_uri_uncached().segments()
     }
 
+    #[inline(always)]
     fn as_uri_uncached(&self) -> URI {
         URI::new(self.uri.as_str())
     }
 
+    #[inline(always)]
     pub fn as_uri(&self) -> URI {
         let mut uri = URI::new(self.uri.as_str());
         uri.segment_count = self.segment_count.clone();
         uri
     }
 
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         self.uri.as_str()
     }
 
+    #[inline(always)]
     pub fn to_string(&self) -> String {
         self.uri.clone()
     }
@@ -115,6 +141,7 @@ impl fmt::Display for URIBuf {
 }
 
 impl From<String> for URIBuf {
+    #[inline(always)]
     fn from(uri: String) -> URIBuf {
         URIBuf {
             segment_count: Cell::new(None),
@@ -124,6 +151,7 @@ impl From<String> for URIBuf {
 }
 
 impl<'a> From<&'a str> for URIBuf {
+    #[inline(always)]
     fn from(uri: &'a str) -> URIBuf {
         URIBuf {
             segment_count: Cell::new(None),
@@ -134,11 +162,9 @@ impl<'a> From<&'a str> for URIBuf {
 
 impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     fn collides_with(&self, other: &URI<'b>) -> bool {
-        let mut trailing = false;
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
-                trailing = true;
-                break;
+                return true;
             }
 
             if !seg_a.collides_with(seg_b) {
@@ -146,7 +172,7 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
             }
         }
 
-        if !trailing && (self.segment_count() != other.segment_count()) {
+        if self.segment_count() != other.segment_count() {
             return false;
         }
 
@@ -300,5 +326,51 @@ mod tests {
         assert!(!eq_segments("/a/b", &["b", "a"]));
         assert!(!eq_segments("/a/a/b", &["a", "b"]));
         assert!(!eq_segments("///a/", &[]));
+    }
+
+    fn test_query(uri: &str, query: Option<&str>) {
+        let uri = URI::new(uri);
+        assert_eq!(uri.query(), query);
+    }
+
+    fn test_fragment(uri: &str, fragment: Option<&str>) {
+        let uri = URI::new(uri);
+        assert_eq!(uri.fragment(), fragment);
+    }
+
+    #[test]
+    fn query_does_not_exist() {
+        test_query("/test", None);
+        test_query("/a/b/c/d/e", None);
+        test_query("/////", None);
+        test_query("//a///", None);
+    }
+
+    #[test]
+    fn query_exists() {
+        test_query("/test?abc", Some("abc"));
+        test_query("/a/b/c?abc", Some("abc"));
+        test_query("/a/b/c/d/e/f/g/?abc#hijklmnop", Some("abc"));
+        test_query("?123", Some("123"));
+        test_query("?", Some(""));
+        test_query("/?", Some(""));
+        test_query("?#", Some(""));
+        test_query("/?hi", Some("hi"));
+    }
+
+    #[test]
+    fn fragment_exists() {
+        test_fragment("/test#abc", Some("abc"));
+        test_fragment("/#abc", Some("abc"));
+        test_fragment("/a/b/c?123#a", Some("a"));
+        test_fragment("/#a", Some("a"));
+    }
+
+    #[test]
+    fn fragment_does_not_exist() {
+        test_fragment("/testabc", None);
+        test_fragment("/abc", None);
+        test_fragment("/a/b/c?123", None);
+        test_fragment("/a", None);
     }
 }
