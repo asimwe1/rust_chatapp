@@ -45,7 +45,7 @@
 //!
 //! Then, add the following to top of your `main.rs` file:
 //!
-//! ```rust,ignore
+//! ```rust
 //! #![feature(plugin)]
 //! #![plugin(rocket_codegen)]
 //!
@@ -53,11 +53,38 @@
 //! ```
 //!
 //! See the [guide](https://guide.rocket.rs) for more information on how to
-//! write Rocket applications.
+//! write Rocket applications. Here's a simple example to get you started:
+//!
+//! ```rust
+//! #![feature(plugin)]
+//! #![plugin(rocket_codegen)]
+//!
+//! extern crate rocket;
+//!
+//! #[get("/")]
+//! fn hello() -> &'static str {
+//!     "Hello, world!"
+//! }
+//!
+//! fn main() {
+//! # if false { // We don't actually want to launch the server in an example.
+//!     rocket::ignite().mount("/", routes![hello]).launch()
+//! # }
+//! }
+//! ```
 //!
 //! ## Configuration
 //!
-//! Rocket is configured via the `Rocket.toml` file.
+//! Rocket and Rocket libraries are configured via the `Rocket.toml` file. For
+//! more information on how to configure Rocket, see the [configuration
+//! section](/guide/configuration) of the guide as well as the [config](config)
+//! module documentation.
+//!
+//! ## Testing
+//!
+//! Rocket includes a small testing library that can be used to test your Rocket
+//! application. The library's API is unstable. For information on how to test
+//! your Rocket applications, the [testing module](testing) documentation.
 //!
 
 #[macro_use] extern crate log;

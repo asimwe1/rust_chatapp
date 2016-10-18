@@ -3,11 +3,12 @@
 
 use std::cell::Cell;
 use std::convert::From;
-use std::fmt::{self, Write};
+use std::fmt;
 
 use router::Collider;
 
 // TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
+/// Borrowed string type for absolute URIs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {
     uri: &'a str,
@@ -18,6 +19,7 @@ pub struct URI<'a> {
 }
 
 impl<'a> URI<'a> {
+    /// Constructs a new URI from a given string.
     pub fn new<T: AsRef<str> + ?Sized>(uri: &'a T) -> URI<'a> {
         let uri = uri.as_ref();
 
@@ -41,6 +43,31 @@ impl<'a> URI<'a> {
         }
     }
 
+    /// Returns the number of segments in the URI. Empty segments, which are
+    /// invalid according to RFC#3986, are not counted.
+    ///
+    /// The segment count is cached after the first invocation. As a result,
+    /// this function is O(1) after the first invocation, and O(n) before.
+    ///
+    /// ### Examples
+    ///
+    /// A valid URI with only non-empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c");
+    /// assert_eq!(uri.segment_count(), 3);
+    /// ```
+    ///
+    /// A URI with empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b//c/d///e");
+    /// assert_eq!(uri.segment_count(), 5);
+    /// ```
     #[inline(always)]
     pub fn segment_count(&self) -> usize {
         self.segment_count.get().unwrap_or_else(|| {
@@ -50,21 +77,114 @@ impl<'a> URI<'a> {
         })
     }
 
+    /// Returns an iterator over the segments of this URI. Skips empty segments.
+    ///
+    /// ### Examples
+    ///
+    /// A valid URI with only non-empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c?a=true#done");
+    /// for (i, segment) in uri.segments().enumerate() {
+    ///     match i {
+    ///         0 => assert_eq!(segment, "a"),
+    ///         1 => assert_eq!(segment, "b"),
+    ///         2 => assert_eq!(segment, "c"),
+    ///         _ => panic!("only three segments")
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// A URI with empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("///a//b///c////d?#");
+    /// for (i, segment) in uri.segments().enumerate() {
+    ///     match i {
+    ///         0 => assert_eq!(segment, "a"),
+    ///         1 => assert_eq!(segment, "b"),
+    ///         2 => assert_eq!(segment, "c"),
+    ///         3 => assert_eq!(segment, "d"),
+    ///         _ => panic!("only four segments")
+    ///     }
+    /// }
+    /// ```
     #[inline(always)]
     pub fn segments(&self) -> Segments<'a> {
         Segments(self.path)
     }
 
+    /// Returns the query part of this URI without the question mark, if there is
+    /// any.
+    ///
+    /// ### Examples
+    ///
+    /// A URI with a query part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c?alphabet=true");
+    /// assert_eq!(uri.query(), Some("alphabet=true"));
+    /// ```
+    ///
+    /// A URI without the query part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c");
+    /// assert_eq!(uri.query(), None);
+    /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<&'a str> {
         self.query
     }
 
+    /// Returns the fargment part of this URI without the hash mark, if there is
+    /// any.
+    ///
+    /// ### Examples
+    ///
+    /// A URI with a fragment part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a?alphabet=true#end");
+    /// assert_eq!(uri.fragment(), Some("end"));
+    /// ```
+    ///
+    /// A URI without the fragment part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a?query=true");
+    /// assert_eq!(uri.fragment(), None);
+    /// ```
     #[inline(always)]
     pub fn fragment(&self) -> Option<&'a str> {
         self.fragment
     }
 
+    /// Returns the inner string of this URI.
+    ///
+    /// The returned string is in raw form. It contains empty segments. If you'd
+    /// like a string without empty segments, use `to_string` instead.
+    ///
+    /// ### Example
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b///c/d/e//f?name=Mike#end");
+    /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
+    /// ```
     #[inline(always)]
     pub fn as_str(&self) -> &'a str {
         self.uri
@@ -73,13 +193,16 @@ impl<'a> URI<'a> {
 
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut last = '\0';
-        for c in self.uri.chars() {
-            if !(c == '/' && last == '/') {
-                f.write_char(c)?;
-            }
+        for segment in self.segments() {
+            write!(f, "/{}", segment)?;
+        }
 
-            last = c;
+        if let Some(query_str) = self.query {
+            write!(f, "?{}", query_str)?;
+        }
+
+        if let Some(fragment_str) = self.fragment {
+            write!(f, "#{}", fragment_str)?;
         }
 
         Ok(())
@@ -89,46 +212,108 @@ impl<'a> fmt::Display for URI<'a> {
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Owned string type for absolute URIs.
+///
+/// This is the owned analog to [URI](struct.URI.html). It serves simply to hold
+/// the backing String. As a result, most functionality will be achieved through
+/// the [as_uri](#method.as_uri) method.
+///
+/// The exception to this is the [segment_count](#method.segment_count) method,
+/// which is provided here for performance reasons. This method uses a cached
+/// count of the segments on subsequent calls. To avoid computing the segment
+/// count again and again, use the `segment_count` method on URIBuf directly.
+///
+/// ## Constructing
+///
+/// A URIBuf can be created with either a borrowed or owned string via the
+/// [new](#method.new) or `from` methods.
 pub struct URIBuf {
     uri: String,
     segment_count: Cell<Option<usize>>,
 }
 
-// I don't like repeating all of this stuff. Is there a better way?
 impl URIBuf {
+    /// Construct a new URIBuf.
+    ///
+    /// # Examples
+    ///
+    /// From a borrowed string:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URIBuf;
+    ///
+    /// let uri = URIBuf::new("/a/b/c");
+    /// assert_eq!(uri.as_uri().as_str(), "/a/b/c");
+    /// ```
+    ///
+    /// From an owned string:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URIBuf;
+    ///
+    /// let uri = URIBuf::new("/a/b/c".to_string());
+    /// assert_eq!(uri.as_str(), "/a/b/c");
+    /// ```
+    #[inline(always)]
+    pub fn new<S: Into<URIBuf>>(s: S) -> URIBuf {
+        s.into()
+    }
+
+    /// Returns the number of segments in the URI. Empty segments, which are
+    /// invalid according to RFC#3986, are not counted.
+    ///
+    /// The segment count is cached after the first invocation. As a result,
+    /// this function is O(1) after the first invocation, and O(n) before.
+    ///
+    /// ### Examples
+    ///
+    /// A valid URI with only non-empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URIBuf;
+    ///
+    /// let uri = URIBuf::new("/a/b/c");
+    /// assert_eq!(uri.segment_count(), 3);
+    /// ```
+    ///
+    /// A URI with empty segments:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URIBuf;
+    ///
+    /// let uri = URIBuf::new("/a/b//c/d///e");
+    /// assert_eq!(uri.segment_count(), 5);
+    /// ```
     pub fn segment_count(&self) -> usize {
         self.segment_count.get().unwrap_or_else(|| {
-            let count = self.segments().count();
+            let count = self.as_uri().segments().count();
             self.segment_count.set(Some(count));
             count
         })
     }
 
+    /// Converts this URIBuf into a borrowed URI. Does not consume this URIBuf.
     #[inline(always)]
-    pub fn segments(&self) -> Segments {
-        self.as_uri_uncached().segments()
-    }
-
-    #[inline(always)]
-    fn as_uri_uncached(&self) -> URI {
+    pub fn as_uri(&self) -> URI {
         URI::new(self.uri.as_str())
     }
 
+    /// Returns the inner string of this URIBuf.
+    ///
+    /// The returned string is in raw form. It contains empty segments. If you'd
+    /// like a string without empty segments, use `to_string` instead.
+    ///
+    /// ### Example
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URIBuf;
+    ///
+    /// let uri = URIBuf::new("/a/b///c/d/e//f?name=Mike#end");
+    /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
+    /// ```
     #[inline(always)]
-    pub fn as_uri(&self) -> URI {
-        let mut uri = URI::new(self.uri.as_str());
-        uri.segment_count = self.segment_count.clone();
-        uri
-    }
-
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
+    pub fn as_str<'a>(&'a self) -> &'a str {
         self.uri.as_str()
-    }
-
-    #[inline(always)]
-    pub fn to_string(&self) -> String {
-        self.uri.clone()
     }
 }
 
@@ -136,7 +321,7 @@ unsafe impl Sync for URIBuf { /* It's safe! */ }
 
 impl fmt::Display for URIBuf {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.as_uri_uncached().fmt(f)
+        self.as_uri().fmt(f)
     }
 }
 
@@ -180,6 +365,25 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     }
 }
 
+/// Iterator over the segments of an absolute URI path. Skips empty segments.
+///
+/// ### Examples
+///
+/// ```rust
+/// use rocket::http::uri::URI;
+/// use rocket::http::uri::Segments;
+///
+/// let segments: Segments = URI::new("/a/////b/c////////d").segments();
+/// for (i, segment) in segments.enumerate() {
+///     match i {
+///         0 => assert_eq!(segment, "a"),
+///         1 => assert_eq!(segment, "b"),
+///         2 => assert_eq!(segment, "c"),
+///         3 => assert_eq!(segment, "d"),
+///         _ => panic!("only four segments")
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug)]
 pub struct Segments<'a>(&'a str);
 
@@ -238,7 +442,7 @@ mod tests {
         let actual: Vec<&str> = uri.segments().collect();
 
         let uri_buf = URIBuf::from(path);
-        let actual_buf: Vec<&str> = uri_buf.segments().collect();
+        let actual_buf: Vec<&str> = uri_buf.as_uri().segments().collect();
 
         actual == expected && actual_buf == expected
     }

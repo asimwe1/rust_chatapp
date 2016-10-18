@@ -1,3 +1,11 @@
+//! Re-exported hyper HTTP library types.
+//!
+//! ## Hyper
+//!
+//! All types that are re-exported from Hyper resides inside of this module.
+//! These types will, with certainty, be removed with time, but they reside here
+//! while necessary.
+
 // TODO: Remove from Rocket in favor of a more flexible HTTP library.
 pub use hyper::server::Request as HyperRequest;
 pub use hyper::server::Response as HyperResponse;

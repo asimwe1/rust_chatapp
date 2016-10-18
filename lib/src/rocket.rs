@@ -175,7 +175,7 @@ impl Rocket {
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
-            let path = format!("{}/{}", base, route.path.as_str());
+            let path = format!("{}/{}", base, route.path.as_uri());
             route.set_path(path);
 
             info_!("{}", route);

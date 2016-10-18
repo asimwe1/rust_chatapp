@@ -17,23 +17,23 @@ use router::Collider;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
 
-macro_rules! is_some {
-    ($ct:ident, $name:ident: $top:ident/$sub:ident) => {
-        /// Returns a new ContentType that matches the MIME for this method's
-        /// name.
-        pub fn $ct() -> ContentType {
-            ContentType::of(TopLevel::$top, SubLevel::$sub)
-        }
-
-        is_some!($name: $top/$sub);
+macro_rules! ctrs {
+    ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
+        $($(#[$attr])*
+            #[inline(always)]
+            pub fn $name() -> ContentType {
+                ContentType::of(TopLevel::$top, SubLevel::$sub)
+            })+
     };
+}
 
-    ($name:ident: $top:ident/$sub:ident) => {
-        /// Returns true if `self` is the content type matching the method's
-        /// name.
-        pub fn $name(&self) -> bool {
-            self.0 == TopLevel::$top && self.1 == SubLevel::$sub
-        }
+macro_rules! checkers {
+    ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
+        $($(#[$attr])*
+            #[inline(always)]
+            pub fn $name(&self) -> bool {
+                self.0 == TopLevel::$top && self.1 == SubLevel::$sub
+            })+
     };
 }
 
@@ -61,47 +61,6 @@ impl ContentType {
         ContentType(t, s, None)
     }
 
-    /// Returns a new ContentType for `*/*`, i.e., any.
-    #[inline(always)]
-    pub fn any() -> ContentType {
-        ContentType::of(TopLevel::Star, SubLevel::Star)
-    }
-
-    /// Returns true if this content type is not one of the standard content
-    /// types, that if, if it is an "extended" content type.
-    pub fn is_ext(&self) -> bool {
-        if let TopLevel::Ext(_) = self.0 {
-            true
-        } else if let SubLevel::Ext(_) = self.1 {
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Returns true if the content type is plain text, i.e.: `text/plain`.
-    is_some!(is_text: Text/Plain);
-
-    /// Returns true if the content type is JSON, i.e: `application/json`.
-    is_some!(json, is_json: Application/Json);
-
-    /// Returns true if the content type is XML, i.e: `application/xml`.
-    is_some!(xml, is_xml: Application/Xml);
-
-    /// Returns true if the content type is any, i.e.: `*/*`.
-    is_some!(is_any: Star/Star);
-
-    /// Returns true if the content type is HTML, i.e.: `application/html`.
-    is_some!(html, is_html: Application/Html);
-
-    /// Returns true if the content type is that for non-data HTTP forms, i.e.:
-    /// `application/x-www-form-urlencoded`.
-    is_some!(is_form: Application/WwwFormUrlEncoded);
-
-    /// Returns true if the content type is that for data HTTP forms, i.e.:
-    /// `multipart/form-data`.
-    is_some!(is_data: Multipart/FormData);
-
     /// Returns the Content-Type associated with the extension `ext`. Not all
     /// extensions are recognized. If an extensions is not recognized, then this
     /// method returns a ContentType of `any`.
@@ -128,7 +87,7 @@ impl ContentType {
     pub fn from_extension(ext: &str) -> ContentType {
         let (top_level, sub_level) = match ext {
             "txt" => (TopLevel::Text, SubLevel::Plain),
-            "html" => (TopLevel::Text, SubLevel::Html),
+            "html" | "htm" => (TopLevel::Text, SubLevel::Html),
             "xml" => (TopLevel::Application, SubLevel::Xml),
             "js" => (TopLevel::Application, SubLevel::Javascript),
             "css" => (TopLevel::Text, SubLevel::Css),
@@ -143,6 +102,57 @@ impl ContentType {
         };
 
         ContentType::of(top_level, sub_level)
+    }
+
+    ctrs! {
+        /// Returns a `ContentType` representing `*/*`, i.e., _any_ ContentType.
+        | any: Star/Star,
+
+        /// Returns a `ContentType` representing JSON, i.e, `application/json`.
+        | json: Application/Json,
+
+        /// Returns a `ContentType` representing XML, i.e, `application/xml`.
+        | xml: Application/Xml,
+
+        /// Returns a `ContentType` representing HTML, i.e, `application/html`.
+        | html: Application/Html
+    }
+
+    /// Returns true if this content type is not one of the standard content
+    /// types, that if, if it is an "extended" content type.
+    pub fn is_ext(&self) -> bool {
+        if let TopLevel::Ext(_) = self.0 {
+            true
+        } else if let SubLevel::Ext(_) = self.1 {
+            true
+        } else {
+            false
+        }
+    }
+
+    checkers! {
+        /// Returns true if the content type is plain text, i.e.: `text/plain`.
+        | is_text: Text/Plain,
+
+        /// Returns true if the content type is JSON, i.e: `application/json`.
+        | is_json: Application/Json,
+
+        /// Returns true if the content type is XML, i.e: `application/xml`.
+        | is_xml: Application/Xml,
+
+        /// Returns true if the content type is any, i.e.: `*/*`.
+        | is_any: Star/Star,
+
+        /// Returns true if the content type is HTML, i.e.: `application/html`.
+        | is_html: Application/Html,
+
+        /// Returns true if the content type is that for non-data HTTP forms,
+        /// i.e.: `application/x-www-form-urlencoded`.
+        | is_form: Application/WwwFormUrlEncoded,
+
+        /// Returns true if the content type is that for data HTTP forms, i.e.:
+        /// `multipart/form-data`.
+        | is_form_data: Multipart/FormData
     }
 }
 

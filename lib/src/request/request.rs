@@ -88,7 +88,7 @@ impl Request {
         } else {
             // TODO: Really want to do self.uri.segments().skip(i).into_inner(),
             // but the std lib doesn't implement it for Skip.
-            let mut segments = self.uri.segments();
+            let mut segments = self.uri.as_uri().segments();
             for _ in segments.by_ref().take(i) { /* do nothing */ }
 
             T::from_segments(segments).map_err(|_| Error::BadParse)

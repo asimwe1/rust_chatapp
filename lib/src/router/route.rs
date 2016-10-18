@@ -61,7 +61,7 @@ impl Route {
     // is, whether you can have: /a<a>b/ or even /<a>:<b>/
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     pub fn get_params<'a>(&self, uri: URI<'a>) -> Vec<&'a str> {
-        let route_segs = self.path.segments();
+        let route_segs = self.path.as_uri().segments();
         let uri_segs = uri.segments();
 
         let mut result = Vec::with_capacity(self.path.segment_count());

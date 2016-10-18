@@ -5,6 +5,9 @@ use error::Error;
 use http::hyper::HyperMethod;
 use self::Method::*;
 
+// TODO: Support non-standard methods, here and in codegen.
+
+/// Representation of HTTP methods.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     Get,
