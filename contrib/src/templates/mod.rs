@@ -128,7 +128,7 @@ lazy_static! {
             }).unwrap_or(DEFAULT_TEMPLATE_DIR);
 
             config.root().join(dir).to_string_lossy().into_owned()
-        }).unwrap_or("templates".to_string())
+        }).unwrap_or(DEFAULT_TEMPLATE_DIR.to_string())
     };
 }
 

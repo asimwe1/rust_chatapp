@@ -1,3 +1,107 @@
+//! Application configuration and configuration parameter retrieval.
+//!
+//! This module implements configuration handling for Rocket. It implements
+//! the parsing and interpretation of the `Rocket.toml` config file. It also
+//! allows libraries to access values that have been configured by the user.
+//!
+//! ## Application Configuration
+//!
+//! ### Environments
+//!
+//! Rocket applications are always running in one of three environments:
+//!
+//!   * development _or_ dev
+//!   * staging _or_ stage
+//!   * production _or_ prod
+//!
+//! Each environment can contain different configuration parameters. By default,
+//! Rocket applications run in the **development** environment. The environment
+//! can be changed via the `ROCKET_ENV` environment variable. For example, to
+//! start a Rocket application in the **production** environment:
+//!
+//! ```sh
+//! ROCKET_ENV=production ./target/release/rocket_app
+//! ```
+//!
+//! ### Configuration Parameters
+//!
+//! Each environments consists of several standard configuration parameters as
+//! well as an arbitrary number of _extra_ configuration parameters, which are
+//! not used by Rocket itself but can be used by external libraries. The
+//! standard configuration parameters are:
+//!
+//!   * **address**: _[string]_ an IP address or host the application will
+//!     listen on
+//!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
+//!   * **port**: _[integer]_ a port number to listen on
+//!     * examples: `"8000"`, `"80"`, `"4242"`
+//!   * **log**: _[string]_ how much information to log; one of `"normal"`,
+//!     `"debug"`, or `"critical"`
+//!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32
+//!     characters) to use as the session key
+//!     * example: `"VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"`
+//!
+//! ### Rocket.toml
+//!
+//! The `Rocket.toml` file is used to specify the configuration parameters for
+//! each environment. The file is optional. If it is not present, the default
+//! configuration parameters are used.
+//!
+//! The file must be a series of tables, one for each environment, where each
+//! table contains key-value pairs corresponding to configuration parameters for
+//! that environment. If a configuration parameter is missing, the default value
+//! is used. The following is a complete `Rocket.toml` file, where every
+//! standard configuration parameter is specified with the default value:
+//!
+//! ```toml
+//! [development]
+//! address = "localhost"
+//! port = 8000
+//! log = "normal"
+//!
+//! [staging]
+//! address = "0.0.0.0"
+//! port = 80
+//! log = "normal"
+//! # don't use this key! generate your own and keep it private!
+//! session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+//!
+//! [production]
+//! address = "0.0.0.0"
+//! port = 80
+//! log = "critical"
+//! # don't use this key! generate your own and keep it private!
+//! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+//! ```
+//!
+//! ## Retrieving Configuration Parameters
+//!
+//! Configuration parameters for the currently active configuration environment
+//! can be retrieved via the [active](fn.active.html) function and methods on
+//! the [Config](struct.Config.html) structure. The general structure is to call
+//! `active` and then one of the `get_` methods on the returned `Config`
+//! structure.
+//!
+//! As an example, consider the following code used by the `Template` type to
+//! retrieve the value of the `template_dir` configuration parameter. If the
+//! value isn't present or isn't a string, a default value is used.
+//!
+//! ```rust
+//! use rocket::config;
+//!
+//! const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
+//!
+//! let template_dir = config::active().map(|config| {
+//!     let dir = config.get_str("template_dir")
+//!         .map_err(|e| if !e.is_not_found() { e.pretty_print(); })
+//!         .unwrap_or(DEFAULT_TEMPLATE_DIR);
+//!
+//!     config.root().join(dir).to_string_lossy().into_owned()
+//! }).unwrap_or(DEFAULT_TEMPLATE_DIR.to_string());
+//! ```
+//!
+//! Libraries should always use a default if a parameter is not defined.
+
 mod error;
 mod environment;
 mod config;
@@ -23,8 +127,11 @@ static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
 
+/// Wraps `std::result` with the error type of
+/// [ConfigError](enum.ConfigError.html).
 pub type Result<T> = ::std::result::Result<T, ConfigError>;
 
+#[doc(hidden)]
 #[derive(Debug, PartialEq)]
 pub struct RocketConfig {
     pub active_env: Environment,
@@ -200,6 +307,10 @@ unsafe fn private_init() {
 }
 
 /// Retrieve the active configuration, if there is one.
+///
+/// This function is guaranteed to return `Some` once a Rocket application has
+/// started. Before a Rocket application has started, or when there is no active
+/// Rocket application (such as during testing), this function will return None.
 pub fn active() -> Option<&'static Config> {
     unsafe { CONFIG.as_ref().map(|c| c.active()) }
 }

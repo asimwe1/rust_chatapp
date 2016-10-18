@@ -19,3 +19,6 @@ Cargo.lock
 
 # Scratch list of items that need to get done.
 _TODO
+
+# The upload script, for now.
+scripts/upload-docs.sh

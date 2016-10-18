@@ -10,11 +10,16 @@ use config::{self, Environment, ConfigError};
 use logger::LoggingLevel;
 use toml::Value;
 
+/// The core configuration structure.
 #[derive(PartialEq)]
 pub struct Config {
+    /// The address to serve on.
     pub address: String,
+    /// The port to serve on.
     pub port: usize,
+    /// How much information to log.
     pub log_level: LoggingLevel,
+    /// The environment that this configuration corresponds to.
     pub env: Environment,
     session_key: RefCell<Option<String>>,
     extra: HashMap<String, Value>,

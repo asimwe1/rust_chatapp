@@ -3,6 +3,7 @@ use super::Environment;
 use term_painter::Color::White;
 use term_painter::ToStyle;
 
+/// The type of a configuration parsing error.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ParsingError {
     pub byte_range: (usize, usize),
@@ -11,24 +12,39 @@ pub struct ParsingError {
     pub desc: String,
 }
 
+/// The type of a configuration error.
 #[derive(Debug, PartialEq, Clone)]
 pub enum ConfigError {
+    /// The current working directory could not be determined.
     BadCWD,
+    /// The configuration file was not found.
     NotFound,
+    /// There was an I/O error while reading the configuration file.
     IOError,
-    /// (path, reason)
+    /// The path at which the configuration file was found was invalid.
+    ///
+    /// Parameters: (path, reason)
     BadFilePath(String, &'static str),
-    /// (environment_name)
+    /// An environment specified in `ROCKET_ENV` is invalid.
+    ///
+    /// Parameters: (environment_name)
     BadEnv(String),
-    /// (environment_name, filename)
+    /// An environment specified as a table `[environment]` is invalid.
+    ///
+    /// Parameters: (environment_name, filename)
     BadEntry(String, String),
-    /// (entry_name, expected_type, actual_type, filename)
+    /// A key was specified with a value of the wrong type.
+    ///
+    /// Parameters: (entry_name, expected_type, actual_type, filename)
     BadType(String, &'static str, &'static str, String),
-    /// (toml_source_string, filename, error_list)
+    /// There was a TOML parsing error.
+    ///
+    /// Parameters: (toml_source_string, filename, error_list)
     ParseError(String, String, Vec<ParsingError>),
 }
 
 impl ConfigError {
+    /// Prints this configuration error with Rocket formatting.
     pub fn pretty_print(&self) {
         use self::ConfigError::*;
 
@@ -70,6 +86,8 @@ impl ConfigError {
         }
     }
 
+    /// Whether this error is of `NotFound` variant.
+    #[inline(always)]
     pub fn is_not_found(&self) -> bool {
         use self::ConfigError::*;
         match *self {
