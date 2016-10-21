@@ -93,9 +93,9 @@ use request::{Request, FromData, Data, DataOutcome};
 /// # fn main() {  }
 /// ```
 ///
-/// Note that the ``r` lifetime is used _twice_ in the handler's signature: this
-/// is necessary to tie the lifetime of the structure to the lifetime of the
-/// request data.
+/// Note that the `` `r`` lifetime is used _twice_ in the handler's signature:
+/// this is necessary to tie the lifetime of the structure to the lifetime of
+/// the request data.
 ///
 /// ## Without References
 ///
@@ -131,8 +131,8 @@ use request::{Request, FromData, Data, DataOutcome};
 /// ```
 ///
 /// Note that no lifetime annotations are required: Rust is able to infer the
-/// lifetime as ``static`. Because the lifetime is ``static`, the `into_inner`
-/// method can be used to directly retrieve the parsed value.
+/// lifetime as `` `static``. Because the lifetime is `` `static``, the
+/// `into_inner` method can be used to directly retrieve the parsed value.
 ///
 /// ## Performance and Correctness Considerations
 ///
