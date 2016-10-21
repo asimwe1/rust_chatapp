@@ -19,6 +19,8 @@ use http::{Method, StatusCode};
 use http::hyper::{HyperRequest, FreshHyperResponse};
 use http::hyper::{HyperServer, HyperHandler, HyperSetCookie, header};
 
+/// The Rocket type used to mount routes and catchers and launch the
+/// application.
 pub struct Rocket {
     address: String,
     port: usize,

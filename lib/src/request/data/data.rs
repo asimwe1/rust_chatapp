@@ -9,6 +9,34 @@ use http::hyper::{HyperBodyReader, HyperHttpStream};
 use http::hyper::HyperNetworkStream;
 use http::hyper::HyperHttpReader::*;
 
+/// Type representing the data in the body of an incoming request.
+///
+/// This type is the only means by which the body of a request can be retrieved.
+/// This type is not usually used directly. Instead, types that implement
+/// [FromData](trait.FromData.html) are used via code generation by specifying
+/// the `data = "<param>"` route parameter as follows:
+///
+/// ```rust,ignore
+/// #[post("/submit", data = "<var>")]
+/// fn submit(var: T) -> ... { ... }
+/// ```
+///
+/// Above, `T` can be any type that implements `FromData`. Note that `Data`
+/// itself implements `FromData`.
+///
+/// # Reading Data
+///
+/// Data may be read from a `Data` object by calling either the
+/// [open](#method.open) or [peek](#method.peek) methods.
+///
+/// The `open` method consumes the `Data` object and returns the raw data
+/// stream. The `Data` object is consumed for safety reasons: consuming the
+/// object ensures that holding a `Data` object means that all of the data is
+/// available for reading.
+///
+/// The `peek` method returns a slice containing at most 4096 bytes of buffered
+/// body data. This enables partially or fully reading from a `Data` object
+/// without consuming the `Data` object.
 pub struct Data {
     buffer: Vec<u8>,
     is_done: bool,
@@ -20,6 +48,12 @@ pub struct Data {
 }
 
 impl Data {
+    /// Returns the raw data stream.
+    ///
+    /// The stream contains all of the data in the body of the request,
+    /// including that in the `peek` buffer. The method consumes the `Data`
+    /// instance. This ensures that a `Data` type _always_ represents _all_ of
+    /// the data in a request.
     pub fn open(mut self) -> impl BufRead {
         // Swap out the buffer and stream for empty ones so we can move.
         let mut buffer = vec![];
@@ -68,21 +102,37 @@ impl Data {
         Ok(Data::new(vec, pos, cap, stream))
     }
 
+    /// Retrieve the `peek` buffer.
+    ///
+    /// The peek buffer contains at most 4096 bytes of the body of the request.
+    /// The actual size of the returned buffer varies by web request. The
+    /// [peek_complete](#method.peek_complete) can be used to determine if this
+    /// buffer contains _all_ of the data in the body of the request.
     #[inline(always)]
     pub fn peek(&self) -> &[u8] {
         &self.buffer[self.position..self.capacity]
     }
 
+    /// Returns true if the `peek` buffer contains all of the data in the body
+    /// of the request.
     #[inline(always)]
     pub fn peek_complete(&self) -> bool {
         self.is_done
     }
 
+    /// A helper method to write the body of the request to any `Write` type.
+    ///
+    /// This method is identical to `io::copy(&mut data.open(), writer)`.
     #[inline(always)]
     pub fn stream_to<W: Write>(self, writer: &mut W) -> io::Result<u64> {
         io::copy(&mut self.open(), writer)
     }
 
+    /// A helper method to write the body of the request to a file at the path
+    /// determined by `path`.
+    ///
+    /// This method is identical to
+    /// `io::copy(&mut self.open(), &mut File::create(path)?)`.
     #[inline(always)]
     pub fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
         io::copy(&mut self.open(), &mut File::create(path)?)

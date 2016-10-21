@@ -30,7 +30,122 @@ use std::io::Read;
 use http::StatusCode;
 use request::{Request, FromData, Data, DataOutcome};
 
-// This works, and it's safe, but it sucks to have the lifetime appear twice.
+// TODO: This works and is safe, but the lifetime appears twice.
+/// A `FromData` type for parsing `FromForm` types.
+///
+/// This type implements the `FromData` trait. It provides a generic means to
+/// parse arbitrary structure from incoming form data.
+///
+/// # Usage
+///
+/// This type can be used with any type that implements the `FromForm` trait.
+/// The trait can be automatically derived; see the
+/// [FromForm](trait.FromForm.html) documentation for more information about
+/// implementing the trait.
+///
+/// Because `Form` implement `FromData`, it can be used directly as a target of
+/// the `data = "<param>"` route parameter. For instance, if some structure of
+/// type `T` implements the `FromForm` trait, an incoming form can be
+/// automatically parsed into the `T` structure with the following route and
+/// handler:
+///
+/// ```rust,ignore
+/// #[post("/form_submit", data = "<param>")]
+/// fn submit(form: Form<T>) ... { ... }
+/// ```
+///
+/// To preserve memory safety, if the underlying structure type contains
+/// references into form data, the type can only be borrowed via the
+/// [get](#method.get) or [get_mut](#method.get_mut) methods. Otherwise, the
+/// parsed structure can be retrieved with the [into_inner](#method.into_inner)
+/// method.
+///
+/// ## With References
+///
+/// The simplest data structure with a reference into form data looks like this:
+///
+/// ```rust
+/// # #![feature(plugin, custom_derive)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #[derive(FromForm)]
+/// struct UserInput<'f> {
+///     value: &'f str
+/// }
+/// ```
+///
+/// This corresponds to a form with a single field named `value` that should be
+/// a string. A handler for this type can be written as:
+///
+/// ```rust
+/// # #![feature(plugin, custom_derive)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # use rocket::request::Form;
+/// # #[derive(FromForm)]
+/// # struct UserInput<'f> {
+/// #     value: &'f str
+/// # }
+/// #[post("/submit", data = "<user_input>")]
+/// fn submit_task<'r>(user_input: Form<'r, UserInput<'r>>) -> String {
+///     format!("Your value: {}", user_input.get().value)
+/// }
+/// # fn main() {  }
+/// ```
+///
+/// Note that the ``r` lifetime is used _twice_ in the handler's signature: this
+/// is necessary to tie the lifetime of the structure to the lifetime of the
+/// request data.
+///
+/// ## Without References
+///
+/// The owned analog of the `UserInput` type above is:
+///
+/// ```rust
+/// # #![feature(plugin, custom_derive)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #[derive(FromForm)]
+/// struct OwnedUserInput {
+///     value: String
+/// }
+/// ```
+///
+/// The handler is written similarly:
+///
+/// ```rust
+/// # #![feature(plugin, custom_derive)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # use rocket::request::Form;
+/// # #[derive(FromForm)]
+/// # struct OwnedUserInput {
+/// #     value: String
+/// # }
+/// #[post("/submit", data = "<user_input>")]
+/// fn submit_task(user_input: Form<OwnedUserInput>) -> String {
+///     let input: OwnedUserInput = user_input.into_inner();
+///     format!("Your value: {}", input.value)
+/// }
+/// # fn main() {  }
+/// ```
+///
+/// Note that no lifetime annotations are required: Rust is able to infer the
+/// lifetime as ``static`. Because the lifetime is ``static`, the `into_inner`
+/// method can be used to directly retrieve the parsed value.
+///
+/// ## Performance and Correctness Considerations
+///
+/// Whether you should use a `str` or `String` in your `FromForm` type depends
+/// on your use case. The primary question to answer is: _Can the input contain
+/// characters that must be URL encoded?_ Note that this includes commmon
+/// characters such as spaces. If so, then you must use `String`, whose
+/// `FromFormValue` implementation deserializes the URL encoded string for you.
+/// Because the `str` references will refer directly to the underlying form
+/// data, they will be raw and URL encoded.
+///
+/// If your string values will not contain URL encoded characters, using `str`
+/// will result in fewer allocation and is thus spreferred.
 pub struct Form<'f, T: FromForm<'f> + 'f> {
     object: T,
     form_string: String,
@@ -38,14 +153,18 @@ pub struct Form<'f, T: FromForm<'f> + 'f> {
 }
 
 impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
+    /// Immutably borrow the parsed type.
     pub fn get(&'f self) -> &'f T {
         &self.object
     }
 
+    /// Mutably borrow the parsed type.
     pub fn get_mut(&'f mut self) -> &'f mut T {
         &mut self.object
     }
 
+    /// Returns the raw form string that was used to parse the encapsulated
+    /// object.
     pub fn raw_form_string(&self) -> &str {
         &self.form_string
     }
@@ -87,6 +206,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
 }
 
 impl<'f, T: FromForm<'f> + 'static> Form<'f, T> {
+    /// Consume this object and move out the parsed object.
     pub fn into_inner(self) -> T {
         self.object
     }
@@ -98,6 +218,15 @@ impl<'f, T: FromForm<'f> + Debug + 'f> Debug for Form<'f, T> {
     }
 }
 
+/// Parses a `Form` from incoming form data.
+///
+/// If the content type of the request data is not
+/// `application/x-www-form-urlencoded`, `Forward`s the request. If the form
+/// data cannot be parsed into a `T` or reading the incoming stream failed,
+/// returns a `Failure` with the raw form string (if avaialble).
+///
+/// All relevant warnings and errors are written to the console in Rocket
+/// logging format.
 impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
     type Error = Option<String>;
 

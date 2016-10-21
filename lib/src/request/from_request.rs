@@ -4,6 +4,7 @@ use request::Request;
 use outcome::Outcome;
 use http::{StatusCode, ContentType, Method, Cookies};
 
+/// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type RequestOutcome<T, E> = Outcome<T, (StatusCode, E), ()>;
 
 impl<T, E> RequestOutcome<T, E> {

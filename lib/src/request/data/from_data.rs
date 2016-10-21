@@ -2,6 +2,7 @@ use outcome::Outcome;
 use http::StatusCode;
 use request::{Request, Data};
 
+/// Type alias for the `Outcome` of a `FromData` conversion.
 pub type DataOutcome<S, E> = Outcome<S, (StatusCode, E), Data>;
 
 impl<S, E> DataOutcome<S, E> {
@@ -30,12 +31,51 @@ impl<S, E> DataOutcome<S, E> {
 }
 
 /// Trait used to derive an object from incoming request data.
+///
+/// Type that implement this trait can be used as target for the `data =
+/// "<param>"` route parmater, as illustrated below:
+///
+/// ```rust,ignore
+/// #[post("/submit", data = "<var>")]
+/// fn submit(var: T) -> ... { ... }
+/// ```
+///
+/// In this example, `T` can be any type that implements `FromData.`
+///
+/// # Outcomes
+///
+/// The returned [Outcome](/rocket/outcome/index.html) of a `from_data` call
+/// determines what will happen with the incoming request.
+///
+/// * **Success**
+///
+///   If the `Outcome` is `Success`, then the `Success` value will be used as
+///   the value for the data parameter.
+///
+/// * **Failure**
+///
+///   If the `Outcome` is `Failure`, the request will fail with the given status
+///   code. Note that users can request types of `Result<S, E>` and `Option<S>`
+///   to catch `Failure`s.
+///
+/// * **Failure**
+///
+///   If the `Outcome` is `Forward`, the request will be forwarded to the next
+///   matching request. This requires that no data has been read from the `Data`
+///   parameter. Note that users can request an `Option<S>` to catch `Forward`s.
 pub trait FromData: Sized {
+    /// The associated error to be returned when parsing fails.
     type Error;
 
+    /// Parses an instance of `Self` from the incoming request body data.
+    ///
+    /// If the parse is successful, an outcome of `Success` is returned. If the
+    /// data does not correspond to the type of `Self`, `Forward` is returned.
+    /// If parsing fails, `Failure` is returned.
     fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error>;
 }
 
+/// The identity implementation of `FromData`. Always returns `Success`.
 impl FromData for Data {
     type Error = ();
     fn from_data(_: &Request, data: Data) -> DataOutcome<Self, Self::Error> {

@@ -52,7 +52,7 @@
 //! extern crate rocket;
 //! ```
 //!
-//! See the [guide](https://guide.rocket.rs) for more information on how to
+//! See the [guide](https://rocket.rs/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust

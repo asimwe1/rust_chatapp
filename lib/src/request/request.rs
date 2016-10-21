@@ -12,29 +12,20 @@ use http::uri::{URI, URIBuf};
 use http::hyper::{header, HyperCookie, HyperHeaders, HyperMethod, HyperRequestUri};
 use http::{Method, ContentType, Cookies};
 
-/// The type for all incoming web requests.
+/// The type of an incoming web request.
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
 /// should likely only be used when writing
 /// [FromRequest](trait.FromRequest.html) implementations. It contains all of
-/// the information for a given web request. This includes the HTTP method, URI,
-/// cookies, headers, and more.
+/// the information for a given web request except for the body data. This
+/// includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request {
     /// The HTTP method associated with the request.
     pub method: Method,
-    /// <div class="stability" style="margin-left: 0;">
-    ///   <em class="stab unstable">
-	///     Unstable
-    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
-    ///     The underlying HTTP library/types are likely to change before v1.0.
-    ///   </em>
-    /// </div>
-    ///
-    /// The data in the request.
-    uri: URIBuf, // FIXME: Should be URI (without Hyper).
+    uri: URIBuf, // FIXME: Should be URI (without hyper).
     params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
-    headers: HyperHeaders, // This sucks.
+    headers: HyperHeaders, // Don't use hyper's headers.
 }
 
 impl Request {
@@ -140,6 +131,14 @@ impl Request {
         hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))
     }
 
+    /// <div class="stability" style="margin-left: 0;">
+    ///   <em class="stab unstable">
+	///     Unstable
+    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
+    ///     The underlying HTTP library/types are likely to change before v1.0.
+    ///   </em>
+    /// </div>
+    ///
     /// Returns the first content-type accepted by this request.
     pub fn accepts(&self) -> ContentType {
         let accept = self.headers().get::<header::Accept>();
