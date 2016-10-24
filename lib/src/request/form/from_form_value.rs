@@ -51,8 +51,8 @@ pub trait FromFormValue<'v>: Sized {
     fn from_form_value(form_value: &'v str) -> Result<Self, Self::Error>;
 
     /// Returns a default value to be used when the form field does not exist.
-    /// If this returns None, then the field is required. Otherwise, this should
-    /// return Some(default_value).
+    /// If this returns `None`, then the field is required. Otherwise, this
+    /// should return `Some(default_value)`.
     fn default() -> Option<Self> {
         None
     }

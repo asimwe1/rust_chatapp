@@ -40,8 +40,8 @@ use request::{Request, FromData, Data, DataOutcome};
 ///
 /// This type can be used with any type that implements the `FromForm` trait.
 /// The trait can be automatically derived; see the
-/// [FromForm](trait.FromForm.html) documentation for more information about
-/// implementing the trait.
+/// [FromForm](trait.FromForm.html) documentation for more information on
+/// deriving or implementing the trait.
 ///
 /// Because `Form` implement `FromData`, it can be used directly as a target of
 /// the `data = "<param>"` route parameter. For instance, if some structure of

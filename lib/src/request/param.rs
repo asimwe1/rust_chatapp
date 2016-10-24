@@ -19,11 +19,9 @@ use http::uri::Segments;
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// #![feature(plugin)]
-/// #![plugin(rocket_codegen)]
-///
-/// extern crate rocket;
-///
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
 /// # /*
@@ -39,6 +37,8 @@ use http::uri::Segments;
 /// forwarded to the next matching route. Since there are no additional matching
 /// routes, this example will result in a 404 error for requests with invalid
 /// `id` values.
+///
+/// # Catching Errors
 ///
 /// # `str` vs. `String`
 ///

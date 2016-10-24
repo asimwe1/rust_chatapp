@@ -32,7 +32,7 @@ impl<S, E> DataOutcome<S, E> {
 
 /// Trait used to derive an object from incoming request data.
 ///
-/// Type that implement this trait can be used as target for the `data =
+/// Types that implement this trait can be used as a target for the `data =
 /// "<param>"` route parmater, as illustrated below:
 ///
 /// ```rust,ignore
@@ -45,20 +45,23 @@ impl<S, E> DataOutcome<S, E> {
 /// # Outcomes
 ///
 /// The returned [Outcome](/rocket/outcome/index.html) of a `from_data` call
-/// determines what will happen with the incoming request.
+/// determines how the incoming request will be processed.
 ///
-/// * **Success**
+/// * **Success**(S)
 ///
 ///   If the `Outcome` is `Success`, then the `Success` value will be used as
-///   the value for the data parameter.
+///   the value for the data parameter.  As long as all other parsed types
+///   succeed, the request will be handled by the requesting handler.
 ///
-/// * **Failure**
+/// * **Failure**(StatusCode, E)
 ///
 ///   If the `Outcome` is `Failure`, the request will fail with the given status
-///   code. Note that users can request types of `Result<S, E>` and `Option<S>`
-///   to catch `Failure`s.
+///   code and error. The designated error
+///   [Catcher](/rocket/struct.Catcher.html) will be used to respond to the
+///   request. Note that users can request types of `Result<S, E>` and
+///   `Option<S>` to catch `Failure`s and retrieve the error value.
 ///
-/// * **Failure**
+/// * **Forward**(Data)
 ///
 ///   If the `Outcome` is `Forward`, the request will be forwarded to the next
 ///   matching request. This requires that no data has been read from the `Data`
