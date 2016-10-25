@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::path::Path;
-use std::cell::RefCell;
+use std::sync::RwLock;
 use std::fmt;
 
 use config::Environment::*;
@@ -11,7 +11,6 @@ use logger::LoggingLevel;
 use toml::Value;
 
 /// The core configuration structure.
-#[derive(PartialEq)]
 pub struct Config {
     /// The address to serve on.
     pub address: String,
@@ -21,7 +20,7 @@ pub struct Config {
     pub log_level: LoggingLevel,
     /// The environment that this configuration corresponds to.
     pub env: Environment,
-    session_key: RefCell<Option<String>>,
+    session_key: RwLock<Option<String>>,
     extra: HashMap<String, Value>,
     filename: String,
 }
@@ -48,7 +47,7 @@ impl Config {
                     address: "localhost".to_string(),
                     port: 8000,
                     log_level: LoggingLevel::Normal,
-                    session_key: RefCell::new(None),
+                    session_key: RwLock::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -59,7 +58,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     log_level: LoggingLevel::Normal,
-                    session_key: RefCell::new(None),
+                    session_key: RwLock::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -70,7 +69,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     log_level: LoggingLevel::Critical,
-                    session_key: RefCell::new(None),
+                    session_key: RwLock::new(None),
                     extra: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
@@ -108,7 +107,7 @@ impl Config {
                 return Err(self.bad_type(name, val, "a 192-bit base64 string"));
             }
 
-            self.session_key = RefCell::new(Some(key.to_string()));
+            self.session_key = RwLock::new(Some(key.to_string()));
         } else if name == "log" {
             let level_str = parse!(self, name, val, as_str, "a string")?;
             self.log_level = match level_str.parse() {
@@ -125,7 +124,8 @@ impl Config {
 
     #[inline(always)]
     pub fn take_session_key(&self) -> Option<String> {
-        self.session_key.borrow_mut().take()
+        let mut key = self.session_key.write().expect("couldn't lock session key");
+        key.take()
     }
 
     #[inline(always)]
@@ -182,7 +182,7 @@ impl Config {
 
     #[inline(always)]
     pub fn session_key(mut self, var: String) -> Self {
-        self.session_key = RefCell::new(Some(var));
+        self.session_key = RwLock::new(Some(var));
         self
     }
 
@@ -199,3 +199,16 @@ impl fmt::Debug for Config {
                self.env, self.address, self.port, self.log_level)
     }
 }
+
+impl PartialEq for Config {
+    fn eq(&self, other: &Config) -> bool {
+        &*self.session_key.read().unwrap() == &*other.session_key.read().unwrap()
+            && self.address == other.address
+            && self.port == other.port
+            && self.log_level == other.log_level
+            && self.env == other.env
+            && self.extra == other.extra
+            && self.filename == other.filename
+    }
+}
+
