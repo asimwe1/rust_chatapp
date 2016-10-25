@@ -132,6 +132,7 @@ pub use request::{Request, Data};
 pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;
+pub use outcome::{Outcome, IntoOutcome};
 
 /// Alias to Rocket::ignite().
 pub fn ignite() -> Rocket {

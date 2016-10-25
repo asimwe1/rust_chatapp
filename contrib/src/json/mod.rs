@@ -4,8 +4,9 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
+use rocket::outcome::Outcome::*;
 use rocket::request::{Request, Data, FromData, DataOutcome};
-use rocket::response::{Responder, ResponseOutcome, data};
+use rocket::response::{self, Responder, data};
 use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;
 
@@ -82,12 +83,12 @@ impl<T: Deserialize> FromData for JSON<T> {
 }
 
 impl<T: Serialize> Responder for JSON<T> {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> response::Outcome<'a> {
         match serde_json::to_string(&self.0) {
             Ok(json_string) => data::JSON(json_string).respond(res),
             Err(e) => {
                 error_!("JSON failed to serialize: {:?}", e);
-                ResponseOutcome::forward(StatusCode::BadRequest, res)
+                Forward((StatusCode::BadRequest, res))
             }
         }
     }

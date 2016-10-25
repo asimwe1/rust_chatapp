@@ -85,6 +85,9 @@ use term_painter::Color::*;
 use term_painter::Color;
 use term_painter::ToStyle;
 
+use self::Outcome::*;
+use http::hyper::{FreshHyperResponse, StatusCode};
+
 /// An enum representing success (`Success`), failure (`Failure`), or
 /// forwarding (`Forward`).
 #[must_use]
@@ -96,6 +99,28 @@ pub enum Outcome<S, E, F> {
     Failure(E),
     /// Contains the value to forward on.
     Forward(F),
+}
+
+pub trait IntoOutcome<S, E, F> {
+    fn into_outcome(self) -> Outcome<S, E, F>;
+}
+
+impl<T, E> IntoOutcome<T, (StatusCode, E), ()> for Result<T, E> {
+    fn into_outcome(self) -> Outcome<T, (StatusCode, E), ()> {
+        match self {
+            Ok(val) => Success(val),
+            Err(val) => Failure((StatusCode::BadRequest, val))
+        }
+    }
+}
+
+impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Result<T, E> {
+    fn into_outcome(self) -> Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)> {
+        match self {
+            Ok(_) => Success(()),
+            Err(_) => Failure(())
+        }
+    }
 }
 
 impl<S, E, F> Outcome<S, E, F> {
@@ -117,7 +142,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn unwrap(self) -> S {
         match self {
-            Outcome::Success(val) => val,
+            Success(val) => val,
             _ => panic!("Expected a successful outcome!")
         }
     }
@@ -142,7 +167,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn is_success(&self) -> bool {
         match *self {
-            Outcome::Success(_) => true,
+            Success(_) => true,
             _ => false
         }
     }
@@ -167,7 +192,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn is_failure(&self) -> bool {
         match *self {
-            Outcome::Failure(_) => true,
+            Failure(_) => true,
             _ => false
         }
     }
@@ -192,7 +217,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn is_forward(&self) -> bool {
         match *self {
-            Outcome::Forward(_) => true,
+            Forward(_) => true,
             _ => false
         }
     }
@@ -218,7 +243,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn succeeded(self) -> Option<S> {
         match self {
-            Outcome::Success(val) => Some(val),
+            Success(val) => Some(val),
             _ => None
         }
     }
@@ -244,7 +269,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn failed(self) -> Option<E> {
         match self {
-            Outcome::Failure(val) => Some(val),
+            Failure(val) => Some(val),
             _ => None
         }
     }
@@ -270,7 +295,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn forwarded(self) -> Option<F> {
         match self {
-            Outcome::Forward(val) => Some(val),
+            Forward(val) => Some(val),
             _ => None
         }
     }
@@ -290,9 +315,9 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn as_ref(&self) -> Outcome<&S, &E, &F> {
         match *self {
-            Outcome::Success(ref val) => Outcome::Success(val),
-            Outcome::Failure(ref val) => Outcome::Failure(val),
-            Outcome::Forward(ref val) => Outcome::Forward(val),
+            Success(ref val) => Success(val),
+            Failure(ref val) => Failure(val),
+            Forward(ref val) => Forward(val),
         }
     }
 
@@ -312,18 +337,18 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     pub fn as_mut(&mut self) -> Outcome<&mut S, &mut E, &mut F> {
         match *self {
-            Outcome::Success(ref mut val) => Outcome::Success(val),
-            Outcome::Failure(ref mut val) => Outcome::Failure(val),
-            Outcome::Forward(ref mut val) => Outcome::Forward(val),
+            Success(ref mut val) => Success(val),
+            Failure(ref mut val) => Failure(val),
+            Forward(ref mut val) => Forward(val),
         }
     }
 
     #[inline(always)]
     fn formatting(&self) -> (Color, &'static str) {
         match *self {
-            Outcome::Success(..) => (Green, "Succcess"),
-            Outcome::Failure(..) => (Red, "Failure"),
-            Outcome::Forward(..) => (Yellow, "Forward"),
+            Success(..) => (Green, "Succcess"),
+            Failure(..) => (Red, "Failure"),
+            Forward(..) => (Yellow, "Forward"),
         }
     }
 }

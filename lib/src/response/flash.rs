@@ -1,7 +1,8 @@
 use std::convert::AsRef;
 
-use response::{ResponseOutcome, Responder};
-use request::{Request, FromRequest, RequestOutcome};
+use outcome::IntoOutcome;
+use response::{self, Responder};
+use request::{self, Request, FromRequest};
 use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
 
 const FLASH_COOKIE_NAME: &'static str = "_flash";
@@ -43,7 +44,7 @@ impl<R: Responder> Flash<R> {
 }
 
 impl<R: Responder> Responder for Flash<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> ResponseOutcome<'b> {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> response::Outcome<'b> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         res.headers_mut().set(HyperSetCookie(vec![self.cookie_pair()]));
         self.responder.respond(res)
@@ -73,7 +74,7 @@ impl Flash<()> {
 impl<'r> FromRequest<'r> for Flash<()> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> RequestOutcome<Self, Self::Error> {
+    fn from_request(request: &'r Request) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
         let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             // Clear the flash message.
@@ -92,6 +93,6 @@ impl<'r> FromRequest<'r> for Flash<()> {
             Ok(Flash::named(name, msg))
         });
 
-        RequestOutcome::of(r)
+        r.into_outcome()
     }
 }

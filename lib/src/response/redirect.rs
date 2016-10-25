@@ -1,5 +1,6 @@
-use response::{ResponseOutcome, Responder};
+use response::{Outcome, Responder};
 use http::hyper::{header, FreshHyperResponse, StatusCode};
+use outcome::IntoOutcome;
 
 #[derive(Debug)]
 pub struct Redirect(StatusCode, String);
@@ -27,10 +28,10 @@ impl Redirect {
 }
 
 impl<'a> Responder for Redirect {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> ResponseOutcome<'b> {
+    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
         res.headers_mut().set(header::ContentLength(0));
         res.headers_mut().set(header::Location(self.1.clone()));
         *(res.status_mut()) = self.0;
-        ResponseOutcome::of(res.send(b""))
+        res.send(b"").into_outcome()
     }
 }

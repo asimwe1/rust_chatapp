@@ -1,7 +1,8 @@
 use std::io::{Read, Write, ErrorKind};
 
-use response::{Responder, ResponseOutcome};
+use response::{Responder, Outcome};
 use http::hyper::FreshHyperResponse;
+use outcome::Outcome::*;
 
 // TODO: Support custom chunk sizes.
 /// The default size of each chunk in the streamed response.
@@ -26,12 +27,12 @@ impl<T: Read> Stream<T> {
 }
 
 impl<T: Read> Responder for Stream<T> {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> ResponseOutcome<'a> {
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         let mut stream = match res.start() {
             Ok(s) => s,
-            Err(e) => {
-                error_!("Failed opening response stream: {:?}", e);
-                return ResponseOutcome::failure();
+            Err(ref err) => {
+                error_!("Failed opening response stream: {:?}", err);
+                return Failure(());
             }
         };
 
@@ -46,22 +47,22 @@ impl<T: Read> Responder for Stream<T> {
                     Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
                     Err(ref e) => {
                         error_!("Error streaming response: {:?}", e);
-                        return ResponseOutcome::failure();
+                        return Failure(());
                     }
                 }
             }
 
             if let Err(e) = stream.write_all(&buffer[..read]) {
                 error_!("Stream write_all() failed: {:?}", e);
-                return ResponseOutcome::failure();
+                return Failure(());
             }
         }
 
         if let Err(e) = stream.end() {
             error_!("Stream end() failed: {:?}", e);
-            return ResponseOutcome::failure();
+            return Failure(());
         }
 
-        ResponseOutcome::success()
+        Success(())
     }
 }
