@@ -43,8 +43,7 @@
 use std::io::Cursor;
 use outcome::Outcome::*;
 use http::{hyper, Method};
-use request::{Request, Data};
-use Rocket;
+use {Rocket, Request, Data};
 
 /// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest {

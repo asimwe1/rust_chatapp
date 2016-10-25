@@ -1,4 +1,4 @@
-//! Talk about the data thing.
+//! Types and traits for reading and parsing request body data.
 
 #[cfg(any(test, feature = "testing"))] pub mod test_data;
 #[cfg(not(any(test, feature = "testing")))] pub mod data;

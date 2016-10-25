@@ -5,7 +5,8 @@ use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
 use rocket::outcome::{Outcome, IntoOutcome};
-use rocket::request::{data, Request, Data, FromData};
+use rocket::request::Request;
+use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
 use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;

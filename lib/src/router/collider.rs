@@ -49,7 +49,8 @@ mod tests {
     use std::str::FromStr;
 
     use router::Collider;
-    use request::{Request, Data};
+    use request::Request;
+    use data::Data;
     use response::Response;
     use router::route::Route;
     use http::{Method, ContentType};

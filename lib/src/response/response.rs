@@ -1,4 +1,4 @@
-use request::Data;
+use data::Data;
 use outcome::{self, Outcome};
 use http::hyper::StatusCode;
 use response::{Responder, StatusResponse};

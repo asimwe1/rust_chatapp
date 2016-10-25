@@ -8,7 +8,8 @@ use term_painter::ToStyle;
 
 use config;
 use logger;
-use request::{Request, Data, FormItems};
+use request::{Request, FormItems};
+use data::Data;
 use response::Responder;
 use router::{Router, Route};
 use catcher::{self, Catcher};

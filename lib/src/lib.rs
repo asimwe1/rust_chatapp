@@ -102,6 +102,7 @@ pub mod request;
 pub mod response;
 pub mod outcome;
 pub mod config;
+pub mod data;
 
 mod error;
 mod router;
@@ -112,7 +113,8 @@ mod catcher;
 /// Defines the types for request and error handlers.
 #[doc(hidden)]
 pub mod handler {
-    use request::{Request, Data};
+    use data::Data;
+    use request::Request;
     use response::Response;
     use error::Error;
 
@@ -127,12 +129,13 @@ pub mod handler {
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
 #[doc(inline)] pub use logger::LoggingLevel;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
+#[doc(inline)] pub use outcome::{Outcome, IntoOutcome};
 pub use router::Route;
-pub use request::{Request, Data};
+pub use request::Request;
+pub use data::Data;
 pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;
-pub use outcome::{Outcome, IntoOutcome};
 
 /// Alias to Rocket::ignite().
 pub fn ignite() -> Rocket {

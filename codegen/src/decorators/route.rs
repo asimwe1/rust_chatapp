@@ -104,7 +104,7 @@ impl RouteGenerateExt for RouteParams {
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
             let $name: $ty =
-                match ::rocket::request::FromData::from_data(&_req, _data) {
+                match ::rocket::data::FromData::from_data(&_req, _data) {
                     ::rocket::outcome::Outcome::Success(d) => d,
                     ::rocket::outcome::Outcome::Forward(d) =>
                         return ::rocket::Response::forward(d),

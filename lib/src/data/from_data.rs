@@ -1,7 +1,8 @@
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 use http::StatusCode;
-use request::{Request, Data};
+use request::Request;
+use data::Data;
 
 /// Type alias for the `Outcome` of a `FromData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (StatusCode, E), Data>;

@@ -28,7 +28,8 @@ use std::fmt::{self, Debug};
 use std::io::Read;
 
 use http::StatusCode;
-use request::{data, Request, FromData, Data};
+use request::Request;
+use data::{self, Data, FromData};
 use outcome::Outcome::*;
 
 // TODO: This works and is safe, but the lifetime appears twice.
