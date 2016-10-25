@@ -4,7 +4,7 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
-use rocket::outcome::Outcome::*;
+use rocket::Outcome::*;
 use rocket::request::{Request, Data, FromData, DataOutcome};
 use rocket::response::{self, Responder, data};
 use rocket::http::StatusCode;
