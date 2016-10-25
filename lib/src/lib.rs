@@ -130,9 +130,9 @@ pub mod handler {
 #[doc(inline)] pub use logger::LoggingLevel;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::{Outcome, IntoOutcome};
+#[doc(inline)] pub use data::Data;
 pub use router::Route;
 pub use request::Request;
-pub use data::Data;
 pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;
