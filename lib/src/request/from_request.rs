@@ -1,12 +1,21 @@
 use std::fmt::Debug;
 
-use outcome;
+use outcome::{self, IntoOutcome};
 use request::Request;
 use outcome::Outcome::*;
 use http::{StatusCode, ContentType, Method, Cookies};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<T, E> = outcome::Outcome<T, (StatusCode, E), ()>;
+
+impl<T, E> IntoOutcome<T, (StatusCode, E), ()> for Result<T, E> {
+    fn into_outcome(self) -> Outcome<T, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(val) => Failure((StatusCode::BadRequest, val))
+        }
+    }
+}
 
 pub trait FromRequest<'r>: Sized {
     type Error: Debug;

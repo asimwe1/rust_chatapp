@@ -4,9 +4,9 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
-use rocket::Outcome::*;
-use rocket::request::{Request, Data, FromData, DataOutcome};
-use rocket::response::{self, Responder, data};
+use rocket::outcome::{Outcome, IntoOutcome};
+use rocket::request::{data, Request, Data, FromData};
+use rocket::response::{self, Responder, content};
 use rocket::http::StatusCode;
 use rocket::http::hyper::FreshHyperResponse;
 
@@ -71,24 +71,24 @@ const MAX_SIZE: u64 = 1048576;
 impl<T: Deserialize> FromData for JSON<T> {
     type Error = SerdeError;
 
-    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, SerdeError> {
+    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
         if !request.content_type().is_json() {
             error_!("Content-Type is not JSON.");
-            return DataOutcome::forward(data);
+            return Outcome::Forward(data);
         }
 
         let reader = data.open().take(MAX_SIZE);
-        DataOutcome::of(serde_json::from_reader(reader).map(|val| JSON(val)))
+        serde_json::from_reader(reader).map(|val| JSON(val)).into_outcome()
     }
 }
 
 impl<T: Serialize> Responder for JSON<T> {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> response::Outcome<'a> {
         match serde_json::to_string(&self.0) {
-            Ok(json_string) => data::JSON(json_string).respond(res),
+            Ok(json_string) => content::JSON(json_string).respond(res),
             Err(e) => {
                 error_!("JSON failed to serialize: {:?}", e);
-                Forward((StatusCode::BadRequest, res))
+                Outcome::Forward((StatusCode::BadRequest, res))
             }
         }
     }

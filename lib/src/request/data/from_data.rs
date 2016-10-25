@@ -1,32 +1,17 @@
-use outcome::Outcome;
+use outcome::{self, IntoOutcome};
+use outcome::Outcome::*;
 use http::StatusCode;
 use request::{Request, Data};
 
 /// Type alias for the `Outcome` of a `FromData` conversion.
-pub type DataOutcome<S, E> = Outcome<S, (StatusCode, E), Data>;
+pub type Outcome<S, E> = outcome::Outcome<S, (StatusCode, E), Data>;
 
-impl<S, E> DataOutcome<S, E> {
-    #[inline(always)]
-    pub fn of(result: Result<S, E>) -> Self {
-        match result {
-            Ok(val) => DataOutcome::success(val),
-            Err(err) => DataOutcome::failure(StatusCode::InternalServerError, err)
+impl<'a, S, E> IntoOutcome<S, (StatusCode, E), Data> for Result<S, E> {
+    fn into_outcome(self) -> Outcome<S, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(err) => Failure((StatusCode::InternalServerError, err))
         }
-    }
-
-    #[inline(always)]
-    pub fn success(s: S) -> Self {
-        Outcome::Success(s)
-    }
-
-    #[inline(always)]
-    pub fn failure(status: StatusCode, e: E) -> Self {
-        Outcome::Failure((status, e))
-    }
-
-    #[inline(always)]
-    pub fn forward(data: Data) -> Self {
-        Outcome::Forward(data)
     }
 }
 
@@ -75,25 +60,25 @@ pub trait FromData: Sized {
     /// If the parse is successful, an outcome of `Success` is returned. If the
     /// data does not correspond to the type of `Self`, `Forward` is returned.
     /// If parsing fails, `Failure` is returned.
-    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error>;
+    fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error>;
 }
 
 /// The identity implementation of `FromData`. Always returns `Success`.
 impl FromData for Data {
     type Error = ();
-    fn from_data(_: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
-        DataOutcome::success(data)
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        Success(data)
     }
 }
 
 impl<T: FromData> FromData for Result<T, T::Error> {
     type Error = ();
 
-    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
+    fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error> {
         match T::from_data(request, data) {
-            Outcome::Success(val) => DataOutcome::success(Ok(val)),
-            Outcome::Failure((_, val)) => DataOutcome::success(Err(val)),
-            Outcome::Forward(data) => DataOutcome::forward(data),
+            Success(val) => Success(Ok(val)),
+            Failure((_, val)) => Success(Err(val)),
+            Forward(data) => Forward(data),
         }
     }
 }
@@ -101,11 +86,11 @@ impl<T: FromData> FromData for Result<T, T::Error> {
 impl<T: FromData> FromData for Option<T> {
     type Error = ();
 
-    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
+    fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error> {
         match T::from_data(request, data) {
-            Outcome::Success(val) => DataOutcome::success(Some(val)),
-            Outcome::Failure(_) => DataOutcome::success(None),
-            Outcome::Forward(_) => DataOutcome::success(None)
+            Success(val) => Success(Some(val)),
+            Failure(_) => Success(None),
+            Forward(_) => Success(None)
         }
     }
 }

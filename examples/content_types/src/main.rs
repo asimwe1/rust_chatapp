@@ -7,7 +7,7 @@ extern crate serde_json;
 
 use rocket::{Request, Error};
 use rocket::http::ContentType;
-use rocket::response::data;
+use rocket::response::content::JSON;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
@@ -15,15 +15,17 @@ struct Person {
     age: i8,
 }
 
+// This shows how to manually serialize some JSON, but in a real application,
+// we'd use the JSON contrib type.
 #[get("/<name>/<age>", format = "application/json")]
-fn hello(content_type: ContentType, name: String, age: i8) -> data::JSON<String> {
+fn hello(content_type: ContentType, name: String, age: i8) -> JSON<String> {
     let person = Person {
         name: name,
         age: age,
     };
 
     println!("ContentType: {}", content_type);
-    data::JSON(serde_json::to_string(&person).unwrap())
+    JSON(serde_json::to_string(&person).unwrap())
 }
 
 #[error(404)]

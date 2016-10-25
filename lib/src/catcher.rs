@@ -74,7 +74,7 @@ macro_rules! default_errors {
         $(
             fn $fn_name<'r>(_: Error, _r: &'r Request) -> Response<'r> {
                 Response::with_raw_status($code,
-                    data::HTML(error_page_template!($code, $name, $description))
+                    content::HTML(error_page_template!($code, $name, $description))
                 )
             }
 
@@ -91,7 +91,7 @@ pub mod defaults {
     use std::collections::HashMap;
 
     use request::Request;
-    use response::{Response, data};
+    use response::{Response, content};
     use error::Error;
 
     pub fn get() -> HashMap<u16, Catcher> {

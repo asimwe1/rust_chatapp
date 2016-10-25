@@ -86,7 +86,6 @@ use term_painter::Color;
 use term_painter::ToStyle;
 
 use self::Outcome::*;
-use http::hyper::{FreshHyperResponse, StatusCode};
 
 /// An enum representing success (`Success`), failure (`Failure`), or
 /// forwarding (`Forward`).
@@ -101,26 +100,9 @@ pub enum Outcome<S, E, F> {
     Forward(F),
 }
 
+/// Conversion trait from some type into an Outcome type.
 pub trait IntoOutcome<S, E, F> {
     fn into_outcome(self) -> Outcome<S, E, F>;
-}
-
-impl<T, E> IntoOutcome<T, (StatusCode, E), ()> for Result<T, E> {
-    fn into_outcome(self) -> Outcome<T, (StatusCode, E), ()> {
-        match self {
-            Ok(val) => Success(val),
-            Err(val) => Failure((StatusCode::BadRequest, val))
-        }
-    }
-}
-
-impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Result<T, E> {
-    fn into_outcome(self) -> Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)> {
-        match self {
-            Ok(_) => Success(()),
-            Err(_) => Failure(())
-        }
-    }
 }
 
 impl<S, E, F> Outcome<S, E, F> {

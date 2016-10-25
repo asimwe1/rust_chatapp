@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::response::{data, Stream};
+use rocket::response::{content, Stream};
 
 use std::io::{self, repeat, Repeat, Read, Take};
 use std::fs::File;
@@ -11,8 +11,8 @@ use std::fs::File;
 type LimitedRepeat = Take<Repeat>;
 
 #[get("/")]
-fn root() -> data::Plain<Stream<LimitedRepeat>> {
-    data::Plain(Stream::from(repeat('a' as u8).take(25000)))
+fn root() -> content::Plain<Stream<LimitedRepeat>> {
+    content::Plain(Stream::from(repeat('a' as u8).take(25000)))
 }
 
 #[get("/big_file")]

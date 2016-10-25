@@ -6,7 +6,7 @@ extern crate rocket;
 use std::io;
 
 use rocket::request::Data;
-use rocket::response::data::Plain;
+use rocket::response::content::Plain;
 
 #[post("/upload", format = "text/plain", data = "<data>")]
 fn upload(data: Data) -> io::Result<Plain<String>> {

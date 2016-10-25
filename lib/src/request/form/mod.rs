@@ -28,7 +28,8 @@ use std::fmt::{self, Debug};
 use std::io::Read;
 
 use http::StatusCode;
-use request::{Request, FromData, Data, DataOutcome};
+use request::{data, Request, FromData, Data};
+use outcome::Outcome::*;
 
 // TODO: This works and is safe, but the lifetime appears twice.
 /// A `FromData` type for parsing `FromForm` types.
@@ -230,23 +231,23 @@ impl<'f, T: FromForm<'f> + Debug + 'f> Debug for Form<'f, T> {
 impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
     type Error = Option<String>;
 
-    fn from_data(request: &Request, data: Data) -> DataOutcome<Self, Self::Error> {
+    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         if !request.content_type().is_form() {
             warn_!("Form data does not have form content type.");
-            return DataOutcome::forward(data);
+            return Forward(data);
         }
 
         let mut form_string = String::with_capacity(4096);
         let mut stream = data.open().take(32768);
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
-            DataOutcome::failure(StatusCode::InternalServerError, None)
+            Failure((StatusCode::InternalServerError, None))
         } else {
             match Form::new(form_string) {
-                Ok(form) => DataOutcome::success(form),
+                Ok(form) => Success(form),
                 Err((form_string, e)) => {
                     error_!("Failed to parse value from form: {:?}", e);
-                    DataOutcome::failure(StatusCode::BadRequest, Some(form_string))
+                    Failure((StatusCode::BadRequest, Some(form_string)))
                 }
             }
         }

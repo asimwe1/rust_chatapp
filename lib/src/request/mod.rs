@@ -17,11 +17,12 @@
 mod request;
 mod param;
 mod form;
-mod data;
 mod from_request;
+
+pub mod data;
 
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::param::{FromParam, FromSegments};
 pub use self::form::{Form, FromForm, FromFormValue, FormItems};
-pub use self::data::{Data, FromData, DataOutcome};
+pub use self::data::{Data, FromData};
