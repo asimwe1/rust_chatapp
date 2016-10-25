@@ -104,6 +104,16 @@ impl RouteParams {
             }
         }
 
+        // Sanity check: `data` should only be used with payload methods.
+        if let Some(ref data_param) = data {
+            if !method.node.supports_payload() {
+                ecx.struct_span_err(data_param.span, "`data` route parameters \
+                        can only be used with payload supporting methods")
+                    .note(&format!("'{}' does not support payloads", method.node))
+                    .emit();
+            }
+        }
+
         RouteParams {
             method: method,
             path: path,

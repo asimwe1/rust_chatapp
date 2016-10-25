@@ -7,8 +7,8 @@ use http::hyper::{header, FreshHyperResponse, StatusCode};
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
+/// Type alias for the `Outcome` of a `Responder`.
 pub type Outcome<'a> = outcome::Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)>;
-
 
 impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Result<T, E> {
     fn into_outcome(self) -> Outcome<'a> {
