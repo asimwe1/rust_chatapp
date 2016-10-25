@@ -1,15 +1,59 @@
+//! A tiny module for testing Rocket applications.
+//!
+//! # Usage
+//!
+//! The testing methadology is simple:
+//!
+//!   1. Construct a `Rocket` instance
+//!   2. Construct a request.
+//!   3. Dispatch the request using the Rocket instance.
+//!   4. Inspect, validate, and verify the response.
+//!
+//! ## Construct a `Rocket` Instance
+//!
+//! Constructing a `Rocket` instance for testing is identical to constructing
+//! one for launching, except you should not call the `launch` method. That is,
+//! use `rocket::ignite`, then mount routes and catchers. That's it!
+//!
+//! ## Construct a (Mock)Request
+//!
+//! The [MockRequest](struct.MockRequest.html) object enables the creation of an
+//! HTTP request without using any networking. A `MockRequest` object is
+//! constructed using the builder pattern. For example, the following code
+//! builds a request for submitting a login form with three fields:
+//!
+//! ```rust
+//! use rocket::http::Method::*;
+//! use rocket::testing::MockRequest;
+//!
+//! let (username, password, age) = ("user", "password", 32);
+//! MockRequest::new(Post, "/login")
+//!     .headers(&[("Content-Type", "application/x-www-form-urlencoded")])
+//!     .body(&format!("username={}&password={}&age={}", username, password, age));
+//! ```
+//!
+//! ## Dispatch and Validate
+//!
+//! Finally, requests can be dispatched using the
+//! [dispatch_with](struct.MockRequest.html#method.dispatch_with) method on the
+//! contructed `MockRequest` instance. The method returns the body of the
+//! response. At present, the API does not allow for headers in the response to
+//! be examined.
+
 use std::io::Cursor;
 use outcome::Outcome::*;
 use http::{hyper, Method};
 use request::{Request, Data};
 use Rocket;
 
+/// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest {
     request: Request,
     data: Data
 }
 
 impl MockRequest {
+    /// Constructs a new mocked request with the given `method` and `uri`.
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
         MockRequest {
             request: Request::mock(method, uri.as_ref()),
@@ -17,6 +61,20 @@ impl MockRequest {
         }
     }
 
+    /// Sets the headers for this request.
+    ///
+    /// # Examples
+    ///
+    /// Set the Content-Type header:
+    ///
+    /// ```rust
+    /// use rocket::http::Method::*;
+    /// use rocket::testing::MockRequest;
+    ///
+    /// let req = MockRequest::new(Get, "/").headers(&[
+    ///     ("Content-Type", "application/json")
+    /// ]);
+    /// ```
     pub fn headers<'h, H: AsRef<[(&'h str, &'h str)]>>(mut self, headers: H) -> Self {
         let mut hyp_headers = hyper::HyperHeaders::new();
 
@@ -33,11 +91,63 @@ impl MockRequest {
         self
     }
 
+    /// Set the body (data) of the request.
+    ///
+    /// # Examples
+    ///
+    /// Set the body to be a JSON structure; also sets the Content-Type.
+    ///
+    /// ```rust
+    /// use rocket::http::Method::*;
+    /// use rocket::testing::MockRequest;
+    ///
+    /// let req = MockRequest::new(Post, "/").headers(&[
+    ///     ("Content-Type", "application/json")
+    /// ]).body(r#"
+    ///    {
+    ///        "key": "value",
+    ///        "array": [1, 2, 3],
+    ///    }
+    /// "#);
+    /// ```
     pub fn body<S: AsRef<str>>(mut self, body: S) -> Self {
         self.data = Data::new(body.as_ref().as_bytes().into());
         self
     }
 
+    /// Dispatch this request using a given instance of Rocket.
+    ///
+    /// Returns the body of the response if there was a response. The return
+    /// value is `None` if any of the following occurs:
+    ///
+    ///   1. The returned body was not valid UTF8.
+    ///   2. The application failed to respond.
+    ///
+    /// # Examples
+    ///
+    /// Dispatch to a Rocket instance with the `"Hello, world!"` example
+    /// mounted:
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// #
+    /// #[get("/")]
+    /// fn hello() -> &'static str {
+    ///     "Hello, world!"
+    /// }
+    ///
+    /// use rocket::testing::MockRequest;
+    /// use rocket::http::Method::*;
+    ///
+    /// # fn main() {
+    /// let rocket = rocket::ignite().mount("/", routes![hello]);
+    /// let req = MockRequest::new(Get, "/");
+    /// let result = req.dispatch_with(&rocket);
+    /// assert_eq!(result.unwrap().as_str(), "Hello, world!");
+    /// # }
+    /// ```
     pub fn dispatch_with(mut self, rocket: &Rocket) -> Option<String> {
         let request = self.request;
         let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
