@@ -11,9 +11,11 @@ source $SCRIPT_DIR/config.sh
 
 function mk_doc() {
   local dir=$1
+  local flag=$2
   pushd $dir > /dev/null
     echo ":: Documenting '${dir}'..."
     cargo doc --no-deps --all-features
+    cargo doc --no-deps $flag
   popd > /dev/null
 }
 
@@ -22,4 +24,4 @@ cargo clean
 
 mk_doc $LIB_DIR
 mk_doc $CODEGEN_DIR
-mk_doc $CONTRIB_DIR
+mk_doc $CONTRIB_DIR  --all-features
