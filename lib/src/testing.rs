@@ -1,5 +1,33 @@
 //! A tiny module for testing Rocket applications.
 //!
+//! # Enabling
+//!
+//! The `testing` module is only available when Rocket is compiled with the
+//! `testing` feature flag. The suggested way to enable the `testing` module is
+//! through Cargo's `[dev-dependencies]` feature which allows features (and
+//! other dependencies) to be enabled exclusively when testing/benchmarking your
+//! application.
+//!
+//! To compile Rocket with the `testing` feature for testing/benchmarking, add
+//! the following to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dev-dependencies]
+//! rocket = { version = "*", features = ["testing"] }
+//! ```
+//!
+//! Then, in your testing module, `use` the testing types. This typically looks
+//! as follows:
+//!
+//! ```rust,ignore
+//! #[cfg(test)]
+//! mod test {
+//!   use super::rocket;
+//!   use rocket::testing::MockRequest;
+//!   use rocket::http::Method::*;
+//! }
+//! ```
+//!
 //! # Usage
 //!
 //! The testing methadology is simple:
@@ -23,9 +51,8 @@
 //! builds a request for submitting a login form with three fields:
 //!
 //! ```rust
-//! use rocket::http::Method::*;
-//! use rocket::testing::MockRequest;
-//!
+//! # use rocket::http::Method::*;
+//! # use rocket::testing::MockRequest;
 //! let (username, password, age) = ("user", "password", 32);
 //! MockRequest::new(Post, "/login")
 //!     .headers(&[("Content-Type", "application/x-www-form-urlencoded")])
@@ -39,6 +66,38 @@
 //! contructed `MockRequest` instance. The method returns the body of the
 //! response. At present, the API does not allow for headers in the response to
 //! be examined.
+//!
+//! # Example
+//!
+//! The following is an example of a complete application with testing.
+//!
+//! ```rust
+//! #![feature(plugin)]
+//! #![plugin(rocket_codegen)]
+//!
+//! extern crate rocket;
+//!
+//! #[get("/")]
+//! fn hello() -> &'static str {
+//!     "Hello, world!"
+//! }
+//!
+//! # fn main() {  }
+//! #[cfg(test)]
+//! mod test {
+//!     use super::rocket;
+//!     use rocket::testing::MockRequest;
+//!     use rocket::http::Method::*;
+//!
+//!     #[test]
+//!     fn test_hello_world() {
+//!         let rocket = rocket::ignite().mount("/", routes![super::hello]);
+//!         let req = MockRequest::new(Get, "/");
+//!         let result = req.dispatch_with(&rocket);
+//!         assert_eq!(result.unwrap().as_str(), "Hello, world!");
+//!     }
+//! }
+//! ```
 
 use std::io::Cursor;
 use outcome::Outcome::*;

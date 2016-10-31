@@ -503,7 +503,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [development]
-            address = "_idk_"
+            address = "_idk_?"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
