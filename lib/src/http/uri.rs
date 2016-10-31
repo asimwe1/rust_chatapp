@@ -193,6 +193,11 @@ impl<'a> URI<'a> {
 
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // If this is the root path, then there are "zero" segments.
+        if self.as_str().starts_with("/") && self.segment_count() == 0 {
+            return write!(f, "/");
+        }
+
         for segment in self.segments() {
             write!(f, "/{}", segment)?;
         }
@@ -576,5 +581,18 @@ mod tests {
         test_fragment("/abc", None);
         test_fragment("/a/b/c?123", None);
         test_fragment("/a", None);
+    }
+
+    #[test]
+    fn to_string() {
+        let uri_to_string = |string| URI::new(string).to_string();
+
+        assert_eq!(uri_to_string("/"), "/".to_string());
+        assert_eq!(uri_to_string("//"), "/".to_string());
+        assert_eq!(uri_to_string("//////a/"), "/a".to_string());
+        assert_eq!(uri_to_string("//ab"), "/ab".to_string());
+        assert_eq!(uri_to_string("//a"), "/a".to_string());
+        assert_eq!(uri_to_string("/a/b///c"), "/a/b/c".to_string());
+        assert_eq!(uri_to_string("/a///b/c/d///"), "/a/b/c/d".to_string());
     }
 }
