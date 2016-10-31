@@ -8,7 +8,7 @@ use error::Error;
 use super::{FromParam, FromSegments};
 
 use router::Route;
-use http::uri::{URI, URIBuf};
+use http::uri::{URI, URIBuf, Segments};
 use http::hyper::{header, HyperCookie, HyperHeaders, HyperMethod, HyperRequestUri};
 use http::{Method, ContentType, Cookies};
 
@@ -45,14 +45,20 @@ impl Request {
     ///     let my_param: T = request.get_param(n);
     /// }
     /// ```
-    #[inline(always)]
     pub fn get_param<'r, T: FromParam<'r>>(&'r self, n: usize) -> Result<T, Error> {
+        let param = self.get_param_str(n).ok_or(Error::NoKey)?;
+        T::from_param(param).map_err(|_| Error::BadParse)
+    }
+
+    /// Get the `n`th path parameter, if it exists.
+    #[doc(hidden)]
+    pub fn get_param_str(&self, n: usize) -> Option<&str> {
         let params = self.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param count {}", n, params.len());
-            Err(Error::NoKey)
+            None
         } else {
-            T::from_param(params[n]).map_err(|_| Error::BadParse)
+            Some(&params[n])
         }
     }
 
@@ -73,16 +79,22 @@ impl Request {
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
     /// `"there/i/am/here"` as type `T`.
     pub fn get_segments<'r, T: FromSegments<'r>>(&'r self, i: usize) -> Result<T, Error> {
+        let segments = self.get_raw_segments(i).ok_or(Error::NoKey)?;
+        T::from_segments(segments).map_err(|_| Error::BadParse)
+    }
+
+    /// Get the segments beginning at the `i`th, if they exists.
+    #[doc(hidden)]
+    pub fn get_raw_segments(&self, i: usize) -> Option<Segments> {
         if i >= self.uri().segment_count() {
             debug!("{} is >= segment count {}", i, self.uri().segment_count());
-            Err(Error::NoKey)
+            None
         } else {
             // TODO: Really want to do self.uri.segments().skip(i).into_inner(),
             // but the std lib doesn't implement it for Skip.
             let mut segments = self.uri.as_uri().segments();
             for _ in segments.by_ref().take(i) { /* do nothing */ }
-
-            T::from_segments(segments).map_err(|_| Error::BadParse)
+            Some(segments)
         }
     }
 

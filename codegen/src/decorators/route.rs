@@ -144,18 +144,26 @@ impl RouteGenerateExt for RouteParams {
                 }
             };
 
+            // Note: the `None` case shouldn't happen if a route is matched.
             let ident = param.ident().prepend(PARAM_PREFIX);
             let expr = match param {
-                Param::Single(_) => quote_expr!(ecx, _req.get_param($i)),
-                Param::Many(_) => quote_expr!(ecx, _req.get_segments($i)),
+                Param::Single(_) => quote_expr!(ecx, match _req.get_param_str($i) {
+                    Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
+                    None => return ::rocket::Response::forward(_data)
+                }),
+                Param::Many(_) => quote_expr!(ecx, match _req.get_raw_segments($i) {
+                    Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
+                    None => return ::rocket::Response::forward(_data)
+                }),
             };
 
+            let original_ident = param.ident();
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
                     Err(e) => {
                         println!("    => Failed to parse '{}': {:?}",
-                                 stringify!($ident), e);
+                                 stringify!($original_ident), e);
                         return ::rocket::Response::forward(_data)
                     }
                 };
