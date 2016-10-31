@@ -1,6 +1,8 @@
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::path::PathBuf;
+use std::fmt::Debug;
+
 use url;
 
 use http::uri::Segments;
@@ -49,7 +51,7 @@ use http::uri::Segments;
 /// use whichever makes sense for your application.
 pub trait FromParam<'a>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error;
+    type Error: Debug;
 
     /// Parses an instance of `Self` from a dynamic path parameter string or
     /// returns an `Error` if one cannot be parsed.
@@ -86,6 +88,26 @@ impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
        bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
        SocketAddr);
 
+impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
+    type Error = ();
+    fn from_param(p: &'a str) -> Result<Self, Self::Error> {
+        Ok(match T::from_param(p) {
+            Ok(val) => Ok(val),
+            Err(e) => Err(e),
+        })
+    }
+}
+
+impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
+    type Error = ();
+    fn from_param(p: &'a str) -> Result<Self, Self::Error> {
+        Ok(match T::from_param(p) {
+            Ok(val) => Some(val),
+            Err(_) => None
+        })
+    }
+}
+
 /// Trait to convert _many_ dynamic path segment strings to a concrete value.
 ///
 /// This is the `..` analog to [FromParam](trait.FromParam.html), and its
@@ -97,7 +119,7 @@ impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
 /// implementing type.
 pub trait FromSegments<'a>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error;
+    type Error: Debug;
 
     /// Parses an instance of `Self` from many dynamic path parameter strings or
     /// returns an `Error` if one cannot be parsed.
@@ -115,5 +137,25 @@ impl<'a> FromSegments<'a> for PathBuf {
     type Error = ();
     fn from_segments(segments: Segments<'a>) -> Result<PathBuf, ()> {
         Ok(segments.collect())
+    }
+}
+
+impl<'a, T: FromSegments<'a>> FromSegments<'a> for Result<T, T::Error> {
+    type Error = ();
+    fn from_segments(segments: Segments<'a>) -> Result<Result<T, T::Error>, ()> {
+        Ok(match T::from_segments(segments) {
+            Ok(val) => Ok(val),
+            Err(e) => Err(e),
+        })
+    }
+}
+
+impl<'a, T: FromSegments<'a>> FromSegments<'a> for Option<T> {
+    type Error = ();
+    fn from_segments(segments: Segments<'a>) -> Result<Option<T>, ()> {
+        Ok(match T::from_segments(segments) {
+            Ok(val) => Some(val),
+            Err(_) => None
+        })
     }
 }

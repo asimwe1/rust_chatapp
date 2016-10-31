@@ -153,7 +153,11 @@ impl RouteGenerateExt for RouteParams {
             fn_param_statements.push(quote_stmt!(ecx,
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Response::forward(_data)
+                    Err(e) => {
+                        println!("    => Failed to parse '{}': {:?}",
+                                 stringify!($ident), e);
+                        return ::rocket::Response::forward(_data)
+                    }
                 };
             ).expect("declared param parsing statement"));
         }

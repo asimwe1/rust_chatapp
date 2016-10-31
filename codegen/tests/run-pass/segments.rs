@@ -10,6 +10,9 @@ fn get(a: String, b: PathBuf) -> String {
     format!("{}/{}", a, b.to_string_lossy())
 }
 
-fn main() {
-    let _ = routes![get];
+#[post("/<a>/<b..>")]
+fn get2(a: String, b: Result<PathBuf, ()>) -> String {
+    format!("{}/{}", a, b.unwrap().to_string_lossy())
 }
+
+fn main() {  }
