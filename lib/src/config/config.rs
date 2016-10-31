@@ -21,7 +21,7 @@ pub struct Config {
     /// The environment that this configuration corresponds to.
     pub env: Environment,
     session_key: RwLock<Option<String>>,
-    extra: HashMap<String, Value>,
+    extras: HashMap<String, Value>,
     filename: String,
 }
 
@@ -48,7 +48,7 @@ impl Config {
                     port: 8000,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
-                    extra: HashMap::new(),
+                    extras: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
                 }
@@ -59,7 +59,7 @@ impl Config {
                     port: 80,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
-                    extra: HashMap::new(),
+                    extras: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
                 }
@@ -70,7 +70,7 @@ impl Config {
                     port: 80,
                     log_level: LoggingLevel::Critical,
                     session_key: RwLock::new(None),
-                    extra: HashMap::new(),
+                    extras: HashMap::new(),
                     env: env,
                     filename: filename.to_string(),
                 }
@@ -116,7 +116,7 @@ impl Config {
                                 "log level ('normal', 'critical', 'debug')"))
             };
         } else {
-            self.extra.insert(name.into(), val.clone());
+            self.extras.insert(name.into(), val.clone());
         }
 
         Ok(())
@@ -130,26 +130,26 @@ impl Config {
 
     #[inline(always)]
     pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a String, &'a Value)> {
-        self.extra.iter()
+        self.extras.iter()
     }
 
     pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
-        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_str, "a string")
     }
 
     pub fn get_int<'a>(&'a self, name: &str) -> config::Result<i64> {
-        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_integer, "an integer")
     }
 
     pub fn get_bool<'a>(&'a self, name: &str) -> config::Result<bool> {
-        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_bool, "a boolean")
     }
 
     pub fn get_float<'a>(&'a self, name: &str) -> config::Result<f64> {
-        let value = self.extra.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_float, "a float")
     }
 
@@ -191,6 +191,12 @@ impl Config {
         self.env = var;
         self
     }
+
+    #[inline(always)]
+    pub fn extra(mut self, name: &str, value: &Value) -> Self {
+        self.extras.insert(name.into(), value.clone());
+        self
+    }
 }
 
 impl fmt::Debug for Config {
@@ -207,7 +213,7 @@ impl PartialEq for Config {
             && self.port == other.port
             && self.log_level == other.log_level
             && self.env == other.env
-            && self.extra == other.extra
+            && self.extras == other.extras
             && self.filename == other.filename
     }
 }

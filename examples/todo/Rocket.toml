@@ -1,8 +1,2 @@
-[dev]
-template_dir = "static"
-
-[stage]
-template_dir = "static"
-
-[prod]
+[global]
 template_dir = "static"

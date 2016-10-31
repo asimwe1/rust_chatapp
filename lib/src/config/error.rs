@@ -58,9 +58,10 @@ impl ConfigError {
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
+                let valid_entries = format!("{}, and global", valid_envs);
                 error!("[{}] is not a known configuration environment", name);
                 info_!("in {}", White.paint(filename));
-                info_!("valid environments are: {}", White.paint(valid_envs));
+                info_!("valid environments are: {}", White.paint(valid_entries));
             }
             BadEnv(ref name) => {
                 error!("'{}' is not a valid ROCKET_ENV value", name);

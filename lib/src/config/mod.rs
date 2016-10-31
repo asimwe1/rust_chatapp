@@ -47,11 +47,12 @@
 //! each environment. The file is optional. If it is not present, the default
 //! configuration parameters are used.
 //!
-//! The file must be a series of tables, one for each environment, where each
-//! table contains key-value pairs corresponding to configuration parameters for
-//! that environment. If a configuration parameter is missing, the default value
-//! is used. The following is a complete `Rocket.toml` file, where every
-//! standard configuration parameter is specified with the default value:
+//! The file must be a series of tables, at most one for each environment and a
+//! "global" table, where each table contains key-value pairs corresponding to
+//! configuration parameters for that environment. If a configuration parameter
+//! is missing, the default value is used. The following is a complete
+//! `Rocket.toml` file, where every standard configuration parameter is
+//! specified with the default value:
 //!
 //! ```toml
 //! [development]
@@ -72,6 +73,23 @@
 //! log = "critical"
 //! # don't use this key! generate your own and keep it private!
 //! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+//! ```
+//!
+//! The "global" pseudo-environment can be used to set and/or override
+//! configuration parameters globally. A parameter defined in a `[global]` table
+//! sets, or overrides if already present, that parameter in every environment.
+//! For example, given the following `Rocket.toml` file, the value of `address`
+//! will be `"1.2.3.4"` in every environment:
+//!
+//! ```toml
+//! [global]
+//! address = "1.2.3.4"
+//!
+//! [devolopment]
+//! address = "localhost"
+//!
+//! [production]
+//! address = "0.0.0.0"
 //! ```
 //!
 //! ## Retrieving Configuration Parameters
@@ -126,6 +144,8 @@ static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
+
+const GLOBAL_ENV_NAME: &'static str = "global";
 
 /// Wraps `std::result` with the error type of
 /// [ConfigError](enum.ConfigError.html).
@@ -198,16 +218,14 @@ impl RocketConfig {
             }).collect()
         ))?;
 
-        // Create a config with the defaults, but the set the env to the active
+        // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
+
+        // Store all of the global overrides, if any, for later use.
+        let mut global = None;
 
         // Parse the values from the TOML file.
         for (entry, value) in toml {
-            // Parse the environment from the table entry name.
-            let env = entry.as_str().parse().map_err(|_| {
-                ConfigError::BadEntry(entry.clone(), filename.into())
-            })?;
-
             // Each environment must be a table.
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
@@ -216,8 +234,24 @@ impl RocketConfig {
                 ))
             };
 
-            // Set the environment configuration from the kv pairs.
-            config.set(env, &kv_pairs)?;
+            if entry.as_str() == GLOBAL_ENV_NAME {
+                global = Some(kv_pairs.clone());
+            } else {
+                // Parse the environment from the table entry name.
+                let env = entry.as_str().parse().map_err(|_| {
+                    ConfigError::BadEntry(entry.clone(), filename.into())
+                })?;
+
+                // Set the environment configuration from the kv pairs.
+                config.set(env, &kv_pairs)?;
+            }
+        }
+
+        // Override all of the environments with the global values.
+        if let Some(ref global_kv_pairs) = global {
+            for env in &Environment::all() {
+                config.set(*env, global_kv_pairs)?;
+            }
         }
 
         Ok(config)
@@ -320,7 +354,7 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{RocketConfig, ConfigError};
+    use super::{RocketConfig, ConfigError, GLOBAL_ENV_NAME};
     use super::environment::{Environment, CONFIG_ENV};
     use super::Environment::*;
     use super::config::Config;
@@ -677,5 +711,43 @@ mod test {
             [dev]
             session_key = "abcv" = other
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    #[test]
+    fn test_global_overrides() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+
+        // Test first that we can override each environment.
+        for env in &Environment::all() {
+            env::set_var(CONFIG_ENV, env.to_string());
+
+            check_config!(RocketConfig::parse(format!(r#"
+                              [{}]
+                              address = "7.6.5.4"
+                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
+                              default_config(*env).address(
+                                  "7.6.5.4".into()
+                              )
+                          });
+
+            check_config!(RocketConfig::parse(format!(r#"
+                              [{}]
+                              database = "mysql"
+                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
+                              default_config(*env).extra("database",
+                                  &Value::String("mysql".into())
+                              )
+                          });
+
+            check_config!(RocketConfig::parse(format!(r#"
+                              [{}]
+                              port = 3980
+                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
+                              default_config(*env).port(
+                                  3980
+                              )
+                          });
+        }
     }
 }

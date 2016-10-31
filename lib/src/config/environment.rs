@@ -36,6 +36,12 @@ impl Environment {
     pub fn valid() -> &'static str {
         "development, staging, production"
     }
+
+    /// Returns a list of all of the possible environments.
+    #[inline(always)]
+    pub fn all() -> [Environment; 3] {
+        [Development, Staging, Production]
+    }
 }
 
 impl FromStr for Environment {
