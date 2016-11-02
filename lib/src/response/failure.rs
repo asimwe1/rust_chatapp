@@ -2,6 +2,8 @@ use outcome::Outcome;
 use response::{self, Responder};
 use http::hyper::{FreshHyperResponse, StatusCode};
 
+/// A failing response; simply forwards to the catcher for the given
+/// `StatusCode`.
 #[derive(Debug)]
 pub struct Failure(pub StatusCode);
 

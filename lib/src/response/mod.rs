@@ -1,3 +1,9 @@
+//! Types and traits to build and send responses.
+//!
+//! The return type of a Rocket handler can be any type that implements the
+//! [Responder](trait.Responder.html) trait. This module contains several useful
+//! types that implement this trait.
+
 mod responder;
 mod redirect;
 mod with_status;
