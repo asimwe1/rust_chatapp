@@ -19,5 +19,4 @@ pub use self::method::Method;
 pub use self::hyper::StatusCode;
 pub use self::content_type::ContentType;
 
-/// Can I document it here?
 pub use self::cookies::{Cookie, Cookies};

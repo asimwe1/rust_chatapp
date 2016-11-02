@@ -20,7 +20,7 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 }
 
 pub trait Responder {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a>;
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a>;
 }
 
 impl<'a> Responder for &'a str {

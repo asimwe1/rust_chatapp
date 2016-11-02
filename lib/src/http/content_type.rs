@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::borrow::Borrow;
 use std::fmt;
 
-use http::mime::{Mime, Param, TopLevel, SubLevel};
+use http::mime::{Mime, Param, Attr, Value, TopLevel, SubLevel};
 use router::Collider;
 
 /// Typed representation of HTTP Content-Types.
@@ -45,7 +45,7 @@ impl ContentType {
     }
 
     /// Constructs a new content type of the given top level and sub level
-    /// types.
+    /// types. If the top-level type is `Text`, a charset of UTF-8 is set.
     ///
     /// # Examples
     ///
@@ -53,12 +53,26 @@ impl ContentType {
     /// use rocket::http::ContentType;
     /// use rocket::http::mime::{TopLevel, SubLevel};
     ///
-    /// let html = ContentType::of(TopLevel::Application, SubLevel::Html);
-    /// assert!(html.is_html());
+    /// let ct = ContentType::of(TopLevel::Text, SubLevel::Html);
+    /// assert_eq!(ct.to_string(), "text/html; charset=utf-8".to_string());
+    /// assert!(ct.is_html());
+    /// ```
+    ///
+    /// ```rust
+    /// use rocket::http::ContentType;
+    /// use rocket::http::mime::{TopLevel, SubLevel};
+    ///
+    /// let ct = ContentType::of(TopLevel::Application, SubLevel::Json);
+    /// assert_eq!(ct.to_string(), "application/json".to_string());
+    /// assert!(ct.is_json());
     /// ```
     #[inline(always)]
     pub fn of(t: TopLevel, s: SubLevel) -> ContentType {
-        ContentType(t, s, None)
+        if t == TopLevel::Text {
+            ContentType(t, s, Some(vec![(Attr::Charset, Value::Utf8)]))
+        } else {
+            ContentType(t, s, None)
+        }
     }
 
     /// Returns the Content-Type associated with the extension `ext`. Not all
@@ -88,7 +102,7 @@ impl ContentType {
         let (top_level, sub_level) = match ext {
             "txt" => (TopLevel::Text, SubLevel::Plain),
             "html" | "htm" => (TopLevel::Text, SubLevel::Html),
-            "xml" => (TopLevel::Application, SubLevel::Xml),
+            "xml" => (TopLevel::Text, SubLevel::Xml),
             "js" => (TopLevel::Application, SubLevel::Javascript),
             "css" => (TopLevel::Text, SubLevel::Css),
             "json" => (TopLevel::Application, SubLevel::Json),
@@ -111,11 +125,11 @@ impl ContentType {
         /// Returns a `ContentType` representing JSON, i.e, `application/json`.
         | json: Application/Json,
 
-        /// Returns a `ContentType` representing XML, i.e, `application/xml`.
-        | xml: Application/Xml,
+        /// Returns a `ContentType` representing XML, i.e, `text/xml`.
+        | xml: Text/Xml,
 
-        /// Returns a `ContentType` representing HTML, i.e, `application/html`.
-        | html: Application/Html
+        /// Returns a `ContentType` representing HTML, i.e, `text/html`.
+        | html: Text/Html
     }
 
     /// Returns true if this content type is not one of the standard content
@@ -137,14 +151,14 @@ impl ContentType {
         /// Returns true if the content type is JSON, i.e: `application/json`.
         | is_json: Application/Json,
 
-        /// Returns true if the content type is XML, i.e: `application/xml`.
-        | is_xml: Application/Xml,
+        /// Returns true if the content type is XML, i.e: `text/xml`.
+        | is_xml: Text/Xml,
 
         /// Returns true if the content type is any, i.e.: `*/*`.
         | is_any: Star/Star,
 
-        /// Returns true if the content type is HTML, i.e.: `application/html`.
-        | is_html: Application/Html,
+        /// Returns true if the content type is HTML, i.e.: `text/html`.
+        | is_html: Text/Html,
 
         /// Returns true if the content type is that for non-data HTTP forms,
         /// i.e.: `application/x-www-form-urlencoded`.
@@ -287,8 +301,8 @@ impl fmt::Display for ContentType {
     /// ```rust
     /// use rocket::http::ContentType;
     ///
-    /// let http_ct = format!("{}", ContentType::xml());
-    /// assert_eq!(http_ct, "application/xml".to_string());
+    /// let ct = format!("{}", ContentType::json());
+    /// assert_eq!(ct, "application/json".to_string());
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}/{}", self.0.as_str(), self.1.as_str())?;
