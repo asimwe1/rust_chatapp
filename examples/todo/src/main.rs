@@ -12,7 +12,7 @@ extern crate serde_json;
 mod static_files;
 mod task;
 
-use rocket::request::Form;
+use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::Template;
 use task::Task;
@@ -63,7 +63,7 @@ fn delete(id: i32) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-fn index(msg: Option<Flash<()>>) -> Template {
+fn index(msg: Option<FlashMessage>) -> Template {
     Template::render("index", &match msg {
         Some(ref msg) => Context::raw(Some((msg.name(), msg.msg()))),
         None => Context::raw(None),
