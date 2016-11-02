@@ -55,11 +55,6 @@ build_and_test "${CONTRIB_DIR}"
 check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 
 for file in ${EXAMPLES_DIR}/*; do
-  if [ "$(basename $file)" = "todo" ]; then
-    echo ":: Skipping todo example due to broken Diesel..."
-    continue
-  fi
-
   if [ -d "${file}" ]; then
     bootstrap_script="${file}/bootstrap.sh"
     if [ -x "${bootstrap_script}" ]; then
