@@ -85,7 +85,7 @@
 //! [global]
 //! address = "1.2.3.4"
 //!
-//! [devolopment]
+//! [development]
 //! address = "localhost"
 //!
 //! [production]

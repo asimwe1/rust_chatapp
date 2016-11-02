@@ -1,8 +1,8 @@
-use url;
-
-use error::Error;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::str::FromStr;
+
+use error::Error;
+use http::uri::URI;
 
 /// Trait to create instance of some type from a form value; expected from field
 /// types in structs deriving `FromForm`.
@@ -72,20 +72,20 @@ impl<'v> FromFormValue<'v> for String {
 
     // This actually parses the value according to the standard.
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let decoder = url::percent_encoding::percent_decode(v.as_bytes());
-        let res = decoder.decode_utf8().map_err(|_| v).map(|s| s.into_owned());
-        match res {
-            e@Err(_) => e,
+        let result = URI::percent_decode(v.as_bytes());
+        match result {
+            Err(_) => Err(v),
             Ok(mut string) => Ok({
+                // Entirely safe because we're changing the single-byte '+'.
                 unsafe {
-                    for c in string.as_mut_vec() {
+                    for c in string.to_mut().as_mut_vec() {
                         if *c == b'+' {
                             *c = b' ';
                         }
                     }
                 }
 
-                string
+                string.into_owned()
             })
         }
     }

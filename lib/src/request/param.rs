@@ -1,11 +1,9 @@
-use std::str::FromStr;
+use std::str::{Utf8Error, FromStr};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::path::PathBuf;
 use std::fmt::Debug;
 
-use url;
-
-use http::uri::Segments;
+use http::uri::{URI, Segments};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -68,8 +66,7 @@ impl<'a> FromParam<'a> for &'a str {
 impl<'a> FromParam<'a> for String {
     type Error = &'a str;
     fn from_param(p: &'a str) -> Result<String, Self::Error> {
-        let decoder = url::percent_encoding::percent_decode(p.as_bytes());
-        decoder.decode_utf8().map_err(|_| p).map(|s| s.into_owned())
+        URI::percent_decode(p.as_bytes()).map_err(|_| p).map(|s| s.into_owned())
     }
 }
 
@@ -133,10 +130,26 @@ impl<'a> FromSegments<'a> for Segments<'a> {
     }
 }
 
+/// Creates a `PathBuf` from a `Segments` iterator. The returned `PathBuf` is
+/// percent-decoded. If a segment is equal to "..", the previous segment (if
+/// any) is skipped. For security purposes, any other segments that begin with
+/// "*" or "." are ignored.  If a percent-decoded segment results in invalid
+/// UTF8, an `Err` is returned.
 impl<'a> FromSegments<'a> for PathBuf {
-    type Error = ();
-    fn from_segments(segments: Segments<'a>) -> Result<PathBuf, ()> {
-        Ok(segments.collect())
+    type Error = Utf8Error;
+
+    fn from_segments(segments: Segments<'a>) -> Result<PathBuf, Utf8Error> {
+        let mut buf = PathBuf::new();
+        for segment in segments {
+            let decoded = URI::percent_decode(segment.as_bytes())?;
+            if decoded == ".." {
+                buf.pop();
+            } else if !(decoded.starts_with(".") || decoded.starts_with("*")) {
+                buf.push(&*decoded)
+            }
+        }
+
+        Ok(buf)
     }
 }
 

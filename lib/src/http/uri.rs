@@ -1,9 +1,12 @@
 //! Borrowed and owned string types for absolute URIs.
-//!
 
 use std::cell::Cell;
 use std::convert::From;
 use std::fmt;
+use std::borrow::Cow;
+use std::str::Utf8Error;
+
+use url;
 
 use router::Collider;
 
@@ -77,7 +80,8 @@ impl<'a> URI<'a> {
         })
     }
 
-    /// Returns an iterator over the segments of this URI. Skips empty segments.
+    /// Returns an iterator over the segments of the path in this URI. Skips
+    /// empty segments.
     ///
     /// ### Examples
     ///
@@ -116,6 +120,32 @@ impl<'a> URI<'a> {
     #[inline(always)]
     pub fn segments(&self) -> Segments<'a> {
         Segments(self.path)
+    }
+
+    /// Returns the path part of this URI.
+    ///
+    /// ### Examples
+    ///
+    /// A URI with only a path:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c");
+    /// assert_eq!(uri.path(), "/a/b/c");
+    /// ```
+    ///
+    /// A URI with other components:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/a/b/c?name=bob#done");
+    /// assert_eq!(uri.path(), "/a/b/c");
+    /// ```
+    #[inline(always)]
+    pub fn path(&self) -> &'a str {
+        self.path
     }
 
     /// Returns the query part of this URI without the question mark, if there is
@@ -170,6 +200,41 @@ impl<'a> URI<'a> {
     #[inline(always)]
     pub fn fragment(&self) -> Option<&'a str> {
         self.fragment
+    }
+
+    /// Returns a URL-decoded version of the string. If the percent encoded
+    /// values are not valid UTF-8, an `Err` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/Hello%2C%20world%21");
+    /// let decoded_path = URI::percent_decode(uri.path().as_bytes()).expect("decoded");
+    /// assert_eq!(decoded_path, "/Hello, world!");
+    /// ```
+    pub fn percent_decode<'s>(string: &'s [u8]) -> Result<Cow<'s, str>, Utf8Error>  {
+        let decoder = url::percent_encoding::percent_decode(string);
+        decoder.decode_utf8()
+    }
+
+    /// Returns a URL-decoded version of the path. Any invalid UTF-8
+    /// percent-encoded byte sequences will be replaced � U+FFFD, the
+    /// replacement character.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let uri = URI::new("/Hello%2C%20world%21");
+    /// let decoded_path = URI::percent_decode_lossy(uri.path().as_bytes());
+    /// assert_eq!(decoded_path, "/Hello, world!");
+    /// ```
+    pub fn percent_decode_lossy<'s>(string: &'s [u8]) -> Cow<'s, str> {
+        let decoder = url::percent_encoding::percent_decode(string);
+        decoder.decode_utf8_lossy()
     }
 
     /// Returns the inner string of this URI.

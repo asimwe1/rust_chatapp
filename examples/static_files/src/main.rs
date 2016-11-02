@@ -4,8 +4,9 @@
 extern crate rocket;
 
 use std::io;
-use rocket::response::NamedFile;
 use std::path::{Path, PathBuf};
+
+use rocket::response::NamedFile;
 
 #[get("/")]
 fn index() -> io::Result<NamedFile> {
