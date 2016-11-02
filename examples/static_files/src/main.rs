@@ -6,7 +6,8 @@ extern crate rocket;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use rocket::response::NamedFile;
+use rocket::response::{NamedFile, Failure};
+use rocket::http::StatusCode::NotFound;
 
 #[get("/")]
 fn index() -> io::Result<NamedFile> {
@@ -14,8 +15,8 @@ fn index() -> io::Result<NamedFile> {
 }
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> io::Result<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file))
+fn files(file: PathBuf) -> Result<NamedFile, Failure> {
+    NamedFile::open(Path::new("static/").join(file)).map_err(|_| Failure(NotFound))
 }
 
 fn main() {
