@@ -63,7 +63,7 @@ fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
 
     if user.username == "Sergio" {
         if let Ok(StrongPassword("password")) = user.password {
-            Ok(Redirect::other("/user/Sergio"))
+            Ok(Redirect::to("/user/Sergio"))
         } else {
             Err("Wrong password!".to_string())
         }

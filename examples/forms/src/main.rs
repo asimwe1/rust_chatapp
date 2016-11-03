@@ -28,7 +28,7 @@ fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
 
     if user.username == "Sergio" {
         match user.password {
-            "password" => Ok(Redirect::other("/user/Sergio")),
+            "password" => Ok(Redirect::to("/user/Sergio")),
             _ => Err("Wrong password!".to_string())
         }
     } else {
