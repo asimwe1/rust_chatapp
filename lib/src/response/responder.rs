@@ -19,7 +19,69 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
     }
 }
 
+/// Trait implemented by types that send a response to clients.
+///
+/// Types that implement this trait can be used as the return type of a handler,
+/// as illustrated below:
+///
+/// ```rust,ignore
+/// #[get("/")]
+/// fn index() -> T { ... }
+/// ```
+///
+/// In this example, `T` can be any type that implements `Responder`.
+///
+/// # Outcomes
+///
+/// The returned [Outcome](/rocket/outcome/index.html) of a `respond` call
+/// determines how the response will be processed, if at all.
+///
+/// * **Success**
+///
+///   An `Outcome` of `Success` indicates that the responder was successful in
+///   sending the response to the client. No further processing will occur as a
+///   result.
+///
+/// * **Failure**
+///
+///   An `Outcome` of `Failure` indicates that the responder failed after
+///   beginning a response. The response is incomplete, and there is no way to
+///   salvage the response. No further processing will occur.
+///
+/// * **Forward**(StatusCode, FreshHyperResponse<'a>)
+///
+///   If the `Outcome` is `Forward`, the response will be forwarded to the
+///   designated error [Catcher](/rocket/struct.Catcher.html) for the given
+///   `StatusCode`. This requires that a response wasn't started and thus is
+///   still fresh.
+///
+/// # Implementation Tips
+///
+/// This section describes a few best practices to take into account when
+/// implementing `Responder`.
+///
+/// ## Debug
+///
+/// A type implementing `Responder` should implement the `Debug` trait when
+/// possible. This is because the `Responder` implementation for `Result`
+/// requires its `Err` type to implement `Debug`. Therefore, a type implementing
+/// `Debug` can more easily be composed.
+///
+/// ## Check Before Changing
+///
+/// Unless a given type is explicitly designed to change some information in
+/// ther esponse, it should first _check_ that some information hasn't been set
+/// before _changing_ that information. For example, before setting the
+/// `Content-Type` header of a response, first check that the header hasn't been
+/// set.
 pub trait Responder {
+    /// Attempts to write a response to `res`.
+    ///
+    /// If writing the response successfully completes, an outcome of `Success`
+    /// is returned. If writing the response begins but fails, an outcome of
+    /// `Failure` is returned. If writing a response fails before writing
+    /// anything out, an outcome of `Forward` can be returned, which causes the
+    /// response to be written by the appropriate error catcher instead.
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a>;
 }
 

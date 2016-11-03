@@ -1,4 +1,5 @@
 use std::io::{Read, Write, ErrorKind};
+use std::fmt::{self, Debug};
 
 use response::{Responder, Outcome};
 use http::hyper::FreshHyperResponse;
@@ -24,6 +25,12 @@ impl<T: Read> Stream<T> {
     //     pub fn chunk_size(&self) -> usize {
     //         self.1
     //     }
+}
+
+impl<T: Read + Debug> Debug for Stream<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Stream({:?})", self.0)
+    }
 }
 
 impl<T: Read> Responder for Stream<T> {

@@ -1,6 +1,7 @@
 use response::{Responder, Outcome};
 use http::hyper::{StatusCode, FreshHyperResponse};
 
+#[derive(Debug)]
 pub struct StatusResponse<R: Responder> {
     status: StatusCode,
     responder: R,

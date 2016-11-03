@@ -26,7 +26,7 @@ impl<'a, S, E> IntoOutcome<S, (StatusCode, E), Data> for Result<S, E> {
 /// fn submit(var: T) -> ... { ... }
 /// ```
 ///
-/// In this example, `T` can be any type that implements `FromData.`
+/// In this example, `T` can be any type that implements `FromData`.
 ///
 /// # Outcomes
 ///

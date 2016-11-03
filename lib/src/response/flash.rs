@@ -5,10 +5,11 @@ use response::{self, Responder};
 use request::{self, Request, FromRequest};
 use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
 
+// The name of the actual flash cookie.
 const FLASH_COOKIE_NAME: &'static str = "_flash";
 
-/// Sets a "flash" cookies that will be removed the next time it is accessed.
-/// The anologous type on the request side is
+/// Sets a "flash" cookie that will be removed when it is accessed. The
+/// anologous request type is
 /// [FlashMessage](/rocket/request/type.FlashMessage.html).
 ///
 /// This type makes it easy to send messages across requests. It is typically
@@ -30,12 +31,56 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 /// [FlashMessage](/rocket/request/type.FlashMessage.html) type and the
 /// [name](#method.name) and [msg](#method.msg) methods.
 ///
-/// # Responder
+/// # Response
 ///
 /// The `Responder` implementation for `Flash` sets the message cookie and then
 /// uses the passed in responder `res` to complete the response. In other words,
 /// it simply sets a cookie and delagates the rest of the response handling to
 /// the wrapped responder.
+///
+/// # Example
+///
+/// The following complete Rocket application illustrates the use of a `Flash`
+/// message on both the request and response sides.
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// #
+/// # extern crate rocket;
+/// #
+/// use rocket::response::{Flash, Redirect};
+/// use rocket::request::FlashMessage;
+///
+/// #[post("/login/<name>")]
+/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
+///     if name == "special_user" {
+///         Ok("Hello, special user!")
+///     } else {
+///         Err(Flash::error(Redirect::to("/"), "Invalid username."))
+///     }
+/// }
+///
+/// #[get("/")]
+/// fn index(flash: Option<FlashMessage>) -> String {
+///     flash.map(|msg| format!("{}: {}", msg.name(), msg.msg()))
+///          .unwrap_or_else(|| "Welcome!".to_string())
+/// }
+///
+/// fn main() {
+/// # if false { // We don't actually want to launch the server in an example.
+///     rocket::ignite().mount("/", routes![login, index]).launch()
+/// # }
+/// }
+/// ```
+///
+/// On the response side (in `login`), a `Flash` error message is set if some
+/// fictional authentication failed, and the user is redirected to `"/"`. On the
+/// request side (in `index`), the handler emits the flash message if there is
+/// one and otherwise emits a standard welcome message. Note that if the user
+/// were to refresh the index page after viewing a flash message, the user would
+/// receive the standard welcome message.
+#[derive(Debug)]
 pub struct Flash<R> {
     name: String,
     message: String,
@@ -124,6 +169,10 @@ impl<R: Responder> Flash<R> {
     }
 }
 
+/// Sets the message cookie and then uses the wrapped responder to complete the
+/// response. In other words, simply sets a cookie and delagates the rest of the
+/// response handling to the wrapped responder. As a result, the `Outcome` of
+/// the response is the `Outcome` of the wrapped `Responder`.
 impl<R: Responder> Responder for Flash<R> {
     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> response::Outcome<'b> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
@@ -133,6 +182,7 @@ impl<R: Responder> Responder for Flash<R> {
 }
 
 impl Flash<()> {
+    /// Constructs a new message with the given name and message.
     fn named(name: &str, msg: &str) -> Flash<()> {
         Flash {
             name: name.to_string(),
@@ -152,7 +202,11 @@ impl Flash<()> {
     }
 }
 
-// This is Type-Aliased in Request.
+/// Retrieves a flash message from a flash cookie and deletes the flash cookie.
+/// If there is no flash cookie, an empty `Err` is returned.
+///
+/// The suggested use is through an `Option` and the `FlashMessage` type alias
+/// in `request`: `Option<FlashMessage>`.
 impl<'r> FromRequest<'r> for Flash<()> {
     type Error = ();
 

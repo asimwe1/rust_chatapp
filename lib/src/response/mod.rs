@@ -1,8 +1,17 @@
 //! Types and traits to build and send responses.
 //!
 //! The return type of a Rocket handler can be any type that implements the
-//! [Responder](trait.Responder.html) trait. This module contains several useful
-//! types that implement this trait.
+//! [Responder](trait.Responder.html) trait. This module contains several such
+//! types.
+//!
+//! # Composing
+//!
+//! Many of the built-in `Responder` types _chain_ responses: they take in
+//! another `Responder` and simply add, remove, or change information in the
+//! response. In other words, many `Responder` types are built to compose well.
+//! As a result, you'll often have types of the form `A<B<C>>` consisting of
+//! three `Responder`s `A`, `B`, and `C`. This is normal and encouraged as the
+//! type names typically illustrate the intended response.
 
 mod responder;
 mod redirect;

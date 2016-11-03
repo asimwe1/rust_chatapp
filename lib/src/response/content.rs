@@ -3,6 +3,7 @@ use http::hyper::{header, FreshHyperResponse};
 use http::mime::{Mime, TopLevel, SubLevel};
 use http::ContentType;
 
+#[derive(Debug)]
 pub struct Content<T: Responder>(pub ContentType, pub T);
 
 impl<T: Responder> Responder for Content<T> {
@@ -14,6 +15,7 @@ impl<T: Responder> Responder for Content<T> {
 
 macro_rules! impl_data_type_responder {
     ($name:ident: $top:ident/$sub:ident) => (
+    #[derive(Debug)]
     pub struct $name<T: Responder>(pub T);
 
     impl<T: Responder> Responder for $name<T> {
