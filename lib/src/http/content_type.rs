@@ -19,7 +19,8 @@ pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
 
 macro_rules! ctrs {
     ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
-        $($(#[$attr])*
+        $
+            ($(#[$attr])*
             #[inline(always)]
             pub fn $name() -> ContentType {
                 ContentType::of(TopLevel::$top, SubLevel::$sub)
@@ -29,7 +30,8 @@ macro_rules! ctrs {
 
 macro_rules! checkers {
     ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
-        $($(#[$attr])*
+        $(
+            $(#[$attr])*
             #[inline(always)]
             pub fn $name(&self) -> bool {
                 self.0 == TopLevel::$top && self.1 == SubLevel::$sub
@@ -131,7 +133,10 @@ impl ContentType {
         | xml: Text/Xml,
 
         /// Returns a `ContentType` representing HTML, i.e, `text/html`.
-        | html: Text/Html
+        | html: Text/Html,
+
+        /// Returns a `ContentType` representing plain text, i.e, `text/plain`.
+        | plain: Text/Plain
     }
 
     /// Returns true if this content type is not one of the standard content
