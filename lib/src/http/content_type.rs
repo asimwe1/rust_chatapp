@@ -77,7 +77,9 @@ impl ContentType {
 
     /// Returns the Content-Type associated with the extension `ext`. Not all
     /// extensions are recognized. If an extensions is not recognized, then this
-    /// method returns a ContentType of `any`.
+    /// method returns a ContentType of `any`. The currently recognized
+    /// extensions are: txt, html, htm, xml, js, css, json, png, gif, bmp, jpeg,
+    /// jpg, and pdf.
     ///
     /// # Example
     ///

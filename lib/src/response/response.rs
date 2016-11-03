@@ -3,6 +3,7 @@ use outcome::{self, Outcome};
 use http::hyper::StatusCode;
 use response::{Responder, StatusResponse};
 
+/// Type alias for the `Outcome` of a `Handler`.
 pub type Response<'a> = outcome::Outcome<Box<Responder + 'a>, StatusCode, Data>;
 
 impl<'a> Response<'a> {

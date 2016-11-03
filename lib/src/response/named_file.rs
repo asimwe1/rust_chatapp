@@ -7,34 +7,79 @@ use response::{Responder, Outcome};
 use http::hyper::{header, FreshHyperResponse};
 use http::ContentType;
 
+/// A file with an associated name; responds with the Content-Type based on the
+/// file extension.
 #[derive(Debug)]
 pub struct NamedFile(PathBuf, File);
 
 impl NamedFile {
+    /// Attempts to open a file in read-only mode.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if path does not already exist. Other
+    /// errors may also be returned according to
+    /// [OpenOptions::open](https://doc.rust-lang.org/std/fs/struct.OpenOptions.html#method.open).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::response::NamedFile;
+    ///
+    /// let file = NamedFile::open("foo.txt");
+    /// ```
     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<NamedFile> {
         let file = File::open(path.as_ref())?;
         Ok(NamedFile(path.as_ref().to_path_buf(), file))
     }
 
+    /// Retrieve the underlying `File`.
     #[inline(always)]
     pub fn file(&self) -> &File {
         &self.1
     }
 
+    /// Retrieve a mutable borrow to the underlying `File`.
     #[inline(always)]
     pub fn file_mut(&mut self) -> &mut File {
         &mut self.1
     }
 
+    /// Retrieve the path of this file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// use rocket::response::NamedFile;
+    ///
+    /// # fn demo_path() -> io::Result<()> {
+    /// let file = NamedFile::open("foo.txt")?;
+    /// assert_eq!(file.path().as_os_str(), "foo.txt");
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub fn path(&self) -> &Path {
         self.0.as_path()
     }
 }
 
+/// Streams the named file to the client. Sets or overrides the Content-Type in
+/// the response according to the file's extension if the extension is
+/// recognized. See
+/// [ContentType::from_extension](/rocket/http/struct.ContentType.html#method.from_extension)
+/// for more information. If you would like to stream a file with a different
+/// Content-Type than that implied by its extension, use a `File` directly.
+///
+/// # Failure
+///
+/// If reading the file fails permanently at any point during the response, an
+/// `Outcome` of `Failure` is returned, and the response is terminated abrubtly.
 impl Responder for NamedFile {
     fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
         if let Some(ext) = self.path().extension() {
+            // TODO: Use Cow for lowercase.
             let ext_string = ext.to_string_lossy().to_lowercase();
             let content_type = ContentType::from_extension(&ext_string);
             if !content_type.is_any() {

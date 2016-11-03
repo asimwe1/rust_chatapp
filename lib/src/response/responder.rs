@@ -1,4 +1,3 @@
-use std::io::{Read, Write};
 use std::fs::File;
 use std::fmt;
 
@@ -6,6 +5,8 @@ use http::mime::{Mime, TopLevel, SubLevel};
 use http::hyper::{header, FreshHyperResponse, StatusCode};
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
+use response::Stream;
+
 
 /// Type alias for the `Outcome` of a `Responder`.
 pub type Outcome<'a> = outcome::Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)>;
@@ -55,6 +56,47 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///   `StatusCode`. This requires that a response wasn't started and thus is
 ///   still fresh.
 ///
+/// # Provided Implementations
+///
+/// Rocket implements `Responder` for several standard library types. Their
+/// behavior is documented here. Note that the `Result` implementation is
+/// overloaded, allowing for two `Responder`s to be used at once, depending on
+/// the variant.
+///
+///   * **impl<'a> Responder for &'a str**
+///
+///     Sets the `Content-Type`t to `text/plain` if it is not already set. Sends
+///     the string as the body of the response.
+///
+///   * **impl Responder for String**
+///
+///     Sets the `Content-Type`t to `text/html` if it is not already set. Sends
+///     the string as the body of the response.
+///
+///   * **impl Responder for File**
+///
+///     Streams the `File` to the client. This is essentially an alias to
+///     Stream<File>.
+///
+///   * **impl<T: Responder> Responder for Option<T>**
+///
+///     If the `Option` is `Some`, the wrapped responder is used to respond to
+///     respond to the client. Otherwise, the response is forwarded to the 404
+///     error catcher and a warning is printed to the console.
+///
+///   * **impl<T: Responder, E: Debug> Responder for Result<T, E>**
+///
+///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
+///     client. Otherwise, the response is forwarded to the 500 error catcher
+///     and the error is printed to the console using the `Debug`
+///     implementation.
+///
+///   * **impl<T: Responder, E: Responder + Debug> Responder for Result<T, E>**
+///
+///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
+///     to the client. If the `Result` is `Err`, the wrapped error responder is
+///     used to respond to the client.
+///
 /// # Implementation Tips
 ///
 /// This section describes a few best practices to take into account when
@@ -85,6 +127,8 @@ pub trait Responder {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a>;
 }
 
+/// Sets the `Content-Type`t to `text/plain` if it is not already set. Sends the
+/// string as the body of the response.
 impl<'a> Responder for &'a str {
     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
         if res.headers().get::<header::ContentType>().is_none() {
@@ -107,24 +151,10 @@ impl Responder for String {
     }
 }
 
+/// Essentially aliases Stream<File>.
 impl Responder for File {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        let size = match self.metadata() {
-            Ok(md) => md.len(),
-            Err(e) => {
-                error_!("Failed to read file metadata: {:?}", e);
-                return Forward((StatusCode::InternalServerError, res));
-            }
-        };
-
-        let mut v = Vec::new();
-        if let Err(e) = self.read_to_end(&mut v) {
-            error_!("Failed to read file: {:?}", e);
-            return Forward((StatusCode::InternalServerError, res));
-        }
-
-        res.headers_mut().set(header::ContentLength(size));
-        res.start().and_then(|mut stream| stream.write_all(&v)).into_outcome()
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
+        Stream::from(self).respond(res)
     }
 }
 
