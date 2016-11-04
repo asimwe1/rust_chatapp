@@ -8,6 +8,7 @@ use std::fmt;
 use term_painter::ToStyle;
 use term_painter::Color::*;
 
+/// An error catching route.
 pub struct Catcher {
     pub code: u16,
     handler: ErrorHandler,
@@ -15,23 +16,32 @@ pub struct Catcher {
 }
 
 impl Catcher {
+    /// Creates a catcher for the given status code using the given error
+    /// handler.
+    #[inline(always)]
     pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code: code, handler: handler, is_default: false }
     }
 
+    #[doc(hidden)]
+    #[inline(always)]
     pub fn handle<'r>(&self, err: Error, request: &'r Request) -> Response<'r> {
         (self.handler)(err, request)
     }
 
+    #[inline(always)]
     fn new_default(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code: code, handler: handler, is_default: true, }
     }
 
+    #[doc(hidden)]
+    #[inline(always)]
     pub fn is_default(&self) -> bool {
         self.is_default
     }
 }
 
+#[doc(hidden)]
 impl<'a> From<&'a StaticCatchInfo> for Catcher {
     fn from(info: &'a StaticCatchInfo) -> Catcher {
         Catcher::new(info.code, info.handler)

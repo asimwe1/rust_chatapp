@@ -129,6 +129,29 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Unwraps the Outcome, yielding the contents of a Success.
+    ///
+    /// # Panics
+    ///
+    /// If the value is not `Success`, panics with the given `message`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    /// assert_eq!(x.expect("success value"), 10);
+    /// ```
+    #[inline(always)]
+    pub fn expect(self, message: &str) -> S {
+        match self {
+            Success(val) => val,
+            _ => panic!("Outcome::expect() failed: {}", message)
+        }
+    }
+
     /// Return true if this `Outcome` is a `Success`.
     ///
     /// # Examples

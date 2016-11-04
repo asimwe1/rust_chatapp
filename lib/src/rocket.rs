@@ -6,8 +6,8 @@ use std::process;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-use config;
 use logger;
+use config::{self, Config};
 use request::{Request, FormItems};
 use data::Data;
 use response::Responder;
@@ -20,7 +20,7 @@ use http::{Method, StatusCode};
 use http::hyper::{HyperRequest, FreshHyperResponse};
 use http::hyper::{HyperServer, HyperHandler, HyperSetCookie, header};
 
-/// The Rocket type used to mount routes and catchers and launch the
+/// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
     address: String,
@@ -32,6 +32,11 @@ pub struct Rocket {
 
 #[doc(hidden)]
 impl HyperHandler for Rocket {
+    // This function tries to hide all of the Hyper-ness from Rocket. It
+    // essentially converts Hyper types into Rocket types, then calls the
+    // `dispatch` function, which knows nothing about Hyper. Because responding
+    // depends on the `HyperResponse` type, this function does the actual
+    // response processing.
     fn handle<'h, 'k>(&self,
                       hyp_req: HyperRequest<'h, 'k>,
                       mut res: FreshHyperResponse<'h>) {
@@ -115,6 +120,11 @@ impl Rocket {
         }
     }
 
+    /// Tries to find a `Responder` for a given `request`. It does this by
+    /// routing the request and calling the handler for each matching route
+    /// until one of the handlers returns success or failure. If a handler
+    /// returns a failure, or there are no matching handlers willing to accept
+    /// the request, this function returns an `Err` with the status code.
     #[doc(hidden)]
     pub fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
             -> Result<Box<Responder + 'r>, StatusCode> {
@@ -143,7 +153,11 @@ impl Rocket {
         Err(StatusCode::NotFound)
     }
 
-    // Call when no route was found. Returns true if there was a response.
+    // Attempts to send a response to the client by using the catcher for the
+    // given status code. If no catcher is found (including the defaults), the
+    // 500 internal server error catcher is used. If the catcher fails to
+    // respond, this function returns `false`. It returns `true` if a response
+    // was sucessfully sent to the client.
     #[doc(hidden)]
     pub fn handle_error<'r>(&self,
                         code: StatusCode,
@@ -153,7 +167,7 @@ impl Rocket {
         let catcher = self.catchers.get(&code.to_u16()).unwrap_or_else(|| {
             error_!("No catcher found for {}.", code);
             warn_!("Using internal server error catcher.");
-            self.catchers.get(&500).expect("500 Catcher")
+            self.catchers.get(&500).expect("500 catcher should exist!")
         });
 
         if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
@@ -169,12 +183,129 @@ impl Rocket {
             let catcher = self.default_catchers.get(&code.to_u16())
                 .unwrap_or(self.default_catchers.get(&500).expect("500 default"));
             let responder = catcher.handle(Error::Internal, req).responder();
-            responder.unwrap().respond(response).unwrap()
+            responder.unwrap().respond(response).expect("default catcher failed")
         }
 
         true
     }
 
+    /// Create a new `Rocket` application using the configuration information in
+    /// `Rocket.toml`. If the file does not exist or if there is an I/O error
+    /// reading the file, the defaults are used. See the
+    /// [config](/rocket/config/index.html) documentation for more information
+    /// on defaults.
+    ///
+    /// This method is typically called through the `rocket::ignite` alias.
+    ///
+    /// # Panics
+    ///
+    /// If there is an error parsing the `Rocket.toml` file, this functions
+    /// prints a nice error message and then exits the process.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # {
+    /// rocket::ignite()
+    /// # };
+    /// ```
+    pub fn ignite() -> Rocket {
+        // Note: init() will exit the process under config errors.
+        let (config, initted) = config::init();
+        if initted {
+            logger::init(config.log_level);
+        }
+
+        Rocket::custom(config)
+    }
+
+    /// Creates a new `Rocket` application using the supplied custom
+    /// configuration information. Ignores the `Rocket.toml` file.
+    ///
+    /// This method is typically called through the `rocket::custom` alias.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    /// # use rocket::config::ConfigError;
+    ///
+    /// # fn try_config() -> Result<(), ConfigError> {
+    /// let config = Config::default_for(Environment::active()?, "/custom")?
+    ///     .address("1.2.3.4".into())
+    ///     .port(9234);
+    ///
+    /// let app = rocket::custom(&config);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn custom(config: &Config) -> Rocket {
+        logger::init(config.log_level);
+
+        info!("🔧  Configured for {}.", config.env);
+        info_!("listening: {}:{}",
+               White.paint(&config.address),
+               White.paint(&config.port));
+        info_!("logging: {:?}", White.paint(config.log_level));
+        info_!("session key: {}", White.paint(config.take_session_key().is_some()));
+        for (name, value) in config.extras() {
+            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+        }
+
+        Rocket {
+            address: config.address.clone(),
+            port: config.port,
+            router: Router::new(),
+            default_catchers: catcher::defaults::get(),
+            catchers: catcher::defaults::get(),
+        }
+    }
+
+    /// Mounts all of the routes in the supplied vector at the given `base`
+    /// path. Mounting a route with path `path` at path `base` makes the route
+    /// available at `base/path`.
+    ///
+    /// # Examples
+    ///
+    /// Use the `routes!` macro to mount routes created using the code
+    /// generation facilities. Requests to the `/hello/world` URI will be
+    /// dispatched to the `hi` route.
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// #
+    /// #[get("/world")]
+    /// fn hi() -> &'static str {
+    ///     "Hello!"
+    /// }
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite().mount("/hello", routes![hi])
+    /// #       .launch()
+    /// # }
+    /// }
+    /// ```
+    ///
+    /// Manually create a route named `hi` at path `"/world"` mounted at base
+    /// `"/hello"`. Requests to the `/hello/world` URI will be dispatched to the
+    /// `hi` route.
+    ///
+    /// ```rust
+    /// use rocket::{Request, Response, Route, Data};
+    /// use rocket::http::Method::*;
+    ///
+    /// fn hi(_: &Request, _: Data) -> Response<'static> {
+    ///     Response::success("Hello!")
+    /// }
+    ///
+    /// # if false { // We don't actually want to launch the server in an example.
+    /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
+    /// #     :.launch()
+    /// # }
+    /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
         for mut route in routes {
@@ -188,6 +319,7 @@ impl Rocket {
         self
     }
 
+    /// Registers all of the catchers in the supplied vector.
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
@@ -204,6 +336,22 @@ impl Rocket {
         self
     }
 
+    /// Starts the application server and begins listening for and dispatching
+    /// requests to mounted routes and catchers.
+    ///
+    /// # Panics
+    ///
+    /// If the server could not be started, this method prints the reason and
+    /// then exits the process.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # if false {
+    /// rocket::ignite().launch()
+    /// # }
+    /// ```
+    #[cfg(not(feature = "testing"))]
     pub fn launch(self) {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
@@ -226,29 +374,4 @@ impl Rocket {
         server.handle(self).unwrap();
     }
 
-    pub fn ignite() -> Rocket {
-        // Note: init() will exit the process under config errors.
-        let (config, initted) = config::init();
-        if initted {
-            logger::init(config.log_level);
-        }
-
-        info!("🔧  Configured for {}.", config.env);
-        info_!("listening: {}:{}",
-               White.paint(&config.address),
-               White.paint(&config.port));
-        info_!("logging: {:?}", White.paint(config.log_level));
-        info_!("session key: {}", White.paint(config.take_session_key().is_some()));
-        for (name, value) in config.extras() {
-            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
-        }
-
-        Rocket {
-            address: config.address.clone(),
-            port: config.port,
-            router: Router::new(),
-            default_catchers: catcher::defaults::get(),
-            catchers: catcher::defaults::get(),
-        }
-    }
 }

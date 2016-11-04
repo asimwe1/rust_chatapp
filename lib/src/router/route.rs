@@ -12,11 +12,17 @@ use request::Request;
 use http::{Method, ContentType};
 use http::uri::{URI, URIBuf};
 
+/// A route: a method, its handler, path, rank, and format/content type.
 pub struct Route {
+    /// The method this route matches against.
     pub method: Method,
+    /// A function that should be called when the route matches.
     pub handler: Handler,
+    /// The path (in Rocket format) that should be matched against.
     pub path: URIBuf,
-    pub rank: isize, // Lower ranks have higher priorities.
+    /// The rank of this route. Lower ranks have higher priorities.
+    pub rank: isize,
+    /// The Content-Type this route matches against.
     pub content_type: ContentType,
 }
 
@@ -27,18 +33,10 @@ fn default_rank(path: &str) -> isize {
 }
 
 impl Route {
-    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler) -> Route
-        where S: AsRef<str>
-    {
-        Route {
-            method: m,
-            path: URIBuf::from(path.as_ref()),
-            handler: handler,
-            rank: rank,
-            content_type: ContentType::any(),
-        }
-    }
-
+    /// Creates a new route with the method, path, and handler.
+    ///
+    /// The rank of the route will be `0` if the path contains no dynamic
+    /// segments, and `1` if it does.
     pub fn new<S>(m: Method, path: S, handler: Handler) -> Route
         where S: AsRef<str>
     {
@@ -51,6 +49,21 @@ impl Route {
         }
     }
 
+    /// Creates a new route with the given rank, method, path, and handler.
+    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler) -> Route
+        where S: AsRef<str>
+    {
+        Route {
+            method: m,
+            path: URIBuf::from(path.as_ref()),
+            handler: handler,
+            rank: rank,
+            content_type: ContentType::any(),
+        }
+    }
+
+    /// Sets the path of the route. Does not update the rank or any other
+    /// parameters.
     pub fn set_path<S>(&mut self, path: S)
         where S: AsRef<str>
     {
@@ -60,6 +73,9 @@ impl Route {
     // FIXME: Decide whether a component has to be fully variable or not. That
     // is, whether you can have: /a<a>b/ or even /<a>:<b>/
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
+    /// Given a URI, returns a vector of slices of that URI corresponding to the
+    /// dynamic segments in this route.
+    #[doc(hidden)]
     pub fn get_params<'a>(&self, uri: URI<'a>) -> Vec<&'a str> {
         let route_segs = self.path.as_uri().segments();
         let uri_segs = uri.segments();
@@ -113,6 +129,7 @@ impl fmt::Debug for Route {
     }
 }
 
+#[doc(hidden)]
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);

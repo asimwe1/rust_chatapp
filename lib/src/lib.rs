@@ -137,7 +137,14 @@ pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 
-/// Alias to Rocket::ignite().
+/// Alias to [Rocket::ignite()](/rocket/struct.Rocket.html#method.ignite).
+/// Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {
     Rocket::ignite()
+}
+
+/// Alias to [Rocket::custom()](/rocket/struct.Rocket.html#method.custom).
+/// Creates a new instance of `Rocket` with a custom configuration.
+pub fn custom(config: &config::Config) -> Rocket {
+    Rocket::custom(config)
 }
