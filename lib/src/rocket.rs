@@ -303,7 +303,7 @@ impl Rocket {
     ///
     /// # if false { // We don't actually want to launch the server in an example.
     /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
-    /// #     :.launch()
+    /// #     .launch()
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
@@ -351,7 +351,6 @@ impl Rocket {
     /// rocket::ignite().launch()
     /// # }
     /// ```
-    #[cfg(not(feature = "testing"))]
     pub fn launch(self) {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
@@ -373,5 +372,4 @@ impl Rocket {
 
         server.handle(self).unwrap();
     }
-
 }

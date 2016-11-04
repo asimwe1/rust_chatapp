@@ -537,7 +537,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [development]
-            address = "_idk_?"
+            address = "!_idk_?"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
@@ -547,7 +547,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [production]
-            address = "1.2.3.4.5.6"
+            address = "!@#$%^&*()"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
