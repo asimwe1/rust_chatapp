@@ -12,4 +12,4 @@ lazy_static = "*"
 [dependencies.rocket_contrib]
 path = "../../contrib"
 default-features = false
-features = ["tera_templates"]
+features = ["handlebars_templates"]

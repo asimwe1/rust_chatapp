@@ -7,11 +7,11 @@
   </head>
   <body>
     <h1>Rocket Cookie Examples</h1>
-    {% if message is defined %}
-      <p>{{ message }}</p>
-    {% else %}
+    {{#if message }}
+      <p>{{message}}</p>
+    {{else}}
       <p>No message yet.</p>
-    {% endif %}
+    {{/if}}
 
     <form action="/submit" method="post" accept-charset="utf-8">
       <textarea placeholder="Your message here..."
