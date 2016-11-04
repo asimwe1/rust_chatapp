@@ -44,7 +44,7 @@ impl FromStr for LoggingLevel {
     }
 }
 
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! log_ {
     ($name:ident: $format:expr) => { log_!($name: $format,) };
     ($name:ident: $format:expr, $($args:expr),*) => {
@@ -52,15 +52,15 @@ macro_rules! log_ {
     };
 }
 
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! error_ { ($($args:expr),+) => { log_!(error: $($args),+); }; }
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! info_ { ($($args:expr),+) => { log_!(info: $($args),+); }; }
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! trace_ { ($($args:expr),+) => { log_!(trace: $($args),+); }; }
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! debug_ { ($($args:expr),+) => { log_!(debug: $($args),+); }; }
-#[macro_export]
+#[doc(hidden)] #[macro_export]
 macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 
 impl Log for RocketLogger {
