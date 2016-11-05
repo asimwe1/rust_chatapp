@@ -320,6 +320,34 @@ impl Rocket {
     }
 
     /// Registers all of the catchers in the supplied vector.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// #![feature(plugin)]
+    /// #![plugin(rocket_codegen)]
+    ///
+    /// extern crate rocket;
+    ///
+    /// use rocket::Request;
+    ///
+    /// #[error(500)]
+    /// fn internal_error() -> &'static str {
+    ///     "Whoops! Looks like we messed up."
+    /// }
+    ///
+    /// #[error(400)]
+    /// fn not_found(req: &Request) -> String {
+    ///     format!("I couldn't find '{}'. Try something else?", req.uri())
+    /// }
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite().catch(errors![internal_error, not_found])
+    /// #       .launch()
+    /// # }
+    /// }
+    /// ```
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
