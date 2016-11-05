@@ -3,7 +3,7 @@ extern crate rocket;
 use std::io;
 use std::fs::File;
 
-use rocket::{Request, Response, Route, Data};
+use rocket::{Request, Response, Route, Data, Catcher, Error};
 use rocket::http::StatusCode;
 use rocket::request::FromParam;
 use rocket::http::Method::*;
@@ -45,6 +45,10 @@ fn upload(req: &Request, data: Data) -> Response {
     }
 }
 
+fn not_found_handler(_: Error, req: &Request) -> Response {
+    Response::success(format!("Couldn't find: {}", req.uri()))
+}
+
 fn main() {
     let always_forward = Route::ranked(1, Get, "/", forward);
     let hello = Route::ranked(2, Get, "/", hi);
@@ -53,10 +57,13 @@ fn main() {
     let name = Route::new(Get, "/<name>", name);
     let upload_route = Route::new(Post, "/upload", upload);
 
+    let not_found_catcher = Catcher::new(404, not_found_handler);
+
     rocket::ignite()
         .mount("/", vec![always_forward, hello, upload_route])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
         .mount("/echo:<str>", vec![echo])
+        .catch(vec![not_found_catcher])
         .launch();
 }

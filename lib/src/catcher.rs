@@ -9,7 +9,61 @@ use term_painter::ToStyle;
 use term_painter::Color::*;
 
 /// An error catching route.
+///
+/// Catchers are routes that run when errors occur. They correspond directly
+/// with the HTTP error status code they will be handling and are registered
+/// with Rocket via the [Rocket::catch](/rocket/struct.Rocket.html#method.catch)
+/// method. For example, to handle "404 not found" errors, a catcher for the
+/// "404" status code is registered.
+///
+/// Because error handlers are only called when all routes are exhausted, they
+/// should not fail nor forward. If an error catcher fails, the user will
+/// receive no response. If an error catcher forwards, Rocket will respond with
+/// an internal server error.
+///
+/// # Built-In Catchers
+///
+/// Rocket has many built-in, pre-registered default catchers. In particular,
+/// Rocket has catchers for all of the following status codes: 400, 401, 402,
+/// 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417,
+/// 418, 421, 426, 428, 429, 431, 451, 500, 501, 503, and 510. As such, catchers
+/// only need to be registered if an error needs to be handled in a custom
+/// fashion.
+///
+/// # Code Generation
+///
+/// Catchers should rarely be used directly. Instead, they are typically
+/// declared using the `error` decorator, as follows:
+///
+/// ```rust
+/// #![feature(plugin)]
+/// #![plugin(rocket_codegen)]
+///
+/// extern crate rocket;
+///
+/// use rocket::Request;
+///
+/// #[error(500)]
+/// fn internal_error() -> &'static str {
+///     "Whoops! Looks like we messed up."
+/// }
+///
+/// #[error(400)]
+/// fn not_found(req: &Request) -> String {
+///     format!("I couldn't find '{}'. Try something else?", req.uri())
+/// }
+///
+/// fn main() {
+/// # if false { // We don't actually want to launch the server in an example.
+///     rocket::ignite().catch(errors![internal_error, not_found]).launch()
+/// # }
+/// }
+/// ```
+///
+/// A function decorated with `error` can take in 0, 1, or 2 parameters:
+/// `Error`, `&Request`, or both, as desired.
 pub struct Catcher {
+    /// The HTTP status code to match against.
     pub code: u16,
     handler: ErrorHandler,
     is_default: bool,
@@ -17,7 +71,24 @@ pub struct Catcher {
 
 impl Catcher {
     /// Creates a catcher for the given status code using the given error
-    /// handler.
+    /// handler. This should only be used when routing manually.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::{Catcher, Request, Error, Response};
+    ///
+    /// fn handle_404(_: Error, req: &Request) -> Response {
+    ///     Response::success(format!("Couldn't find: {}", req.uri()))
+    /// }
+    ///
+    /// fn handle_500(_: Error, _: &Request) -> Response {
+    ///     Response::success("Whoops, we messed up!")
+    /// }
+    ///
+    /// let not_found_catcher = Catcher::new(404, handle_404);
+    /// let internal_server_error_catcher = Catcher::new(500, handle_500);
+    /// ```
     #[inline(always)]
     pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code: code, handler: handler, is_default: false }
@@ -110,10 +181,10 @@ pub mod defaults {
                 to malformed syntax.", handle_400,
             401, "Unauthorized", "The request requires user authentication.",
                 handle_401,
-            403, "Forbidden", "The request was forbidden by the server.
-                Check authentication.", handle_403,
             402, "Payment Required", "The request could not be processed due to lack of
                 payment.", handle_402,
+            403, "Forbidden", "The request was forbidden by the server.
+                Check authentication.", handle_403,
             404, "Not Found", "The requested resource could not be found.", handle_404,
             405, "Method Not Allowed", "The request method is not supported for the
                 requested resource.", handle_405,
