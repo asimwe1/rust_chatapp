@@ -220,7 +220,9 @@ impl Rocket {
     }
 
     /// Creates a new `Rocket` application using the supplied custom
-    /// configuration information. Ignores the `Rocket.toml` file.
+    /// configuration information. Ignores the `Rocket.toml` file. Does not
+    /// enable logging. To enable logging, use the hidden
+    /// `logger::init(LoggingLevel)` method.
     ///
     /// This method is typically called through the `rocket::custom` alias.
     ///
@@ -240,8 +242,6 @@ impl Rocket {
     /// # }
     /// ```
     pub fn custom(config: &Config) -> Rocket {
-        logger::init(config.log_level);
-
         info!("🔧  Configured for {}.", config.env);
         info_!("listening: {}:{}",
                White.paint(&config.address),
