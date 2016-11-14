@@ -42,7 +42,6 @@ fn new(todo_form: Form<Task>) -> Flash<Redirect> {
     }
 }
 
-// Should likely do something to simulate PUT.
 #[put("/<id>")]
 fn toggle(id: i32) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id) {
@@ -52,7 +51,6 @@ fn toggle(id: i32) -> Result<Redirect, Template> {
     }
 }
 
-// Should likely do something to simulate DELETE.
 #[delete("/<id>")]
 fn delete(id: i32) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id) {
