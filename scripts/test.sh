@@ -60,6 +60,11 @@ for file in ${EXAMPLES_DIR}/*; do
     if [ -x "${bootstrap_script}" ]; then
       echo ":: Bootstrapping ${file}..."
 
+      if [ "$(basename $file)" = "todo" ]; then
+        echo ":: Skipping todo example due to broken Diesel..."
+        continue
+      fi
+
       if ! ${bootstrap_script}; then
         echo ":: Running bootstrap script (${bootstrap_script}) failed!"
         echo ":: Skipping ${file}."
