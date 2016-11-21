@@ -19,7 +19,7 @@ impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
 
 /// Trait used to derive an object from incoming request metadata.
 ///
-/// An arbitrary number of types that implement this trait can appears as
+/// An arbitrary number of types that implement this trait can appear as
 /// parameters in a route handler, as illustrated below:
 ///
 /// ```rust,ignore
@@ -62,6 +62,58 @@ impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
 ///   If the `Outcome` is `Forward`, the request will be forwarded to the next
 ///   matching request. Note that users can request an `Option<S>` to catch
 ///   `Forward`s.
+///
+/// # Example
+///
+/// Imagine you're running an authenticated API service that requires that some
+/// requests be sent along with a valid API key in a header field. You want to
+/// ensure that the handlers corresponding to these requests don't get called
+/// unless there is an API key in the request and the key is valid. The
+/// following example implements this using an `APIKey` type and a `FromRequest`
+/// implementation for that type in the `senstive` handler:
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #
+/// use rocket::Outcome;
+/// use rocket::http::StatusCode;
+/// use rocket::request::{self, Request, FromRequest};
+///
+/// struct APIKey(String);
+///
+/// /// Returns true if `key` is a valid API key string.
+/// fn is_valid(key: &str) -> bool {
+///     key == "valid_api_key"
+/// }
+///
+/// impl<'r> FromRequest<'r> for APIKey {
+///     type Error = ();
+///     fn from_request(request: &'r Request) -> request::Outcome<APIKey, ()> {
+///         if let Some(keys) = request.headers().get_raw("x-api-key") {
+///             if keys.len() != 1 {
+///                 return Outcome::Failure((StatusCode::BadRequest, ()));
+///             }
+///
+///             if let Ok(key) = String::from_utf8(keys[0].clone()) {
+///                 if is_valid(&key) {
+///                     return Outcome::Success(APIKey(key));
+///                 }
+///             }
+///         }
+///
+///         Outcome::Forward(())
+///     }
+/// }
+///
+/// #[get("/sensitive")]
+/// fn sensitive(key: APIKey) -> &'static str {
+///     "Sensitive data."
+/// }
+///
+/// # fn main() { }
+/// ```
 pub trait FromRequest<'r>: Sized {
     /// The associated error to be returned when derivation fails.
     type Error: Debug;

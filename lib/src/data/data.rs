@@ -138,6 +138,9 @@ impl Data {
         io::copy(&mut self.open(), &mut File::create(path)?)
     }
 
+    // Creates a new data object with an internal buffer `buf`, where the cursor
+    // in the buffer is at `pos` and the buffer has `cap` valid bytes. The
+    // remainder of the data bytes can be read from `stream`.
     #[doc(hidden)]
     pub fn new(mut buf: Vec<u8>,
                pos: usize,
@@ -151,28 +154,38 @@ impl Data {
             buf.resize(PEEK_BYTES, 0);
         }
 
+        // We want to fill the buffer with as many bytes as possible. We also
+        // want to record if we reach the EOF while filling the buffer. The
+        // buffer already has `cap` bytes. We read up to buf.len() - 1 bytes,
+        // and then we try reading 1 more to see if we've reached the EOF.
         trace!("Init buffer cap: {}", cap);
         let buf_len = buf.len();
-        let eof = match stream.read(&mut buf[cap..(buf_len - 1)]) {
-            Ok(n) if n == 0 => true,
-            Ok(n) => {
-                trace!("Filled peek buf with {} bytes.", n);
-                cap += n;
-                match stream.read(&mut buf[cap..(cap + 1)]) {
-                    Ok(n) => {
-                        cap += n;
-                        n == 0
-                    }
-                    Err(e) => {
-                        error_!("Failed to check stream EOF status: {:?}", e);
-                        false
+        let eof = if cap < buf_len {
+            // We have room to read into the buffer. Let's do it.
+            match stream.read(&mut buf[cap..(buf_len - 1)]) {
+                Ok(0) => true,
+                Ok(n) => {
+                    trace!("Filled peek buf with {} bytes.", n);
+                    cap += n;
+                    match stream.read(&mut buf[cap..(cap + 1)]) {
+                        Ok(n) => {
+                            cap += n;
+                            n == 0
+                        }
+                        Err(e) => {
+                            error_!("Failed to check stream EOF status: {:?}", e);
+                            false
+                        }
                     }
                 }
+                Err(e) => {
+                    error_!("Failed to read into peek buffer: {:?}", e);
+                    false
+                }
             }
-            Err(e) => {
-                error_!("Failed to read into peek buffer: {:?}", e);
-                false
-            }
+        } else {
+            // There's no more room in the buffer. Assume there are still bytes.
+            false
         };
 
         trace!("Peek buffer size: {}, remaining: {}", buf_len, buf_len - cap);
