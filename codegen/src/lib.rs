@@ -17,7 +17,7 @@ mod decorators;
 
 use rustc_plugin::Registry;
 use syntax::ext::base::SyntaxExtension;
-use syntax::parse::token::intern;
+use syntax::symbol::Symbol;
 
 const PARAM_PREFIX: &'static str = "rocket_param_";
 const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
@@ -27,7 +27,7 @@ const CATCH_FN_PREFIX: &'static str = "rocket_catch_fn_";
 
 macro_rules! register_decorators {
     ($registry:expr, $($name:expr => $func:ident),+) => (
-        $($registry.register_syntax_extension(intern($name),
+        $($registry.register_syntax_extension(Symbol::intern($name),
                 SyntaxExtension::MultiDecorator(Box::new(decorators::$func)));
          )+
     )

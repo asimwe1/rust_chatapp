@@ -4,8 +4,7 @@ use std::mem::transmute;
 
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
-use syntax::parse::token::{str_to_ident};
-use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData};
+use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData, Ident};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
@@ -107,7 +106,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
             }
         ],
         associated_types: vec![
-            (str_to_ident("Error"), error_type.clone())
+            (Ident::from_str("Error"), error_type.clone())
         ],
     };
 

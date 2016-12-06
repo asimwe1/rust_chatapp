@@ -1,7 +1,6 @@
 use syntax::ast::Ident;
 use syntax::ext::base::ExtCtxt;
 use syntax::codemap::{Span, Spanned, BytePos};
-use syntax::parse::token::str_to_ident;
 
 use utils::{span, SpanExt, is_valid_ident};
 
@@ -87,13 +86,13 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         } else if param.starts_with("_") {
             err(self.ctxt, param_span, "parameters cannot be ignored")
         } else if is_many && !self.string.is_empty() {
-            let sp = self.span.shorten_to(self.string.len() as u32);
+            let sp = self.span.shorten_to(self.string.len());
             self.ctxt.struct_span_err(sp, "text after a trailing '..' param")
                      .span_note(param_span, "trailing param is here")
                      .emit();
             None
         } else {
-            let spanned_ident = span(str_to_ident(param), param_span);
+            let spanned_ident = span(Ident::from_str(param), param_span);
             match is_many {
                 true => Some(Param::Many(spanned_ident)),
                 false => Some(Param::Single(spanned_ident))

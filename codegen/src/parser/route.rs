@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
-use syntax::parse::token::str_to_ident;
 
 use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
 use super::{Function, ParamIter};
@@ -142,7 +141,7 @@ fn is_valid_method(method: Method) -> bool {
 
 pub fn kv_from_nested(item: &NestedMetaItem) -> Option<KVSpanned<LitKind>> {
     item.name_value().map(|(name, value)| {
-        let k_span = item.span().shorten_to(name.len() as u32);
+        let k_span = item.span().shorten_to(name.as_str().len());
         KVSpanned {
             key: span(name.to_string(), k_span),
             value: value.clone(),
@@ -156,7 +155,7 @@ fn param_string_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Ident> {
     if string.starts_with('<') && string.ends_with('>') {
         let param = &string[1..(string.len() - 1)];
         if is_valid_ident(param) {
-            return Some(str_to_ident(param));
+            return Some(Ident::from_str(param));
         }
 
         ecx.span_err(s.span, "parameter name must be alphanumeric");
@@ -169,7 +168,7 @@ fn param_string_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Ident> {
 
 fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     if let Some(word) = meta_item.word() {
-        if let Ok(method) = Method::from_str(&*word.name()) {
+        if let Ok(method) = Method::from_str(&word.name().as_str()) {
             if is_valid_method(method) {
                 return span(method, word.span());
             }
@@ -201,15 +200,15 @@ fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> (Spanned<String>, Op
 
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
-        if name != "path" {
+        if name != &"path" {
             ecx.span_err(sp, "the first key, if any, must be 'path'");
         } else if let LitKind::Str(ref s, _) = lit.node {
-            return from_string(s, lit.span);
+            return from_string(&s.as_str(), lit.span);
         } else {
             ecx.span_err(lit.span, "`path` value must be a string")
         }
     } else if let Some(s) = meta_item.str_lit() {
-        return from_string(s, sp);
+        return from_string(&s.as_str(), sp);
     } else {
         ecx.struct_span_err(sp, r#"expected `path = string` or a path string"#)
             .help(r#"you can specify the path directly as a string, \
@@ -228,11 +227,12 @@ fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanne
 }
 
 fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
-    let mut str_name = "unknown";
+    let mut ident = Ident::from_str("unknown");
     if let LitKind::Str(ref s, _) = *kv.value() {
-        str_name = s;
-        if let Some(ident) = param_string_to_ident(ecx, span(s, kv.value.span)) {
-            return ident;
+        ident = Ident::from_str(&s.as_str());
+        match param_string_to_ident(ecx, span(&s.as_str(), kv.value.span)) {
+            Some(ident) => return ident,
+            _ => { /* fall through if not an ident */ }
         }
     }
 
@@ -243,7 +243,7 @@ fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
               parameter inside '<' '>'. e.g: data = "<user_form>""#)
         .emit();
 
-    str_to_ident(str_name)
+    ident
 }
 
 fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
@@ -268,7 +268,7 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
 
 fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
     if let LitKind::Str(ref s, _) = *kv.value() {
-        if let Ok(ct) = ContentType::from_str(s) {
+        if let Ok(ct) = ContentType::from_str(&s.as_str()) {
             if ct.is_ext() {
                 let msg = format!("'{}' is not a known content-type", s);
                 ecx.span_warn(kv.value.span, &msg);

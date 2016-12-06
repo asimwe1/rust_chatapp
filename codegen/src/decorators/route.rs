@@ -11,7 +11,7 @@ use syntax::tokenstream::TokenTree;
 use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
-use syntax::parse::token::{self, str_to_ident};
+use syntax::parse::token;
 use syntax::ptr::P;
 
 use rocket::http::{Method, ContentType};
@@ -288,7 +288,7 @@ macro_rules! method_decorator {
     ($name:ident, $method:ident) => (
         pub fn $name(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
                      annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
-            let i_sp = meta_item.span.shorten_to(meta_item.name().len() as u32);
+            let i_sp = meta_item.span.shorten_to(stringify!($method).len());
             let method = Some(span(Method::$method, i_sp));
             generic_route_decorator(method, ecx, sp, meta_item, annotated, push);
         }

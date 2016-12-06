@@ -5,7 +5,7 @@ use syntax::codemap::{Span};
 use syntax::ast::{MetaItem, Ident, TyKind};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::tokenstream::TokenTree;
-use syntax::parse::token::{self, str_to_ident};
+use syntax::parse::token;
 use parser::ErrorParams;
 
 const ERR_PARAM: &'static str = "_error";
@@ -53,7 +53,7 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     let user_fn_name = error.annotated_fn.ident();
     let catch_fn_name = user_fn_name.prepend(CATCH_FN_PREFIX);
     let code = error.code.node;
-    let (err_ident, req_ident) = (str_to_ident(ERR_PARAM), str_to_ident(REQ_PARAM));
+    let (err_ident, req_ident) = (Ident::from_str(ERR_PARAM), Ident::from_str(REQ_PARAM));
     let fn_arguments = error.generate_fn_arguments(ecx, err_ident, req_ident);
 
     emit_item(push, quote_item!(ecx,
