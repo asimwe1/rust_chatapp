@@ -27,4 +27,5 @@ members = [
   "examples/config",
   "examples/hello_alt_methods",
   "examples/raw_upload",
+  "examples/pastebin",
 ]

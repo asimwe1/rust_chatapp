@@ -1,0 +1,58 @@
+#![feature(plugin)]
+#![plugin(rocket_codegen)]
+
+extern crate rocket;
+extern crate rand;
+
+mod paste_id;
+
+use std::io;
+use std::fs::File;
+use std::path::Path;
+
+use rocket::Data;
+use rocket::response::{content, Failure};
+use rocket::http::StatusCode::NotFound;
+
+use paste_id::PasteID;
+
+const HOST: &'static str = "http://localhost:8000";
+const ID_LENGTH: usize = 3;
+
+#[post("/", data = "<paste>")]
+fn upload(paste: Data) -> io::Result<content::Plain<String>> {
+    let id = PasteID::new(ID_LENGTH);
+    let filename = format!("upload/{id}", id = id);
+    let url = format!("{host}/{id}\n", host = HOST, id = id);
+
+    paste.stream_to_file(Path::new(&filename))?;
+    Ok(content::Plain(url))
+}
+
+#[get("/<id>")]
+fn retrieve(id: PasteID) -> Result<content::Plain<File>, Failure> {
+    let filename = format!("upload/{id}", id = id);
+    File::open(&filename).map(|f| content::Plain(f)).map_err(|_| Failure(NotFound))
+}
+
+#[get("/")]
+fn index() -> &'static str {
+    "
+    USAGE
+
+      POST /
+
+          accepts raw data in the body of the request and responds with a URL of
+          a page containing the body's content
+
+          EXMAPLE: curl --data-binary @file.txt http://localhost:8000
+
+      GET /<id>
+
+          retrieves the content for the paste with id `<id>`
+    "
+}
+
+fn main() {
+    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch()
+}
