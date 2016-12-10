@@ -9,8 +9,8 @@ use http::uri::{URI, Segments};
 ///
 /// This trait is used by Rocket's code generation facilities to parse dynamic
 /// path segment string values into a given type. That is, when a path contains
-/// a dynamic segment `<param>` where `param` has some type `T` that
-/// implements `FromParam`, `T::from_param` will be called.
+/// a dynamic segment `<param>` where `param` has some type `T` that implements
+/// `FromParam`, `T::from_param` will be called.
 ///
 /// # Forwarding
 ///
@@ -40,6 +40,73 @@ use http::uri::{URI, Segments};
 ///
 /// # Catching Errors
 ///
+/// Sometimes, a forward is not desired, and instead, we simply want to know
+/// that the dynamic path segment could not be parsed into some desired type
+/// `T`. In these cases, types of `Option<T>` or `Result<T, T::Error>` can be
+/// used. These types implement `FromParam` themeselves. Their implementations
+/// always return successfully, so they never forward. They can be used to
+/// determine if the `FromParam` call failed and to retrieve the error value
+/// from the failed `from_param` call.
+///
+/// For instance, imagine you've asked for an `<id>` as a `usize`. To determine
+/// when the `<id>` was not a valid `usize` and retrieve the string that failed
+/// to parse, you can use a `Result<usize, &str>` type for the `<id>` parameter
+/// as follows:
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #[get("/<id>")]
+/// fn hello(id: Result<usize, &str>) -> String {
+///     match id {
+///         Ok(id_num) => format!("usize: {}", id_num),
+///         Err(string) => format!("Not a usize: {}", string)
+///     }
+/// }
+/// # fn main() {  }
+/// ```
+///
+/// # Provided Implementations
+///
+/// Rocket implements `FromParam` for several standard library types. Their
+/// behavior is documented here.
+///
+///   * **f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64, bool**
+///
+///   **IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr**
+///
+///     A value is parse successfully if the `from_str` method from the given
+///     type returns successfully. Otherwise, the raw path segment is returned
+///     in the `Err` value.
+///
+///   * **str**
+///
+///     _This implementation always returns successfully._
+///
+///     The path segment is passed directly with no modification.
+///
+///   * **String**
+///
+///     Percent decodes the path segment. If the decode is successful, the
+///     decoded string is returned. Otherwise, an `Err` with the original path
+///     segment is returned.
+///
+///   * **Option<T>** _where_ **T: FromParam**
+///
+///     _This implementation always returns successfully._
+///
+///     The path segment is parsed by `T`'s `FromParam` implementation. If the
+///     parse succeeds, a `Some(parsed_value)` is returned. Otherwise, a `None`
+///     is returned.
+///
+///   * **Result<T, T::Error>** _where_ **T: FromParam**
+///
+///     _This implementation always returns successfully._
+///
+///     The path segment is parsed by `T`'s `FromParam` implementation. The
+///     returned `Result` value is returned.
+///
 /// # `str` vs. `String`
 ///
 /// Paths are URL encoded. As a result, the `str` `FromParam` implementation
@@ -47,6 +114,79 @@ use http::uri::{URI, Segments};
 /// other hand, `String` decodes the path parameter, but requires an allocation
 /// to do so. This tradeoff is similiar to that of form values, and you should
 /// use whichever makes sense for your application.
+///
+/// # Example
+///
+/// Say you want to parse a segment of the form:
+///
+/// ```ignore
+/// [a-zA-Z]+:[0-9]+
+/// ```
+///
+/// into the following structure, where the string before the `:` is stored in
+/// `key` and the number after the colon is stored in `value`:
+///
+/// ```rust
+/// struct MyParam<'r> {
+///     key: &'r str,
+///     value: usize
+/// }
+/// ```
+///
+/// The following implementation accomplishes this:
+///
+/// ```rust
+/// use rocket::request::FromParam;
+/// # struct MyParam<'r> { key: &'r str, value: usize }
+///
+/// impl<'r> FromParam<'r> for MyParam<'r> {
+///     type Error = &'r str;
+///
+///     fn from_param(param: &'r str) -> Result<MyParam<'r>, &'r str> {
+///         let (key, val_str) = match param.find(':') {
+///             Some(i) if i > 0 => (&param[..i], &param[(i + 1)..]),
+///             _ => return Err(param)
+///         };
+///
+///         if !key.chars().all(|c| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+///             return Err(param);
+///         }
+///
+///         val_str.parse().map(|value| {
+///             MyParam {
+///                 key: key,
+///                 value: value
+///             }
+///         }).map_err(|_| param)
+///     }
+/// }
+/// ```
+///
+/// With the implementation, the `MyParam` type can be used as the target of a
+/// dynamic path segment:
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # use rocket::request::FromParam;
+/// # struct MyParam<'r> { key: &'r str, value: usize }
+/// # impl<'r> FromParam<'r> for MyParam<'r> {
+/// #     type Error = &'r str;
+/// #     fn from_param(param: &'r str) -> Result<MyParam<'r>, &'r str> {
+/// #         Err(param)
+/// #     }
+/// # }
+/// #
+/// #[get("/<key_val>")]
+/// fn hello(key_val: MyParam) -> String {
+/// # /*
+///     ...
+/// # */
+/// # "".to_string()
+/// }
+/// # fn main() {  }
+/// ```
 pub trait FromParam<'a>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error: Debug;

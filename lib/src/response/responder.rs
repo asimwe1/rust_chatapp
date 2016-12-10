@@ -115,8 +115,8 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///
 /// ## Check Before Changing
 ///
-/// Unless a given type is explicitly designed to change some information in
-/// ther esponse, it should first _check_ that some information hasn't been set
+/// Unless a given type is explicitly designed to change some information in the
+/// response, it should first _check_ that some information hasn't been set
 /// before _changing_ that information. For example, before setting the
 /// `Content-Type` header of a response, first check that the header hasn't been
 /// set.
