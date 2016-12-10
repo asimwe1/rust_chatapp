@@ -78,6 +78,10 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///     Streams the `File` to the client. This is essentially an alias to
 ///     Stream<File>.
 ///
+///   * **impl Responder for ()**
+///
+///     Responds with an empty body.
+///
 ///   * **impl<T: Responder> Responder for Option<T>**
 ///
 ///     If the `Option` is `Some`, the wrapped responder is used to respond to
@@ -155,6 +159,13 @@ impl Responder for String {
 impl Responder for File {
     fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
         Stream::from(self).respond(res)
+    }
+}
+
+/// Empty response.
+impl Responder for () {
+    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
+        res.send(&[]).into_outcome()
     }
 }
 

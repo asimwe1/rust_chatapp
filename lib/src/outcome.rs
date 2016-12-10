@@ -89,6 +89,9 @@ use self::Outcome::*;
 
 /// An enum representing success (`Success`), failure (`Failure`), or
 /// forwarding (`Forward`).
+///
+/// See the [top level documentation](/rocket/outcome/) for detailed
+/// information.
 #[must_use]
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Outcome<S, E, F> {

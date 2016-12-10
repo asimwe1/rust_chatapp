@@ -1,7 +1,7 @@
 use data::Data;
 use outcome::{self, Outcome};
 use http::hyper::StatusCode;
-use response::{Responder, StatusResponse};
+use response::{Responder, status};
 
 /// Type alias for the `Outcome` of a `Handler`.
 pub type Response<'a> = outcome::Outcome<Box<Responder + 'a>, StatusCode, Data>;
@@ -25,7 +25,7 @@ impl<'a> Response<'a> {
     #[inline(always)]
     pub fn with_raw_status<T: Responder + 'a>(status: u16, body: T) -> Response<'a> {
         let status_code = StatusCode::from_u16(status);
-        Response::success(StatusResponse::new(status_code, body))
+        Response::success(status::Custom(status_code, body))
     }
 
     #[doc(hidden)]
