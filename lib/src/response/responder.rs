@@ -120,6 +120,64 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 /// before _changing_ that information. For example, before setting the
 /// `Content-Type` header of a response, first check that the header hasn't been
 /// set.
+///
+/// # Example
+///
+/// Say that you have a custom type, `Person`:
+///
+/// ```rust
+/// struct Person {
+///     name: String,
+///     age: u16
+/// }
+/// ```
+///
+/// You'd like to use `Person` as a `Responder` so that you can return a
+/// `Person` directly from a handler:
+///
+/// ```rust,ignore
+/// #[get("/person/<id>")]
+/// fn person(id: usize) -> Option<Person> {
+///     Person::from_id(id)
+/// }
+/// ```
+///
+/// You want the `Person` responder to set two header fields: `X-Person-Name`
+/// and `X-Person-Age` as well as supply a custom representation of the object
+/// (`Content-Type: application/x-person`) in the body of the response. The
+/// following `Responder` implementation accomplishes this:
+///
+/// ```rust
+/// # #[derive(Debug)]
+/// # struct Person { name: String, age: u16 }
+/// #
+/// use std::str::FromStr;
+/// use std::fmt::Write;
+///
+/// use rocket::response::{Responder, Outcome};
+/// use rocket::outcome::IntoOutcome;
+/// use rocket::http::hyper::{FreshHyperResponse, header};
+/// use rocket::http::ContentType;
+///
+/// impl Responder for Person {
+///     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
+///         // Set the custom headers.
+///         let name_bytes = self.name.clone().into_bytes();
+///         let age_bytes = self.age.to_string().into_bytes();
+///         res.headers_mut().set_raw("X-Person-Name", vec![name_bytes]);
+///         res.headers_mut().set_raw("X-Person-Age", vec![age_bytes]);
+///
+///         // Set the custom Content-Type header.
+///         let ct = ContentType::from_str("application/x-person").unwrap();
+///         res.headers_mut().set(header::ContentType(ct.into()));
+///
+///         // Write out the "custom" body, here just the debug representation.
+///         let mut repr = String::with_capacity(50);
+///         write!(&mut repr, "{:?}", *self);
+///         res.send(repr.as_bytes()).into_outcome()
+///     }
+/// }
+/// ```
 pub trait Responder {
     /// Attempts to write a response to `res`.
     ///
