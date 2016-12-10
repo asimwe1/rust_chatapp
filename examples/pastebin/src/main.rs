@@ -11,8 +11,7 @@ use std::fs::File;
 use std::path::Path;
 
 use rocket::Data;
-use rocket::response::{content, Failure};
-use rocket::http::StatusCode::NotFound;
+use rocket::response::content;
 
 use paste_id::PasteID;
 
@@ -30,9 +29,9 @@ fn upload(paste: Data) -> io::Result<content::Plain<String>> {
 }
 
 #[get("/<id>")]
-fn retrieve(id: PasteID) -> Result<content::Plain<File>, Failure> {
+fn retrieve(id: PasteID) -> Option<content::Plain<File>> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).map(|f| content::Plain(f)).map_err(|_| Failure(NotFound))
+    File::open(&filename).map(|f| content::Plain(f)).ok()
 }
 
 #[get("/")]
