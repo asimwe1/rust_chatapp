@@ -82,20 +82,20 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///
 ///     Responds with an empty body.
 ///
-///   * **impl<T: Responder> Responder for Option<T>**
+///   * **impl&lt;T: Responder> Responder for Option&lt;T>**
 ///
 ///     If the `Option` is `Some`, the wrapped responder is used to respond to
 ///     respond to the client. Otherwise, the response is forwarded to the 404
 ///     error catcher and a warning is printed to the console.
 ///
-///   * **impl<T: Responder, E: Debug> Responder for Result<T, E>**
+///   * **impl&lt;T: Responder, E: Debug> Responder for Result&lt;T, E>**
 ///
 ///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
 ///     client. Otherwise, the response is forwarded to the 500 error catcher
 ///     and the error is printed to the console using the `Debug`
 ///     implementation.
 ///
-///   * **impl<T: Responder, E: Responder + Debug> Responder for Result<T, E>**
+///   * **impl&lt;T: Responder, E: Responder + Debug> Responder for Result&lt;T, E>**
 ///
 ///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
 ///     to the client. If the `Result` is `Err`, the wrapped error responder is
