@@ -76,7 +76,7 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///   * **impl Responder for File**
 ///
 ///     Streams the `File` to the client. This is essentially an alias to
-///     Stream<File>.
+///     [Stream](struct.Stream.html)&lt;File>.
 ///
 ///   * **impl Responder for ()**
 ///
