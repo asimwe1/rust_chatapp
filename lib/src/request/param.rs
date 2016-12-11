@@ -92,7 +92,7 @@ use http::uri::{URI, Segments};
 ///     decoded string is returned. Otherwise, an `Err` with the original path
 ///     segment is returned.
 ///
-///   * **Option<T>** _where_ **T: FromParam**
+///   * **Option&lt;T>** _where_ **T: FromParam**
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -100,7 +100,7 @@ use http::uri::{URI, Segments};
 ///     parse succeeds, a `Some(parsed_value)` is returned. Otherwise, a `None`
 ///     is returned.
 ///
-///   * **Result<T, T::Error>** _where_ **T: FromParam**
+///   * **Result&lt;T, T::Error>** _where_ **T: FromParam**
 ///
 ///     _This implementation always returns successfully._
 ///
