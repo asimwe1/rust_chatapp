@@ -27,6 +27,8 @@ function build_and_test() {
 
 # Checks that the versions for Cargo projects $@ all match
 function check_versions_match() {
+  echo ":: Ensuring all crate versions match..."
+
   local last_version=""
   for dir in $@; do
     local cargo_toml="${dir}/Cargo.toml"
@@ -45,14 +47,16 @@ function check_versions_match() {
   done
 }
 
-# Update dependencies first.
+check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
+
+# Update dependencies before running tests.
+echo ":: Updating dependencies..."
 cargo update
 
+echo ":: Building and testing libraries..."
 build_and_test "${LIB_DIR}"
 build_and_test "${CODEGEN_DIR}"
 build_and_test "${CONTRIB_DIR}"
-
-check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 
 for file in ${EXAMPLES_DIR}/*; do
   if [ -d "${file}" ]; then
