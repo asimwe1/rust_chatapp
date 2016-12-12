@@ -71,9 +71,15 @@ impl HyperHandler for Rocket {
         res.headers_mut().set(header::Server("rocket".to_string()));
         self.preprocess_request(&mut request, &data);
 
-        // Now that we've Rocket-ized everything, actually dispath the request.
+        // Now that we've Rocket-ized everything, actually dispatch the request.
         let mut responder = match self.dispatch(&request, data) {
             Ok(responder) => responder,
+            Err(StatusCode::NotFound) if request.method == Method::Head => {
+                // TODO: Handle unimplemented HEAD requests automatically.
+                info_!("Redirecting to {}.", Green.paint(Method::Get));
+                self.handle_error(StatusCode::NotFound, &request, res);
+                return;
+            }
             Err(code) => {
                 self.handle_error(code, &request, res);
                 return;
