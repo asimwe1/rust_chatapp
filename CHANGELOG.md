@@ -1,3 +1,59 @@
+# Version 0.0.11 (Dec 11, 2016)
+
+## Streaming Requests
+
+All incoming request data is now streamed. This resulted in a major change to
+the Rocket APIs. They are summarized through the following API changes:
+
+  * The `form` route parameter has been removed.
+  * The `data` route parameter has been introduced.
+  * Forms are now handled via the `data` parameter and `Form` type.
+  * Removed the `data` parameter from `Request`.
+  * Added `FromData` conversion trait and default implementation.
+  * `FromData` is used to automatically derive the `data` parameter.
+  * `Responder`s are now final: they cannot forward to other requests.
+  * `Responser`s may only forward to catchers.
+
+## Breaking
+
+  * Request `uri` parameter is private. Use `uri()` method instead.
+  * `form` module moved under `request` module.
+  * `response::data` was renamed to `response::content`.
+  * Introduced `Outcome` with `Success`, `Failure`, and `Forward` variants.
+  * `outcome` module moved to top-level.
+  * `Response` is now a type alias to `Outcome`.
+  * `Empty` `Responder` was removed.
+  * `StatusResponder` removed in favor of `response::status` module.
+
+## Codegen
+
+  * Error handlers can now take 0, 1, or 2 parameters.
+  * `FromForm` derive now works on empty structs.
+  * Lifetimes are now properly stripped in code generation.
+  * Any valid ident is now allowed in single-parameter route parameters.
+
+## Core
+
+  * Route is now cloneable.
+  * `Request` no longer has any lifetime parameters.
+  * `Handler` type now includes a `Data` parameter.
+  * `http` module is public.
+  * `Responder` implemented for `()` type as an empty response.
+  * Add `config::get()` for global config access.
+  * Introduced `testing` module.
+  * `Rocket.toml` allows global configuration via `[global]` table.
+
+## Docs
+
+  * Added a `raw_upload` example.
+  * Added a `pastebin` example.
+  * Documented all public APIs.
+
+## Testing
+
+  * Now building and running tests with `--all-features` flag.
+  * Added appveyor config for Windows CI testing.
+
 # Version 0.0.10 (Oct 03, 2016)
 
 ## Breaking
