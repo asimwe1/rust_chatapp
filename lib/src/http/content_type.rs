@@ -144,11 +144,11 @@ impl ContentType {
         "form", Form, is_form => "application", "x-www-form-urlencoded",
         "data form", DataForm, is_data_form => "multipart", "form-data",
         "JSON", JSON, is_json => "application", "json",
-        "XML", XML, is_xml => "text", "xml"; "charset=utf-8",
-        "HTML", HTML, is_html => "text", "html"; "charset=utf-8",
-        "Plain", Plain, is_plain => "text", "plain"; "charset=utf-8",
+        "XML", XML, is_xml => "text", "xml" ; "charset=utf-8",
+        "HTML", HTML, is_html => "text", "html" ; "charset=utf-8",
+        "Plain", Plain, is_plain => "text", "plain" ; "charset=utf-8",
         "JavaScript", JavaScript, is_javascript => "application", "javascript",
-        "CSS", CSS, is_css => "text", "css"; "charset=utf-8",
+        "CSS", CSS, is_css => "text", "css" ; "charset=utf-8",
         "PNG", PNG, is_png => "image", "png",
         "GIF", GIF, is_gif => "image", "gif",
         "BMP", BMP, is_bmp => "image", "bmp",
@@ -204,6 +204,16 @@ fn is_valid_char(c: char) -> bool {
     }
 }
 
+fn is_valid_token(string: &str) -> bool {
+    if string.len() < 1 {
+        return false;
+    }
+
+    string.chars().take(1).all(is_valid_first_char)
+        && string.chars().skip(1).all(is_valid_char)
+}
+
+
 impl FromStr for ContentType {
     type Err = &'static str;
 
@@ -250,8 +260,8 @@ impl FromStr for ContentType {
         };
 
         let top_s = &raw[..slash];
-        let (sub_s, _rest) = match raw.find(';') {
-            Some(j) => (&raw[(slash + 1)..j], Some(&raw[(j + 1)..])),
+        let (sub_s, params) = match raw.find(';') {
+            Some(j) => (raw[(slash + 1)..j].trim_right(), Some(raw[(j + 1)..].trim_left())),
             None => (&raw[(slash + 1)..], None),
         };
 
@@ -259,20 +269,36 @@ impl FromStr for ContentType {
             return Err("Empty string.");
         }
 
-        if !is_valid_first_char(top_s.chars().next().unwrap())
-                || !is_valid_first_char(sub_s.chars().next().unwrap()) {
-            return Err("Invalid first char.");
+        if !is_valid_token(top_s) || !is_valid_token(sub_s) {
+            return Err("Invalid characters in type or subtype.");
         }
 
-        if top_s.contains(|c| !is_valid_char(c))
-                || sub_s.contains(|c| !is_valid_char(c)) {
-            return Err("Invalid character in string.");
+        let mut trimmed_params = vec![];
+        for param in params.into_iter().flat_map(|p| p.split(";")) {
+            let param = param.trim_left();
+            for (i, split) in param.split("=").enumerate() {
+                if split.trim() != split {
+                    return Err("Whitespace not allowed around = character.");
+                }
+
+                match i {
+                    0 => if !is_valid_token(split) {
+                        return Err("Invalid parameter name.");
+                    },
+                    1 => if !((split.starts_with('"') && split.ends_with('"'))
+                                || is_valid_token(split)) {
+                        return Err("Invalid parameter value.");
+                    },
+                    _ => return Err("Malformed parameter.")
+                }
+            }
+
+            trimmed_params.push(param);
         }
 
-        let (top_s, sub_s) = (top_s.to_lowercase(), sub_s.to_lowercase());
-
-        // FIXME: Use `rest` to find params.
-        Ok(ContentType::new(top_s, sub_s))
+        let (ttype, subtype) = (top_s.to_lowercase(), sub_s.to_lowercase());
+        let params = params.map(|_| trimmed_params.join(";"));
+        Ok(ContentType::with_params(ttype, subtype, params))
     }
 }
 
@@ -331,7 +357,10 @@ mod test {
     macro_rules! assert_parse {
         ($string:expr) => ({
             let result = ContentType::from_str($string);
-            assert!(result.is_ok());
+            if let Err(e) = result {
+                println!("{:?} failed to parse: {}", $string, e);
+            }
+
             result.unwrap()
         });
 
@@ -339,6 +368,7 @@ mod test {
             let c = assert_parse!($string);
             assert_eq!(c.ttype, $ct.ttype);
             assert_eq!(c.subtype, $ct.subtype);
+            assert_eq!(c.params, $ct.params);
             c
         })
     }
@@ -347,27 +377,35 @@ mod test {
     fn test_simple() {
         assert_parse!("application/json", ContentType::JSON);
         assert_parse!("*/json", ContentType::new("*", "json"));
-        assert_parse!("text/html", ContentType::HTML);
-        assert_parse!("TEXT/html", ContentType::HTML);
+        assert_parse!("text/html;charset=utf-8", ContentType::HTML);
+        assert_parse!("text/html ; charset=utf-8", ContentType::HTML);
+        assert_parse!("text/html ;charset=utf-8", ContentType::HTML);
+        assert_parse!("TEXT/html;charset=utf-8", ContentType::HTML);
         assert_parse!("*/*", ContentType::Any);
         assert_parse!("application/*", ContentType::new("application", "*"));
     }
 
     #[test]
     fn test_params() {
-        // TODO: Test these.
-        assert_parse!("application/json; charset=utf-8", ContentType::JSON);
-        assert_parse!("*/*;", ContentType::Any);
+        assert_parse!("*/*;a=1;b=2;c=3;d=4",
+            ContentType::with_params("*", "*", Some("a=1;b=2;c=3;d=4")));
+        assert_parse!("*/*; a=1;   b=2; c=3;d=4",
+            ContentType::with_params("*", "*", Some("a=1;b=2;c=3;d=4")));
         assert_parse!("application/*;else=1",
             ContentType::with_params("application", "*", Some("else=1")));
-        assert_parse!("*/*;charset=utf8;else=1",
+        assert_parse!("*/*;charset=utf-8;else=1",
             ContentType::with_params("*", "*", Some("charset=utf-8;else=1")));
+        assert_parse!("*/*;    charset=utf-8;   else=1",
+            ContentType::with_params("*", "*", Some("charset=utf-8;else=1")));
+        assert_parse!("*/*;    charset=\"utf-8\";   else=1",
+            ContentType::with_params("*", "*", Some("charset=\"utf-8\";else=1")));
     }
 
     #[test]
     fn test_bad_parses() {
         assert_no_parse!("application//json");
         assert_no_parse!("application///json");
+        assert_no_parse!("*&_/*)()");
         assert_no_parse!("/json");
         assert_no_parse!("text/");
         assert_no_parse!("text//");
@@ -376,5 +414,15 @@ mod test {
         assert_no_parse!("/*");
         assert_no_parse!("///");
         assert_no_parse!("");
+        assert_no_parse!("*/*;");
+        assert_no_parse!("*/*;a=");
+        assert_no_parse!("*/*;a= ");
+        assert_no_parse!("*/*;a=@#$%^&*()");
+        assert_no_parse!("*/*;;");
+        assert_no_parse!("*/*;=;");
+        assert_no_parse!("*/*=;");
+        assert_no_parse!("*/*=;=");
+        assert_no_parse!("*/*; a=b;");
+        assert_no_parse!("*/*; a = b");
     }
 }
