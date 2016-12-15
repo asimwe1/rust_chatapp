@@ -1,8 +1,7 @@
 use std::{io, fmt, str};
-use std::borrow::{Borrow, Cow};
-use std::collections::HashMap;
+use std::borrow::Cow;
 
-use http::Header;
+use http::{Header, HeaderMap};
 use http::Status;
 
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -165,7 +164,7 @@ impl<'r> ResponseBuilder<'r> {
 /// Return type of a thing.
 pub struct Response<'r> {
     status: Option<Status>,
-    headers: HashMap<Cow<'r, str>, Vec<Cow<'r, str>>>,
+    headers: HeaderMap<'r>,
     body: Option<Body<Box<io::Read + 'r>>>,
 }
 
@@ -174,7 +173,7 @@ impl<'r> Response<'r> {
     pub fn new() -> Response<'r> {
         Response {
             status: None,
-            headers: HashMap::new(),
+            headers: HeaderMap::new(),
             body: None,
         }
     }
@@ -206,38 +205,30 @@ impl<'r> Response<'r> {
 
     #[inline(always)]
     pub fn headers<'a>(&'a self) -> impl Iterator<Item=Header<'a>> {
-        self.headers.iter().flat_map(|(key, values)| {
-            values.iter().map(move |val| {
-                Header::new(key.borrow(), val.borrow())
-            })
-        })
+        self.headers.iter()
     }
 
     #[inline(always)]
     pub fn get_header_values<'h>(&'h self, name: &str)
             -> impl Iterator<Item=&'h str> {
-        self.headers.get(name).into_iter().flat_map(|values| {
-            values.iter().map(|val| val.borrow())
-        })
+        self.headers.get(name)
     }
 
     #[inline(always)]
-    pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
-        let header = header.into();
-        self.headers.insert(header.name, vec![header.value]);
+    pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
+        self.headers.replace(header)
     }
 
     #[inline(always)]
-    pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
+    pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V) -> bool
         where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
     {
-        self.set_header(Header::new(name, value));
+        self.set_header(Header::new(name, value))
     }
 
     #[inline(always)]
     pub fn adjoin_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
-        let header = header.into();
-        self.headers.entry(header.name).or_insert(vec![]).push(header.value);
+        self.headers.add(header)
     }
 
     #[inline(always)]
@@ -248,7 +239,7 @@ impl<'r> Response<'r> {
     }
 
     #[inline(always)]
-    pub fn remove_header<'h>(&mut self, name: &'h str) {
+    pub fn remove_header(&mut self, name: &str) {
         self.headers.remove(name);
     }
 
@@ -304,7 +295,7 @@ impl<'r> Response<'r> {
         }
 
         for (name, values) in other.headers.into_iter() {
-            self.headers.insert(name, values);
+            self.headers.replace_all(name, values);
         }
     }
 
@@ -321,7 +312,7 @@ impl<'r> Response<'r> {
         }
 
         for (name, mut values) in other.headers.into_iter() {
-            self.headers.entry(name).or_insert(vec![]).append(&mut values)
+            self.headers.add_all(name, &mut values);
         }
     }
 }

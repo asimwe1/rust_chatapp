@@ -17,6 +17,6 @@ mod header;
 pub use self::method::Method;
 pub use self::content_type::ContentType;
 pub use self::status::Status;
-pub use self::header::Header;
+pub use self::header::{Header, HeaderMap};
 
 pub use self::cookies::{Cookie, Cookies};

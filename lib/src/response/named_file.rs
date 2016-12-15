@@ -83,7 +83,7 @@ impl<'r> Responder<'r> for NamedFile {
             let ext_string = ext.to_string_lossy().to_lowercase();
             let content_type = ContentType::from_extension(&ext_string);
             if !content_type.is_any() {
-                response.set_header(content_type)
+                response.set_header(content_type);
             }
         }
 
