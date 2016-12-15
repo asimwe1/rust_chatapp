@@ -45,7 +45,7 @@ impl Route {
             handler: handler,
             rank: default_rank(path.as_ref()),
             path: URIBuf::from(path.as_ref()),
-            content_type: ContentType::any(),
+            content_type: ContentType::Any,
         }
     }
 
@@ -58,7 +58,7 @@ impl Route {
             path: URIBuf::from(path.as_ref()),
             handler: handler,
             rank: rank,
-            content_type: ContentType::any(),
+            content_type: ContentType::Any,
         }
     }
 
@@ -133,7 +133,7 @@ impl fmt::Debug for Route {
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
-        route.content_type = info.format.clone().unwrap_or(ContentType::any());
+        route.content_type = info.format.clone().unwrap_or(ContentType::Any);
         if let Some(rank) = info.rank {
             route.rank = rank;
         }

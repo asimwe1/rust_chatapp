@@ -72,10 +72,12 @@ mod test {
     use http::Method;
     use http::Method::*;
     use http::uri::URI;
-    use {Response, Request, Data};
+    use request::Request;
+    use data::Data;
+    use handler::Outcome;
 
-    fn dummy_handler(_req: &Request, _: Data) -> Response<'static> {
-        Response::success("hi")
+    fn dummy_handler(_req: &Request, _: Data) -> Outcome<'static> {
+        Outcome::of("hi")
     }
 
     fn router_with_routes(routes: &[&'static str]) -> Router {

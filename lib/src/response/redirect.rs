@@ -1,12 +1,12 @@
-use response::{Outcome, Responder};
-use http::hyper::{header, FreshHyperResponse, StatusCode};
-use outcome::IntoOutcome;
+use response::{Response, Responder};
+use http::hyper::header;
+use http::Status;
 
 /// An empty redirect response to a given URL.
 ///
 /// This type simplifies returning a redirect response to the client.
 #[derive(Debug)]
-pub struct Redirect(StatusCode, String);
+pub struct Redirect(Status, String);
 
 impl Redirect {
     /// Construct a temporary "see other" (303) redirect response. This is the
@@ -22,7 +22,7 @@ impl Redirect {
     /// let redirect = Redirect::to("/other_url");
     /// ```
     pub fn to(uri: &str) -> Redirect {
-        Redirect(StatusCode::SeeOther, String::from(uri))
+        Redirect(Status::SeeOther, String::from(uri))
     }
 
     /// Construct a "temporary" (307) redirect response. This response instructs
@@ -39,7 +39,7 @@ impl Redirect {
     /// let redirect = Redirect::temporary("/other_url");
     /// ```
     pub fn temporary(uri: &str) -> Redirect {
-        Redirect(StatusCode::TemporaryRedirect, String::from(uri))
+        Redirect(Status::TemporaryRedirect, String::from(uri))
     }
 
     /// Construct a "permanent" (308) redirect response. This redirect must only
@@ -57,7 +57,7 @@ impl Redirect {
     /// let redirect = Redirect::permanent("/other_url");
     /// ```
     pub fn permanent(uri: &str) -> Redirect {
-        Redirect(StatusCode::PermanentRedirect, String::from(uri))
+        Redirect(Status::PermanentRedirect, String::from(uri))
     }
 
     /// Construct a temporary "found" (302) redirect response. This response
@@ -75,7 +75,7 @@ impl Redirect {
     /// let redirect = Redirect::found("/other_url");
     /// ```
     pub fn found(uri: &str) -> Redirect {
-        Redirect(StatusCode::Found, String::from(uri))
+        Redirect(Status::Found, String::from(uri))
     }
 
     /// Construct a permanent "moved" (301) redirect response. This response
@@ -91,18 +91,19 @@ impl Redirect {
     /// let redirect = Redirect::moved("/other_url");
     /// ```
     pub fn moved(uri: &str) -> Redirect {
-        Redirect(StatusCode::MovedPermanently, String::from(uri))
+        Redirect(Status::MovedPermanently, String::from(uri))
     }
 }
 
 /// Constructs a response with the appropriate status code and the given URL in
 /// the `Location` header field. The body of the response is empty. This
 /// responder does not fail.
-impl<'a> Responder for Redirect {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        res.headers_mut().set(header::ContentLength(0));
-        res.headers_mut().set(header::Location(self.1.clone()));
-        *(res.status_mut()) = self.0;
-        res.send(b"").into_outcome()
+impl Responder<'static> for Redirect {
+    fn respond(self) -> Result<Response<'static>, Status> {
+        Response::build()
+            .status(self.0)
+            .header(header::ContentLength(0))
+            .header(header::Location(self.1.clone()))
+            .ok()
     }
 }

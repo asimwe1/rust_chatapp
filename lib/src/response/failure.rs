@@ -1,14 +1,13 @@
-use outcome::Outcome;
-use response::{self, Responder};
-use http::hyper::{FreshHyperResponse, StatusCode};
+use response::{Response, Responder};
+use http::Status;
 
 /// A failing response; simply forwards to the catcher for the given
-/// `StatusCode`.
+/// `Status`.
 #[derive(Debug)]
-pub struct Failure(pub StatusCode);
+pub struct Failure(pub Status);
 
-impl Responder for Failure {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> response::Outcome<'a> {
-        Outcome::Forward((self.0, res))
+impl<'r> Responder<'r> for Failure {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Err(self.0)
     }
 }

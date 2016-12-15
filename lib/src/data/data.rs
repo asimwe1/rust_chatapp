@@ -5,6 +5,8 @@ use std::time::Duration;
 use std::mem::transmute;
 
 use super::data_stream::{DataStream, StreamReader, kill_stream};
+
+use ext::ReadExt;
 use http::hyper::{HyperBodyReader, HyperHttpStream};
 use http::hyper::HyperNetworkStream;
 use http::hyper::HyperHttpReader::*;
@@ -114,7 +116,8 @@ impl Data {
     }
 
     /// Returns true if the `peek` buffer contains all of the data in the body
-    /// of the request.
+    /// of the request. Returns `false` if it does not or if it is not known if
+    /// it does.
     #[inline(always)]
     pub fn peek_complete(&self) -> bool {
         self.is_done
@@ -150,45 +153,27 @@ impl Data {
         // Make sure the buffer is large enough for the bytes we want to peek.
         const PEEK_BYTES: usize = 4096;
         if buf.len() < PEEK_BYTES {
-            trace!("Resizing peek buffer from {} to {}.", buf.len(), PEEK_BYTES);
+            trace_!("Resizing peek buffer from {} to {}.", buf.len(), PEEK_BYTES);
             buf.resize(PEEK_BYTES, 0);
         }
 
-        // We want to fill the buffer with as many bytes as possible. We also
-        // want to record if we reach the EOF while filling the buffer. The
-        // buffer already has `cap` bytes. We read up to buf.len() - 1 bytes,
-        // and then we try reading 1 more to see if we've reached the EOF.
+        // Fill the buffer with as many bytes as possible. If we read less than
+        // that buffer's length, we know we reached the EOF. Otherwise, it's
+        // unclear, so we just say we didn't reach EOF.
         trace!("Init buffer cap: {}", cap);
-        let buf_len = buf.len();
-        let eof = if cap < buf_len {
-            // We have room to read into the buffer. Let's do it.
-            match stream.read(&mut buf[cap..(buf_len - 1)]) {
-                Ok(0) => true,
-                Ok(n) => {
-                    trace!("Filled peek buf with {} bytes.", n);
-                    cap += n;
-                    match stream.read(&mut buf[cap..(cap + 1)]) {
-                        Ok(n) => {
-                            cap += n;
-                            n == 0
-                        }
-                        Err(e) => {
-                            error_!("Failed to check stream EOF status: {:?}", e);
-                            false
-                        }
-                    }
-                }
-                Err(e) => {
-                    error_!("Failed to read into peek buffer: {:?}", e);
-                    false
-                }
+        let eof = match stream.read_max(&mut buf[cap..]) {
+            Ok(n) => {
+                trace_!("Filled peek buf with {} bytes.", n);
+                cap += n;
+                cap < buf.len()
             }
-        } else {
-            // There's no more room in the buffer. Assume there are still bytes.
-            false
+            Err(e) => {
+                error_!("Failed to read into peek buffer: {:?}.", e);
+                false
+            },
         };
 
-        trace!("Peek buffer size: {}, remaining: {}", buf_len, buf_len - cap);
+        trace_!("Peek buffer size: {}, remaining: {}", buf.len(), buf.len() - cap);
         Data {
             buffer: buf,
             stream: stream,

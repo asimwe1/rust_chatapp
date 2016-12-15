@@ -24,11 +24,13 @@ mod failure;
 pub mod content;
 pub mod status;
 
-pub use self::response::Response;
-pub use self::responder::{Outcome, Responder};
+pub use self::response::{Response, Body, DEFAULT_CHUNK_SIZE};
+pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
 pub use self::content::Content;
 pub use self::failure::Failure;
+
+pub type Result<'r> = ::std::result::Result<self::Response<'r>, ::http::Status>;

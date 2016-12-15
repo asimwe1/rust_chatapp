@@ -21,10 +21,8 @@
 //! let response = content::HTML("<h1>Hello, world!</h1>");
 //! ```
 
-use response::{Responder, Outcome};
-use http::hyper::{header, FreshHyperResponse};
-use http::mime::{Mime, TopLevel, SubLevel};
-use http::ContentType;
+use response::{Response, Responder};
+use http::{Status, ContentType};
 
 /// Set the Content-Type to any arbitrary value.
 ///
@@ -41,57 +39,50 @@ use http::ContentType;
 /// let response = Content(ContentType::from_extension("pdf"), "Hi.");
 /// ```
 #[derive(Debug)]
-pub struct Content<T: Responder>(pub ContentType, pub T);
+pub struct Content<R>(pub ContentType, pub R);
 
 /// Sets the Content-Type of the response to the wrapped `ContentType` then
 /// delegates the remainder of the response to the wrapped responder.
-impl<T: Responder> Responder for Content<T> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        res.headers_mut().set(header::ContentType(self.0.clone().into()));
-        self.1.respond(res)
+impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
+    #[inline(always)]
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Response::build()
+            .merge(self.1.respond()?)
+            .header(self.0)
+            .ok()
     }
 }
 
 macro_rules! ctrs {
-    ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
+    ($($name:ident: $name_str:expr, $ct_str:expr),+) => {
         $(
-            $(#[$attr])*
+            #[doc="Set the `Content-Type` of the response to <b>"]
+            #[doc=$name_str]
+            #[doc="</b>, or <i>"]
+            #[doc=$ct_str]
+            #[doc="</i>."]
             ///
             /// Delagates the remainder of the response to the wrapped responder.
             #[derive(Debug)]
-            pub struct $name<T: Responder>(pub T);
+            pub struct $name<R>(pub R);
 
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
-            impl<T: Responder> Responder for $name<T> {
-                #[inline(always)]
-                fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-                    let mime = Mime(TopLevel::$top, SubLevel::$sub, vec![]);
-                    res.headers_mut().set(header::ContentType(mime));
-                    self.0.respond(res)
+            impl<'r, R: Responder<'r>> Responder<'r> for $name<R> {
+                fn respond(self) -> Result<Response<'r>, Status> {
+                    Content(ContentType::$name, self.0).respond()
                 }
-            })+
+            }
+        )+
     }
 }
 
 ctrs! {
-    /// Sets the Content-Type of the response to JSON (`application/json`).
-    | JSON: Application/Json,
-
-    /// Sets the Content-Type of the response to XML (`text/xml`).
-    | XML: Text/Xml,
-
-    /// Sets the Content-Type of the response to HTML (`text/html`).
-    | HTML: Text/Html,
-
-    /// Sets the Content-Type of the response to plain text (`text/plain`).
-    | Plain: Text/Plain,
-
-    /// Sets the Content-Type of the response to CSS (`text/css`).
-    | CSS: Text/Css,
-
-    /// Sets the Content-Type of the response to JavaScript
-    /// (`application/javascript`).
-    | JavaScript: Application/Javascript
+    JSON: "JSON", "application/json",
+    XML: "XML", "text/xml",
+    HTML: "HTML", "text/html",
+    Plain: "plain text", "text/plain",
+    CSS: "CSS", "text/css",
+    JavaScript: "JavaScript", "application/javascript"
 }
 

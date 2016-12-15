@@ -2,22 +2,24 @@ use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
 use std::process;
+use std::io::{self, Write};
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
 use logger;
+use ext::ReadExt;
 use config::{self, Config};
 use request::{Request, FormItems};
 use data::Data;
-use response::Responder;
+use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
 use error::Error;
 
-use http::{Method, StatusCode};
-use http::hyper::{HyperRequest, FreshHyperResponse};
+use http::{Method, Status};
+use http::hyper::{self, HyperRequest, FreshHyperResponse};
 use http::hyper::{HyperServer, HyperHandler, HyperSetCookie, header};
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
@@ -39,7 +41,7 @@ impl HyperHandler for Rocket {
     // response processing.
     fn handle<'h, 'k>(&self,
                       hyp_req: HyperRequest<'h, 'k>,
-                      mut res: FreshHyperResponse<'h>) {
+                      res: FreshHyperResponse<'h>) {
         // Get all of the information from Hyper.
         let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
@@ -52,8 +54,8 @@ impl HyperHandler for Rocket {
             Err(ref reason) => {
                 let mock = Request::mock(Method::Get, uri.as_str());
                 error!("{}: bad request ({}).", mock, reason);
-                self.handle_error(StatusCode::InternalServerError, &mock, res);
-                return;
+                let r = self.handle_error(Status::InternalServerError, &mock);
+                return self.issue_response(r, res);
             }
         };
 
@@ -62,49 +64,99 @@ impl HyperHandler for Rocket {
             Ok(data) => data,
             Err(reason) => {
                 error_!("Bad data in request: {}", reason);
-                self.handle_error(StatusCode::InternalServerError, &request, res);
-                return;
+                let r = self.handle_error(Status::InternalServerError, &request);
+                return self.issue_response(r, res);
             }
         };
-
-        // Set the common response headers and preprocess the request.
-        res.headers_mut().set(header::Server("rocket".to_string()));
-        self.preprocess_request(&mut request, &data);
 
         // Now that we've Rocket-ized everything, actually dispatch the request.
-        let mut responder = match self.dispatch(&request, data) {
-            Ok(responder) => responder,
-            Err(StatusCode::NotFound) if request.method == Method::Head => {
-                // TODO: Handle unimplemented HEAD requests automatically.
-                info_!("Redirecting to {}.", Green.paint(Method::Get));
-                self.handle_error(StatusCode::NotFound, &request, res);
-                return;
-            }
-            Err(code) => {
-                self.handle_error(code, &request, res);
-                return;
+        self.preprocess_request(&mut request, &data);
+        let mut response = match self.dispatch(&request, data) {
+            Ok(response) => response,
+            Err(status) => {
+                if status == Status::NotFound && request.method == Method::Head {
+                    // FIXME: Handle unimplemented HEAD requests automatically.
+                    info_!("Redirecting to {}.", Green.paint(Method::Get));
+                }
+
+                let response = self.handle_error(status, &request);
+                return self.issue_response(response, res);
             }
         };
 
-        // We have a responder. Update the cookies in the header.
+        // We have a response from the user. Update the cookies in the header.
         let cookie_delta = request.cookies().delta();
         if cookie_delta.len() > 0 {
-            res.headers_mut().set(HyperSetCookie(cookie_delta));
+            response.adjoin_header(HyperSetCookie(cookie_delta));
         }
 
-        // Actually call the responder.
-        let outcome = responder.respond(res);
-        info_!("{} {}", White.paint("Outcome:"), outcome);
-
-        // Check if the responder wants to forward to a catcher. If it doesn't,
-        // it's a success or failure, so we can't do any more processing.
-        if let Some((code, f_res)) = outcome.forwarded() {
-            self.handle_error(code, &request, f_res);
-        }
+        // Actually write out the response.
+        return self.issue_response(response, res);
     }
 }
 
 impl Rocket {
+    #[inline]
+    fn issue_response(&self, mut response: Response, hyp_res: FreshHyperResponse) {
+        // Add the 'rocket' server header, and write out the response.
+        // TODO: If removing Hyper, write out `Data` header too.
+        response.set_header(header::Server("rocket".to_string()));
+
+        match self.write_response(response, hyp_res) {
+            Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
+            Err(e) => error_!("Failed to write response: {:?}.", e)
+        }
+    }
+
+    fn write_response(&self, mut response: Response,
+                      mut hyp_res: FreshHyperResponse) -> io::Result<()>
+    {
+        *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
+
+        for header in response.headers() {
+            let name = header.name.into_owned();
+            let value = vec![header.value.into_owned().into()];
+            hyp_res.headers_mut().set_raw(name, value);
+        }
+
+        if response.body().is_none() {
+            hyp_res.headers_mut().set(header::ContentLength(0));
+            return hyp_res.start()?.end();
+        }
+
+        match response.body() {
+            None => {
+                hyp_res.headers_mut().set(header::ContentLength(0));
+                hyp_res.start()?.end()
+            }
+            Some(Body::Sized(mut body, size)) => {
+                hyp_res.headers_mut().set(header::ContentLength(size));
+                let mut stream = hyp_res.start()?;
+                io::copy(body, &mut stream)?;
+                stream.end()
+            }
+            Some(Body::Chunked(mut body, chunk_size)) => {
+                // This _might_ happen on a 32-bit machine!
+                if chunk_size > (usize::max_value() as u64) {
+                    let msg = "chunk size exceeds limits of usize type";
+                    return Err(io::Error::new(io::ErrorKind::Other, msg));
+                }
+
+                // The buffer stores the current chunk being written out.
+                let mut buffer = vec![0; chunk_size as usize];
+                let mut stream = hyp_res.start()?;
+                loop {
+                    match body.read_max(&mut buffer)? {
+                        0 => break,
+                        n => stream.write_all(&buffer[..n])?,
+                    }
+                }
+
+                stream.end()
+            }
+        }
+    }
+
     /// Preprocess the request for Rocket-specific things. At this time, we're
     /// only checking for _method in forms.
     fn preprocess_request(&self, req: &mut Request, data: &Data) {
@@ -133,7 +185,7 @@ impl Rocket {
     /// the request, this function returns an `Err` with the status code.
     #[doc(hidden)]
     pub fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
-            -> Result<Box<Responder + 'r>, StatusCode> {
+            -> Result<Response<'r>, Status> {
         // Go through the list of matching routes until we fail or succeed.
         info!("{}:", request);
         let matches = self.router.route(&request);
@@ -143,56 +195,41 @@ impl Rocket {
             request.set_params(route);
 
             // Dispatch the request to the handler.
-            let response = (route.handler)(&request, data);
+            let outcome = (route.handler)(&request, data);
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", White.paint("Response:"), response);
-            match response {
-                Outcome::Success(responder) => return Ok(responder),
-                Outcome::Failure(status_code) => return Err(status_code),
+            info_!("{} {}", White.paint("Outcome:"), outcome);
+            match outcome {
+                Outcome::Success(response) => return Ok(response),
+                Outcome::Failure(status) => return Err(status),
                 Outcome::Forward(unused_data) => data = unused_data,
             };
         }
 
-        error_!("No matching routes.");
-        Err(StatusCode::NotFound)
+        error_!("No matching routes for {}.", request);
+        Err(Status::NotFound)
     }
 
-    // Attempts to send a response to the client by using the catcher for the
-    // given status code. If no catcher is found (including the defaults), the
-    // 500 internal server error catcher is used. If the catcher fails to
-    // respond, this function returns `false`. It returns `true` if a response
-    // was sucessfully sent to the client.
+    // TODO: DOC.
     #[doc(hidden)]
-    pub fn handle_error<'r>(&self,
-                        code: StatusCode,
-                        req: &'r Request,
-                        response: FreshHyperResponse) -> bool {
-        // Find the catcher or use the one for internal server errors.
-        let catcher = self.catchers.get(&code.to_u16()).unwrap_or_else(|| {
-            error_!("No catcher found for {}.", code);
-            warn_!("Using internal server error catcher.");
-            self.catchers.get(&500).expect("500 catcher should exist!")
+    pub fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
+        warn_!("Responding with {} catcher.", Red.paint(&status));
+
+        // Try to get the active catcher but fallback to user's 500 catcher.
+        let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
+            error_!("No catcher found for {}. Using 500 catcher.", status);
+            self.catchers.get(&500).expect("500 catcher.")
         });
 
-        if let Some(mut responder) = catcher.handle(Error::NoRoute, req).responder() {
-            if !responder.respond(response).is_success() {
-                error_!("Catcher outcome was unsuccessul; aborting response.");
-                return false;
-            } else {
-                info_!("Responded with {} catcher.", White.paint(code));
-            }
-        } else {
-            error_!("Catcher returned an incomplete response.");
-            warn_!("Using default error response.");
-            let catcher = self.default_catchers.get(&code.to_u16())
-                .unwrap_or(self.default_catchers.get(&500).expect("500 default"));
-            let responder = catcher.handle(Error::Internal, req).responder();
-            responder.unwrap().respond(response).expect("default catcher failed")
-        }
-
-        true
+        // Dispatch to the user's catcher. If it fails, use the default 500.
+        let error = Error::NoRoute;
+        catcher.handle(error, req).unwrap_or_else(|err_status| {
+            error_!("Catcher failed with status: {}!", err_status);
+            warn_!("Using default 500 error catcher.");
+            let default = self.default_catchers.get(&500).expect("Default 500");
+            default.handle(error, req).expect("Default 500 response.")
+        })
     }
 
     /// Create a new `Rocket` application using the configuration information in
@@ -300,11 +337,12 @@ impl Rocket {
     /// `hi` route.
     ///
     /// ```rust
-    /// use rocket::{Request, Response, Route, Data};
+    /// use rocket::{Request, Route, Data};
+    /// use rocket::handler::Outcome;
     /// use rocket::http::Method::*;
     ///
-    /// fn hi(_: &Request, _: Data) -> Response<'static> {
-    ///     Response::success("Hello!")
+    /// fn hi(_: &Request, _: Data) -> Outcome {
+    ///     Outcome::of("Hello!")
     /// }
     ///
     /// # if false { // We don't actually want to launch the server in an example.

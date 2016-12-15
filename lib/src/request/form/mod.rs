@@ -27,7 +27,7 @@ use std::marker::PhantomData;
 use std::fmt::{self, Debug};
 use std::io::Read;
 
-use http::StatusCode;
+use http::Status;
 use request::Request;
 use data::{self, Data, FromData};
 use outcome::Outcome::*;
@@ -242,13 +242,13 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
         let mut stream = data.open().take(32768);
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
-            Failure((StatusCode::InternalServerError, None))
+            Failure((Status::InternalServerError, None))
         } else {
             match Form::new(form_string) {
                 Ok(form) => Success(form),
                 Err((form_string, e)) => {
                     error_!("Failed to parse value from form: {:?}", e);
-                    Failure((StatusCode::BadRequest, Some(form_string)))
+                    Failure((Status::BadRequest, Some(form_string)))
                 }
             }
         }

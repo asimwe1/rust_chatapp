@@ -18,9 +18,7 @@ use std::collections::HashMap;
 
 use rocket::config;
 use rocket::response::{self, Content, Responder};
-use rocket::http::hyper::FreshHyperResponse;
-use rocket::http::{ContentType, StatusCode};
-use rocket::Outcome;
+use rocket::http::{ContentType, Status};
 
 /// The Template type implements generic support for template rendering in
 /// Rocket.
@@ -159,16 +157,16 @@ impl Template {
     }
 }
 
-impl Responder for Template {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> response::Outcome<'a> {
+impl Responder<'static> for Template {
+    fn respond(self) -> response::Result<'static> {
         let content_type = match self.1 {
             Some(ref ext) => ContentType::from_extension(ext),
-            None => ContentType::html()
+            None => ContentType::HTML
         };
 
         match self.0 {
-            Some(ref render) => Content(content_type, render.as_str()).respond(res),
-            None => Outcome::Forward((StatusCode::InternalServerError, res)),
+            Some(render) => Content(content_type, render).respond(),
+            None => Err(Status::InternalServerError)
         }
     }
 }

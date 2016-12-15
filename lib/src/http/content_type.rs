@@ -1,10 +1,9 @@
-use std::default::Default;
-
+use std::borrow::{Borrow, Cow};
 use std::str::FromStr;
-use std::borrow::Borrow;
 use std::fmt;
 
-use http::mime::{Mime, Param, Attr, Value, TopLevel, SubLevel};
+use http::Header;
+use http::mime::Mime;
 use router::Collider;
 
 /// Typed representation of HTTP Content-Types.
@@ -14,68 +13,89 @@ use router::Collider;
 /// provides methods to parse HTTP Content-Type values
 /// ([from_str](#method.from_str)) and to return the ContentType associated with
 /// a file extension ([from_ext](#method.from_extension)).
-#[derive(Debug, Clone, PartialEq)]
-pub struct ContentType(pub TopLevel, pub SubLevel, pub Option<Vec<Param>>);
-
-macro_rules! ctrs {
-    ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
-        $
-            ($(#[$attr])*
-            #[inline(always)]
-            pub fn $name() -> ContentType {
-                ContentType::of(TopLevel::$top, SubLevel::$sub)
-            })+
-    };
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub struct ContentType {
+    pub ttype: Cow<'static, str>,
+    pub subtype: Cow<'static, str>,
+    pub params: Option<Cow<'static, str>>
 }
 
-macro_rules! checkers {
-    ($($(#[$attr:meta])* | $name:ident: $top:ident/$sub:ident),+) => {
+macro_rules! ctr_params {
+    () => (None);
+    ($param:expr) => (Some(Cow::Borrowed($param)));
+}
+
+macro_rules! ctrs {
+    ($($str:expr, $name:ident, $check_name:ident =>
+            $top:expr, $sub:expr $(; $param:expr),*),+) => {
         $(
-            $(#[$attr])*
-            #[inline(always)]
-            pub fn $name(&self) -> bool {
-                self.0 == TopLevel::$top && self.1 == SubLevel::$sub
-            })+
+            #[doc="[ContentType](struct.ContentType.html) for <b>"]
+            #[doc=$str]
+            #[doc="</b>: <i>"]
+            #[doc=$top]
+            #[doc="/"]
+            #[doc=$sub]
+            $(#[doc="; "] #[doc=$param])*
+            #[doc="</i>"]
+            #[allow(non_upper_case_globals)]
+            pub const $name: ContentType = ContentType {
+                ttype: Cow::Borrowed($top),
+                subtype: Cow::Borrowed($sub),
+                params: ctr_params!($($param)*)
+            };
+         )+
+
+            /// Returns `true` if this ContentType is known to Rocket.
+            pub fn is_known(&self) -> bool {
+                match (&*self.ttype, &*self.subtype) {
+                    $(
+                        ($top, $sub) => true,
+                     )+
+                     _ => false
+                }
+            }
+
+        $(
+            #[doc="Returns `true` if `self` is a <b>"]
+            #[doc=$str]
+            #[doc="</b> ContentType: <i>"]
+            #[doc=$top]
+            #[doc="</i>/<i>"]
+            #[doc=$sub]
+            #[doc="</i>."]
+            /// Paramaters are not taken into account when doing that check.
+            pub fn $check_name(&self) -> bool {
+                self.ttype == $top && self.subtype == $sub
+            }
+         )+
     };
 }
 
 impl ContentType {
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn new(t: TopLevel, s: SubLevel, params: Option<Vec<Param>>) -> ContentType {
-        ContentType(t, s, params)
-    }
-
-    /// Constructs a new content type of the given top level and sub level
-    /// types. If the top-level type is `Text`, a charset of UTF-8 is set.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use rocket::http::ContentType;
-    /// use rocket::http::mime::{TopLevel, SubLevel};
-    ///
-    /// let ct = ContentType::of(TopLevel::Text, SubLevel::Html);
-    /// assert_eq!(ct.to_string(), "text/html; charset=utf-8".to_string());
-    /// assert!(ct.is_html());
-    /// ```
-    ///
-    /// ```rust
-    /// use rocket::http::ContentType;
-    /// use rocket::http::mime::{TopLevel, SubLevel};
-    ///
-    /// let ct = ContentType::of(TopLevel::Application, SubLevel::Json);
-    /// assert_eq!(ct.to_string(), "application/json".to_string());
-    /// assert!(ct.is_json());
-    /// ```
-    #[inline(always)]
-    pub fn of(t: TopLevel, s: SubLevel) -> ContentType {
-        if t == TopLevel::Text {
-            ContentType(t, s, Some(vec![(Attr::Charset, Value::Utf8)]))
-        } else {
-            ContentType(t, s, None)
+    pub fn new<T, S>(ttype: T, subtype: S) -> ContentType
+        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    {
+        ContentType {
+            ttype: ttype.into(),
+            subtype: subtype.into(),
+            params: None
         }
     }
+
+    #[inline(always)]
+    pub fn with_params<T, S, P>(ttype: T, subtype: S, params: Option<P>) -> ContentType
+        where T: Into<Cow<'static, str>>,
+              S: Into<Cow<'static, str>>,
+              P: Into<Cow<'static, str>>
+    {
+        ContentType {
+            ttype: ttype.into(),
+            subtype: subtype.into(),
+            params: params.map(|p| p.into())
+        }
+    }
+
 
     /// Returns the Content-Type associated with the extension `ext`. Not all
     /// extensions are recognized. If an extensions is not recognized, then this
@@ -103,77 +123,37 @@ impl ContentType {
     /// assert!(foo.is_any());
     /// ```
     pub fn from_extension(ext: &str) -> ContentType {
-        let (top_level, sub_level) = match ext {
-            "txt" => (TopLevel::Text, SubLevel::Plain),
-            "html" | "htm" => (TopLevel::Text, SubLevel::Html),
-            "xml" => (TopLevel::Text, SubLevel::Xml),
-            "js" => (TopLevel::Application, SubLevel::Javascript),
-            "css" => (TopLevel::Text, SubLevel::Css),
-            "json" => (TopLevel::Application, SubLevel::Json),
-            "png" => (TopLevel::Image, SubLevel::Png),
-            "gif" => (TopLevel::Image, SubLevel::Gif),
-            "bmp" => (TopLevel::Image, SubLevel::Bmp),
-            "jpeg" => (TopLevel::Image, SubLevel::Jpeg),
-            "jpg" => (TopLevel::Image, SubLevel::Jpeg),
-            "pdf" => (TopLevel::Application, SubLevel::Ext("pdf".into())),
-            _ => (TopLevel::Star, SubLevel::Star),
-        };
-
-        ContentType::of(top_level, sub_level)
-    }
-
-    ctrs! {
-        /// Returns a `ContentType` representing `*/*`, i.e., _any_ ContentType.
-        | any: Star/Star,
-
-        /// Returns a `ContentType` representing JSON, i.e, `application/json`.
-        | json: Application/Json,
-
-        /// Returns a `ContentType` representing XML, i.e, `text/xml`.
-        | xml: Text/Xml,
-
-        /// Returns a `ContentType` representing HTML, i.e, `text/html`.
-        | html: Text/Html,
-
-        /// Returns a `ContentType` representing plain text, i.e, `text/plain`.
-        | plain: Text/Plain
-    }
-
-    /// Returns true if this content type is not one of the standard content
-    /// types, that if, if it is an "extended" content type.
-    pub fn is_ext(&self) -> bool {
-        if let TopLevel::Ext(_) = self.0 {
-            true
-        } else if let SubLevel::Ext(_) = self.1 {
-            true
-        } else {
-            false
+        match ext {
+            "txt" => ContentType::Plain,
+            "html" | "htm" => ContentType::HTML,
+            "xml" => ContentType::XML,
+            "js" => ContentType::JavaScript,
+            "css" => ContentType::CSS,
+            "json" => ContentType::JSON,
+            "png" => ContentType::PNG,
+            "gif" => ContentType::GIF,
+            "bmp" => ContentType::BMP,
+            "jpeg" | "jpg" => ContentType::JPEG,
+            "pdf" => ContentType::PDF,
+            _ => ContentType::Any
         }
     }
 
-    checkers! {
-        /// Returns true if the content type is plain text, i.e.: `text/plain`.
-        | is_text: Text/Plain,
-
-        /// Returns true if the content type is JSON, i.e: `application/json`.
-        | is_json: Application/Json,
-
-        /// Returns true if the content type is XML, i.e: `text/xml`.
-        | is_xml: Text/Xml,
-
-        /// Returns true if the content type is any, i.e.: `*/*`.
-        | is_any: Star/Star,
-
-        /// Returns true if the content type is HTML, i.e.: `text/html`.
-        | is_html: Text/Html,
-
-        /// Returns true if the content type is that for non-data HTTP forms,
-        /// i.e.: `application/x-www-form-urlencoded`.
-        | is_form: Application/WwwFormUrlEncoded,
-
-        /// Returns true if the content type is that for data HTTP forms, i.e.:
-        /// `multipart/form-data`.
-        | is_form_data: Multipart/FormData
+    ctrs! {
+        "any", Any, is_any => "*", "*",
+        "form", Form, is_form => "application", "x-www-form-urlencoded",
+        "data form", DataForm, is_data_form => "multipart", "form-data",
+        "JSON", JSON, is_json => "application", "json",
+        "XML", XML, is_xml => "text", "xml"; "charset=utf-8",
+        "HTML", HTML, is_html => "text", "html"; "charset=utf-8",
+        "Plain", Plain, is_plain => "text", "plain"; "charset=utf-8",
+        "JavaScript", JavaScript, is_javascript => "application", "javascript",
+        "CSS", CSS, is_css => "text", "css"; "charset=utf-8",
+        "PNG", PNG, is_png => "image", "png",
+        "GIF", GIF, is_gif => "image", "gif",
+        "BMP", BMP, is_bmp => "image", "bmp",
+        "JPEG", JPEG, is_jpeg => "image", "jpeg",
+        "PDF", PDF, is_pdf => "application", "pdf"
     }
 }
 
@@ -181,14 +161,7 @@ impl Default for ContentType {
     /// Returns a ContentType of `any`, or `*/*`.
     #[inline(always)]
     fn default() -> ContentType {
-        ContentType::any()
-    }
-}
-
-#[doc(hidden)]
-impl Into<Mime> for ContentType {
-    fn into(self) -> Mime {
-        Mime(self.0, self.1, self.2.unwrap_or_default())
+        ContentType::Any
     }
 }
 
@@ -205,10 +178,15 @@ impl From<Mime> for ContentType {
     fn from(mime: Mime) -> ContentType {
         let params = match mime.2.len() {
             0 => None,
-            _ => Some(mime.2),
+            _ => {
+                Some(mime.2.into_iter()
+                    .map(|(attr, value)| format!("{}={}", attr, value))
+                    .collect::<Vec<_>>()
+                    .join("; "))
+            }
         };
 
-        ContentType(mime.0, mime.1, params)
+        ContentType::with_params(mime.0.to_string(), mime.1.to_string(), params)
     }
 }
 
@@ -239,8 +217,8 @@ impl FromStr for ContentType {
     /// use std::str::FromStr;
     /// use rocket::http::ContentType;
     ///
-    /// let json = ContentType::from_str("application/json");
-    /// assert_eq!(json, Ok(ContentType::json()));
+    /// let json = ContentType::from_str("application/json").unwrap();
+    /// assert_eq!(json, ContentType::JSON);
     /// ```
     ///
     /// Parsing a content-type extension:
@@ -251,9 +229,9 @@ impl FromStr for ContentType {
     /// use rocket::http::mime::{TopLevel, SubLevel};
     ///
     /// let custom = ContentType::from_str("application/x-custom").unwrap();
-    /// assert!(custom.is_ext());
-    /// assert_eq!(custom.0, TopLevel::Application);
-    /// assert_eq!(custom.1, SubLevel::Ext("x-custom".into()));
+    /// assert!(!custom.is_known());
+    /// assert_eq!(custom.ttype, "application");
+    /// assert_eq!(custom.subtype, "x-custom");
     /// ```
     ///
     /// Parsing an invalid Content-Type value:
@@ -291,12 +269,10 @@ impl FromStr for ContentType {
             return Err("Invalid character in string.");
         }
 
-        let (top_s, sub_s) = (&*top_s.to_lowercase(), &*sub_s.to_lowercase());
-        let top_level = TopLevel::from_str(top_s).map_err(|_| "Bad TopLevel")?;
-        let sub_level = SubLevel::from_str(sub_s).map_err(|_| "Bad SubLevel")?;
+        let (top_s, sub_s) = (top_s.to_lowercase(), sub_s.to_lowercase());
 
         // FIXME: Use `rest` to find params.
-        Ok(ContentType::new(top_level, sub_level, None))
+        Ok(ContentType::new(top_s, sub_s))
     }
 }
 
@@ -308,53 +284,44 @@ impl fmt::Display for ContentType {
     /// ```rust
     /// use rocket::http::ContentType;
     ///
-    /// let ct = format!("{}", ContentType::json());
-    /// assert_eq!(ct, "application/json".to_string());
+    /// let ct = format!("{}", ContentType::JSON);
+    /// assert_eq!(ct, "application/json");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}/{}", self.0.as_str(), self.1.as_str())?;
+        write!(f, "{}/{}", self.ttype, self.subtype)?;
 
-        self.2.as_ref().map_or(Ok(()), |params| {
-            for param in params.iter() {
-                let (ref attr, ref value) = *param;
-                write!(f, "; {}={}", attr, value)?;
-            }
+        if let Some(ref params) = self.params {
+            write!(f, "; {}", params)?;
+        }
 
-            Ok(())
-        })
+        Ok(())
+    }
+}
+
+impl Into<Header<'static>> for ContentType {
+    #[inline]
+    fn into(self) -> Header<'static> {
+        Header::new("Content-Type", self.to_string())
     }
 }
 
 impl Collider for ContentType {
     fn collides_with(&self, other: &ContentType) -> bool {
-        self.0.collides_with(&other.0) && self.1.collides_with(&other.1)
-    }
-}
-
-impl Collider for TopLevel {
-    fn collides_with(&self, other: &TopLevel) -> bool {
-        *self == TopLevel::Star || *other == TopLevel::Star || *self == *other
-    }
-}
-
-impl Collider for SubLevel {
-    fn collides_with(&self, other: &SubLevel) -> bool {
-        *self == SubLevel::Star || *other == SubLevel::Star || *self == *other
+        (self.ttype == "*" || other.ttype == "*" || self.ttype == other.ttype) &&
+        (self.subtype == "*" || other.subtype == "*" || self.subtype == other.subtype)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::ContentType;
-    use hyper::mime::{TopLevel, SubLevel};
     use std::str::FromStr;
-
 
     macro_rules! assert_no_parse {
         ($string:expr) => ({
             let result = ContentType::from_str($string);
             if !result.is_err() {
-                println!("{} parsed!", $string);
+                println!("{} parsed unexpectedly!", $string);
             }
 
             assert!(result.is_err());
@@ -367,29 +334,34 @@ mod test {
             assert!(result.is_ok());
             result.unwrap()
         });
-        ($string:expr, $top:tt/$sub:tt) => ({
+
+        ($string:expr, $ct:expr) => ({
             let c = assert_parse!($string);
-            assert_eq!(c.0, TopLevel::$top);
-            assert_eq!(c.1, SubLevel::$sub);
+            assert_eq!(c.ttype, $ct.ttype);
+            assert_eq!(c.subtype, $ct.subtype);
             c
         })
     }
 
     #[test]
     fn test_simple() {
-        assert_parse!("application/json", Application/Json);
-        assert_parse!("*/json", Star/Json);
-        assert_parse!("text/html", Text/Html);
-        assert_parse!("TEXT/html", Text/Html);
-        assert_parse!("*/*", Star/Star);
-        assert_parse!("application/*", Application/Star);
+        assert_parse!("application/json", ContentType::JSON);
+        assert_parse!("*/json", ContentType::new("*", "json"));
+        assert_parse!("text/html", ContentType::HTML);
+        assert_parse!("TEXT/html", ContentType::HTML);
+        assert_parse!("*/*", ContentType::Any);
+        assert_parse!("application/*", ContentType::new("application", "*"));
     }
 
     #[test]
     fn test_params() {
-        assert_parse!("application/json; charset=utf8", Application/Json);
-        assert_parse!("application/*;charset=utf8;else=1", Application/Star);
-        assert_parse!("*/*;charset=utf8;else=1", Star/Star);
+        // TODO: Test these.
+        assert_parse!("application/json; charset=utf-8", ContentType::JSON);
+        assert_parse!("*/*;", ContentType::Any);
+        assert_parse!("application/*;else=1",
+            ContentType::with_params("application", "*", Some("else=1")));
+        assert_parse!("*/*;charset=utf8;else=1",
+            ContentType::with_params("*", "*", Some("charset=utf-8;else=1")));
     }
 
     #[test]
@@ -403,5 +375,6 @@ mod test {
         assert_no_parse!("*/");
         assert_no_parse!("/*");
         assert_no_parse!("///");
+        assert_no_parse!("");
     }
 }

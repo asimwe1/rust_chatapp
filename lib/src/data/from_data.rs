@@ -1,17 +1,17 @@
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
-use http::StatusCode;
+use http::Status;
 use request::Request;
 use data::Data;
 
 /// Type alias for the `Outcome` of a `FromData` conversion.
-pub type Outcome<S, E> = outcome::Outcome<S, (StatusCode, E), Data>;
+pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
-impl<'a, S, E> IntoOutcome<S, (StatusCode, E), Data> for Result<S, E> {
+impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     fn into_outcome(self) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((StatusCode::InternalServerError, err))
+            Err(err) => Failure((Status::InternalServerError, err))
         }
     }
 }
@@ -39,7 +39,7 @@ impl<'a, S, E> IntoOutcome<S, (StatusCode, E), Data> for Result<S, E> {
 ///   the value for the data parameter.  As long as all other parsed types
 ///   succeed, the request will be handled by the requesting handler.
 ///
-/// * **Failure**(StatusCode, E)
+/// * **Failure**(Status, E)
 ///
 ///   If the `Outcome` is `Failure`, the request will fail with the given status
 ///   code and error. The designated error

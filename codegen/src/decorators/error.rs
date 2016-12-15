@@ -59,9 +59,12 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     emit_item(push, quote_item!(ecx,
         fn $catch_fn_name<'_b>($err_ident: ::rocket::Error,
                                $req_ident: &'_b ::rocket::Request)
-                               -> ::rocket::Response<'_b> {
-            let result = $user_fn_name($fn_arguments);
-            rocket::Response::with_raw_status($code, result)
+                               -> ::rocket::response::Result<'_b> {
+            let response = $user_fn_name($fn_arguments);
+            let status = ::rocket::http::Status::raw($code);
+            ::rocket::response::Responder::respond(
+                ::rocket::response::status::Custom(status, response)
+            )
         }
     ).expect("catch function"));
 
@@ -69,9 +72,9 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
     emit_item(push, quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticCatchInfo =
-        ::rocket::StaticCatchInfo {
-            code: $code,
-            handler: $catch_fn_name
-        };
+            ::rocket::StaticCatchInfo {
+                code: $code,
+                handler: $catch_fn_name
+            };
     ).expect("catch info struct"));
 }

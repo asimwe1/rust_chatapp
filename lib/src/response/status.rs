@@ -10,9 +10,9 @@
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
-use response::{Responder, Outcome};
-use outcome::IntoOutcome;
-use http::hyper::{StatusCode, FreshHyperResponse, header};
+use response::{Responder, Response};
+use http::hyper::header;
+use http::Status;
 
 /// Sets the status of the response to 201 (Created).
 ///
@@ -28,7 +28,7 @@ use http::hyper::{StatusCode, FreshHyperResponse, header};
 /// let content = "{ 'resource': 'Hello, world!' }";
 /// let response = status::Created(url, Some(content));
 /// ```
-pub struct Created<R: Responder>(pub String, pub Option<R>);
+pub struct Created<R>(pub String, pub Option<R>);
 
 /// Sets the status code of the response to 201 Created. Sets the `Location`
 /// header to the `String` parameter in the constructor.
@@ -37,14 +37,14 @@ pub struct Created<R: Responder>(pub String, pub Option<R>);
 /// responder should write the body of the response so that it contains
 /// information about the created resource. If no responder is provided, the
 /// response body will be empty.
-impl<R: Responder> Responder for Created<R> {
-    default fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *res.status_mut() = StatusCode::Created;
-        res.headers_mut().set(header::Location(self.0.clone()));
-        match self.1 {
-            Some(ref mut r) => r.respond(res),
-            None => res.send(&[]).into_outcome()
+impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
+    default fn respond(self) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.1 {
+            build.merge(responder.respond()?);
         }
+
+        build.status(Status::Created).header(header::Location(self.0)).ok()
     }
 }
 
@@ -52,21 +52,19 @@ impl<R: Responder> Responder for Created<R> {
 /// the response with the `Responder`, the `ETag` header is set conditionally if
 /// a `Responder` is provided that implements `Hash`. The `ETag` header is set
 /// to a hash value of the responder.
-impl<R: Responder + Hash> Responder for Created<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *res.status_mut() = StatusCode::Created;
-        res.headers_mut().set(header::Location(self.0.clone()));
-
+impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
+    fn respond(self) -> Result<Response<'r>, Status> {
         let mut hasher = DefaultHasher::default();
-        match self.1 {
-            Some(ref mut responder) => {
-                responder.hash(&mut hasher);
-                let tag = header::EntityTag::strong(hasher.finish().to_string());
-                res.headers_mut().set(header::ETag(tag));
-                responder.respond(res)
-            }
-            None => res.send(&[]).into_outcome()
+        let mut build = Response::build();
+        if let Some(responder) = self.1 {
+            responder.hash(&mut hasher);
+            let hash = hasher.finish().to_string();
+
+            build.merge(responder.respond()?);
+            build.header(header::ETag(header::EntityTag::strong(hash)));
         }
+
+        build.status(Status::Created).header(header::Location(self.0)).ok()
     }
 }
 
@@ -92,17 +90,18 @@ impl<R: Responder + Hash> Responder for Created<R> {
 ///
 /// let response = status::Accepted(Some("processing"));
 /// ```
-pub struct Accepted<R: Responder>(pub Option<R>);
+pub struct Accepted<R>(pub Option<R>);
 
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<R: Responder> Responder for Accepted<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *res.status_mut() = StatusCode::Accepted;
-        match self.0 {
-            Some(ref mut r) => r.respond(res),
-            None => res.send(&[]).into_outcome()
+impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond()?);
         }
+
+        build.status(Status::Accepted).ok()
     }
 }
 
@@ -120,10 +119,9 @@ pub struct NoContent;
 
 /// Sets the status code of the response to 204 No Content. The body of the
 /// response will be empty.
-impl Responder for NoContent {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *res.status_mut() = StatusCode::NoContent;
-        res.send(&[]).into_outcome()
+impl<'r> Responder<'r> for NoContent {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Response::build().status(Status::NoContent).ok()
     }
 }
 
@@ -141,10 +139,9 @@ pub struct Reset;
 
 /// Sets the status code of the response to 205 Reset Content. The body of the
 /// response will be empty.
-impl Responder for Reset {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *res.status_mut() = StatusCode::ResetContent;
-        res.send(&[]).into_outcome()
+impl<'r> Responder<'r> for Reset {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Response::build().status(Status::ResetContent).ok()
     }
 }
 
@@ -154,18 +151,19 @@ impl Responder for Reset {
 ///
 /// ```rust
 /// use rocket::response::status;
-/// use rocket::http::StatusCode;
+/// use rocket::http::Status;
 ///
-/// let response = status::Custom(StatusCode::ImATeapot, "Hi!");
+/// let response = status::Custom(Status::ImATeapot, "Hi!");
 /// ```
-pub struct Custom<R: Responder>(pub StatusCode, pub R);
+pub struct Custom<R>(pub Status, pub R);
 
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
-impl<R: Responder> Responder for Custom<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        *(res.status_mut()) = self.0;
-        self.1.respond(res)
+impl<'r, R: Responder<'r>> Responder<'r> for Custom<R> {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Response::build_from(self.1.respond()?)
+            .status(self.0)
+            .ok()
     }
 }
 

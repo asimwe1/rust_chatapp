@@ -140,7 +140,7 @@ impl Request {
     #[inline(always)]
     pub fn content_type(&self) -> ContentType {
         let hyp_ct = self.headers().get::<header::ContentType>();
-        hyp_ct.map_or(ContentType::any(), |ct| ContentType::from(&ct.0))
+        hyp_ct.map_or(ContentType::Any, |ct| ContentType::from(&ct.0))
     }
 
     /// <div class="stability" style="margin-left: 0;">
@@ -154,10 +154,10 @@ impl Request {
     /// Returns the first content-type accepted by this request.
     pub fn accepts(&self) -> ContentType {
         let accept = self.headers().get::<header::Accept>();
-        accept.map_or(ContentType::any(), |accept| {
+        accept.map_or(ContentType::Any, |accept| {
             let items = &accept.0;
             if items.len() < 1 {
-                return ContentType::any();
+                return ContentType::Any;
             } else {
                 return ContentType::from(items[0].item.clone());
             }

@@ -39,8 +39,9 @@ mod test {
     use rocket::http::Method::*;
 
     fn test_header_count<'h>(headers: &[(&'h str, &'h str)]) {
+        // FIXME: Should be able to count headers directly!
         let rocket = rocket::ignite().mount("/", routes![super::header_count]);
-        let req = MockRequest::new(Get, "/").headers(headers);
+        let mut req = MockRequest::new(Get, "/").headers(headers);
         let result = req.dispatch_with(&rocket);
         assert_eq!(result.unwrap(),
             format!("Your request contained {} headers!", headers.len()));

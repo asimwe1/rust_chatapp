@@ -2,6 +2,8 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
+use rocket::http::Status;
+
 use utils::{span, MetaItemExt};
 use super::Function;
 
@@ -50,6 +52,9 @@ fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
         if n.node < 400 || n.node > 599 {
             ecx.span_err(n.span, "code must be >= 400 and <= 599.");
             span(0, n.span)
+        } else if Status::from_code(n.node as u16).is_none() {
+            ecx.span_warn(n.span, "status code is unknown.");
+            span(n.node as u16, n.span)
         } else {
             span(n.node as u16, n.span)
         }

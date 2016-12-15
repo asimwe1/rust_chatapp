@@ -1,24 +1,9 @@
 use std::fs::File;
+use std::io::Cursor;
 use std::fmt;
 
-use http::mime::{Mime, TopLevel, SubLevel};
-use http::hyper::{header, FreshHyperResponse, StatusCode};
-use outcome::{self, IntoOutcome};
-use outcome::Outcome::*;
-use response::Stream;
-
-
-/// Type alias for the `Outcome` of a `Responder`.
-pub type Outcome<'a> = outcome::Outcome<(), (), (StatusCode, FreshHyperResponse<'a>)>;
-
-impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Result<T, E> {
-    fn into_outcome(self) -> Outcome<'a> {
-        match self {
-            Ok(_) => Success(()),
-            Err(_) => Failure(())
-        }
-    }
-}
+use http::{Status, ContentType};
+use response::{Response, Stream};
 
 /// Trait implemented by types that send a response to clients.
 ///
@@ -32,29 +17,16 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 ///
 /// In this example, `T` can be any type that implements `Responder`.
 ///
-/// # Outcomes
+/// # Return Value
 ///
-/// The returned [Outcome](/rocket/outcome/index.html) of a `respond` call
-/// determines how the response will be processed, if at all.
+/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`.
 ///
-/// * **Success**
+/// An `Ok` variant means that the `Responder` was successful in generating a
+/// new `Response`. The `Response` will be written out to the client.
 ///
-///   An `Outcome` of `Success` indicates that the responder was successful in
-///   sending the response to the client. No further processing will occur as a
-///   result.
-///
-/// * **Failure**
-///
-///   An `Outcome` of `Failure` indicates that the responder failed after
-///   beginning a response. The response is incomplete, and there is no way to
-///   salvage the response. No further processing will occur.
-///
-/// * **Forward**(StatusCode, FreshHyperResponse<'a>)
-///
-///   If the `Outcome` is `Forward`, the response will be forwarded to the
-///   designated error [Catcher](/rocket/struct.Catcher.html) for the given
-///   `StatusCode`. This requires that a response wasn't started and thus is
-///   still fresh.
+/// An `Err` variant means that the `Responder` could not or did not generate a
+/// `Response`. The contained `Status` will be used to find the relevant error
+/// catcher to use to generate a proper response.
 ///
 /// # Provided Implementations
 ///
@@ -63,42 +35,44 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 /// overloaded, allowing for two `Responder`s to be used at once, depending on
 /// the variant.
 ///
-///   * **impl<'a> Responder for &'a str**
+///   * **&str**
 ///
-///     Sets the `Content-Type`t to `text/plain` if it is not already set. Sends
-///     the string as the body of the response.
+///     Sets the `Content-Type`t to `text/plain`. The string is used as the body
+///     of the response, which is fixed size and not streamed. To stream a raw
+///     string, use `Stream::from(Cursor::new(string))`.
 ///
-///   * **impl Responder for String**
+///   * **String**
 ///
-///     Sets the `Content-Type`t to `text/html` if it is not already set. Sends
-///     the string as the body of the response.
+///     Sets the `Content-Type`t to `text/html`. The string is used as the body
+///     of the response, which is fixed size and not streamed. To stream a
+///     string, use `Stream::from(Cursor::new(string))`.
 ///
-///   * **impl Responder for File**
+///   * **File**
 ///
 ///     Streams the `File` to the client. This is essentially an alias to
-///     [Stream](struct.Stream.html)&lt;File>.
+///     `Stream::from(file)`.
 ///
 ///   * **impl Responder for ()**
 ///
-///     Responds with an empty body.
+///     Responds with an empty body. No Content-Type is set.
 ///
-///   * **impl&lt;T: Responder> Responder for Option&lt;T>**
+///   * **Option&lt;T>**
 ///
 ///     If the `Option` is `Some`, the wrapped responder is used to respond to
-///     respond to the client. Otherwise, the response is forwarded to the 404
-///     error catcher and a warning is printed to the console.
+///     respond to the client. Otherwise, an `Err` with status **404 Not Found**
+///     is returned and a warning is printed to the console.
 ///
-///   * **impl&lt;T: Responder, E: Debug> Responder for Result&lt;T, E>**
+///   * **Result&lt;T, E>** _where_ **E: Debug**
 ///
 ///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
-///     client. Otherwise, the response is forwarded to the 500 error catcher
-///     and the error is printed to the console using the `Debug`
+///     client. Otherwise, an `Err` with status **500 Internal Server Error** is
+///     returned and the error is printed to the console using the `Debug`
 ///     implementation.
 ///
-///   * **impl&lt;T: Responder, E: Responder + Debug> Responder for Result&lt;T, E>**
+///   * **Result&lt;T, E>** _where_ **E: Debug + Responder**
 ///
 ///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
-///     to the client. If the `Result` is `Err`, the wrapped error responder is
+///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
 ///     used to respond to the client.
 ///
 /// # Implementation Tips
@@ -113,13 +87,13 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 /// requires its `Err` type to implement `Debug`. Therefore, a type implementing
 /// `Debug` can more easily be composed.
 ///
-/// ## Check Before Changing
+/// ## Joining and Merging
 ///
-/// Unless a given type is explicitly designed to change some information in the
-/// response, it should first _check_ that some information hasn't been set
-/// before _changing_ that information. For example, before setting the
-/// `Content-Type` header of a response, first check that the header hasn't been
-/// set.
+/// When chaining/wrapping other `Responder`s, use the
+/// [merge](/rocket/struct.Response.html#method.merge) or
+/// [join](/rocket/struct.Response.html#method.join) methods on the `Response`
+/// struct. Ensure that you document the merging or joining behavior
+/// appropriately.
 ///
 /// # Example
 ///
@@ -151,34 +125,23 @@ impl<'a, T, E> IntoOutcome<(), (), (StatusCode, FreshHyperResponse<'a>)> for Res
 /// # #[derive(Debug)]
 /// # struct Person { name: String, age: u16 }
 /// #
-/// use std::str::FromStr;
-/// use std::fmt::Write;
+/// use std::io::Cursor;
 ///
-/// use rocket::response::{Responder, Outcome};
-/// use rocket::outcome::IntoOutcome;
-/// use rocket::http::hyper::{FreshHyperResponse, header};
+/// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl Responder for Person {
-///     fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-///         // Set the custom headers.
-///         let name_bytes = self.name.clone().into_bytes();
-///         let age_bytes = self.age.to_string().into_bytes();
-///         res.headers_mut().set_raw("X-Person-Name", vec![name_bytes]);
-///         res.headers_mut().set_raw("X-Person-Age", vec![age_bytes]);
-///
-///         // Set the custom Content-Type header.
-///         let ct = ContentType::from_str("application/x-person").unwrap();
-///         res.headers_mut().set(header::ContentType(ct.into()));
-///
-///         // Write out the "custom" body, here just the debug representation.
-///         let mut repr = String::with_capacity(50);
-///         write!(&mut repr, "{:?}", *self);
-///         res.send(repr.as_bytes()).into_outcome()
+/// impl<'r> Responder<'r> for Person {
+///     fn respond(self) -> response::Result<'r> {
+///         Response::build()
+///             .sized_body(Cursor::new(format!("{:?}", self)))
+///             .raw_header("X-Person-Name", self.name)
+///             .raw_header("X-Person-Age", self.age.to_string())
+///             .header(ContentType::new("application", "x-person"))
+///             .ok()
 ///     }
 /// }
 /// ```
-pub trait Responder {
+pub trait Responder<'r> {
     /// Attempts to write a response to `res`.
     ///
     /// If writing the response successfully completes, an outcome of `Success`
@@ -186,76 +149,82 @@ pub trait Responder {
     /// `Failure` is returned. If writing a response fails before writing
     /// anything out, an outcome of `Forward` can be returned, which causes the
     /// response to be written by the appropriate error catcher instead.
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a>;
+    fn respond(self) -> Result<Response<'r>, Status>;
 }
 
 /// Sets the `Content-Type`t to `text/plain` if it is not already set. Sends the
-/// string as the body of the response.
-impl<'a> Responder for &'a str {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> Outcome<'b> {
-        if res.headers().get::<header::ContentType>().is_none() {
-            let mime = Mime(TopLevel::Text, SubLevel::Plain, vec![]);
-            res.headers_mut().set(header::ContentType(mime));
-        }
-
-        res.send(self.as_bytes()).into_outcome()
+/// string as the body of the response. Never fails.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::response::Responder;
+/// use rocket::http::ContentType;
+///
+/// let mut response = "Hello".respond().unwrap();
+///
+/// let body_string = response.body().unwrap().to_string().unwrap();
+/// assert_eq!(body_string, "Hello".to_string());
+///
+/// let content_type: Vec<_> = response.get_header_values("Content-Type").collect();
+/// assert_eq!(content_type.len(), 1);
+/// assert_eq!(content_type[0], ContentType::Plain.to_string());
+/// ```
+impl<'r> Responder<'r> for &'r str {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Response::build()
+            .header(ContentType::Plain)
+            .sized_body(Cursor::new(self))
+            .ok()
     }
 }
 
-impl Responder for String {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        if res.headers().get::<header::ContentType>().is_none() {
-            let mime = Mime(TopLevel::Text, SubLevel::Html, vec![]);
-            res.headers_mut().set(header::ContentType(mime));
-        }
-
-        res.send(self.as_bytes()).into_outcome()
+impl Responder<'static> for String {
+    fn respond(self) -> Result<Response<'static>, Status> {
+        Response::build()
+            .header(ContentType::HTML)
+            .sized_body(Cursor::new(self))
+            .ok()
     }
 }
 
 /// Essentially aliases Stream<File>.
-impl Responder for File {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        Stream::from(self).respond(res)
+impl Responder<'static> for File {
+    fn respond(self) -> Result<Response<'static>, Status> {
+        Stream::from(self).respond()
     }
 }
 
 /// Empty response.
-impl Responder for () {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        res.send(&[]).into_outcome()
+impl Responder<'static> for () {
+    fn respond(self) -> Result<Response<'static>, Status> {
+        Ok(Response::new())
     }
 }
 
-impl<T: Responder> Responder for Option<T> {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        if let Some(ref mut val) = *self {
-            val.respond(res)
-        } else {
+impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        self.map_or_else(|| {
             warn_!("Response was `None`.");
-            Forward((StatusCode::NotFound, res))
-        }
+            Err(Status::NotFound)
+        }, |r| r.respond())
     }
 }
 
-impl<T: Responder, E: fmt::Debug> Responder for Result<T, E> {
-    // prepend with `default` when using impl specialization
-    default fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        match *self {
-            Ok(ref mut val) => val.respond(res),
-            Err(ref e) => {
-                error_!("{:?}", e);
-                Forward((StatusCode::InternalServerError, res))
-            }
-        }
+impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
+    default fn respond(self) -> Result<Response<'r>, Status> {
+        self.map(|r| r.respond()).unwrap_or_else(|e| {
+            warn_!("Response was `Err`: {:?}.", e);
+            Err(Status::InternalServerError)
+        })
     }
 }
 
-impl<T: Responder, E: Responder + fmt::Debug> Responder for Result<T, E> {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> Outcome<'a> {
-        match *self {
-            Ok(ref mut responder) => responder.respond(res),
-            Err(ref mut responder) => responder.respond(res),
+impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        match self {
+            Ok(responder) => responder.respond(),
+            Err(responder) => responder.respond(),
         }
     }
 }

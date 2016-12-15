@@ -15,7 +15,6 @@ use syntax::parse::token;
 use syntax::ptr::P;
 
 use rocket::http::{Method, ContentType};
-use rocket::http::mime::{TopLevel, SubLevel};
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     quote_enum!(ecx, method => ::rocket::http::Method {
@@ -23,28 +22,14 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     })
 }
 
-// FIXME: This should return an Expr! (Ext is not a path.)
-fn top_level_to_expr(ecx: &ExtCtxt, level: &TopLevel) -> Path {
-    quote_enum!(ecx, *level => ::rocket::http::mime::TopLevel {
-        Star, Text, Image, Audio, Video, Application, Multipart, Model, Message;
-        Ext(ref s) => quote_path!(ecx, ::rocket::http::mime::TopLevel::Ext($s))
-    })
-}
-
-// FIXME: This should return an Expr! (Ext is not a path.)
-fn sub_level_to_expr(ecx: &ExtCtxt, level: &SubLevel) -> Path {
-    quote_enum!(ecx, *level => ::rocket::http::mime::SubLevel {
-        Star, Plain, Html, Xml, Javascript, Css, EventStream, Json,
-        WwwFormUrlEncoded, Msgpack, OctetStream, FormData, Png, Gif, Bmp, Jpeg;
-        Ext(ref s) => quote_path!(ecx, ::rocket::http::mime::SubLevel::Ext($s))
-    })
-}
-
 fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
     ct.map(|ct| {
-        let top_level = top_level_to_expr(ecx, &ct.0);
-        let sub_level = sub_level_to_expr(ecx, &ct.1);
-        quote_expr!(ecx, ::rocket::http::ContentType($top_level, $sub_level, None))
+        let (ttype, subtype) = (ct.ttype, ct.subtype);
+        quote_expr!(ecx, ::rocket::http::ContentType {
+            ttype: ::std::borrow::Cow::Borrowed($ttype),
+            subtype: ::std::borrow::Cow::Borrowed($subtype),
+            params: None
+        })
     })
 }
 
@@ -84,7 +69,7 @@ impl RouteGenerateExt for RouteParams {
             let $name: $ty =
                 match ::rocket::request::FromForm::from_form_string($form_string) {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Response::forward(_data)
+                    Err(_) => return ::rocket::Outcome::Forward(_data)
                 };
         ).expect("form statement"))
     }
@@ -105,11 +90,11 @@ impl RouteGenerateExt for RouteParams {
         Some(quote_stmt!(ecx,
             let $name: $ty =
                 match ::rocket::data::FromData::from_data(&_req, _data) {
-                    ::rocket::outcome::Outcome::Success(d) => d,
-                    ::rocket::outcome::Outcome::Forward(d) =>
-                        return ::rocket::Response::forward(d),
-                    ::rocket::outcome::Outcome::Failure((code, _)) => {
-                        return ::rocket::Response::failure(code);
+                    ::rocket::Outcome::Success(d) => d,
+                    ::rocket::Outcome::Forward(d) =>
+                        return ::rocket::Outcome::Forward(d),
+                    ::rocket::Outcome::Failure((code, _)) => {
+                        return ::rocket::Outcome::Failure(code);
                     }
                 };
         ).expect("data statement"))
@@ -120,7 +105,7 @@ impl RouteGenerateExt for RouteParams {
         let expr = quote_expr!(ecx,
            match _req.uri().query() {
                Some(query) => query,
-               None => return ::rocket::Response::forward(_data)
+               None => return ::rocket::Outcome::Forward(_data)
            }
         );
 
@@ -149,11 +134,11 @@ impl RouteGenerateExt for RouteParams {
             let expr = match param {
                 Param::Single(_) => quote_expr!(ecx, match _req.get_param_str($i) {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
-                    None => return ::rocket::Response::forward(_data)
+                    None => return ::rocket::Outcome::Forward(_data)
                 }),
                 Param::Many(_) => quote_expr!(ecx, match _req.get_raw_segments($i) {
                     Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
-                    None => return ::rocket::Response::forward(_data)
+                    None => return ::rocket::Outcome::forward(_data)
                 }),
             };
 
@@ -164,7 +149,7 @@ impl RouteGenerateExt for RouteParams {
                     Err(e) => {
                         println!("    => Failed to parse '{}': {:?}",
                                  stringify!($original_ident), e);
-                        return ::rocket::Response::forward(_data)
+                        return ::rocket::Outcome::Forward(_data)
                     }
                 };
             ).expect("declared param parsing statement"));
@@ -195,9 +180,9 @@ impl RouteGenerateExt for RouteParams {
                         ::rocket::request::FromRequest::from_request(&_req) {
                     ::rocket::outcome::Outcome::Success(v) => v,
                     ::rocket::outcome::Outcome::Forward(_) =>
-                        return ::rocket::Response::forward(_data),
+                        return ::rocket::Outcome::forward(_data),
                     ::rocket::outcome::Outcome::Failure((code, _)) => {
-                        return ::rocket::Response::failure(code)
+                        return ::rocket::Outcome::Failure(code)
                     },
                 };
             ).expect("undeclared param parsing statement"));
@@ -250,12 +235,12 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
     emit_item(push, quote_item!(ecx,
          fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
-                -> ::rocket::Response<'_b> {
+                -> ::rocket::handler::Outcome<'_b> {
              $param_statements
              $query_statement
              $data_statement
-             let result = $user_fn_name($fn_arguments);
-             ::rocket::Response::success(result)
+             let responder = $user_fn_name($fn_arguments);
+             ::rocket::handler::Outcome::of(responder)
          }
     ).unwrap());
 

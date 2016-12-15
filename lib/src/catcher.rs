@@ -1,5 +1,5 @@
+use response;
 use handler::ErrorHandler;
-use response::Response;
 use codegen::StaticCatchInfo;
 use error::Error;
 use request::Request;
@@ -76,14 +76,15 @@ impl Catcher {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::{Catcher, Request, Error, Response};
+    /// use rocket::{Catcher, Request, Error};
+    /// use rocket::response::{Result, Responder};
     ///
-    /// fn handle_404(_: Error, req: &Request) -> Response {
-    ///     Response::success(format!("Couldn't find: {}", req.uri()))
+    /// fn handle_404(_: Error, req: &Request) -> Result {
+    ///    format!("Couldn't find: {}", req.uri()).respond()
     /// }
     ///
-    /// fn handle_500(_: Error, _: &Request) -> Response {
-    ///     Response::success("Whoops, we messed up!")
+    /// fn handle_500(_: Error, _: &Request) -> Result {
+    ///     "Whoops, we messed up!".respond()
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -96,8 +97,8 @@ impl Catcher {
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn handle<'r>(&self, err: Error, request: &'r Request) -> Response<'r> {
-        (self.handler)(err, request)
+    pub fn handle<'r>(&self, err: Error, req: &'r Request) -> response::Result<'r> {
+        (self.handler)(err, req)
     }
 
     #[inline(always)]
@@ -153,10 +154,10 @@ macro_rules! default_errors {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(_: Error, _r: &'r Request) -> Response<'r> {
-                Response::with_raw_status($code,
+            fn $fn_name<'r>(_: Error, _r: &'r Request) -> response::Result<'r> {
+                status::Custom(Status::from_code($code).unwrap(),
                     content::HTML(error_page_template!($code, $name, $description))
-                )
+                ).respond()
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));
@@ -172,7 +173,8 @@ pub mod defaults {
     use std::collections::HashMap;
 
     use request::Request;
-    use response::{Response, content};
+    use response::{self, content, status, Responder};
+    use http::Status;
     use error::Error;
 
     pub fn get() -> HashMap<u16, Catcher> {

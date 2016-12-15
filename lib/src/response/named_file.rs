@@ -3,9 +3,8 @@ use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use response::{Responder, Outcome};
-use http::hyper::{header, FreshHyperResponse};
-use http::ContentType;
+use response::{Response, Responder};
+use http::{Status, ContentType};
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.
@@ -76,18 +75,19 @@ impl NamedFile {
 ///
 /// If reading the file fails permanently at any point during the response, an
 /// `Outcome` of `Failure` is returned, and the response is terminated abrubtly.
-impl Responder for NamedFile {
-    fn respond<'a>(&mut self, mut res: FreshHyperResponse<'a>) -> Outcome<'a> {
+impl<'r> Responder<'r> for NamedFile {
+    fn respond(self) -> Result<Response<'r>, Status> {
+        let mut response = Response::new();
         if let Some(ext) = self.path().extension() {
             // TODO: Use Cow for lowercase.
             let ext_string = ext.to_string_lossy().to_lowercase();
             let content_type = ContentType::from_extension(&ext_string);
             if !content_type.is_any() {
-                res.headers_mut().set(header::ContentType(content_type.into()));
+                response.set_header(content_type)
             }
         }
 
-        self.file_mut().respond(res)
+        Ok(response)
     }
 }
 

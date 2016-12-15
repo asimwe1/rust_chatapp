@@ -51,7 +51,7 @@ mod tests {
     use router::Collider;
     use request::Request;
     use data::Data;
-    use response::Response;
+    use handler::Outcome;
     use router::route::Route;
     use http::{Method, ContentType};
     use http::uri::URI;
@@ -60,8 +60,8 @@ mod tests {
 
     type SimpleRoute = (Method, &'static str);
 
-    fn dummy_handler(_req: &Request, _: Data) -> Response<'static> {
-        Response::success("hi")
+    fn dummy_handler(_req: &Request, _: Data) -> Outcome<'static> {
+        Outcome::of("hi")
     }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {

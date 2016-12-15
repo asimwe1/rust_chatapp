@@ -1,9 +1,10 @@
 use std::convert::AsRef;
 
 use outcome::IntoOutcome;
-use response::{self, Responder};
+use response::{Response, Responder};
 use request::{self, Request, FromRequest};
-use http::hyper::{HyperSetCookie, HyperCookiePair, FreshHyperResponse};
+use http::hyper::{HyperSetCookie, HyperCookiePair};
+use http::Status;
 
 // The name of the actual flash cookie.
 const FLASH_COOKIE_NAME: &'static str = "_flash";
@@ -87,7 +88,7 @@ pub struct Flash<R> {
     responder: R,
 }
 
-impl<R: Responder> Flash<R> {
+impl<'r, R: Responder<'r>> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
     /// underlying `responder`.
     ///
@@ -173,11 +174,13 @@ impl<R: Responder> Flash<R> {
 /// response. In other words, simply sets a cookie and delagates the rest of the
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
-impl<R: Responder> Responder for Flash<R> {
-    fn respond<'b>(&mut self, mut res: FreshHyperResponse<'b>) -> response::Outcome<'b> {
+impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
+    fn respond(self) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
-        res.headers_mut().set(HyperSetCookie(vec![self.cookie_pair()]));
-        self.responder.respond(res)
+        let cookie = vec![self.cookie_pair()];
+        Response::build_from(self.responder.respond()?)
+            .header_adjoin(HyperSetCookie(cookie))
+            .ok()
     }
 }
 

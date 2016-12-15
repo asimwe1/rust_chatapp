@@ -3,16 +3,16 @@ use std::fmt::Debug;
 use outcome::{self, IntoOutcome};
 use request::Request;
 use outcome::Outcome::*;
-use http::{StatusCode, ContentType, Method, Cookies};
+use http::{Status, ContentType, Method, Cookies};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
-pub type Outcome<S, E> = outcome::Outcome<S, (StatusCode, E), ()>;
+pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
 
-impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
+impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     fn into_outcome(self) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(val) => Failure((StatusCode::BadRequest, val))
+            Err(val) => Failure((Status::BadRequest, val))
         }
     }
 }
@@ -49,7 +49,7 @@ impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
 ///   the value for the corresponding parameter.  As long as all other parsed
 ///   types succeed, the request will be handled.
 ///
-/// * **Failure**(StatusCode, E)
+/// * **Failure**(Status, E)
 ///
 ///   If the `Outcome` is `Failure`, the request will fail with the given status
 ///   code and error. The designated error
@@ -78,7 +78,7 @@ impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
 /// # extern crate rocket;
 /// #
 /// use rocket::Outcome;
-/// use rocket::http::StatusCode;
+/// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 ///
 /// struct APIKey(String);
@@ -93,7 +93,7 @@ impl<S, E> IntoOutcome<S, (StatusCode, E), ()> for Result<S, E> {
 ///     fn from_request(request: &'r Request) -> request::Outcome<APIKey, ()> {
 ///         if let Some(keys) = request.headers().get_raw("x-api-key") {
 ///             if keys.len() != 1 {
-///                 return Outcome::Failure((StatusCode::BadRequest, ()));
+///                 return Outcome::Failure((Status::BadRequest, ()));
 ///             }
 ///
 ///             if let Ok(key) = String::from_utf8(keys[0].clone()) {

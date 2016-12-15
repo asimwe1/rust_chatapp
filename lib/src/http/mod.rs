@@ -11,12 +11,15 @@ pub mod uri;
 mod cookies;
 mod method;
 mod content_type;
+mod status;
+mod header;
 
 // TODO: Removed from Rocket in favor of a more flexible HTTP library.
 pub use hyper::mime;
 
 pub use self::method::Method;
-pub use self::hyper::StatusCode;
 pub use self::content_type::ContentType;
+pub use self::status::Status;
+pub use self::header::Header;
 
 pub use self::cookies::{Cookie, Cookies};

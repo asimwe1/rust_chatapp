@@ -99,8 +99,6 @@
 //! }
 //! ```
 
-use std::io::Cursor;
-use outcome::Outcome::*;
 use http::{hyper, Method};
 use {Rocket, Request, Data};
 
@@ -201,46 +199,20 @@ impl MockRequest {
     ///
     /// # fn main() {
     /// let rocket = rocket::ignite().mount("/", routes![hello]);
-    /// let req = MockRequest::new(Get, "/");
-    /// let result = req.dispatch_with(&rocket);
-    /// assert_eq!(result.unwrap().as_str(), "Hello, world!");
+    /// let result = MockRequest::new(Get, "/").dispatch_with(&rocket);
+    /// assert_eq!(&result.unwrap(), "Hello, world!");
     /// # }
     /// ```
-    pub fn dispatch_with(mut self, rocket: &Rocket) -> Option<String> {
-        let request = self.request;
+    /// FIXME: Can now return Response to get all info!
+    pub fn dispatch_with(&mut self, rocket: &Rocket) -> Option<String> {
         let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
 
-        let mut response = Cursor::new(vec![]);
-
-        // Create a new scope so we can get the inner from response later.
-        let ok = {
-            let mut h_h = hyper::HyperHeaders::new();
-            let res = hyper::FreshHyperResponse::new(&mut response, &mut h_h);
-            match rocket.dispatch(&request, data) {
-                Ok(mut responder) => {
-                    match responder.respond(res) {
-                        Success(_) => true,
-                        Failure(_) => false,
-                        Forward((code, r)) => rocket.handle_error(code, &request, r)
-                    }
-                }
-                Err(code) => rocket.handle_error(code, &request, res)
-            }
+        let mut response = match rocket.dispatch(&self.request, data) {
+            Ok(response) => response,
+            // FIXME: Send to catcher? Not sure what user would want.
+            Err(_status) => return None
         };
 
-        if !ok {
-            return None;
-        }
-
-        match String::from_utf8(response.into_inner()) {
-            Ok(string) => {
-                // TODO: Expose the full response (with headers) somewhow.
-                string.find("\r\n\r\n").map(|i| string[(i + 4)..].to_string())
-            }
-            Err(e) => {
-                error_!("Could not create string from response: {:?}", e);
-                None
-            }
-        }
+        response.body().and_then(|body| body.to_string())
     }
 }

@@ -269,7 +269,7 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
 fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
     if let LitKind::Str(ref s, _) = *kv.value() {
         if let Ok(ct) = ContentType::from_str(&s.as_str()) {
-            if ct.is_ext() {
+            if !ct.is_known() {
                 let msg = format!("'{}' is not a known content-type", s);
                 ecx.span_warn(kv.value.span, &msg);
             } else {
@@ -286,5 +286,5 @@ fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
               content-type accepted. e.g: format = "application/json""#)
         .emit();
 
-    ContentType::any()
+    ContentType::Any
 }

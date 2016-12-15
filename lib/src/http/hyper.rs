@@ -26,7 +26,6 @@ pub use hyper::net::NetworkStream as HyperNetworkStream;
 pub use hyper::http::h1::HttpReader as HyperHttpReader;
 pub use hyper::header;
 
-// This is okay for now.
 pub use hyper::status::StatusCode;
 
 // TODO: Remove from Rocket in favor of a more flexible HTTP library.

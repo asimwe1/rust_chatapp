@@ -8,8 +8,7 @@ use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
-use rocket::http::StatusCode;
-use rocket::http::hyper::FreshHyperResponse;
+use rocket::http::Status;
 
 use self::serde::{Serialize, Deserialize};
 use self::serde_json::error::Error as SerdeError;
@@ -83,15 +82,14 @@ impl<T: Deserialize> FromData for JSON<T> {
     }
 }
 
-impl<T: Serialize> Responder for JSON<T> {
-    fn respond<'a>(&mut self, res: FreshHyperResponse<'a>) -> response::Outcome<'a> {
-        match serde_json::to_string(&self.0) {
-            Ok(json_string) => content::JSON(json_string).respond(res),
-            Err(e) => {
-                error_!("JSON failed to serialize: {:?}", e);
-                Outcome::Forward((StatusCode::BadRequest, res))
-            }
-        }
+impl<T: Serialize> Responder<'static> for JSON<T> {
+    fn respond(self) -> response::Result<'static> {
+        serde_json::to_string(&self.0).map(|string| {
+            content::JSON(string).respond().unwrap()
+        }).map_err(|e| {
+            error_!("JSON failed to serialize: {:?}", e);
+            Status::BadRequest
+        })
     }
 }
 

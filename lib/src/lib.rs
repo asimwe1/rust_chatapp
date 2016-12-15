@@ -1,6 +1,8 @@
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
 #![feature(drop_types_in_const)]
+#![feature(associated_consts)]
+#![feature(const_fn)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -103,27 +105,14 @@ pub mod response;
 pub mod outcome;
 pub mod config;
 pub mod data;
+pub mod handler;
 
 mod error;
 mod router;
 mod rocket;
 mod codegen;
 mod catcher;
-
-/// Defines the types for request and error handlers.
-#[doc(hidden)]
-pub mod handler {
-    use data::Data;
-    use request::Request;
-    use response::Response;
-    use error::Error;
-
-    /// The type of a request handler.
-    pub type Handler = for<'r> fn(&'r Request, Data) -> Response<'r>;
-
-    /// The type of an error handler.
-    pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> Response<'r>;
-}
+mod ext;
 
 #[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
