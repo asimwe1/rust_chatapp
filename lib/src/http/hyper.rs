@@ -7,32 +7,21 @@
 //! while necessary.
 
 // TODO: Remove from Rocket in favor of a more flexible HTTP library.
-pub use hyper::server::Request as HyperRequest;
-pub use hyper::server::Response as HyperResponse;
-pub use hyper::server::Server as HyperServer;
-pub use hyper::server::Handler as HyperHandler;
+pub use hyper::server::Request as Request;
+pub use hyper::server::Response as Response;
+pub use hyper::server::Server as Server;
+pub use hyper::server::Handler as Handler;
 
-pub use hyper::header::Headers as HyperHeaders;
-pub use hyper::header::CookiePair as HyperCookiePair;
-pub use hyper::header::CookieJar as HyperCookieJar;
-pub use hyper::header::Cookie as HyperCookie;
-pub use hyper::header::SetCookie as HyperSetCookie;
-
-pub use hyper::method::Method as HyperMethod;
-pub use hyper::uri::RequestUri as HyperRequestUri;
-pub use hyper::net::Fresh as HyperFresh;
-pub use hyper::net::HttpStream as HyperHttpStream;
-pub use hyper::net::NetworkStream as HyperNetworkStream;
-pub use hyper::http::h1::HttpReader as HyperHttpReader;
 pub use hyper::header;
+pub use hyper::mime;
+pub use hyper::net;
 
+pub use hyper::method::Method;
 pub use hyper::status::StatusCode;
+pub use hyper::uri::RequestUri;
+pub use hyper::http::h1;
+pub use hyper::buffer;
 
 // TODO: Remove from Rocket in favor of a more flexible HTTP library.
-pub type FreshHyperResponse<'a> = self::HyperResponse<'a, self::HyperFresh>;
-
-// TODO: Remove from Rocket in favor of a more flexible HTTP library.
-use hyper::buffer::BufReader;
-pub type HyperBodyReader<'a, 'b> =
-    HyperHttpReader<&'a mut BufReader<&'b mut HyperNetworkStream>>;
+pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use http::Header;
-use http::mime::Mime;
+use http::hyper::mime::Mime;
 use router::Collider;
 
 /// Typed representation of HTTP Content-Types.
@@ -236,7 +236,6 @@ impl FromStr for ContentType {
     /// ```rust
     /// use std::str::FromStr;
     /// use rocket::http::ContentType;
-    /// use rocket::http::mime::{TopLevel, SubLevel};
     ///
     /// let custom = ContentType::from_str("application/x-custom").unwrap();
     /// assert!(!custom.is_known());

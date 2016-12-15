@@ -3,7 +3,7 @@ use std::convert::AsRef;
 use outcome::IntoOutcome;
 use response::{Response, Responder};
 use request::{self, Request, FromRequest};
-use http::hyper::{HyperSetCookie, HyperCookiePair};
+use http::hyper::header;
 use http::Status;
 
 // The name of the actual flash cookie.
@@ -161,9 +161,9 @@ impl<'r, R: Responder<'r>> Flash<R> {
         Flash::new(responder, "error", msg)
     }
 
-    fn cookie_pair(&self) -> HyperCookiePair {
+    fn cookie_pair(&self) -> header::CookiePair {
         let content = format!("{}{}{}", self.name.len(), self.name, self.message);
-        let mut pair = HyperCookiePair::new(FLASH_COOKIE_NAME.to_string(), content);
+        let mut pair = header::CookiePair::new(FLASH_COOKIE_NAME.to_string(), content);
         pair.path = Some("/".to_string());
         pair.max_age = Some(300);
         pair
@@ -179,7 +179,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         let cookie = vec![self.cookie_pair()];
         Response::build_from(self.responder.respond()?)
-            .header_adjoin(HyperSetCookie(cookie))
+            .header_adjoin(header::SetCookie(cookie))
             .ok()
     }
 }

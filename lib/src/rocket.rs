@@ -19,8 +19,7 @@ use outcome::Outcome;
 use error::Error;
 
 use http::{Method, Status};
-use http::hyper::{self, HyperRequest, FreshHyperResponse};
-use http::hyper::{HyperServer, HyperHandler, HyperSetCookie, header};
+use http::hyper::{self, header};
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
@@ -33,15 +32,15 @@ pub struct Rocket {
 }
 
 #[doc(hidden)]
-impl HyperHandler for Rocket {
+impl hyper::Handler for Rocket {
     // This function tries to hide all of the Hyper-ness from Rocket. It
     // essentially converts Hyper types into Rocket types, then calls the
     // `dispatch` function, which knows nothing about Hyper. Because responding
     // depends on the `HyperResponse` type, this function does the actual
     // response processing.
     fn handle<'h, 'k>(&self,
-                      hyp_req: HyperRequest<'h, 'k>,
-                      res: FreshHyperResponse<'h>) {
+                      hyp_req: hyper::Request<'h, 'k>,
+                      res: hyper::FreshResponse<'h>) {
         // Get all of the information from Hyper.
         let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
@@ -87,7 +86,7 @@ impl HyperHandler for Rocket {
         // We have a response from the user. Update the cookies in the header.
         let cookie_delta = request.cookies().delta();
         if cookie_delta.len() > 0 {
-            response.adjoin_header(HyperSetCookie(cookie_delta));
+            response.adjoin_header(header::SetCookie(cookie_delta));
         }
 
         // Actually write out the response.
@@ -97,7 +96,7 @@ impl HyperHandler for Rocket {
 
 impl Rocket {
     #[inline]
-    fn issue_response(&self, mut response: Response, hyp_res: FreshHyperResponse) {
+    fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Data` header too.
         response.set_header(header::Server("rocket".to_string()));
@@ -109,7 +108,7 @@ impl Rocket {
     }
 
     fn write_response(&self, mut response: Response,
-                      mut hyp_res: FreshHyperResponse) -> io::Result<()>
+                      mut hyp_res: hyper::FreshResponse) -> io::Result<()>
     {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
@@ -429,7 +428,7 @@ impl Rocket {
         }
 
         let full_addr = format!("{}:{}", self.address, self.port);
-        let server = match HyperServer::http(full_addr.as_str()) {
+        let server = match hyper::Server::http(full_addr.as_str()) {
             Ok(hyper_server) => hyper_server,
             Err(e) => {
                 error!("failed to start server.");

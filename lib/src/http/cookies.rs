@@ -1,4 +1,5 @@
-pub use http::hyper::HyperCookiePair as Cookie;
-
 use http;
-pub type Cookies = http::hyper::HyperCookieJar<'static>;
+
+pub use http::hyper::header::CookiePair as Cookie;
+
+pub type Cookies = http::hyper::header::CookieJar<'static>;

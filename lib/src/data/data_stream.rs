@@ -1,15 +1,15 @@
 use std::io::{self, BufRead, Read, Cursor, BufReader, Chain, Take};
 use std::net::Shutdown;
 
-use http::hyper::{HyperHttpStream, HyperHttpReader};
-use http::hyper::HyperNetworkStream;
+use http::hyper::net::{HttpStream, NetworkStream};
+use http::hyper::h1::HttpReader;
 
-pub type StreamReader = HyperHttpReader<HyperHttpStream>;
+pub type StreamReader = HttpReader<HttpStream>;
 pub type InnerStream = Chain<Take<Cursor<Vec<u8>>>, BufReader<StreamReader>>;
 
 pub struct DataStream {
     pub stream: InnerStream,
-    pub network: HyperHttpStream,
+    pub network: HttpStream,
 }
 
 impl Read for DataStream {
@@ -28,7 +28,7 @@ impl BufRead for DataStream {
     }
 }
 
-pub fn kill_stream<S: Read, N: HyperNetworkStream>(stream: &mut S, network: &mut N) {
+pub fn kill_stream<S: Read, N: NetworkStream>(stream: &mut S, network: &mut N) {
     io::copy(&mut stream.take(1024), &mut io::sink()).expect("sink");
 
     // If there are any more bytes, kill it.

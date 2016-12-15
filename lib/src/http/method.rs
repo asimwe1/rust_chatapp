@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use error::Error;
-use http::hyper::HyperMethod;
+use http::hyper;
 use self::Method::*;
 
 // TODO: Support non-standard methods, here and in codegen.
@@ -23,24 +23,24 @@ pub enum Method {
 
 impl Method {
     #[doc(hidden)]
-    pub fn from_hyp(method: &HyperMethod) -> Option<Method> {
+    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
         match *method {
-            HyperMethod::Get => Some(Get),
-            HyperMethod::Put => Some(Put),
-            HyperMethod::Post => Some(Post),
-            HyperMethod::Delete => Some(Delete),
-            HyperMethod::Options => Some(Options),
-            HyperMethod::Head => Some(Head),
-            HyperMethod::Trace => Some(Trace),
-            HyperMethod::Connect => Some(Connect),
-            HyperMethod::Patch => Some(Patch),
-            HyperMethod::Extension(_) => None,
+            hyper::Method::Get => Some(Get),
+            hyper::Method::Put => Some(Put),
+            hyper::Method::Post => Some(Post),
+            hyper::Method::Delete => Some(Delete),
+            hyper::Method::Options => Some(Options),
+            hyper::Method::Head => Some(Head),
+            hyper::Method::Trace => Some(Trace),
+            hyper::Method::Connect => Some(Connect),
+            hyper::Method::Patch => Some(Patch),
+            hyper::Method::Extension(_) => None,
         }
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn to_hyp(&self) -> HyperMethod {
+    pub fn to_hyp(&self) -> hyper::Method {
         self.to_string().as_str().parse().unwrap()
     }
 

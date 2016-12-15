@@ -7,9 +7,14 @@ use std::mem::transmute;
 use super::data_stream::{DataStream, StreamReader, kill_stream};
 
 use ext::ReadExt;
-use http::hyper::{HyperBodyReader, HyperHttpStream};
-use http::hyper::HyperNetworkStream;
-use http::hyper::HyperHttpReader::*;
+
+use http::hyper::h1::HttpReader;
+use http::hyper::buffer;
+use http::hyper::h1::HttpReader::*;
+use http::hyper::net::{HttpStream, NetworkStream};
+
+pub type BodyReader<'a, 'b> =
+    self::HttpReader<&'a mut self::buffer::BufReader<&'b mut NetworkStream>>;
 
 /// Type representing the data in the body of an incoming request.
 ///
@@ -76,12 +81,12 @@ impl Data {
     }
 
     #[doc(hidden)]
-    pub fn from_hyp(mut h_body: HyperBodyReader) -> Result<Data, &'static str> {
+    pub fn from_hyp(mut h_body: BodyReader) -> Result<Data, &'static str> {
         // FIXME: This is asolutely terrible, thanks to Hyper.
 
         // Retrieve the underlying HTTPStream from Hyper.
         let mut stream = match h_body.get_ref().get_ref()
-                                     .downcast_ref::<HyperHttpStream>() {
+                                     .downcast_ref::<HttpStream>() {
             Some(s) => {
                 let owned_stream = s.clone();
                 let buf_len = h_body.get_ref().get_buf().len() as u64;

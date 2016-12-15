@@ -9,7 +9,7 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, URIBuf, Segments};
-use http::hyper::{header, HyperCookie, HyperHeaders, HyperMethod, HyperRequestUri};
+use http::hyper::{self, header};
 use http::{Method, ContentType, Cookies};
 
 /// The type of an incoming web request.
@@ -25,7 +25,7 @@ pub struct Request {
     uri: URIBuf, // FIXME: Should be URI (without hyper).
     params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
-    headers: HyperHeaders, // Don't use hyper's headers.
+    headers: header::Headers, // Don't use hyper's headers.
 }
 
 impl Request {
@@ -106,7 +106,7 @@ impl Request {
             method: method,
             cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
-            headers: HyperHeaders::new(),
+            headers: header::Headers::new(),
         }
     }
 
@@ -120,7 +120,7 @@ impl Request {
     ///
     /// Returns the headers in this request.
     #[inline(always)]
-    pub fn headers(&self) -> &HyperHeaders {
+    pub fn headers(&self) -> &header::Headers {
         // FIXME: Get rid of Hyper.
         &self.headers
     }
@@ -188,8 +188,8 @@ impl Request {
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn set_headers(&mut self, h_headers: HyperHeaders) {
-        let cookies = match h_headers.get::<HyperCookie>() {
+    pub fn set_headers(&mut self, h_headers: header::Headers) {
+        let cookies = match h_headers.get::<header::Cookie>() {
             // TODO: Retrieve key from config.
             Some(cookie) => cookie.to_cookie_jar(&[]),
             None => Cookies::new(&[]),
@@ -200,12 +200,12 @@ impl Request {
     }
 
     #[doc(hidden)]
-    pub fn new(h_method: HyperMethod,
-               h_headers: HyperHeaders,
-               h_uri: HyperRequestUri)
+    pub fn new(h_method: hyper::Method,
+               h_headers: header::Headers,
+               h_uri: hyper::RequestUri)
                -> Result<Request, String> {
         let uri = match h_uri {
-            HyperRequestUri::AbsolutePath(s) => URIBuf::from(s),
+            hyper::RequestUri::AbsolutePath(s) => URIBuf::from(s),
             _ => return Err(format!("Bad URI: {}", h_uri)),
         };
 
@@ -214,7 +214,7 @@ impl Request {
             _ => return Err(format!("Bad method: {}", h_method)),
         };
 
-        let cookies = match h_headers.get::<HyperCookie>() {
+        let cookies = match h_headers.get::<header::Cookie>() {
             // TODO: Retrieve key from config.
             Some(cookie) => cookie.to_cookie_jar(&[]),
             None => Cookies::new(&[]),

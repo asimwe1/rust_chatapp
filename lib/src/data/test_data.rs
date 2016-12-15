@@ -2,7 +2,12 @@ use std::io::{self, BufRead, Write, Cursor, BufReader};
 use std::path::Path;
 use std::fs::File;
 
-use http::hyper::HyperBodyReader;
+use http::hyper::h1::HttpReader;
+use http::hyper::net::NetworkStream;
+use http::hyper::buffer;
+
+pub type BodyReader<'a, 'b> =
+    self::HttpReader<&'a mut self::buffer::BufReader<&'b mut NetworkStream>>;
 
 const PEEK_BYTES: usize = 4096;
 
@@ -36,7 +41,7 @@ impl Data {
     }
 
     #[doc(hidden)]
-    pub fn from_hyp(mut h_body: HyperBodyReader) -> Result<Data, &'static str> {
+    pub fn from_hyp(mut h_body: BodyReader) -> Result<Data, &'static str> {
         let mut vec = Vec::new();
         if let Err(_) = io::copy(&mut h_body, &mut vec) {
             return Err("Reading from body failed.");

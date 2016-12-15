@@ -132,7 +132,7 @@ impl MockRequest {
     /// ]);
     /// ```
     pub fn headers<'h, H: AsRef<[(&'h str, &'h str)]>>(mut self, headers: H) -> Self {
-        let mut hyp_headers = hyper::HyperHeaders::new();
+        let mut hyp_headers = hyper::header::Headers::new();
 
         for &(name, fields) in headers.as_ref() {
             let mut vec_fields = vec![];
