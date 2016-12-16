@@ -11,4 +11,4 @@ rocket = { path = "../lib/" }
 log = "^0.3"
 
 [dev-dependencies]
-compiletest_rs = "^0.2"
+compiletest_rs = { git = "https://github.com/SergioBenitez/compiletest-rs" }

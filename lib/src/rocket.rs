@@ -174,7 +174,7 @@ impl Rocket {
                 // Rust thinks `request` is still borrowed here, but it's
                 // obviously not (data has nothing to do with it), so we
                 // convince it to give us another mutable reference.
-                // TODO: Pay the cost to copy Request into UnsafeCell?
+                // FIXME: Pay the cost to copy Request into UnsafeCell?
                 let request: &'r mut Request = unsafe {
                     &mut *(request as *const Request as *mut Request)
                 };
@@ -208,6 +208,7 @@ impl Rocket {
         for route in matches {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
+            // FIXME: Users should not be able to use this.
             request.set_params(route);
 
             // Dispatch the request to the handler.
