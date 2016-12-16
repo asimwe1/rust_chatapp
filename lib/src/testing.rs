@@ -222,9 +222,6 @@ impl MockRequest {
     /// ```
     pub fn dispatch_with<'r>(&'r mut self, rocket: &Rocket) -> Response<'r> {
         let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
-        match rocket.dispatch(&self.request, data) {
-            Ok(response) => response,
-            Err(status) => rocket.handle_error(status, &self.request)
-        }
+        rocket.dispatch(&mut self.request, data)
     }
 }

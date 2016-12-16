@@ -285,3 +285,4 @@ method_decorator!(put_decorator, Put);
 method_decorator!(post_decorator, Post);
 method_decorator!(delete_decorator, Delete);
 method_decorator!(patch_decorator, Patch);
+method_decorator!(head_decorator, Head);

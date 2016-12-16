@@ -7,7 +7,7 @@ use std::io::{self, Write};
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-use logger;
+use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config};
 use request::{Request, FormItems};
@@ -66,28 +66,8 @@ impl hyper::Handler for Rocket {
             }
         };
 
-        // Now that we've Rocket-ized everything, actually dispatch the request.
-        self.preprocess_request(&mut request, &data);
-        let mut response = match self.dispatch(&request, data) {
-            Ok(response) => response,
-            Err(status) => {
-                if status == Status::NotFound && request.method() == Method::Head {
-                    // FIXME: Handle unimplemented HEAD requests automatically.
-                    info_!("Redirecting to {}.", Green.paint(Method::Get));
-                }
-
-                let response = self.handle_error(status, &request);
-                return self.issue_response(response, res);
-            }
-        };
-
-        // We have a response from the user. Update the cookies in the header.
-        let cookie_delta = request.cookies().delta();
-        if cookie_delta.len() > 0 {
-            response.adjoin_header(header::SetCookie(cookie_delta));
-        }
-
-        // Actually write out the response.
+        // Dispatch the request to get a response, then write that response out.
+        let response = self.dispatch(&mut request, data);
         return self.issue_response(response, res);
     }
 }
@@ -175,14 +155,53 @@ impl Rocket {
         }
     }
 
+    #[doc(hidden)]
+    pub fn dispatch<'r>(&self, request: &'r mut Request, data: Data) -> Response<'r> {
+        // Do a bit of preprocessing before routing.
+        self.preprocess_request(request, &data);
+
+        // Route the request to get a response.
+        match self.route(request, data) {
+            Outcome::Success(mut response) => {
+                let cookie_delta = request.cookies().delta();
+                if cookie_delta.len() > 0 {
+                    response.adjoin_header(header::SetCookie(cookie_delta));
+                }
+
+                response
+            }
+            Outcome::Forward(data) => {
+                // Rust thinks `request` is still borrowed here, but it's
+                // obviously not (data has nothing to do with it), so we
+                // convince it to give us another mutable reference.
+                // TODO: Pay the cost to copy Request into UnsafeCell?
+                let request: &'r mut Request = unsafe {
+                    &mut *(request as *const Request as *mut Request)
+                };
+
+                if request.method() == Method::Head {
+                    info_!("Autohandling {} request.", White.paint("HEAD"));
+                    request.set_method(Method::Get);
+                    let mut response = self.dispatch(request, data);
+                    response.strip_body();
+                    response
+                } else {
+                    self.handle_error(Status::NotFound, request)
+                }
+            }
+            Outcome::Failure(status) => self.handle_error(status, request),
+        }
+    }
+
     /// Tries to find a `Responder` for a given `request`. It does this by
     /// routing the request and calling the handler for each matching route
     /// until one of the handlers returns success or failure. If a handler
     /// returns a failure, or there are no matching handlers willing to accept
     /// the request, this function returns an `Err` with the status code.
     #[doc(hidden)]
-    pub fn dispatch<'r>(&self, request: &'r Request, mut data: Data)
-            -> Result<Response<'r>, Status> {
+    #[inline]
+    pub fn route<'r>(&self, request: &'r Request, mut data: Data)
+            -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         info!("{}:", request);
         let matches = self.router.route(&request);
@@ -198,14 +217,14 @@ impl Rocket {
             // to be forwarded. If it does, continue the loop to try again.
             info_!("{} {}", White.paint("Outcome:"), outcome);
             match outcome {
-                Outcome::Success(response) => return Ok(response),
-                Outcome::Failure(status) => return Err(status),
+                o@Outcome::Success(_) => return o,
+                o@Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
             };
         }
 
         error_!("No matching routes for {}.", request);
-        Err(Status::NotFound)
+        Outcome::Forward(data)
     }
 
     // TODO: DOC.

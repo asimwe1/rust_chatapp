@@ -47,6 +47,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "put" => put_decorator,
         "post" => post_decorator,
         "delete" => delete_decorator,
+        "head" => head_decorator,
         "patch" => patch_decorator
     );
 }

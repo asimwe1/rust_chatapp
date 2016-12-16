@@ -249,8 +249,8 @@ impl<'r> Response<'r> {
         // Looks crazy, right? Needed so Rust infers lifetime correctly. Weird.
         match self.body.as_mut() {
             Some(body) => Some(match body.as_mut() {
-                Body::Sized(b, u64) => Body::Sized(b, u64),
-                Body::Chunked(b, u64) => Body::Chunked(b, u64),
+                Body::Sized(b, size) => Body::Sized(b, size),
+                Body::Chunked(b, chunk_size) => Body::Chunked(b, chunk_size),
             }),
             None => None
         }
@@ -259,6 +259,19 @@ impl<'r> Response<'r> {
     #[inline(always)]
     pub fn take_body(&mut self) -> Option<Body<Box<io::Read + 'r>>> {
         self.body.take()
+    }
+
+    // Removes any actual body, but leaves the size if it exists. Only meant to
+    // be used to handle HEAD requests automatically.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn strip_body(&mut self) {
+        if let Some(body) = self.take_body() {
+            self.body = match body {
+                Body::Sized(_, n) => Some(Body::Sized(Box::new(io::empty()), n)),
+                Body::Chunked(..) => None
+            };
+        }
     }
 
     #[inline(always)]
