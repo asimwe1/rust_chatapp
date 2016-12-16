@@ -125,7 +125,7 @@ world!" benchmark:
   * **Processor:** Intel Xeon X5675 @ 3.07GHz
   * **Operating System:** Mac OS X v10.11.6
 
-**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 300 req/s, +/- 1us):
+**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 300 req/s, +/- 1us latency):
 
 	Running 10s test @ http://localhost:3000
 	  2 threads and 10 connections
@@ -136,7 +136,7 @@ world!" benchmark:
 	Requests/sec:  54811.36
     Transfer/sec:      7.63MB
 
-**Rocket v0.0.11** (8 LOC) results (best of 3, +/- 200 req/s, +/- 0.5us):
+**Rocket v0.0.11** (8 LOC) results (best of 3, +/- 200 req/s, +/- 0.5us latency):
 
 	Running 10s test @ http://localhost:80
 	  2 threads and 10 connections
@@ -155,8 +155,8 @@ world!" benchmark:
 ## Future Improvements
 
 Rocket is currently built on a synchronous HTTP backend. Once the Rust
-aynchronous I/O libraries have stabalized, a migration to a new, more performant
-HTTP backend is planned. We expect performance to improve significantly at that
-time. The [Stabilize HTTP
+asynchronous I/O libraries have stabilized, a migration to a new, more
+performant HTTP backend is planned. We expect performance to improve
+significantly at that time. The [Stabilize HTTP
 Library](https://github.com/SergioBenitez/Rocket/issues/17) issue tracks the
 progress on this front.

@@ -137,7 +137,7 @@ impl MockRequest {
         self.request.add_header(header.into());
         self
     }
-    ///
+
     /// Add a cookie to this request.
     ///
     /// # Examples
