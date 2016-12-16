@@ -2,6 +2,7 @@ use std::{io, fmt, str};
 use std::borrow::Cow;
 
 use http::{Header, HeaderMap};
+use response::Responder;
 use http::Status;
 
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -329,5 +330,12 @@ impl<'r> fmt::Debug for Response<'r> {
             Some(ref body) => writeln!(f, "{:?}", body),
             None => writeln!(f, "Empty Body")
         }
+    }
+}
+
+impl<'r> Responder<'r> for Response<'r> {
+    /// This is the identity implementation. It simply returns `Ok(self)`.
+    fn respond(self) -> Result<Response<'r>, Status> {
+        Ok(self)
     }
 }
