@@ -9,8 +9,9 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, URIBuf, Segments};
-use http::hyper::{self, header};
-use http::{Method, ContentType, Cookies};
+use http::{Method, ContentType, Header, HeaderMap, Cookies};
+
+use http::hyper;
 
 /// The type of an incoming web request.
 ///
@@ -25,7 +26,8 @@ pub struct Request {
     uri: URIBuf, // FIXME: Should be URI (without hyper).
     params: RefCell<Vec<&'static str>>,
     cookies: Cookies,
-    headers: header::Headers, // Don't use hyper's headers.
+    // TODO: Allow non-static here.
+    headers: HeaderMap<'static>,
 }
 
 impl Request {
@@ -78,7 +80,8 @@ impl Request {
     /// For example, if the request URI is `"/hello/there/i/am/here"`, then
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
     /// `"there/i/am/here"` as type `T`.
-    pub fn get_segments<'r, T: FromSegments<'r>>(&'r self, i: usize) -> Result<T, Error> {
+    pub fn get_segments<'r, T: FromSegments<'r>>(&'r self, i: usize)
+            -> Result<T, Error> {
         let segments = self.get_raw_segments(i).ok_or(Error::NoKey)?;
         T::from_segments(segments).map_err(|_| Error::BadParse)
     }
@@ -98,7 +101,7 @@ impl Request {
         }
     }
 
-    // FIXME: Implement a testing framework for Rocket.
+    // FIXME: Make this `new`. Make current `new` a `from_hyp` method.
     #[doc(hidden)]
     pub fn mock(method: Method, uri: &str) -> Request {
         Request {
@@ -106,7 +109,7 @@ impl Request {
             method: method,
             cookies: Cookies::new(&[]),
             uri: URIBuf::from(uri),
-            headers: header::Headers::new(),
+            headers: HeaderMap::new(),
         }
     }
 
@@ -120,8 +123,7 @@ impl Request {
     ///
     /// Returns the headers in this request.
     #[inline(always)]
-    pub fn headers(&self) -> &header::Headers {
-        // FIXME: Get rid of Hyper.
+    pub fn headers(&self) -> &HeaderMap {
         &self.headers
     }
 
@@ -139,29 +141,9 @@ impl Request {
     /// Content-Type of [any](struct.ContentType.html#method.any) is returned.
     #[inline(always)]
     pub fn content_type(&self) -> ContentType {
-        let hyp_ct = self.headers().get::<header::ContentType>();
-        hyp_ct.map_or(ContentType::Any, |ct| ContentType::from(&ct.0))
-    }
-
-    /// <div class="stability" style="margin-left: 0;">
-    ///   <em class="stab unstable">
-	///     Unstable
-    ///     (<a href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>):
-    ///     The underlying HTTP library/types are likely to change before v1.0.
-    ///   </em>
-    /// </div>
-    ///
-    /// Returns the first content-type accepted by this request.
-    pub fn accepts(&self) -> ContentType {
-        let accept = self.headers().get::<header::Accept>();
-        accept.map_or(ContentType::Any, |accept| {
-            let items = &accept.0;
-            if items.len() < 1 {
-                return ContentType::Any;
-            } else {
-                return ContentType::from(items[0].item.clone());
-            }
-        })
+        self.headers().get_one("Content-Type")
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(ContentType::Any)
     }
 
     /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
@@ -179,7 +161,9 @@ impl Request {
         // in this structure, which is (obviously) guaranteed to live as long as
         // the structure AS LONG AS it is not moved out or changed. AS A RESULT,
         // the `uri` fields MUST NEVER be changed once it is set.
-        // TODO: Find a way to enforce these. Look at OwningRef for inspiration.
+        //
+        // TODO: Find a way to ecapsulate this better. Look at OwningRef/Rental
+        // for inspiration.
         use ::std::mem::transmute;
         *self.params.borrow_mut() = unsafe {
             transmute(route.get_params(self.uri.as_uri()))
@@ -188,20 +172,13 @@ impl Request {
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn set_headers(&mut self, h_headers: header::Headers) {
-        let cookies = match h_headers.get::<header::Cookie>() {
-            // TODO: Retrieve key from config.
-            Some(cookie) => cookie.to_cookie_jar(&[]),
-            None => Cookies::new(&[]),
-        };
-
-        self.headers = h_headers;
-        self.cookies = cookies;
+    pub fn add_header(&mut self, header: Header<'static>) {
+        self.headers.add(header);
     }
 
     #[doc(hidden)]
     pub fn new(h_method: hyper::Method,
-               h_headers: header::Headers,
+               h_headers: hyper::header::Headers,
                h_uri: hyper::RequestUri)
                -> Result<Request, String> {
         let uri = match h_uri {
@@ -214,18 +191,23 @@ impl Request {
             _ => return Err(format!("Bad method: {}", h_method)),
         };
 
-        let cookies = match h_headers.get::<header::Cookie>() {
+        let cookies = match h_headers.get::<hyper::header::Cookie>() {
             // TODO: Retrieve key from config.
             Some(cookie) => cookie.to_cookie_jar(&[]),
             None => Cookies::new(&[]),
         };
+
+        let mut headers = HeaderMap::new();
+        for h_header in h_headers.iter() {
+            headers.add_raw(h_header.name().to_string(), h_header.value_string())
+        }
 
         let request = Request {
             params: RefCell::new(vec![]),
             method: method,
             cookies: cookies,
             uri: uri,
-            headers: h_headers,
+            headers: headers,
         };
 
         Ok(request)

@@ -282,9 +282,9 @@ impl<'r> Response<'r> {
         self.body = Some(Body::Chunked(Box::new(body), chunk_size));
     }
 
-    // Replaces this response's status and body with that of `other`, if they
-    // exist. Any headers that exist in `other` replace the ones in `self`. Any
-    // in `self` that aren't in `other` remain.
+    /// Replaces this response's status and body with that of `other`, if they
+    /// exist in `other`. Any headers that exist in `other` replace the ones in
+    /// `self`. Any in `self` that aren't in `other` remain in `self`.
     pub fn merge(&mut self, other: Response<'r>) {
         if let Some(status) = other.status {
             self.status = Some(status);
@@ -294,7 +294,7 @@ impl<'r> Response<'r> {
             self.body = Some(body);
         }
 
-        for (name, values) in other.headers.into_iter() {
+        for (name, values) in other.headers.into_iter_raw() {
             self.headers.replace_all(name, values);
         }
     }
@@ -311,7 +311,7 @@ impl<'r> Response<'r> {
             self.body = other.body;
         }
 
-        for (name, mut values) in other.headers.into_iter() {
+        for (name, mut values) in other.headers.into_iter_raw() {
             self.headers.add_all(name, &mut values);
         }
     }

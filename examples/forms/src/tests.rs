@@ -1,11 +1,12 @@
 use super::rocket;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
+use rocket::http::ContentType;
 
 fn test_login<F: Fn(String) -> bool>(username: &str, password: &str, age: isize, test: F) {
     let rocket = rocket::ignite().mount("/", routes![super::user_page, super::login]);
     let result = MockRequest::new(Post, "/login")
-        .headers(&[("Content-Type", "application/x-www-form-urlencoded")])
+        .header(ContentType::Form)
         .body(&format!("username={}&password={}&age={}", username, password, age))
         .dispatch_with(&rocket)
         .unwrap_or("".to_string());

@@ -53,9 +53,10 @@
 //! ```rust
 //! # use rocket::http::Method::*;
 //! # use rocket::testing::MockRequest;
+//! # use rocket::http::ContentType;
 //! let (username, password, age) = ("user", "password", 32);
 //! MockRequest::new(Post, "/login")
-//!     .headers(&[("Content-Type", "application/x-www-form-urlencoded")])
+//!     .header(ContentType::Form)
 //!     .body(&format!("username={}&password={}&age={}", username, password, age));
 //! ```
 //!
@@ -99,8 +100,8 @@
 //! }
 //! ```
 
-use http::{hyper, Method};
-use {Rocket, Request, Data};
+use http::{Method, Header, Cookie};
+use ::{Rocket, Request, Data};
 
 /// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest {
@@ -110,6 +111,7 @@ pub struct MockRequest {
 
 impl MockRequest {
     /// Constructs a new mocked request with the given `method` and `uri`.
+    #[inline]
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
         MockRequest {
             request: Request::mock(method, uri.as_ref()),
@@ -117,33 +119,42 @@ impl MockRequest {
         }
     }
 
-    /// Sets the headers for this request.
+    /// Add a header to this request.
     ///
     /// # Examples
     ///
-    /// Set the Content-Type header:
+    /// Add the Content-Type header:
     ///
     /// ```rust
     /// use rocket::http::Method::*;
     /// use rocket::testing::MockRequest;
+    /// use rocket::http::ContentType;
     ///
-    /// let req = MockRequest::new(Get, "/").headers(&[
-    ///     ("Content-Type", "application/json")
-    /// ]);
+    /// let req = MockRequest::new(Get, "/").header(ContentType::JSON);
     /// ```
-    pub fn headers<'h, H: AsRef<[(&'h str, &'h str)]>>(mut self, headers: H) -> Self {
-        let mut hyp_headers = hyper::header::Headers::new();
-
-        for &(name, fields) in headers.as_ref() {
-            let mut vec_fields = vec![];
-            for field in fields.split(";") {
-                vec_fields.push(field.as_bytes().to_vec());
-            }
-
-            hyp_headers.set_raw(name.to_string(), vec_fields);
-        }
-
-        self.request.set_headers(hyp_headers);
+    #[inline]
+    pub fn header<'h, H: Into<Header<'static>>>(mut self, header: H) -> Self {
+        self.request.add_header(header.into());
+        self
+    }
+    ///
+    /// Add a cookie to this request.
+    ///
+    /// # Examples
+    ///
+    /// Add `user_id` cookie:
+    ///
+    /// ```rust
+    /// use rocket::http::Method::*;
+    /// use rocket::testing::MockRequest;
+    /// use rocket::http::Cookie;
+    ///
+    /// let req = MockRequest::new(Get, "/")
+    ///     .cookie(Cookie::new("user_id".into(), "12".into()));
+    /// ```
+    #[inline]
+    pub fn cookie(self, cookie: Cookie) -> Self {
+        self.request.cookies().add(cookie);
         self
     }
 
@@ -156,16 +167,13 @@ impl MockRequest {
     /// ```rust
     /// use rocket::http::Method::*;
     /// use rocket::testing::MockRequest;
+    /// use rocket::http::ContentType;
     ///
-    /// let req = MockRequest::new(Post, "/").headers(&[
-    ///     ("Content-Type", "application/json")
-    /// ]).body(r#"
-    ///    {
-    ///        "key": "value",
-    ///        "array": [1, 2, 3],
-    ///    }
-    /// "#);
+    /// let req = MockRequest::new(Post, "/")
+    ///     .header(ContentType::JSON)
+    ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
     /// ```
+    #[inline]
     pub fn body<S: AsRef<str>>(mut self, body: S) -> Self {
         self.data = Data::new(body.as_ref().as_bytes().into());
         self

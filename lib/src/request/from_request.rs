@@ -70,7 +70,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ensure that the handlers corresponding to these requests don't get called
 /// unless there is an API key in the request and the key is valid. The
 /// following example implements this using an `APIKey` type and a `FromRequest`
-/// implementation for that type in the `senstive` handler:
+/// implementation for that type. The `APIKey` type is then used in the
+/// `senstive` handler.
 ///
 /// ```rust
 /// # #![feature(plugin)]
@@ -90,20 +91,19 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// impl<'r> FromRequest<'r> for APIKey {
 ///     type Error = ();
-///     fn from_request(request: &'r Request) -> request::Outcome<APIKey, ()> {
-///         if let Some(keys) = request.headers().get_raw("x-api-key") {
-///             if keys.len() != 1 {
-///                 return Outcome::Failure((Status::BadRequest, ()));
-///             }
 ///
-///             if let Ok(key) = String::from_utf8(keys[0].clone()) {
-///                 if is_valid(&key) {
-///                     return Outcome::Success(APIKey(key));
-///                 }
-///             }
+///     fn from_request(request: &'r Request) -> request::Outcome<APIKey, ()> {
+///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
+///         if keys.len() != 1 {
+///             return Outcome::Failure((Status::BadRequest, ()));
 ///         }
 ///
-///         Outcome::Forward(())
+///         let key = keys[0];
+///         if !is_valid(keys[0]) {
+///             return Outcome::Forward(());
+///         }
+///
+///         return Outcome::Success(APIKey(key.to_string()));
 ///     }
 /// }
 ///

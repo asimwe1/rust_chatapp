@@ -37,14 +37,20 @@ mod test {
     use super::rocket;
     use rocket::testing::MockRequest;
     use rocket::http::Method::*;
+    use rocket::http::Header;
 
-    fn test_header_count<'h>(headers: &[(&'h str, &'h str)]) {
+    fn test_header_count<'h>(headers: Vec<Header<'static>>) {
+        let num_headers = headers.len();
+        let mut req = MockRequest::new(Get, "/");
+        for header in headers {
+            req = req.header(header);
+        }
+
         // FIXME: Should be able to count headers directly!
         let rocket = rocket::ignite().mount("/", routes![super::header_count]);
-        let mut req = MockRequest::new(Get, "/").headers(headers);
         let result = req.dispatch_with(&rocket);
         assert_eq!(result.unwrap(),
-            format!("Your request contained {} headers!", headers.len()));
+            format!("Your request contained {} headers!", num_headers));
     }
 
     #[test]
@@ -53,14 +59,10 @@ mod test {
             let mut headers = vec![];
             for j in 0..i {
                 let string = format!("{}", j);
-                headers.push((string.clone(), string));
+                headers.push(Header::new(string.clone(), string));
             }
 
-            let h_strs: Vec<_> = headers.iter()
-                .map(|&(ref a, ref b)| (a.as_str(), b.as_str()))
-                .collect();
-
-            test_header_count(&h_strs);
+            test_header_count(headers);
         }
     }
 }
