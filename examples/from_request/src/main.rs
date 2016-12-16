@@ -16,9 +16,9 @@ impl fmt::Display for HeaderCount {
     }
 }
 
-impl<'r> FromRequest<'r> for HeaderCount {
+impl<'a, 'r> FromRequest<'a, 'r> for HeaderCount {
     type Error = ();
-    fn from_request(request: &'r Request) -> request::Outcome<Self, ()> {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
         Success(HeaderCount(request.headers().len()))
     }
 }

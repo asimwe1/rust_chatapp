@@ -79,11 +79,11 @@ impl Catcher {
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
     ///
-    /// fn handle_404(_: Error, req: &Request) -> Result {
+    /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
     ///    format!("Couldn't find: {}", req.uri()).respond()
     /// }
     ///
-    /// fn handle_500(_: Error, _: &Request) -> Result {
+    /// fn handle_500<'r>(_: Error, _: &'r Request) -> Result<'r> {
     ///     "Whoops, we messed up!".respond()
     /// }
     ///

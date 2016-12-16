@@ -105,12 +105,13 @@
 //! }
 //! ```
 
-use http::{Method, Header, Cookie};
 use ::{Rocket, Request, Response, Data};
+use http::{Method, Header, Cookie};
+use http::uri::URIBuf;
 
 /// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest {
-    request: Request,
+    request: Request<'static>,
     data: Data
 }
 
@@ -119,7 +120,7 @@ impl MockRequest {
     #[inline]
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
         MockRequest {
-            request: Request::mock(method, uri.as_ref()),
+            request: Request::new(method, URIBuf::new(uri.as_ref().to_string())),
             data: Data::new(vec![])
         }
     }

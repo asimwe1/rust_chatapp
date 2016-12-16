@@ -36,6 +36,7 @@ impl<T> From<T> for Header<'static> where T: hyper::Header + hyper::HeaderFormat
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct HeaderMap<'h> {
     headers: HashMap<Cow<'h, str>, Vec<Cow<'h, str>>>
 }

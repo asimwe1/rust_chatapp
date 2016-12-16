@@ -20,6 +20,7 @@ use error::Error;
 
 use http::{Method, Status};
 use http::hyper::{self, header};
+use http::uri::URI;
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
@@ -44,16 +45,13 @@ impl hyper::Handler for Rocket {
         // Get all of the information from Hyper.
         let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
-        // Get a copy of the URI for later use.
-        let uri = h_uri.to_string();
-
-        // Try to create a Rocket request from the hyper request info.
-        let mut request = match Request::new(h_method, h_headers, h_uri) {
-            Ok(req) => req,
-            Err(ref reason) => {
-                let mock = Request::mock(Method::Get, uri.as_str());
-                error!("{}: bad request ({}).", mock, reason);
-                let r = self.handle_error(Status::InternalServerError, &mock);
+        // Convert the Hyper request into a Rocket request.
+        let mut request = match Request::from_hyp(h_method, h_headers, h_uri) {
+            Ok(request) => request,
+            Err(e) => {
+                error!("Bad incoming request: {}", e);
+                let dummy = Request::new(Method::Get, URI::new("<unknown>"));
+                let r = self.handle_error(Status::InternalServerError, &dummy);
                 return self.issue_response(r, res);
             }
         };
@@ -73,7 +71,7 @@ impl hyper::Handler for Rocket {
         let mut response = match self.dispatch(&request, data) {
             Ok(response) => response,
             Err(status) => {
-                if status == Status::NotFound && request.method == Method::Head {
+                if status == Status::NotFound && request.method() == Method::Head {
                     // FIXME: Handle unimplemented HEAD requests automatically.
                     info_!("Redirecting to {}.", Green.paint(Method::Get));
                 }
@@ -171,7 +169,7 @@ impl Rocket {
             let mut form_items = FormItems(form);
             if let Some(("_method", value)) = form_items.next() {
                 if let Ok(method) = value.parse() {
-                    req.method = method;
+                    req.set_method(method);
                 }
             }
         }
@@ -340,7 +338,7 @@ impl Rocket {
     /// use rocket::handler::Outcome;
     /// use rocket::http::Method::*;
     ///
-    /// fn hi(_: &Request, _: Data) -> Outcome {
+    /// fn hi(_: &Request, _: Data) -> Outcome<'static> {
     ///     Outcome::of("Hello!")
     /// }
     ///

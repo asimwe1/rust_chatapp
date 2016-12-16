@@ -3,7 +3,9 @@ use std::fmt::Debug;
 use outcome::{self, IntoOutcome};
 use request::Request;
 use outcome::Outcome::*;
+
 use http::{Status, ContentType, Method, Cookies};
+use http::uri::URI;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -89,10 +91,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     key == "valid_api_key"
 /// }
 ///
-/// impl<'r> FromRequest<'r> for APIKey {
+/// impl<'a, 'r> FromRequest<'a, 'r> for APIKey {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'r Request) -> request::Outcome<APIKey, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<APIKey, ()> {
 ///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
 ///         if keys.len() != 1 {
 ///             return Outcome::Failure((Status::BadRequest, ()));
@@ -114,8 +116,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// # fn main() { }
 /// ```
-pub trait FromRequest<'r>: Sized {
-    /// The associated error to be returned when derivation fails.
+pub trait FromRequest<'a, 'r>: Sized {
+    /// The associated error to be returned if derivation fails.
     type Error: Debug;
 
     /// Derives an instance of `Self` from the incoming request metadata.
@@ -124,45 +126,45 @@ pub trait FromRequest<'r>: Sized {
     /// the derivation fails in an unrecoverable fashion, `Failure` is returned.
     /// `Forward` is returned to indicate that the request should be forwarded
     /// to other matching routes, if any.
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error>;
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
 }
 
-impl<'r> FromRequest<'r> for &'r Request {
+impl<'a, 'r> FromRequest<'a, 'r> for URI<'a> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
-        Success(request)
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        Success(request.uri())
     }
 }
 
-impl<'r> FromRequest<'r> for Method {
+impl<'a, 'r> FromRequest<'a, 'r> for Method {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
-        Success(request.method)
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        Success(request.method())
     }
 }
 
-impl<'r> FromRequest<'r> for &'r Cookies {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Cookies {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
     }
 }
 
-impl<'r> FromRequest<'r> for ContentType {
+impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.content_type())
     }
 }
 
-impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
+impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
             Success(val) => Success(Ok(val)),
             Failure((_, e)) => Success(Err(e)),
@@ -171,10 +173,10 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
     }
 }
 
-impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
+impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
             Success(val) => Success(Some(val)),
             Failure(_) => Success(None),

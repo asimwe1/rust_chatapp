@@ -10,15 +10,15 @@ use rocket::response::{self, Responder};
 use rocket::handler::Outcome;
 use rocket::http::Method::*;
 
-fn forward(_req: &Request, data: Data) -> Outcome {
+fn forward(_req: &Request, data: Data) -> Outcome<'static> {
     Outcome::forward(data)
 }
 
-fn hi(_req: &Request, _: Data) -> Outcome {
+fn hi(_req: &Request, _: Data) -> Outcome<'static> {
     Outcome::of("Hello!")
 }
 
-fn name<'a>(req: &'a Request, _: Data) -> Outcome {
+fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
 }
 
@@ -27,7 +27,7 @@ fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
     Outcome::of(String::from_param(param).unwrap())
 }
 
-fn upload(req: &Request, data: Data) -> Outcome {
+fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     if !req.content_type().is_plain() {
         println!("    => Content-Type of upload must be text/plain. Ignoring.");
         return Outcome::failure(Status::BadRequest);
@@ -47,11 +47,11 @@ fn upload(req: &Request, data: Data) -> Outcome {
     }
 }
 
-fn get_upload(_: &Request, _: Data) -> Outcome {
+fn get_upload(_: &Request, _: Data) -> Outcome<'static> {
     Outcome::of(File::open("/tmp/upload.txt").ok())
 }
 
-fn not_found_handler(_: Error, req: &Request) -> response::Result {
+fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
     format!("Couldn't find: {}", req.uri()).respond()
 }
 

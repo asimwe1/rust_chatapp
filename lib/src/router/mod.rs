@@ -37,7 +37,7 @@ impl Router {
         trace_!("Trying to route: {}", req);
         // let num_segments = req.uri.segment_count();
         // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
-        self.routes.get(&req.method).map_or(vec![], |routes| {
+        self.routes.get(&req.method()).map_or(vec![], |routes| {
             let mut matches: Vec<_> = routes.iter()
                 .filter(|r| r.collides_with(req))
                 .collect();
@@ -155,7 +155,7 @@ mod test {
                  method: Method,
                  uri: &str)
                  -> Option<&'a Route> {
-        let request = Request::mock(method, uri);
+        let request = Request::new(method, URI::new(uri));
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -165,7 +165,7 @@ mod test {
     }
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
-        let request = Request::mock(method, uri);
+        let request = Request::new(method, URI::new(uri));
         router.route(&request)
     }
 
@@ -321,14 +321,15 @@ mod test {
     }
 
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
+        println!("Testing: {} (expect: {:?})", path, expected);
         route(router, Get, path).map_or(false, |route| {
-            let params = route.get_params(URI::new(path));
+            let params = route.get_param_indexes(URI::new(path));
             if params.len() != expected.len() {
                 return false;
             }
 
-            for i in 0..params.len() {
-                if params[i] != expected[i] {
+            for (k, (i, j)) in params.into_iter().enumerate() {
+                if &path[i..j] != expected[k] {
                     return false;
                 }
             }

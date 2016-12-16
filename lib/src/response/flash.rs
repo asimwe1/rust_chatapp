@@ -210,10 +210,10 @@ impl Flash<()> {
 ///
 /// The suggested use is through an `Option` and the `FlashMessage` type alias
 /// in `request`: `Option<FlashMessage>`.
-impl<'r> FromRequest<'r> for Flash<()> {
+impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
     type Error = ();
 
-    fn from_request(request: &'r Request) -> request::Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
         let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             // Clear the flash message.

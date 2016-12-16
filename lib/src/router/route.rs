@@ -64,9 +64,7 @@ impl Route {
 
     /// Sets the path of the route. Does not update the rank or any other
     /// parameters.
-    pub fn set_path<S>(&mut self, path: S)
-        where S: AsRef<str>
-    {
+    pub fn set_path<S>(&mut self, path: S) where S: AsRef<str> {
         self.path = URIBuf::from(path.as_ref());
     }
 
@@ -76,18 +74,19 @@ impl Route {
     /// Given a URI, returns a vector of slices of that URI corresponding to the
     /// dynamic segments in this route.
     #[doc(hidden)]
-    pub fn get_params<'a>(&self, uri: URI<'a>) -> Vec<&'a str> {
+    pub fn get_param_indexes(&self, uri: URI) -> Vec<(usize, usize)> {
         let route_segs = self.path.as_uri().segments();
         let uri_segs = uri.segments();
+        let start_addr = uri.as_str().as_ptr() as usize;
 
         let mut result = Vec::with_capacity(self.path.segment_count());
         for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
             if route_seg.ends_with("..>") {
-                // FIXME: Here.
                 break;
             } else if route_seg.ends_with('>') {
-                // FIXME: Here.
-                result.push(uri_seg);
+                let i = (uri_seg.as_ptr() as usize) - start_addr;
+                let j = i + uri_seg.len();
+                result.push((i, j));
             }
         }
 
@@ -151,9 +150,9 @@ impl Collider for Route {
     }
 }
 
-impl Collider<Request> for Route {
-    fn collides_with(&self, req: &Request) -> bool {
-        self.method == req.method
+impl<'r> Collider<Request<'r>> for Route {
+    fn collides_with(&self, req: &Request<'r>) -> bool {
+        self.method == req.method()
             && req.uri().collides_with(&self.path.as_uri())
             && req.content_type().collides_with(&self.content_type)
     }

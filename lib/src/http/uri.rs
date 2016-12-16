@@ -256,6 +256,13 @@ impl<'a> URI<'a> {
     }
 }
 
+impl<'a> From<&'a str> for URI<'a> {
+    #[inline(always)]
+    fn from(uri: &'a str) -> URI<'a> {
+        URI::new(uri)
+    }
+}
+
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.

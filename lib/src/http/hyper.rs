@@ -24,4 +24,3 @@ pub use hyper::buffer;
 
 // TODO: Remove from Rocket in favor of a more flexible HTTP library.
 pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
-
