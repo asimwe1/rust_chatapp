@@ -21,7 +21,10 @@ mod test {
     #[test]
     fn test_hello() {
         let rocket = rocket::ignite().mount("/", routes![super::hello]);
-        let result = MockRequest::new(Get, "/").dispatch_with(&rocket);
-        assert_eq!(result.unwrap().as_str(), "Hello, world!");
+        let mut req = MockRequest::new(Get, "/");
+        let mut response = req.dispatch_with(&rocket);
+
+        let body_string = response.body().and_then(|b| b.to_string());
+        assert_eq!(body_string, Some("Hello, world!".to_string()));
     }
 }

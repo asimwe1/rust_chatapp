@@ -4,8 +4,11 @@ use rocket::http::Method::*;
 
 fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let result = MockRequest::new(Get, uri).dispatch_with(&rocket);
-    assert_eq!(result.unwrap(), expected);
+    let mut req = MockRequest::new(Get, uri);
+
+    let mut response = req.dispatch_with(&rocket);
+    let body_str = response.body().and_then(|body| body.to_string());
+    assert_eq!(body_str, Some(expected));
 }
 
 #[test]

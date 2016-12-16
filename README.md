@@ -152,7 +152,7 @@ world!" benchmark:
   * Rocket throughput higher by 3.7% (higher is better)
   * Rocket latency lower by 4.0% (lower is better)
 
-## Future Improvements
+### Future Improvements
 
 Rocket is currently built on a synchronous HTTP backend. Once the Rust
 asynchronous I/O libraries have stabilized, a migration to a new, more

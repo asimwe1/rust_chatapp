@@ -46,11 +46,11 @@ mod test {
             req = req.header(header);
         }
 
-        // FIXME: Should be able to count headers directly!
         let rocket = rocket::ignite().mount("/", routes![super::header_count]);
-        let result = req.dispatch_with(&rocket);
-        assert_eq!(result.unwrap(),
-            format!("Your request contained {} headers!", num_headers));
+        let mut response = req.dispatch_with(&rocket);
+
+        let expect = format!("Your request contained {} headers!", num_headers);
+        assert_eq!(response.body().and_then(|b| b.to_string()), Some(expect));
     }
 
     #[test]

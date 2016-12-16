@@ -93,15 +93,20 @@
 //!     #[test]
 //!     fn test_hello_world() {
 //!         let rocket = rocket::ignite().mount("/", routes![super::hello]);
-//!         let req = MockRequest::new(Get, "/");
-//!         let result = req.dispatch_with(&rocket);
-//!         assert_eq!(result.unwrap().as_str(), "Hello, world!");
+//!         let mut req = MockRequest::new(Get, "/");
+//!         let mut response = req.dispatch_with(&rocket);
+//!
+//!         // Write the body out as a string.
+//!         let body_str = response.body().unwrap().to_string().unwrap();
+//!
+//!         // Check that the body contains what we expect.
+//!         assert_eq!(body_str, "Hello, world!".to_string());
 //!     }
 //! }
 //! ```
 
 use http::{Method, Header, Cookie};
-use ::{Rocket, Request, Data};
+use ::{Rocket, Request, Response, Data};
 
 /// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest {
@@ -207,20 +212,18 @@ impl MockRequest {
     ///
     /// # fn main() {
     /// let rocket = rocket::ignite().mount("/", routes![hello]);
-    /// let result = MockRequest::new(Get, "/").dispatch_with(&rocket);
-    /// assert_eq!(&result.unwrap(), "Hello, world!");
+    /// let mut req = MockRequest::new(Get, "/");
+    /// let mut response = req.dispatch_with(&rocket);
+    ///
+    /// let body_str = response.body().unwrap().to_string().unwrap();
+    /// assert_eq!(body_str, "Hello, world!".to_string());
     /// # }
     /// ```
-    /// FIXME: Can now return Response to get all info!
-    pub fn dispatch_with(&mut self, rocket: &Rocket) -> Option<String> {
+    pub fn dispatch_with<'r>(&'r mut self, rocket: &Rocket) -> Response<'r> {
         let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
-
-        let mut response = match rocket.dispatch(&self.request, data) {
+        match rocket.dispatch(&self.request, data) {
             Ok(response) => response,
-            // FIXME: Send to catcher? Not sure what user would want.
-            Err(_status) => return None
-        };
-
-        response.body().and_then(|body| body.to_string())
+            Err(status) => rocket.handle_error(status, &self.request)
+        }
     }
 }

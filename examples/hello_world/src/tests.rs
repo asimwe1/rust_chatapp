@@ -5,6 +5,9 @@ use rocket::http::Method::*;
 #[test]
 fn hello_world() {
     let rocket = rocket::ignite().mount("/", routes![super::hello]);
-    let result = MockRequest::new(Get, "/").dispatch_with(&rocket);
-    assert_eq!(result.unwrap().as_str(), "Hello, world!");
+    let mut req = MockRequest::new(Get, "/");
+    let mut response = req.dispatch_with(&rocket);
+
+    let body_str = response.body().and_then(|body| body.to_string());
+    assert_eq!(body_str, Some("Hello, world!".to_string()));
 }

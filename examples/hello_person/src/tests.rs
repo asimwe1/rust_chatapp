@@ -1,19 +1,21 @@
 use super::rocket;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
+    use rocket::http::Status;
 
 fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let result = MockRequest::new(Get, uri).dispatch_with(&rocket);
-    assert_eq!(result.unwrap(), expected);
+    let mut req = MockRequest::new(Get, uri);
+    let mut response = req.dispatch_with(&rocket);
+
+    assert_eq!(response.body().and_then(|b| b.to_string()), Some(expected));
 }
 
 fn test_404(uri: &str) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let result = MockRequest::new(Get, uri).dispatch_with(&rocket);
-    // FIXME: Be able to check that actual HTTP response status code.
-    // assert!(result.unwrap().contains("404"));
-    assert!(result.is_none());
+    let mut req = MockRequest::new(Get, uri);
+    let response = req.dispatch_with(&rocket);
+    assert_eq!(response.status(), Status::NotFound);
 }
 
 #[test]
