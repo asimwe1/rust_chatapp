@@ -109,3 +109,54 @@ code you contribute must be:
   * **Focused:** Your code should do what it's supposed to do and nothing more.
 
 All pull requests are code reviewed and tested by the CI.
+
+## Performance
+
+Rocket is designed to be performant. At this time, its performance is
+[bottlenecked by the Hyper HTTP
+library](https://github.com/SergioBenitez/Rocket/issues/17). Even so, Rocket
+currently performs _better_ than the latest version of Hyper on a simple "Hello,
+world!" benchmark:
+
+**Machine Specs:**
+
+  * **Logical Cores:** 12 (6 cores x 2 threads)
+  * **Memory:** 24gb ECC DDR3 @ 1600mhz
+  * **Processor:** Intel Xeon X5675 @ 3.07GHz
+  * **Operating System:** Mac OS X v10.11.6
+
+**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 300 req/s, +/- 1us):
+
+	Running 10s test @ http://localhost:3000
+	  2 threads and 10 connections
+	  Thread Stats   Avg      Stdev     Max   +/- Stdev
+		Latency   177.61us   37.04us   1.77ms   78.55%
+		Req/Sec    27.56k     1.07k   30.37k    69.31%
+	  553567 requests in 10.10s, 77.08MB read
+	Requests/sec:  54811.36
+    Transfer/sec:      7.63MB
+
+**Rocket v0.0.11** (8 LOC) results (best of 3, +/- 200 req/s, +/- 0.5us):
+
+	Running 10s test @ http://localhost:80
+	  2 threads and 10 connections
+	  Thread Stats   Avg      Stdev     Max   +/- Stdev
+		Latency   170.07us   28.02us 484.00us   72.50%
+		Req/Sec    28.55k   830.36    30.43k    69.80%
+	  574017 requests in 10.10s, 79.92MB read
+	Requests/sec:  56836.22
+	Transfer/sec:      7.91MB
+
+**Summary:**
+
+  * Rocket throughput higher by 3.7% (higher is better)
+  * Rocket latency lower by 4.0% (lower is better)
+
+## Future Improvements
+
+Rocket is currently built on a synchronous HTTP backend. Once the Rust
+aynchronous I/O libraries have stabalized, a migration to a new, more performant
+HTTP backend is planned. We expect performance to improve significantly at that
+time. The [Stabilize HTTP
+Library](https://github.com/SergioBenitez/Rocket/issues/17) issue tracks the
+progress on this front.
