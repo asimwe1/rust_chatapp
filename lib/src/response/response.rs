@@ -29,7 +29,7 @@ impl<T> Body<T> {
 }
 
 impl<T: io::Read> Body<T> {
-    pub fn to_string(self) -> Option<String> {
+    pub fn into_string(self) -> Option<String> {
         let (mut body, mut string) = match self {
             Body::Sized(b, size) => (b, String::with_capacity(size as usize)),
             Body::Chunked(b, _) => (b, String::new())
@@ -163,6 +163,7 @@ impl<'r> ResponseBuilder<'r> {
 // replaces, `join` adds. One more thing that could be done: we could make it
 // some that _some_ headers default to replacing, and other to joining.
 /// Return type of a thing.
+#[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,

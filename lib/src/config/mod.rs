@@ -208,7 +208,7 @@ impl RocketConfig {
     fn parse(src: String, filename: &str) -> Result<RocketConfig> {
         // Parse the source as TOML, if possible.
         let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or(ConfigError::ParseError(
+        let toml = parser.parse().ok_or_else(|| ConfigError::ParseError(
             src.clone(), filename.into(),
             parser.errors.iter().map(|error| ParsingError {
                 byte_range: (error.lo, error.hi),
@@ -243,7 +243,7 @@ impl RocketConfig {
                 })?;
 
                 // Set the environment configuration from the kv pairs.
-                config.set(env, &kv_pairs)?;
+                config.set(env, kv_pairs)?;
             }
         }
 

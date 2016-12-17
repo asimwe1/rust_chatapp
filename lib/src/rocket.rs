@@ -68,7 +68,7 @@ impl hyper::Handler for Rocket {
 
         // Dispatch the request to get a response, then write that response out.
         let response = self.dispatch(&mut request, data);
-        return self.issue_response(response, res);
+        self.issue_response(response, res)
     }
 }
 
@@ -164,7 +164,7 @@ impl Rocket {
         match self.route(request, data) {
             Outcome::Success(mut response) => {
                 let cookie_delta = request.cookies().delta();
-                if cookie_delta.len() > 0 {
+                if !cookie_delta.is_empty() {
                     response.adjoin_header(header::SetCookie(cookie_delta));
                 }
 
@@ -204,7 +204,7 @@ impl Rocket {
             -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         info!("{}:", request);
-        let matches = self.router.route(&request);
+        let matches = self.router.route(request);
         for route in matches {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
@@ -212,14 +212,13 @@ impl Rocket {
             request.set_params(route);
 
             // Dispatch the request to the handler.
-            let outcome = (route.handler)(&request, data);
+            let outcome = (route.handler)(request, data);
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
             info_!("{} {}", White.paint("Outcome:"), outcome);
             match outcome {
-                o@Outcome::Success(_) => return o,
-                o@Outcome::Failure(_) => return o,
+                o@Outcome::Success(_) | o @Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
             };
         }

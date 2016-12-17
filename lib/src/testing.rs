@@ -97,10 +97,10 @@
 //!         let mut response = req.dispatch_with(&rocket);
 //!
 //!         // Write the body out as a string.
-//!         let body_str = response.body().unwrap().to_string().unwrap();
+//!         let body_str = response.body().and_then(|b| b.into_string());
 //!
 //!         // Check that the body contains what we expect.
-//!         assert_eq!(body_str, "Hello, world!".to_string());
+//!         assert_eq!(body_str, Some("Hello, world!".to_string()));
 //!     }
 //! }
 //! ```
@@ -216,8 +216,8 @@ impl MockRequest {
     /// let mut req = MockRequest::new(Get, "/");
     /// let mut response = req.dispatch_with(&rocket);
     ///
-    /// let body_str = response.body().unwrap().to_string().unwrap();
-    /// assert_eq!(body_str, "Hello, world!".to_string());
+    /// let body_str = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_str, Some("Hello, world!".to_string()));
     /// # }
     /// ```
     pub fn dispatch_with<'r>(&'r mut self, rocket: &Rocket) -> Response<'r> {

@@ -273,9 +273,9 @@ impl FromStr for ContentType {
         }
 
         let mut trimmed_params = vec![];
-        for param in params.into_iter().flat_map(|p| p.split(";")) {
+        for param in params.into_iter().flat_map(|p| p.split(';')) {
             let param = param.trim_left();
-            for (i, split) in param.split("=").enumerate() {
+            for (i, split) in param.split('=').enumerate() {
                 if split.trim() != split {
                     return Err("Whitespace not allowed around = character.");
                 }

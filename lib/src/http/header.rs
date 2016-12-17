@@ -36,7 +36,7 @@ impl<T> From<T> for Header<'static> where T: hyper::Header + hyper::HeaderFormat
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
     headers: HashMap<Cow<'h, str>, Vec<Cow<'h, str>>>
 }
@@ -55,6 +55,11 @@ impl<'h> HeaderMap<'h> {
     #[inline]
     pub fn len(&self) -> usize {
         self.headers.iter().flat_map(|(_, values)| values.iter()).count()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.headers.is_empty()
     }
 
     #[inline]
@@ -131,6 +136,7 @@ impl<'h> HeaderMap<'h> {
         })
     }
 
+    // TODO: Figure out what the return type is to implement IntoIterator.
     #[inline(always)]
     pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
         self.headers.into_iter().flat_map(|(name, value)| {
@@ -145,7 +151,7 @@ impl<'h> HeaderMap<'h> {
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn into_iter_raw<'s>(self)
+    pub fn into_iter_raw(self)
             -> impl Iterator<Item=(Cow<'h, str>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }

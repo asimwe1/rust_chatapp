@@ -179,8 +179,7 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
             Success(val) => Success(Some(val)),
-            Failure(_) => Success(None),
-            Forward(_) => Success(None),
+            Failure(_) | Forward(_) => Success(None),
         }
     }
 }

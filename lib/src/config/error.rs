@@ -53,7 +53,7 @@ impl ConfigError {
             BadCWD => error!("couldn't get current working directory"),
             NotFound => error!("config file was not found"),
             IOError => error!("failed reading the config file: IO error"),
-            BadFilePath(ref path, ref reason) => {
+            BadFilePath(ref path, reason) => {
                 error!("configuration file path '{}' is invalid", path);
                 info_!("{}", reason);
             }
@@ -67,7 +67,7 @@ impl ConfigError {
                 error!("'{}' is not a valid ROCKET_ENV value", name);
                 info_!("valid environments are: {}", White.paint(valid_envs));
             }
-            BadType(ref name, ref expected, ref actual, ref filename) => {
+            BadType(ref name, expected, actual, ref filename) => {
                 error!("'{}' key could not be parsed", name);
                 info_!("in {}", White.paint(filename));
                 info_!("expected value to be {}, but found {}",

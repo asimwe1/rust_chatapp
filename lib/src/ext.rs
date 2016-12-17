@@ -12,7 +12,7 @@ pub trait ReadExt: io::Read {
             }
         }
 
-        return Ok(start_len - buf.len())
+        Ok(start_len - buf.len())
     }
 }
 

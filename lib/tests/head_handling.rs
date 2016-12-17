@@ -45,7 +45,7 @@ fn auto_head() {
             _ => panic!("Expected a sized body!")
         }
 
-        assert_eq!(body.to_string(), Some("".to_string()));
+        assert_eq!(body.into_string(), Some("".to_string()));
     } else {
         panic!("Expected an empty body!")
     }

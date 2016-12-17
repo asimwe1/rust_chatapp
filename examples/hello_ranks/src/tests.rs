@@ -7,7 +7,7 @@ fn test(uri: &str, expected: String) {
     let mut req = MockRequest::new(Get, uri);
 
     let mut response = req.dispatch_with(&rocket);
-    let body_str = response.body().and_then(|body| body.to_string());
+    let body_str = response.body().and_then(|body| body.into_string());
     assert_eq!(body_str, Some(expected));
 }
 

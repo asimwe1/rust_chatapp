@@ -24,7 +24,7 @@ mod test {
         let mut req = MockRequest::new(Get, "/");
         let mut response = req.dispatch_with(&rocket);
 
-        let body_string = response.body().and_then(|b| b.to_string());
+        let body_string = response.body().and_then(|b| b.into_string());
         assert_eq!(body_string, Some("Hello, world!".to_string()));
     }
 }

@@ -87,7 +87,7 @@ impl Config {
     pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
-            if address_str.contains(":") {
+            if address_str.contains(':') {
                 return Err(self.bad_type(name, val, "an IP address with no port"));
             } else if format!("{}:{}", address_str, 80).to_socket_addrs().is_err() {
                 return Err(self.bad_type(name, val, "a valid IP address"));
@@ -138,24 +138,24 @@ impl Config {
         parse!(self, name, value, as_str, "a string")
     }
 
-    pub fn get_int<'a>(&'a self, name: &str) -> config::Result<i64> {
+    pub fn get_int(&self, name: &str) -> config::Result<i64> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_integer, "an integer")
     }
 
-    pub fn get_bool<'a>(&'a self, name: &str) -> config::Result<bool> {
+    pub fn get_bool(&self, name: &str) -> config::Result<bool> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_bool, "a boolean")
     }
 
-    pub fn get_float<'a>(&'a self, name: &str) -> config::Result<f64> {
+    pub fn get_float(&self, name: &str) -> config::Result<f64> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_float, "a float")
     }
 
     pub fn root(&self) -> &Path {
         match Path::new(self.filename.as_str()).parent() {
-            Some(parent) => &parent,
+            Some(parent) => parent,
             None => panic!("root(): filename {} has no parent", self.filename)
         }
     }

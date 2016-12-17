@@ -214,7 +214,7 @@ impl<'a> URI<'a> {
     /// let decoded_path = URI::percent_decode(uri.path().as_bytes()).expect("decoded");
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
-    pub fn percent_decode<'s>(string: &'s [u8]) -> Result<Cow<'s, str>, Utf8Error>  {
+    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error>  {
         let decoder = url::percent_encoding::percent_decode(string);
         decoder.decode_utf8()
     }
@@ -232,7 +232,7 @@ impl<'a> URI<'a> {
     /// let decoded_path = URI::percent_decode_lossy(uri.path().as_bytes());
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
-    pub fn percent_decode_lossy<'s>(string: &'s [u8]) -> Cow<'s, str> {
+    pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
         let decoder = url::percent_encoding::percent_decode(string);
         decoder.decode_utf8_lossy()
     }
@@ -266,7 +266,7 @@ impl<'a> From<&'a str> for URI<'a> {
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.
-        if self.as_str().starts_with("/") && self.segment_count() == 0 {
+        if self.as_str().starts_with('/') && self.segment_count() == 0 {
             return write!(f, "/");
         }
 
@@ -389,7 +389,7 @@ impl URIBuf {
     /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
     /// ```
     #[inline(always)]
-    pub fn as_str<'a>(&'a self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         self.uri.as_str()
     }
 }

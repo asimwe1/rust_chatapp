@@ -90,8 +90,7 @@ impl<T: FromData> FromData for Option<T> {
     fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error> {
         match T::from_data(request, data) {
             Success(val) => Success(Some(val)),
-            Failure(_) => Success(None),
-            Forward(_) => Success(None)
+            Failure(_) | Forward(_) => Success(None),
         }
     }
 }

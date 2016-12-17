@@ -284,7 +284,7 @@ impl<'a> FromSegments<'a> for PathBuf {
             let decoded = URI::percent_decode(segment.as_bytes())?;
             if decoded == ".." {
                 buf.pop();
-            } else if !(decoded.starts_with(".") || decoded.starts_with("*")) {
+            } else if !(decoded.starts_with('.') || decoded.starts_with('*')) {
                 buf.push(&*decoded)
             }
         }

@@ -163,8 +163,8 @@ pub trait Responder<'r> {
 ///
 /// let mut response = "Hello".respond().unwrap();
 ///
-/// let body_string = response.body().unwrap().to_string().unwrap();
-/// assert_eq!(body_string, "Hello".to_string());
+/// let body_string = response.body().and_then(|b| b.into_string());
+/// assert_eq!(body_string, Some("Hello".to_string()));
 ///
 /// let content_type: Vec<_> = response.get_header_values("Content-Type").collect();
 /// assert_eq!(content_type.len(), 1);

@@ -11,7 +11,7 @@ fn test_login(username: &str, password: &str, age: isize, status: Status,
         .body(&format!("username={}&password={}&age={}", username, password, age));
 
     let mut response = req.dispatch_with(&rocket);
-    let body_str = response.body().and_then(|body| body.to_string());
+    let body_str = response.body().and_then(|body| body.into_string());
 
     println!("Checking: {:?}/{:?}", username, password);
     assert_eq!(response.status(), status);
