@@ -127,30 +127,30 @@ world!" benchmark:
 
 **Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 300 req/s, +/- 1us latency):
 
-	Running 10s test @ http://localhost:3000
-	  2 threads and 10 connections
-	  Thread Stats   Avg      Stdev     Max   +/- Stdev
-		Latency   177.61us   37.04us   1.77ms   78.55%
-		Req/Sec    27.56k     1.07k   30.37k    69.31%
-	  553567 requests in 10.10s, 77.08MB read
-	Requests/sec:  54811.36
-    Transfer/sec:      7.63MB
+    Running 10s test @ http://localhost:80
+      2 threads and 10 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   175.12us   40.38us 429.00us   70.79%
+        Req/Sec    28.00k     2.41k   36.79k    72.28%
+      562692 requests in 10.10s, 81.57MB read
+    Requests/sec:  55715.98
+    Transfer/sec:      8.08MB
 
 **Rocket v0.0.11** (8 LOC) results (best of 3, +/- 200 req/s, +/- 0.5us latency):
 
-	Running 10s test @ http://localhost:80
-	  2 threads and 10 connections
-	  Thread Stats   Avg      Stdev     Max   +/- Stdev
-		Latency   170.07us   28.02us 484.00us   72.50%
-		Req/Sec    28.55k   830.36    30.43k    69.80%
-	  574017 requests in 10.10s, 79.92MB read
-	Requests/sec:  56836.22
-	Transfer/sec:      7.91MB
+    Running 10s test @ http://localhost:80
+      2 threads and 10 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   163.97us   27.47us 699.00us   70.30%
+        Req/Sec    29.58k     1.02k   32.39k    64.85%
+      594546 requests in 10.10s, 82.78MB read
+    Requests/sec:  58868.83
+    Transfer/sec:      8.20MB
 
 **Summary:**
 
-  * Rocket throughput higher by 3.7% (higher is better)
-  * Rocket latency lower by 4.0% (lower is better)
+  * Rocket throughput higher by 5.7% (higher is better).
+  * Rocket latency lower by 7.4% (lower is better).
 
 ### Future Improvements
 
