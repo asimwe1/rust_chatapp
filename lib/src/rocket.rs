@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
-use std::process;
 use std::io::{self, Write};
 
 use term_painter::Color::*;
@@ -330,6 +329,11 @@ impl Rocket {
     /// generation facilities. Requests to the `/hello/world` URI will be
     /// dispatched to the `hi` route.
     ///
+    /// # Panics
+    ///
+    /// The `base` mount point must be a static path. That is, the mount point
+    /// must _not_ contain dynamic path parameters: `<param>`.
+    ///
     /// ```rust
     /// # #![feature(plugin)]
     /// # #![plugin(rocket_codegen)]
@@ -368,6 +372,13 @@ impl Rocket {
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
+
+        if base.contains('<') {
+            error_!("Bad mount point: '{}'.", base);
+            error_!("Mount points must be static paths!");
+            panic!("Bad mount point.")
+        }
+
         for mut route in routes {
             let path = format!("{}/{}", base, route.path.as_uri());
             route.set_path(path);
@@ -448,9 +459,8 @@ impl Rocket {
         let server = match hyper::Server::http(full_addr.as_str()) {
             Ok(hyper_server) => hyper_server,
             Err(e) => {
-                error!("failed to start server.");
-                error_!("{}", e);
-                process::exit(1);
+                error!("Failed to start server.");
+                panic!("{}", e);
             }
         };
 
