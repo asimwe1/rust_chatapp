@@ -16,5 +16,5 @@ fn hi<'r>(name: &'r str) -> &'r str {
 }
 
 fn main() {
-    rocket::ignite().mount("/<test>", routes![hello, hi]).launch();
+    rocket::ignite().mount("/", routes![hello, hi]).launch();
 }
