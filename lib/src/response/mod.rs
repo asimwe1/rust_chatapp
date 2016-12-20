@@ -30,7 +30,7 @@ mod failure;
 pub mod content;
 pub mod status;
 
-pub use self::response::{Response, Body, DEFAULT_CHUNK_SIZE};
+pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;

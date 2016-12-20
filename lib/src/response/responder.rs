@@ -166,7 +166,7 @@ pub trait Responder<'r> {
 /// let body_string = response.body().and_then(|b| b.into_string());
 /// assert_eq!(body_string, Some("Hello".to_string()));
 ///
-/// let content_type: Vec<_> = response.get_header_values("Content-Type").collect();
+/// let content_type: Vec<_> = response.header_values("Content-Type").collect();
 /// assert_eq!(content_type.len(), 1);
 /// assert_eq!(content_type[0], ContentType::Plain.to_string());
 /// ```

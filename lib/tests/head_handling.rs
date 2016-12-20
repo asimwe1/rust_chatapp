@@ -51,7 +51,7 @@ fn auto_head() {
     }
 
 
-    let content_type: Vec<_> = response.get_header_values("Content-Type").collect();
+    let content_type: Vec<_> = response.header_values("Content-Type").collect();
     assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
 
     let mut req = MockRequest::new(Head, "/empty");
@@ -67,6 +67,6 @@ fn user_head() {
 
     assert_eq!(response.status(), Status::Ok);
 
-    let content_type: Vec<_> = response.get_header_values("Content-Type").collect();
+    let content_type: Vec<_> = response.header_values("Content-Type").collect();
     assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
 }

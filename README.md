@@ -56,7 +56,7 @@ simple.
 
   * Core: `cd lib && cargo build`
   * Codegen: `cd codegen && cargo build`
-  * Contrib: `cd contrib && cargo build`
+  * Contrib: `cd contrib && cargo build --all-features`
 
 ### Examples
 
