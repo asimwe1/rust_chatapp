@@ -5,14 +5,20 @@ use http::{Header, HeaderMap};
 use response::Responder;
 use http::Status;
 
+/// The default size, in bytes, of a chunk for streamed responses.
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
 
+#[derive(PartialEq, Clone, Hash)]
+/// The body of a response: can be sized or streamed/chunked.
 pub enum Body<T> {
+    /// A fixed-size body.
     Sized(T, u64),
+    /// A streamed/chunked body, akin to `Transfer-Encoding: chunked`.
     Chunked(T, u64)
 }
 
 impl<T> Body<T> {
+    /// Returns a mutable borrow to the inner type.
     pub fn as_mut(&mut self) -> Body<&mut T> {
         match *self {
             Body::Sized(ref mut b, n) => Body::Sized(b, n),
@@ -20,6 +26,9 @@ impl<T> Body<T> {
         }
     }
 
+    /// Consumes `self`. Passes the inner type as a parameter to `f` and
+    /// constructs a new body with the size of `self` and the return value of
+    /// the call to `f`.
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Body<U> {
         match self {
             Body::Sized(b, n) => Body::Sized(f(b), n),
@@ -29,6 +38,8 @@ impl<T> Body<T> {
 }
 
 impl<T: io::Read> Body<T> {
+    /// Attepts to read `self` into a `String` and returns it. If reading or
+    /// conversion fails, returns `None`.
     pub fn into_string(self) -> Option<String> {
         let (mut body, mut string) = match self {
             Body::Sized(b, size) => (b, String::with_capacity(size as usize)),
@@ -162,7 +173,7 @@ impl<'r> ResponseBuilder<'r> {
 // `join`? Maybe one does one thing, the other does another? IE: `merge`
 // replaces, `join` adds. One more thing that could be done: we could make it
 // some that _some_ headers default to replacing, and other to joining.
-/// Return type of a thing.
+/// An HTTP response.
 #[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,

@@ -3,10 +3,10 @@
 //! # Usage
 //!
 //! Each type wraps a given responder. The `Responder` implementation of each
-//! type simply sets the Content-Type and delegates the remainder of the
-//! response to the wrapped responder. This is useful for setting the
-//! Content-Type of a type that doesn't set it itself or for overriding one that
-//! does.
+//! type replaces the Content-Type of the wrapped responder and delegates the
+//! remainder of the response to the wrapped responder. This allows for setting
+//! the Content-Type of a type that doesn't set it itself or for overriding one
+//! that does.
 //!
 //! # Example
 //!
@@ -24,24 +24,24 @@
 use response::{Response, Responder};
 use http::{Status, ContentType};
 
-/// Set the Content-Type to any arbitrary value.
+/// Sets the Content-Type of a `Responder` to a chosen value.
 ///
 /// Delagates the remainder of the response to the wrapped responder.
 ///
 /// # Example
 ///
-/// Set the Content-Type of a string to be PDF.
+/// Set the Content-Type of a string to PDF.
 ///
 /// ```rust
 /// use rocket::response::content::Content;
 /// use rocket::http::ContentType;
 ///
-/// let response = Content(ContentType::from_extension("pdf"), "Hi.");
+/// let response = Content(ContentType::PDF, "Hi.");
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Content<R>(pub ContentType, pub R);
 
-/// Sets the Content-Type of the response to the wrapped `ContentType` then
+/// Overrides the Content-Type of the response to the wrapped `ContentType` then
 /// delegates the remainder of the response to the wrapped responder.
 impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
     #[inline(always)]
@@ -56,14 +56,14 @@ impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
 macro_rules! ctrs {
     ($($name:ident: $name_str:expr, $ct_str:expr),+) => {
         $(
-            #[doc="Set the `Content-Type` of the response to <b>"]
+            #[doc="Override the `Content-Type` of the response to <b>"]
             #[doc=$name_str]
             #[doc="</b>, or <i>"]
             #[doc=$ct_str]
             #[doc="</i>."]
             ///
             /// Delagates the remainder of the response to the wrapped responder.
-            #[derive(Debug)]
+            #[derive(Debug, Clone, PartialEq)]
             pub struct $name<R>(pub R);
 
             /// Sets the Content-Type of the response then delegates the

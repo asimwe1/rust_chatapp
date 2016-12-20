@@ -1,8 +1,8 @@
 //! Contains types that set the status code and correspoding headers of a
 //! response.
 //!
-//! These types are designed to make it easier to respond with a given status
-//! code. Each type takes in the minimum number of parameters required to
+//! These types are designed to make it easier to respond correctly with a given
+//! status code. Each type takes in the minimum number of parameters required to
 //! construct a proper response with that status code. Some types take in
 //! responders; when they do, the responder finalizes the response by writing
 //! out additional headers and, importantly, the body of the response.
@@ -28,6 +28,7 @@ use http::Status;
 /// let content = "{ 'resource': 'Hello, world!' }";
 /// let response = status::Created(url, Some(content));
 /// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct Created<R>(pub String, pub Option<R>);
 
 /// Sets the status code of the response to 201 Created. Sets the `Location`
@@ -90,6 +91,7 @@ impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
 ///
 /// let response = status::Accepted(Some("processing"));
 /// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct Accepted<R>(pub Option<R>);
 
 /// Sets the status code of the response to 202 Accepted. If the responder is
@@ -115,6 +117,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 /// let response = status::NoContent;
 /// ```
 // TODO: This would benefit from Header support.
+#[derive(Debug, Clone, PartialEq)]
 pub struct NoContent;
 
 /// Sets the status code of the response to 204 No Content. The body of the
@@ -135,6 +138,7 @@ impl<'r> Responder<'r> for NoContent {
 ///
 /// let response = status::Reset;
 /// ```
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Reset;
 
 /// Sets the status code of the response to 205 Reset Content. The body of the
@@ -155,6 +159,7 @@ impl<'r> Responder<'r> for Reset {
 ///
 /// let response = status::Custom(Status::ImATeapot, "Hi!");
 /// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct Custom<R>(pub Status, pub R);
 
 /// Sets the status code of the response and then delegates the remainder of the
