@@ -92,8 +92,8 @@ use response::{Response, Stream};
 /// When chaining/wrapping other `Responder`s, use the
 /// [merge](/rocket/struct.Response.html#method.merge) or
 /// [join](/rocket/struct.Response.html#method.join) methods on the `Response`
-/// struct. Ensure that you document the merging or joining behavior
-/// appropriately.
+/// or `ResponseBuilder` struct. Ensure that you document the merging or joining
+/// behavior appropriately.
 ///
 /// # Example
 ///
@@ -142,18 +142,19 @@ use response::{Response, Stream};
 /// }
 /// ```
 pub trait Responder<'r> {
-    /// Attempts to write a response to `res`.
+    /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
+    /// returns an `Err` with a failing `Status`.
     ///
-    /// If writing the response successfully completes, an outcome of `Success`
-    /// is returned. If writing the response begins but fails, an outcome of
-    /// `Failure` is returned. If writing a response fails before writing
-    /// anything out, an outcome of `Forward` can be returned, which causes the
-    /// response to be written by the appropriate error catcher instead.
+    /// When using Rocket's code generation, if an `Ok(Response)` is returned,
+    /// the response will be written out to the client. If an `Err(Status)` is
+    /// returned, the error catcher for the given status is retrieved and called
+    /// to generate a final error response, which is then written out to the
+    /// client.
     fn respond(self) -> Result<Response<'r>, Status>;
 }
 
-/// Sets the `Content-Type`t to `text/plain` if it is not already set. Sends the
-/// string as the body of the response. Never fails.
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
+/// containing the string `self`. Always returns `Ok`.
 ///
 /// # Example
 ///
@@ -179,6 +180,8 @@ impl<'r> Responder<'r> for &'r str {
     }
 }
 
+/// Returns a response with Content-Type `text/html` and a fized-size body
+/// containing the string `self`. Always returns `Ok`.
 impl Responder<'static> for String {
     fn respond(self) -> Result<Response<'static>, Status> {
         Response::build()
@@ -188,20 +191,22 @@ impl Responder<'static> for String {
     }
 }
 
-/// Essentially aliases Stream<File>.
+/// Aliases Stream<File>: `Stream::from(self)`.
 impl Responder<'static> for File {
     fn respond(self) -> Result<Response<'static>, Status> {
         Stream::from(self).respond()
     }
 }
 
-/// Empty response.
+/// Returns an empty, default `Response`. Always returns `Ok`.
 impl Responder<'static> for () {
     fn respond(self) -> Result<Response<'static>, Status> {
         Ok(Response::new())
     }
 }
 
+/// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
+/// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     fn respond(self) -> Result<Response<'r>, Status> {
         self.map_or_else(|| {
@@ -211,6 +216,9 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     }
 }
 
+/// If `self` is `Ok`, responds with the wrapped `Responder`. Otherwise prints a
+/// warning message with the `Err` value returns an `Err` of
+/// `Status::InternalServerError`.
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     default fn respond(self) -> Result<Response<'r>, Status> {
         self.map(|r| r.respond()).unwrap_or_else(|e| {
@@ -220,6 +228,8 @@ impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     }
 }
 
+/// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
+/// `Err`.
 impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
     fn respond(self) -> Result<Response<'r>, Status> {
         match self {
