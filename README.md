@@ -29,11 +29,17 @@ route won't get called, resulting in a 404 error.
 
 Rocket is extensively documented:
 
-  * [Quickstart](guide/quickstart): How to get started as quickly as possible.
-  * [Getting Started](guide/getting_started): How to start your first project.
-  * [Overview](overview): A brief introduction.
-  * [Guide](guide): A detailed guide and reference to every component.
-  * [API Documentation](https://api.rocket.rs): The "rustdocs" (API documentation).
+  * [Overview]: A brief look at what makes Rocket special.
+  * [Quickstart]: How to get started as quickly as possible.
+  * [Getting Started]: How to start your first Rocket project.
+  * [Guide]: A detailed guide and reference to Rocket.
+  * [API Documentation]: The "rustdocs".
+
+[Quickstart]: https://rocket.rs/guide/quickstart
+[Getting Started]: https://rocket.rs/guide/getting-started
+[Overview]: https://rocket.rs/overview
+[Guide]: https://rocket.rs/guide
+[API Documentation]: https://api.rocket.rs/rocket
 
 ## Building
 
