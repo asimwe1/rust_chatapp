@@ -137,7 +137,9 @@ pub use self::environment::Environment;
 pub use self::config::Config;
 use self::Environment::*;
 
-use toml::{self, Table};
+use toml;
+pub use toml::{Array, Table, Value};
+
 use logger::{self, LoggingLevel};
 
 static INIT: Once = ONCE_INIT;

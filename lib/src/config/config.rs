@@ -22,7 +22,7 @@ pub struct Config {
     pub env: Environment,
     session_key: RwLock<Option<String>>,
     extras: HashMap<String, Value>,
-    filename: String,
+    filepath: String,
 }
 
 macro_rules! parse {
@@ -34,10 +34,13 @@ macro_rules! parse {
 }
 
 impl Config {
-    pub fn default_for(env: Environment, filename: &str) -> config::Result<Config> {
-        let file_path = Path::new(filename);
+    /// Returns the default configuration for the environment `env` given that
+    /// the configuration was stored at `filepath`. If `filepath` is not an
+    /// absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
+    pub fn default_for(env: Environment, filepath: &str) -> config::Result<Config> {
+        let file_path = Path::new(filepath);
         if file_path.parent().is_none() {
-            return Err(ConfigError::BadFilePath(filename.to_string(),
+            return Err(ConfigError::BadFilePath(filepath.to_string(),
                 "Configuration files must be rooted in a directory."));
         }
 
@@ -50,7 +53,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    filename: filename.to_string(),
+                    filepath: filepath.to_string(),
                 }
             }
             Staging => {
@@ -61,7 +64,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    filename: filename.to_string(),
+                    filepath: filepath.to_string(),
                 }
             }
             Production => {
@@ -72,18 +75,34 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    filename: filename.to_string(),
+                    filepath: filepath.to_string(),
                 }
             }
         })
     }
 
+    /// Constructs a `BadType` error given the entry `name`, the invalid `val`
+    /// at that entry, and the `expect`ed type name.
     #[inline(always)]
     fn bad_type(&self, name: &str, val: &Value, expect: &'static str) -> ConfigError {
         let id = format!("{}.{}", self.env, name);
-        ConfigError::BadType(id, expect, val.type_str(), self.filename.clone())
+        ConfigError::BadType(id, expect, val.type_str(), self.filepath.clone())
     }
 
+    /// Sets the configuration `val` for the `name` entry. If the `name` is one
+    /// of "address", "port", "session_key", or "log" (the "default" values),
+    /// the appropriate value in the `self` Config structure is set. Otherwise,
+    /// the value is stored as an `extra`.
+    ///
+    /// For each of the default values, the following `Value` variant is
+    /// expected. If a different variant is supplied, a `BadType` `Err` is
+    /// returned:
+    ///
+    ///   * **address**: String
+    ///   * **port**: Integer
+    ///   * **session_key**: String (192-bit base64)
+    ///   * **log**: String
+    ///
     pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
@@ -122,76 +141,124 @@ impl Config {
         Ok(())
     }
 
+    /// Moves the session key string out of the `self` Config, if there is one.
+    /// Because the value is moved out, subsequent calls will result in a return
+    /// value of `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Value};
+    ///
+    /// // Create a new config with a session key.
+    /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz".to_string();
+    /// let config = Config::default_for(Environment::Staging, "/custom").unwrap()
+    ///     .session_key(key.clone());
+    ///
+    /// // Get the key for the first time.
+    /// let session_key = config.take_session_key();
+    /// assert_eq!(session_key, Some(key.clone()));
+    ///
+    /// // Try to get the key again.
+    /// let session_key_again = config.take_session_key();
+    /// assert_eq!(session_key_again, None);
+    /// ```
     #[inline(always)]
     pub fn take_session_key(&self) -> Option<String> {
         let mut key = self.session_key.write().expect("couldn't lock session key");
         key.take()
     }
 
+    /// Returns an iterator over the names and values of all of the extras in
+    /// the `self` Config.
     #[inline(always)]
-    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a String, &'a Value)> {
-        self.extras.iter()
+    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
+        self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
+    /// Attempts to retrieve the extra named `name` as a string. If an extra
+    /// with that name doesn't exist, returns an `Err` of `NotFound`. If an
+    /// extra with that name does exist but is not a string, returns a `BadType`
+    /// error.
     pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_str, "a string")
     }
 
+    /// Attempts to retrieve the extra named `name` as an integer. If an extra
+    /// with that name doesn't exist, returns an `Err` of `NotFound`. If an
+    /// extra with that name does exist but is not an integer, returns a
+    /// `BadType` error.
     pub fn get_int(&self, name: &str) -> config::Result<i64> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_integer, "an integer")
     }
 
+    /// Attempts to retrieve the extra named `name` as a boolean. If an extra
+    /// with that name doesn't exist, returns an `Err` of `NotFound`. If an
+    /// extra with that name does exist but is not a boolean, returns a
+    /// `BadType` error.
     pub fn get_bool(&self, name: &str) -> config::Result<bool> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_bool, "a boolean")
     }
 
+    /// Attempts to retrieve the extra named `name` as a float. If an extra
+    /// with that name doesn't exist, returns an `Err` of `NotFound`. If an
+    /// extra with that name does exist but is not a float, returns a
+    /// `BadType` error.
     pub fn get_float(&self, name: &str) -> config::Result<f64> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         parse!(self, name, value, as_float, "a float")
     }
 
+    /// Returns the path at which the configuration file for `self` is stored.
+    /// For instance, if the configuration file is at `/tmp/Rocket.toml`, the
+    /// path `/tmp` is returned.
     pub fn root(&self) -> &Path {
-        match Path::new(self.filename.as_str()).parent() {
+        match Path::new(self.filepath.as_str()).parent() {
             Some(parent) => parent,
-            None => panic!("root(): filename {} has no parent", self.filename)
+            None => panic!("root(): filepath {} has no parent", self.filepath)
         }
     }
 
-    // Builder pattern below, mostly for testing.
-
+    /// Sets the `address` in `self` to `var` and returns the structure.
     #[inline(always)]
     pub fn address(mut self, var: String) -> Self {
         self.address = var;
         self
     }
 
+    /// Sets the `port` in `self` to `var` and returns the structure.
     #[inline(always)]
     pub fn port(mut self, var: usize) -> Self {
         self.port = var;
         self
     }
 
+    /// Sets the `log_level` in `self` to `var` and returns the structure.
     #[inline(always)]
     pub fn log_level(mut self, var: LoggingLevel) -> Self {
         self.log_level = var;
         self
     }
 
+    /// Sets the `session_key` in `self` to `var` and returns the structure.
     #[inline(always)]
     pub fn session_key(mut self, var: String) -> Self {
         self.session_key = RwLock::new(Some(var));
         self
     }
 
+    /// Sets the `env` in `self` to `var` and returns the structure.
     #[inline(always)]
     pub fn env(mut self, var: Environment) -> Self {
         self.env = var;
         self
     }
 
+    /// Adds an extra configuration parameter with `name` and `value` to `self`
+    /// and returns the structure.
     #[inline(always)]
     pub fn extra(mut self, name: &str, value: &Value) -> Self {
         self.extras.insert(name.into(), value.clone());
@@ -214,7 +281,7 @@ impl PartialEq for Config {
             && self.log_level == other.log_level
             && self.env == other.env
             && self.extras == other.extras
-            && self.filename == other.filename
+            && self.filepath == other.filepath
     }
 }
 

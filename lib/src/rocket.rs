@@ -155,6 +155,7 @@ impl Rocket {
     }
 
     #[doc(hidden)]
+    #[inline(always)]
     pub fn dispatch<'r>(&self, request: &'r mut Request, data: Data) -> Response<'r> {
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
@@ -173,7 +174,9 @@ impl Rocket {
                 // Rust thinks `request` is still borrowed here, but it's
                 // obviously not (data has nothing to do with it), so we
                 // convince it to give us another mutable reference.
-                // FIXME: Pay the cost to copy Request into UnsafeCell?
+                // FIXME: Pay the cost to copy Request into UnsafeCell? Pay the
+                // cost to use RefCell? Move the call to `issue_response` here
+                // to move Request and move directly into a RefCell?
                 let request: &'r mut Request = unsafe {
                     &mut *(request as *const Request as *mut Request)
                 };
@@ -198,7 +201,7 @@ impl Rocket {
     /// returns a failure, or there are no matching handlers willing to accept
     /// the request, this function returns an `Err` with the status code.
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub fn route<'r>(&self, request: &'r Request, mut data: Data)
             -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.

@@ -1,3 +1,5 @@
+//! The types of request and error handlers and their return values.
+
 use data::Data;
 use request::Request;
 use response::{self, Response, Responder};

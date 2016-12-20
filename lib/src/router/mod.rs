@@ -42,6 +42,7 @@ impl Router {
                 .filter(|r| r.collides_with(req))
                 .collect();
 
+            // FIXME: Presort vector to avoid a sort on each route.
             matches.sort_by(|a, b| a.rank.cmp(&b.rank));
             trace_!("All matches: {:?}", matches);
             matches

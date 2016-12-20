@@ -13,7 +13,7 @@
 //! as well as a [full, detailed guide](https://rocket.rs/guide). If you'd like
 //! pointers on getting started, see the
 //! [quickstart](https://rocket.rs/guide/quickstart) or [getting
-//! started](https://rocket.rs/guide/getting_started) chapters of the guide.
+//! started](https://rocket.rs/guide/getting-started) chapters of the guide.
 //!
 //! You may also be interested in looking at the [contrib API
 //! documentation](../rocket_contrib), which contains JSON and templating
@@ -42,10 +42,10 @@
 //! rocket_codegen = "*"
 //! ```
 //!
-//! If you'll be deploying your project to Crates.io, you'll need to change the
-//! "*" to the current version of Rocket.
+//! If you'll be deploying your project to [crates.io](https://crates.io),
+//! you'll need to change the "*" to the current version of Rocket.
 //!
-//! Then, add the following to top of your `main.rs` file:
+//! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
 //! #![feature(plugin)]
@@ -79,14 +79,14 @@
 //!
 //! Rocket and Rocket libraries are configured via the `Rocket.toml` file. For
 //! more information on how to configure Rocket, see the [configuration
-//! section](/guide/configuration) of the guide as well as the [config](config)
-//! module documentation.
+//! section](https://rocket.rs/guide/getting-started/#configuration) of the
+//! guide as well as the [config](config) module documentation.
 //!
 //! ## Testing
 //!
 //! Rocket includes a small testing library that can be used to test your Rocket
-//! application. The library's API is unstable. For information on how to test
-//! your Rocket applications, the [testing module](testing) documentation.
+//! application. For information on how to test your Rocket applications, the
+//! [testing module](testing) documentation.
 //!
 
 #[macro_use] extern crate log;
