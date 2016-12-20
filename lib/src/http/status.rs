@@ -1,14 +1,61 @@
 use std::fmt;
 
-pub enum Class {
+/// Enumeration of HTTP status classes.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum StatusClass {
+    /// Indicates a provisional response.
     Informational,
+    /// Indicates that a request has succeeded.
     Success,
+    /// Indicates that further action needs to be taken by the user agent in
+    /// order to fulfill the request.
     Redirection,
+    /// Intended for cases in which the client seems to have erred.
     ClientError,
+    /// Indicates cases in which the server is aware that it has erred or is
+    /// incapable of performing the request.
     ServerError,
+    /// Indicates that the status code is nonstandard and unknown.
     Unknown
 }
 
+/// Structure representing HTTP statuses: an integer code and a reason phrase.
+///
+/// # Usage
+///
+/// Status classes should rarely be created directly. Instead, an associated
+/// constant should be used; one is declared for every standard status defined
+/// in the HTTP standard.
+///
+/// ## Example
+///
+/// A status of `200 OK` can be insantiated via the `Ok` constant:
+///
+/// ```rust
+/// use rocket::http::Status;
+///
+/// let ok = Status::Ok;
+/// ```
+///
+/// A status of `400 Not Found` can be insantiated via the `NotFound` constant:
+///
+/// ```rust
+/// use rocket::http::Status;
+///
+/// let not_found = Status::NotFound;
+/// ```
+///
+/// The code and phrase can be retrieved directly:
+///
+/// ```rust
+/// use rocket::http::Status;
+///
+/// let not_found = Status::NotFound;
+///
+/// assert_eq!(not_found.code, 404);
+/// assert_eq!(not_found.reason, "Not Found");
+/// assert_eq!(not_found.to_string(), "404 Not Found".to_string());
+/// ```
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Status {
     /// The HTTP status code associated with this status.
@@ -19,13 +66,6 @@ pub struct Status {
 
 macro_rules! ctrs {
     ($($code:expr, $code_str:expr, $name:ident => $reason:expr),+) => {
-        pub fn from_code(code: u16) -> Option<Status> {
-            match code {
-                $($code => Some(Status::$name),)+
-                _ => None
-            }
-        }
-
         $(
             #[doc="[Status](struct.Status.html) with code <b>"]
             #[doc=$code_str]
@@ -35,29 +75,40 @@ macro_rules! ctrs {
             #[allow(non_upper_case_globals)]
             pub const $name: Status = Status::new($code, $reason);
          )+
+
+        /// Returns a Status given a standard status code `code`. If `code` is
+        /// not a known status code, `None` is returned.
+        ///
+        /// # Example
+        ///
+        /// Create a `Status` from a known `code`:
+        ///
+        /// ```rust
+        /// use rocket::http::Status;
+        ///
+        /// let not_found = Status::from_code(404);
+        /// assert_eq!(not_found, Some(Status::NotFound));
+        /// ```
+        ///
+        /// Create a `Status` from an unknown `code`:
+        ///
+        /// ```rust
+        /// use rocket::http::Status;
+        ///
+        /// let not_found = Status::from_code(600);
+        /// assert!(not_found.is_none());
+        /// ```
+        pub fn from_code(code: u16) -> Option<Status> {
+            match code {
+                $($code => Some(Status::$name),)+
+                _ => None
+            }
+        }
+
     };
 }
 
 impl Status {
-    #[inline(always)]
-    pub const fn new(code: u16, reason: &'static str) -> Status {
-        Status {
-            code: code,
-            reason: reason
-        }
-    }
-
-    pub fn class(&self) -> Class {
-        match self.code / 100 {
-            1 => Class::Informational,
-            2 => Class::Success,
-            3 => Class::Redirection,
-            4 => Class::ClientError,
-            5 => Class::ServerError,
-            _ => Class::Unknown
-        }
-    }
-
     ctrs! {
         100, "100", Continue => "Continue",
         101, "101", SwitchingProtocols => "Switching Protocols",
@@ -121,6 +172,67 @@ impl Status {
         511, "511", NetworkAuthenticationRequired => "Network Authentication Required"
     }
 
+    /// Returns the class of a given status.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{Status, StatusClass};
+    ///
+    /// let processing = Status::Processing;
+    /// assert_eq!(processing.class(), StatusClass::Informational);
+    ///
+    /// let ok = Status::Ok;
+    /// assert_eq!(ok.class(), StatusClass::Success);
+    ///
+    /// let see_other = Status::SeeOther;
+    /// assert_eq!(see_other.class(), StatusClass::Redirection);
+    ///
+    /// let not_found = Status::NotFound;
+    /// assert_eq!(not_found.class(), StatusClass::ClientError);
+    ///
+    /// let internal_error = Status::InternalServerError;
+    /// assert_eq!(internal_error.class(), StatusClass::ServerError);
+    ///
+    /// let custom = Status::new(600, "Bizarre");
+    /// assert_eq!(custom.class(), StatusClass::Unknown);
+    /// ```
+    pub fn class(&self) -> StatusClass {
+        match self.code / 100 {
+            1 => StatusClass::Informational,
+            2 => StatusClass::Success,
+            3 => StatusClass::Redirection,
+            4 => StatusClass::ClientError,
+            5 => StatusClass::ServerError,
+            _ => StatusClass::Unknown
+        }
+    }
+
+    /// Creates a new `Status` with `code` and `reason`. This should be _only_
+    /// to construct non-standard HTTP statuses. Use an associated constant for
+    /// standard statuses.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `299 Somewhat Successful` status:
+    ///
+    /// ```rust
+    /// use rocket::http::Status;
+    ///
+    /// let custom = Status::new(299, "Somewhat Successful");
+    /// assert_eq!(custom.to_string(), "299 Somewhat Successful".to_string());
+    /// ```
+    #[inline(always)]
+    pub const fn new(code: u16, reason: &'static str) -> Status {
+        Status {
+            code: code,
+            reason: reason
+        }
+    }
+
+    /// Returns a status from a given status code. If the status code is a
+    /// standard code, then the reason phrase is populated accordingly.
+    /// Otherwise the reason phrase is set to "<unknown code>".
     #[doc(hidden)]
     #[inline]
     pub fn raw(code: u16) -> Status {
