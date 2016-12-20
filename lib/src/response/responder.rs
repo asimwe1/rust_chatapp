@@ -19,14 +19,14 @@ use response::{Response, Stream};
 ///
 /// # Return Value
 ///
-/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`.
+/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`:
 ///
-/// An `Ok` variant means that the `Responder` was successful in generating a
-/// new `Response`. The `Response` will be written out to the client.
+///   * An `Ok` variant means that the `Responder` was successful in generating
+///     a `Response`. The `Response` will be written out to the client.
 ///
-/// An `Err` variant means that the `Responder` could not or did not generate a
-/// `Response`. The contained `Status` will be used to find the relevant error
-/// catcher to use to generate a proper response.
+///   * An `Err` variant means that the `Responder` could not or did not
+///     generate a `Response`. The contained `Status` will be used to find the
+///     relevant error catcher which then generates an error response.
 ///
 /// # Provided Implementations
 ///
@@ -37,7 +37,7 @@ use response::{Response, Stream};
 ///
 ///   * **&str**
 ///
-///     Sets the `Content-Type`t to `text/plain`. The string is used as the body
+///     Sets the `Content-Type` to `text/plain`. The string is used as the body
 ///     of the response, which is fixed size and not streamed. To stream a raw
 ///     string, use `Stream::from(Cursor::new(string))`.
 ///
@@ -52,15 +52,15 @@ use response::{Response, Stream};
 ///     Streams the `File` to the client. This is essentially an alias to
 ///     `Stream::from(file)`.
 ///
-///   * **impl Responder for ()**
+///   * **()**
 ///
 ///     Responds with an empty body. No Content-Type is set.
 ///
 ///   * **Option&lt;T>**
 ///
 ///     If the `Option` is `Some`, the wrapped responder is used to respond to
-///     respond to the client. Otherwise, an `Err` with status **404 Not Found**
-///     is returned and a warning is printed to the console.
+///     the client. Otherwise, an `Err` with status **404 Not Found** is
+///     returned and a warning is printed to the console.
 ///
 ///   * **Result&lt;T, E>** _where_ **E: Debug**
 ///

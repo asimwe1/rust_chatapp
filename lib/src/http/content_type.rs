@@ -6,17 +6,43 @@ use http::Header;
 use http::hyper::mime::Mime;
 use router::Collider;
 
-/// Typed representation of HTTP Content-Types.
+/// Representation of HTTP Content-Types.
 ///
-/// This type wraps raw HTTP `Content-Type`s in a type-safe manner. It provides
-/// methods to create and test against common HTTP content-types. It also
-/// provides methods to parse HTTP Content-Type values
-/// ([from_str](#method.from_str)) and to return the ContentType associated with
-/// a file extension ([from_ext](#method.from_extension)).
+/// # Usage
+///
+/// ContentTypes should rarely be created directly. Instead, an associated
+/// constant should be used; one is declared for most commonly used content
+/// types.
+///
+/// ## Example
+///
+/// A Content-Type of `text/html; charset=utf-8` can be insantiated via the
+/// `HTML` constant:
+///
+/// ```rust
+/// use rocket::http::ContentType;
+///
+/// let html = ContentType::HTML;
+/// ```
+///
+/// # Header
+///
+/// `ContentType` implements `Into<Header>`. As such, it can be used in any
+/// context where an `Into<Header>` is expected:
+///
+/// ```rust
+/// use rocket::http::ContentType;
+/// use rocket::response::Response;
+///
+/// let response = Response::build().header(ContentType::HTML).finalize();
+/// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct ContentType {
+    /// The "type" component of the Content-Type.
     pub ttype: Cow<'static, str>,
+    /// The "subtype" component of the Content-Type.
     pub subtype: Cow<'static, str>,
+    /// Semicolon-seperated parameters associated with the Content-Type.
     pub params: Option<Cow<'static, str>>
 }
 
@@ -45,7 +71,8 @@ macro_rules! ctrs {
             };
          )+
 
-            /// Returns `true` if this ContentType is known to Rocket.
+            /// Returns `true` if this ContentType is known to Rocket, that is,
+            /// there is an associated constant for `self`.
             pub fn is_known(&self) -> bool {
                 match (&*self.ttype, &*self.subtype) {
                     $(
@@ -63,7 +90,9 @@ macro_rules! ctrs {
             #[doc="</i>/<i>"]
             #[doc=$sub]
             #[doc="</i>."]
-            /// Paramaters are not taken into account when doing that check.
+            ///
+            /// Paramaters are not taken into account when doing this check.
+            #[inline(always)]
             pub fn $check_name(&self) -> bool {
                 self.ttype == $top && self.subtype == $sub
             }
@@ -72,34 +101,26 @@ macro_rules! ctrs {
 }
 
 impl ContentType {
-    #[inline(always)]
-    pub fn new<T, S>(ttype: T, subtype: S) -> ContentType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
-    {
-        ContentType {
-            ttype: ttype.into(),
-            subtype: subtype.into(),
-            params: None
-        }
+    ctrs! {
+        "any", Any, is_any => "*", "*",
+        "HTML", HTML, is_html => "text", "html" ; "charset=utf-8",
+        "Plain", Plain, is_plain => "text", "plain" ; "charset=utf-8",
+        "JSON", JSON, is_json => "application", "json",
+        "form", Form, is_form => "application", "x-www-form-urlencoded",
+        "JavaScript", JavaScript, is_javascript => "application", "javascript",
+        "CSS", CSS, is_css => "text", "css" ; "charset=utf-8",
+        "data form", DataForm, is_data_form => "multipart", "form-data",
+        "XML", XML, is_xml => "text", "xml" ; "charset=utf-8",
+        "PNG", PNG, is_png => "image", "png",
+        "GIF", GIF, is_gif => "image", "gif",
+        "BMP", BMP, is_bmp => "image", "bmp",
+        "JPEG", JPEG, is_jpeg => "image", "jpeg",
+        "PDF", PDF, is_pdf => "application", "pdf"
     }
-
-    #[inline(always)]
-    pub fn with_params<T, S, P>(ttype: T, subtype: S, params: Option<P>) -> ContentType
-        where T: Into<Cow<'static, str>>,
-              S: Into<Cow<'static, str>>,
-              P: Into<Cow<'static, str>>
-    {
-        ContentType {
-            ttype: ttype.into(),
-            subtype: subtype.into(),
-            params: params.map(|p| p.into())
-        }
-    }
-
 
     /// Returns the Content-Type associated with the extension `ext`. Not all
     /// extensions are recognized. If an extensions is not recognized, then this
-    /// method returns a ContentType of `any`. The currently recognized
+    /// method returns a ContentType of `Any`. The currently recognized
     /// extensions are: txt, html, htm, xml, js, css, json, png, gif, bmp, jpeg,
     /// jpg, and pdf.
     ///
@@ -139,26 +160,63 @@ impl ContentType {
         }
     }
 
-    ctrs! {
-        "any", Any, is_any => "*", "*",
-        "form", Form, is_form => "application", "x-www-form-urlencoded",
-        "data form", DataForm, is_data_form => "multipart", "form-data",
-        "JSON", JSON, is_json => "application", "json",
-        "XML", XML, is_xml => "text", "xml" ; "charset=utf-8",
-        "HTML", HTML, is_html => "text", "html" ; "charset=utf-8",
-        "Plain", Plain, is_plain => "text", "plain" ; "charset=utf-8",
-        "JavaScript", JavaScript, is_javascript => "application", "javascript",
-        "CSS", CSS, is_css => "text", "css" ; "charset=utf-8",
-        "PNG", PNG, is_png => "image", "png",
-        "GIF", GIF, is_gif => "image", "gif",
-        "BMP", BMP, is_bmp => "image", "bmp",
-        "JPEG", JPEG, is_jpeg => "image", "jpeg",
-        "PDF", PDF, is_pdf => "application", "pdf"
+    /// Creates a new `ContentType` with type `ttype` and subtype `subtype`.
+    /// This should be _only_ to construct uncommon Content-Types or custom
+    /// Content-Types. Use an associated constant for common Content-Types.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `application/x-person` Content-Type:
+    ///
+    /// ```rust
+    /// use rocket::http::ContentType;
+    ///
+    /// let custom = ContentType::new("application", "x-person");
+    /// assert_eq!(custom.to_string(), "application/x-person".to_string());
+    /// ```
+    #[inline(always)]
+    pub fn new<T, S>(ttype: T, subtype: S) -> ContentType
+        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    {
+        ContentType {
+            ttype: ttype.into(),
+            subtype: subtype.into(),
+            params: None
+        }
+    }
+
+    /// Creates a new `ContentType` with type `ttype`, subtype `subtype`, and
+    /// optionally parameters `params`, a semicolon-seperated list of
+    /// parameters. This should be _only_ to construct uncommon Content-Types or
+    /// custom Content-Types. Use an associated constant for common
+    /// Content-Types.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `application/x-id; id=1` Content-Type:
+    ///
+    /// ```rust
+    /// use rocket::http::ContentType;
+    ///
+    /// let id = ContentType::with_params("application", "x-id", Some("id=1"));
+    /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
+    /// ```
+    #[inline(always)]
+    pub fn with_params<T, S, P>(ttype: T, subtype: S, params: Option<P>) -> ContentType
+        where T: Into<Cow<'static, str>>,
+              S: Into<Cow<'static, str>>,
+              P: Into<Cow<'static, str>>
+    {
+        ContentType {
+            ttype: ttype.into(),
+            subtype: subtype.into(),
+            params: params.map(|p| p.into())
+        }
     }
 }
 
 impl Default for ContentType {
-    /// Returns a ContentType of `any`, or `*/*`.
+    /// Returns a ContentType of `Any`, or `*/*`.
     #[inline(always)]
     fn default() -> ContentType {
         ContentType::Any
@@ -323,6 +381,8 @@ impl fmt::Display for ContentType {
     }
 }
 
+/// Creates a new `Header` with name `Content-Type` and the value set to the
+/// HTTP rendering of this Content-Type.
 impl Into<Header<'static>> for ContentType {
     #[inline]
     fn into(self) -> Header<'static> {
