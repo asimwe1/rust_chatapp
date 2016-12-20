@@ -6,7 +6,6 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-// TODO: Remove from Rocket in favor of a more flexible HTTP library.
 pub use hyper::server::Request as Request;
 pub use hyper::server::Response as Response;
 pub use hyper::server::Server as Server;
@@ -22,5 +21,5 @@ pub use hyper::uri::RequestUri;
 pub use hyper::http::h1;
 pub use hyper::buffer;
 
-// TODO: Remove from Rocket in favor of a more flexible HTTP library.
+/// Type alias to `hyper::Response<'a, hyper::net::Fresh>`.
 pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
