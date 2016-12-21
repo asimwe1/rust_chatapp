@@ -122,6 +122,10 @@ use response::{Response, Stream};
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #
 /// # #[derive(Debug)]
 /// # struct Person { name: String, age: u16 }
 /// #
@@ -133,13 +137,17 @@ use response::{Response, Stream};
 /// impl<'r> Responder<'r> for Person {
 ///     fn respond(self) -> response::Result<'r> {
 ///         Response::build()
-///             .sized_body(Cursor::new(format!("{:?}", self)))
+///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
 ///             .raw_header("X-Person-Name", self.name)
 ///             .raw_header("X-Person-Age", self.age.to_string())
 ///             .header(ContentType::new("application", "x-person"))
 ///             .ok()
 ///     }
 /// }
+///
+/// # #[get("/person")]
+/// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
+/// # fn main() {  }
 /// ```
 pub trait Responder<'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,

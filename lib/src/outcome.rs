@@ -351,6 +351,7 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    #[doc(hidden)]
     #[inline(always)]
     fn formatting(&self) -> (Color, &'static str) {
         match *self {

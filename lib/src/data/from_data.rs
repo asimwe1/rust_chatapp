@@ -52,6 +52,88 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///   If the `Outcome` is `Forward`, the request will be forwarded to the next
 ///   matching request. This requires that no data has been read from the `Data`
 ///   parameter. Note that users can request an `Option<S>` to catch `Forward`s.
+///
+/// # Example
+///
+/// Say that you have a custom type, `Person`:
+///
+/// ```rust
+/// struct Person {
+///     name: String,
+///     age: u16
+/// }
+/// ```
+///
+/// `Person` has a custom serialization format, so the built-in `JSON` type
+/// doesn't suffice. The format is `<name>:<age>` with `Content-Type:
+/// application/x-person`. You'd like to use `Person` as a `FromData` type so
+/// that you can retrieve it directly from a client's request body:
+///
+/// ```rust,ignore
+/// #[post("/person", data = "<person>")]
+/// fn person(person: Person) -> &'static str {
+///     "Saved the new person to the database!"
+/// }
+/// ```
+///
+/// A `FromData` implementation allowing this looks like:
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #
+/// # #[derive(Debug)]
+/// # struct Person { name: String, age: u16 }
+/// #
+/// use std::io::Read;
+/// use rocket::{Request, Data, Outcome};
+/// use rocket::data::{self, FromData};
+/// use rocket::http::{Status, ContentType};
+/// use rocket::Outcome::*;
+///
+/// impl FromData for Person {
+///     type Error = String;
+///
+///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
+///         // Ensure the content type is correct before opening the data.
+///         let person_ct = ContentType::new("application", "x-person");
+///         if req.content_type() != person_ct {
+///             return Outcome::Forward(data);
+///         }
+///
+///         // Read the data into a String.
+///         let mut string = String::new();
+///         if let Err(e) = data.open().read_to_string(&mut string) {
+///             return Failure((Status::InternalServerError, format!("{:?}", e)));
+///         }
+///
+///         // Split the string into two pieces at ':'.
+///         let (name, age) = match string.find(':') {
+///             Some(i) => (&string[..i], &string[(i + 1)..]),
+///             None => return Failure((Status::BadRequest, "Missing ':'.".into()))
+///         };
+///
+///         // Parse the age.
+///         let age: u16 = match age.parse() {
+///             Ok(age) => age,
+///             Err(e) => return Failure((Status::BadRequest, "Bad age.".into()))
+///         };
+///
+///         // Return successfully.
+///         Success(Person {
+///             name: name.into(),
+///             age: age
+///         })
+///     }
+/// }
+/// #
+/// # #[post("/person", data = "<person>")]
+/// # fn person(person: Person) {  }
+/// # #[post("/person", data = "<person>")]
+/// # fn person2(person: Result<Person, String>) {  }
+/// # fn main() {  }
+/// ```
 pub trait FromData: Sized {
     /// The associated error to be returned when parsing fails.
     type Error;
