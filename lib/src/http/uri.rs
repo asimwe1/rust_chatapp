@@ -10,39 +10,42 @@ use url;
 
 use router::Collider;
 
+/// Index (start, end) into a string, to prevent borrowing.
+type Index = (usize, usize);
+
 // TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
 /// Borrowed string type for absolute URIs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct URI<'a> {
-    uri: &'a str,
-    path: &'a str,
-    query: Option<&'a str>,
-    fragment: Option<&'a str>,
+    uri: Cow<'a, str>,
+    path: Index,
+    query: Option<Index>,
+    fragment: Option<Index>,
     segment_count: Cell<Option<usize>>,
 }
 
 impl<'a> URI<'a> {
-    /// Constructs a new URI from a given string.
-    pub fn new<T: AsRef<str> + ?Sized>(uri: &'a T) -> URI<'a> {
-        let uri = uri.as_ref();
-
+    /// Constructs a new URI from a given string. The URI is assumed to be an
+    /// absolute, well formed URI.
+    pub fn new<T: Into<Cow<'a, str>>>(uri: T) -> URI<'a> {
+        let uri = uri.into();
         let qmark = uri.find('?');
-        let hmark = qmark.map(|i| uri[(i + 1)..].find('#').map(|j| j + i + 1))
-            .unwrap_or_else(|| uri.find('#'));
+        let hmark = uri.find('#');
 
+        let (start, end) = (0, uri.len());
         let (path, query, fragment) = match (qmark, hmark) {
-            (Some(i), Some(j)) => (&uri[..i], Some(&uri[(i+1)..j]), Some(&uri[(j+1)..])),
-            (Some(i), None) => (&uri[..i], Some(&uri[(i+1)..]), None),
-            (None, Some(j)) => (&uri[..j], None, Some(&uri[(j+1)..])),
-            (None, None) => (uri, None, None),
+            (Some(i), Some(j)) => ((start, i), Some((i+1, j)), Some((j+1, end))),
+            (Some(i), None) => ((0, i), Some((i+1, end)), None),
+            (None, Some(j)) => ((0, j), None, Some((j+1, end))),
+            (None, None) => ((0, end), None, None),
         };
 
         URI {
-            segment_count: Cell::new(None),
             uri: uri,
             path: path,
             query: query,
             fragment: fragment,
+            segment_count: Cell::new(None),
         }
     }
 
@@ -118,8 +121,8 @@ impl<'a> URI<'a> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn segments(&self) -> Segments<'a> {
-        Segments(self.path)
+    pub fn segments(&self) -> Segments {
+        Segments(self.path())
     }
 
     /// Returns the path part of this URI.
@@ -144,8 +147,9 @@ impl<'a> URI<'a> {
     /// assert_eq!(uri.path(), "/a/b/c");
     /// ```
     #[inline(always)]
-    pub fn path(&self) -> &'a str {
-        self.path
+    pub fn path(&self) -> &str {
+        let (i, j) = self.path;
+        &self.uri[i..j]
     }
 
     /// Returns the query part of this URI without the question mark, if there is
@@ -171,8 +175,8 @@ impl<'a> URI<'a> {
     /// assert_eq!(uri.query(), None);
     /// ```
     #[inline(always)]
-    pub fn query(&self) -> Option<&'a str> {
-        self.query
+    pub fn query(&self) -> Option<&str> {
+        self.query.map(|(i, j)| &self.uri[i..j])
     }
 
     /// Returns the fargment part of this URI without the hash mark, if there is
@@ -198,8 +202,8 @@ impl<'a> URI<'a> {
     /// assert_eq!(uri.fragment(), None);
     /// ```
     #[inline(always)]
-    pub fn fragment(&self) -> Option<&'a str> {
-        self.fragment
+    pub fn fragment(&self) -> Option<&str> {
+        self.fragment.map(|(i, j)| &self.uri[i..j])
     }
 
     /// Returns a URL-decoded version of the string. If the percent encoded
@@ -251,14 +255,21 @@ impl<'a> URI<'a> {
     /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
     /// ```
     #[inline(always)]
-    pub fn as_str(&self) -> &'a str {
-        self.uri
+    pub fn as_str(&self) -> &str {
+        &self.uri
     }
 }
 
 impl<'a> From<&'a str> for URI<'a> {
     #[inline(always)]
     fn from(uri: &'a str) -> URI<'a> {
+        URI::new(uri)
+    }
+}
+
+impl From<String> for URI<'static> {
+    #[inline(always)]
+    fn from(uri: String) -> URI<'static> {
         URI::new(uri)
     }
 }
@@ -274,11 +285,11 @@ impl<'a> fmt::Display for URI<'a> {
             write!(f, "/{}", segment)?;
         }
 
-        if let Some(query_str) = self.query {
+        if let Some(query_str) = self.query() {
             write!(f, "?{}", query_str)?;
         }
 
-        if let Some(fragment_str) = self.fragment {
+        if let Some(fragment_str) = self.fragment() {
             write!(f, "#{}", fragment_str)?;
         }
 
@@ -450,7 +461,8 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
 /// use rocket::http::uri::URI;
 /// use rocket::http::uri::Segments;
 ///
-/// let segments: Segments = URI::new("/a/////b/c////////d").segments();
+/// let uri = URI::new("/a/////b/c////////d");
+/// let segments = uri.segments();
 /// for (i, segment) in segments.enumerate() {
 ///     match i {
 ///         0 => assert_eq!(segment, "a"),
@@ -519,7 +531,8 @@ mod tests {
         let actual: Vec<&str> = uri.segments().collect();
 
         let uri_buf = URIBuf::from(path);
-        let actual_buf: Vec<&str> = uri_buf.as_uri().segments().collect();
+        let uri_buf_uri = uri_buf.as_uri();
+        let actual_buf: Vec<&str> = uri_buf_uri.segments().collect();
 
         actual == expected && actual_buf == expected
     }

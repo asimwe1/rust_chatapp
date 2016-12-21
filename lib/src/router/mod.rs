@@ -324,7 +324,7 @@ mod test {
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
         println!("Testing: {} (expect: {:?})", path, expected);
         route(router, Get, path).map_or(false, |route| {
-            let params = route.get_param_indexes(URI::new(path));
+            let params = route.get_param_indexes(&URI::new(path));
             if params.len() != expected.len() {
                 return false;
             }

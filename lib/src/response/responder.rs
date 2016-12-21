@@ -5,7 +5,7 @@ use std::fmt;
 use http::{Status, ContentType};
 use response::{Response, Stream};
 
-/// Trait implemented by types that send a response to clients.
+/// Trait implemented by types that generate responses for clients.
 ///
 /// Types that implement this trait can be used as the return type of a handler,
 /// as illustrated below:
@@ -144,7 +144,7 @@ use response::{Response, Stream};
 ///             .ok()
 ///     }
 /// }
-///
+/// #
 /// # #[get("/person")]
 /// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
 /// # fn main() {  }

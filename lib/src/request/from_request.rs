@@ -129,7 +129,7 @@ pub trait FromRequest<'a, 'r>: Sized {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for URI<'a> {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a URI<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {

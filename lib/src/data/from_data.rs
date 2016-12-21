@@ -8,6 +8,7 @@ use data::Data;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
 impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+    #[inline]
     fn into_outcome(self) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),

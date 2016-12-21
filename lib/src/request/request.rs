@@ -8,61 +8,10 @@ use error::Error;
 use super::{FromParam, FromSegments};
 
 use router::Route;
-use http::uri::{URI, URIBuf, Segments};
+use http::uri::{URI, Segments};
 use http::{Method, ContentType, Header, HeaderMap, Cookies};
 
 use http::hyper;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CowURI<'b> {
-    Borrowed(URI<'b>),
-    Owned(URIBuf)
-}
-
-impl<'b> CowURI<'b> {
-    /// Returns raw URI.
-    fn as_str(&self) -> &str {
-        match *self {
-            CowURI::Borrowed(ref uri) => uri.as_str(),
-            CowURI::Owned(ref uri) => uri.as_str()
-        }
-    }
-
-    fn segment_count(&self) -> usize {
-        match *self {
-            CowURI::Borrowed(ref uri) => uri.segment_count(),
-            CowURI::Owned(ref uri) => uri.segment_count()
-        }
-    }
-
-    fn segments(&self) -> Segments {
-        match *self {
-            CowURI::Borrowed(ref uri) => uri.segments(),
-            CowURI::Owned(ref uri) => uri.as_uri().segments()
-        }
-    }
-}
-
-impl<'b> From<URI<'b>> for CowURI<'b> {
-    fn from(uri: URI<'b>) -> CowURI<'b> {
-        CowURI::Borrowed(uri)
-    }
-}
-
-impl<'b> From<URIBuf> for CowURI<'b> {
-    fn from(uri: URIBuf) -> CowURI<'b> {
-        CowURI::Owned(uri)
-    }
-}
-
-impl<'b> fmt::Display for CowURI<'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            CowURI::Borrowed(ref uri) => uri.fmt(f),
-            CowURI::Owned(ref uri) => uri.fmt(f)
-        }
-    }
-}
 
 /// The type of an incoming web request.
 ///
@@ -73,14 +22,14 @@ impl<'b> fmt::Display for CowURI<'b> {
 /// includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request<'r> {
     method: Method,
-    uri: CowURI<'r>,
+    uri: URI<'r>,
     headers: HeaderMap<'r>,
     params: RefCell<Vec<(usize, usize)>>,
     cookies: Cookies,
 }
 
 impl<'r> Request<'r> {
-    pub fn new<U: Into<CowURI<'r>>>(method: Method, uri: U) -> Request<'r> {
+    pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
         Request {
             method: method,
             uri: uri.into(),
@@ -103,17 +52,14 @@ impl<'r> Request<'r> {
     /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
     /// the URI will be absolute.
     #[inline(always)]
-    pub fn uri(&self) -> URI {
-        match self.uri {
-            CowURI::Borrowed(ref uri) => uri.clone(),
-            CowURI::Owned(ref uri) => uri.as_uri(),
-        }
+    pub fn uri(&self) -> &URI {
+        &self.uri
     }
 
     // Sets the URI for the request. To retrieve parameters, the `set_params`
     // method needs to be called first.
     #[inline(always)]
-    pub fn set_uri<'u: 'r, U: Into<CowURI<'u>>>(&mut self, uri: U) {
+    pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
         self.uri = uri.into();
         self.params = RefCell::new(Vec::new());
     }
@@ -234,7 +180,7 @@ impl<'r> Request<'r> {
                     -> Result<Request<'static>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
-            hyper::RequestUri::AbsolutePath(s) => URIBuf::from(s),
+            hyper::RequestUri::AbsolutePath(s) => s,
             _ => return Err(format!("Bad URI: {}", h_uri)),
         };
 
