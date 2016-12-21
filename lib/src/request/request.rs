@@ -17,9 +17,9 @@ use http::hyper;
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
 /// should likely only be used when writing
-/// [FromRequest](trait.FromRequest.html) implementations. It contains all of
-/// the information for a given web request except for the body data. This
-/// includes the HTTP method, URI, cookies, headers, and more.
+/// [FromRequest](/rocket/request/struct.Request.html) implementations. It
+/// contains all of the information for a given web request except for the body
+/// data. This includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request<'r> {
     method: Method,
     uri: URI<'r>,
@@ -29,6 +29,18 @@ pub struct Request<'r> {
 }
 
 impl<'r> Request<'r> {
+    /// Create a new `Request` with the given `method` and `uri`. The `uri`
+    /// parameter can be of any type that implements `Into<URI>` including
+    /// `&str` and `String`; it must be a valid absolute URI.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let request = Request::new(Method::Get, "/uri");
+    /// ```
     pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
         Request {
             method: method,
@@ -39,58 +51,193 @@ impl<'r> Request<'r> {
         }
     }
 
+    /// Retrieve the method from `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let request = Request::new(Method::Get, "/uri");
+    /// assert_eq!(request.method(), Method::Get);
+    /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
         self.method
     }
 
+    /// Set the method of `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// assert_eq!(request.method(), Method::Get);
+    ///
+    /// request.set_method(Method::Post);
+    /// assert_eq!(request.method(), Method::Post);
+    /// ```
     #[inline(always)]
     pub fn set_method(&mut self, method: Method) {
         self.method = method;
     }
 
-    /// Retrieves the URI from the request. Rocket only allows absolute URIs, so
-    /// the URI will be absolute.
+    /// Borrow the URI from `self`, which must be an absolute URI.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// assert_eq!(request.uri().as_str(), "/uri");
+    /// ```
     #[inline(always)]
     pub fn uri(&self) -> &URI {
         &self.uri
     }
 
-    // Sets the URI for the request. To retrieve parameters, the `set_params`
-    // method needs to be called first.
+    /// Set the URI in `self`. The `uri` parameter can be of any type that
+    /// implements `Into<URI>` including `&str` and `String`; it must be a valid
+    /// absolute URI.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    ///
+    /// request.set_uri("/hello/Sergio?type=greeting");
+    /// assert_eq!(request.uri().as_str(), "/hello/Sergio?type=greeting");
+    /// ```
     #[inline(always)]
     pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
         self.uri = uri.into();
         self.params = RefCell::new(Vec::new());
     }
 
-    // Add the `header` to this request's header list.
-    #[inline(always)]
-    pub fn add_header(&mut self, header: Header<'r>) {
-        self.headers.add(header);
-    }
-
-    /// Returns the headers in this request.
+    /// Returns a `HeaderMap` of all of the headers in `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let header_map = request.headers();
+    /// assert!(header_map.is_empty());
+    /// ```
     #[inline(always)]
     pub fn headers(&self) -> &HeaderMap<'r> {
         &self.headers
     }
 
-    /// Returns a borrow to the cookies sent with this request. Note that
-    /// `Cookie` implements internal mutability, so this method allows you to
-    /// get _and_ set cookies in the given Request.
+    /// Add the `header` to `self`'s headers.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// assert!(request.headers().is_empty());
+    ///
+    /// request.add_header(ContentType::HTML.into());
+    /// assert!(request.headers().contains("Content-Type"));
+    /// assert_eq!(request.headers().len(), 1);
+    /// ```
+    #[inline(always)]
+    pub fn add_header(&mut self, header: Header<'r>) {
+        self.headers.add(header);
+    }
+
+    /// Replaces the value of the header with `header.name` with `header.value`.
+    /// If no such header existed, `header` is added.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// assert!(request.headers().is_empty());
+    ///
+    /// request.add_header(ContentType::HTML.into());
+    /// assert_eq!(request.content_type(), ContentType::HTML);
+    ///
+    /// request.replace_header(ContentType::JSON.into());
+    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// ```
+    #[inline(always)]
+    pub fn replace_header(&mut self, header: Header<'r>) {
+        self.headers.replace(header);
+    }
+
+    /// Returns a borrow to the cookies in `self`.
+    ///
+    /// Note that `Cookie` implements internal mutability, so this method allows
+    /// you to get _and_ set cookies in `self`.
+    ///
+    /// # Example
+    ///
+    /// Add a new cookie to a request's cookies:
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Cookie, Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// request.cookies().add(Cookie::new("key".into(), "val".into()))
+    /// ```
     #[inline(always)]
     pub fn cookies(&self) -> &Cookies {
         &self.cookies
     }
 
+    /// Replace all of the cookies in `self` with `cookies`.
+    ///
+    /// # Example
+    ///
+    /// Add a new cookie to a request's cookies:
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Cookie, Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// request.cookies().add(Cookie::new("key".into(), "val".into()))
+    /// ```
+    #[doc(hidden)]
     #[inline(always)]
     pub fn set_cookies(&mut self, cookies: Cookies) {
         self.cookies = cookies;
     }
 
-    /// Returns the Content-Type of the request. Returns `ContentType::Any` if
-    /// there was none or if the Content-Type was "*/*".
+    /// Returns the Content-Type header of `self`. If the header is not present,
+    /// returns `ContentType::Any`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// assert_eq!(request.content_type(), ContentType::Any);
+    ///
+    /// request.replace_header(ContentType::JSON.into());
+    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// ```
     #[inline(always)]
     pub fn content_type(&self) -> ContentType {
         self.headers().get_one("Content-Type")
@@ -103,15 +250,20 @@ impl<'r> Request<'r> {
     /// params. Returns `Error::BadParse` if the parameter type `T` can't be
     /// parsed from the parameter.
     ///
+    /// This method exists only to be used by manual routing. To retrieve
+    /// parameters from a request, use Rocket's code generation facilities.
+    ///
     /// # Example
     ///
-    /// To retrieve parameter `n` as some type `T` that implements
-    /// [FromParam](trait.FromParam.html) inside a
-    /// [FromRequest](trait.FromRequest.html) implementation:
+    /// Retrieve parameter `0`, which is expected to be an `&str`, in a manual
+    /// route:
     ///
-    /// ```rust,ignore
-    /// fn from_request(request: &'r Request<'c>) -> .. {
-    ///     let my_param: T = request.get_param(n);
+    /// ```rust
+    /// use rocket::{Request, Data};
+    /// use rocket::handler::Outcome;
+    ///
+    /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
+    ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
     /// }
     /// ```
     pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
@@ -119,13 +271,16 @@ impl<'r> Request<'r> {
         T::from_param(param).map_err(|_| Error::BadParse)
     }
 
+    /// Set `self`'s parameters given that the route used to reach this request
+    /// was `route`. This should only be used internally by `Rocket` as improper
+    /// use may result in out of bounds indexing.
     #[doc(hidden)]
     #[inline(always)]
     pub fn set_params(&self, route: &Route) {
         *self.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
-    /// Get the `n`th path parameter, if it exists.
+    /// Get the `n`th path parameter as a string, if it exists.
     #[doc(hidden)]
     pub fn get_param_str(&self, n: usize) -> Option<&str> {
         let params = self.params.borrow();
@@ -146,10 +301,17 @@ impl<'r> Request<'r> {
 
     /// Retrieves and parses into `T` all of the path segments in the request
     /// URI beginning and including the 0-indexed `i`. `T` must implement
-    /// [FromSegments](trait.FromSegments.html), which is used to parse the
-    /// segments.
+    /// [FromSegments](/rocket/request/trait.FromSegments.html), which is used
+    /// to parse the segments.
     ///
-    /// For example, if the request URI is `"/hello/there/i/am/here"`, then
+    /// # Error
+    ///
+    /// If there are less than `i` segments, returns an `Err` of `NoKey`. If
+    /// parsing the segments failed, returns an `Err` of `BadParse`.
+    ///
+    /// # Example
+    ///
+    /// If the request URI is `"/hello/there/i/am/here"`, then
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
     /// `"there/i/am/here"` as type `T`.
     pub fn get_segments<'a, T: FromSegments<'a>>(&'a self, i: usize)
@@ -173,6 +335,7 @@ impl<'r> Request<'r> {
         }
     }
 
+    /// Convert from Hyper types into a Rocket Request.
     #[doc(hidden)]
     pub fn from_hyp(h_method: hyper::Method,
                     h_headers: hyper::header::Headers,

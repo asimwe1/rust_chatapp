@@ -66,7 +66,7 @@ impl<T> From<T> for Header<'static> where T: hyper::Header + hyper::HeaderFormat
     }
 }
 
-/// A collection of headers, mapping many ordered values to a header names.
+/// A collection of headers, mapping a header name to its many ordered values.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
     headers: HashMap<Cow<'h, str>, Vec<Cow<'h, str>>>
