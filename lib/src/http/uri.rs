@@ -299,140 +299,6 @@ impl<'a> fmt::Display for URI<'a> {
 
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Owned string type for absolute URIs.
-///
-/// This is the owned analog to [URI](struct.URI.html). It serves simply to hold
-/// the backing String. As a result, most functionality will be achieved through
-/// the [as_uri](#method.as_uri) method.
-///
-/// The exception to this is the [segment_count](#method.segment_count) method,
-/// which is provided here for performance reasons. This method uses a cached
-/// count of the segments on subsequent calls. To avoid computing the segment
-/// count again and again, use the `segment_count` method on URIBuf directly.
-///
-/// ## Constructing
-///
-/// A URIBuf can be created with either a borrowed or owned string via the
-/// [new](#method.new) or `from` methods.
-pub struct URIBuf {
-    uri: String,
-    segment_count: Cell<Option<usize>>,
-}
-
-impl URIBuf {
-    /// Construct a new URIBuf.
-    ///
-    /// # Examples
-    ///
-    /// From a borrowed string:
-    ///
-    /// ```rust
-    /// use rocket::http::uri::URIBuf;
-    ///
-    /// let uri = URIBuf::new("/a/b/c");
-    /// assert_eq!(uri.as_uri().as_str(), "/a/b/c");
-    /// ```
-    ///
-    /// From an owned string:
-    ///
-    /// ```rust
-    /// use rocket::http::uri::URIBuf;
-    ///
-    /// let uri = URIBuf::new("/a/b/c".to_string());
-    /// assert_eq!(uri.as_str(), "/a/b/c");
-    /// ```
-    #[inline(always)]
-    pub fn new<S: Into<URIBuf>>(s: S) -> URIBuf {
-        s.into()
-    }
-
-    /// Returns the number of segments in the URI. Empty segments, which are
-    /// invalid according to RFC#3986, are not counted.
-    ///
-    /// The segment count is cached after the first invocation. As a result,
-    /// this function is O(1) after the first invocation, and O(n) before.
-    ///
-    /// ### Examples
-    ///
-    /// A valid URI with only non-empty segments:
-    ///
-    /// ```rust
-    /// use rocket::http::uri::URIBuf;
-    ///
-    /// let uri = URIBuf::new("/a/b/c");
-    /// assert_eq!(uri.segment_count(), 3);
-    /// ```
-    ///
-    /// A URI with empty segments:
-    ///
-    /// ```rust
-    /// use rocket::http::uri::URIBuf;
-    ///
-    /// let uri = URIBuf::new("/a/b//c/d///e");
-    /// assert_eq!(uri.segment_count(), 5);
-    /// ```
-    pub fn segment_count(&self) -> usize {
-        self.segment_count.get().unwrap_or_else(|| {
-            let count = self.as_uri().segments().count();
-            self.segment_count.set(Some(count));
-            count
-        })
-    }
-
-    /// Converts this URIBuf into a borrowed URI. Does not consume this URIBuf.
-    #[inline(always)]
-    pub fn as_uri(&self) -> URI {
-        URI::new(self.uri.as_str())
-    }
-
-    /// Returns the inner string of this URIBuf.
-    ///
-    /// The returned string is in raw form. It contains empty segments. If you'd
-    /// like a string without empty segments, use `to_string` instead.
-    ///
-    /// ### Example
-    ///
-    /// ```rust
-    /// use rocket::http::uri::URIBuf;
-    ///
-    /// let uri = URIBuf::new("/a/b///c/d/e//f?name=Mike#end");
-    /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
-    /// ```
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        self.uri.as_str()
-    }
-}
-
-unsafe impl Sync for URIBuf { /* It's safe! */ }
-
-impl fmt::Display for URIBuf {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.as_uri().fmt(f)
-    }
-}
-
-impl From<String> for URIBuf {
-    #[inline(always)]
-    fn from(uri: String) -> URIBuf {
-        URIBuf {
-            segment_count: Cell::new(None),
-            uri: uri,
-        }
-    }
-}
-
-impl<'a> From<&'a str> for URIBuf {
-    #[inline(always)]
-    fn from(uri: &'a str) -> URIBuf {
-        URIBuf {
-            segment_count: Cell::new(None),
-            uri: uri.to_string(),
-        }
-    }
-}
-
 impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     fn collides_with(&self, other: &URI<'b>) -> bool {
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
@@ -509,12 +375,11 @@ impl<'a> Iterator for Segments<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{URI, URIBuf};
+    use super::URI;
 
     fn seg_count(path: &str, expected: usize) -> bool {
         let actual = URI::new(path).segment_count();
-        let actual_buf = URIBuf::from(path).segment_count();
-        if actual != expected || actual_buf != expected {
+        if actual != expected {
             trace_!("Count mismatch: expected {}, got {}.", expected, actual);
             trace_!("{}", if actual != expected { "lifetime" } else { "buf" });
             trace_!("Segments (for {}):", path);
@@ -523,18 +388,13 @@ mod tests {
             }
         }
 
-        actual == expected && actual_buf == expected
+        actual == expected
     }
 
     fn eq_segments(path: &str, expected: &[&str]) -> bool {
         let uri = URI::new(path);
         let actual: Vec<&str> = uri.segments().collect();
-
-        let uri_buf = URIBuf::from(path);
-        let uri_buf_uri = uri_buf.as_uri();
-        let actual_buf: Vec<&str> = uri_buf_uri.segments().collect();
-
-        actual == expected && actual_buf == expected
+        actual == expected
     }
 
     #[test]

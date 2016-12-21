@@ -383,7 +383,7 @@ impl Rocket {
         }
 
         for mut route in routes {
-            let path = format!("{}/{}", base, route.path.as_uri());
+            let path = format!("{}/{}", base, route.path);
             route.set_path(path);
 
             info_!("{}", route);

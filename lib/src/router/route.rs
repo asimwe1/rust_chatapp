@@ -10,7 +10,7 @@ use codegen::StaticRouteInfo;
 use handler::Handler;
 use request::Request;
 use http::{Method, ContentType};
-use http::uri::{URI, URIBuf};
+use http::uri::URI;
 
 /// A route: a method, its handler, path, rank, and format/content type.
 pub struct Route {
@@ -19,7 +19,7 @@ pub struct Route {
     /// A function that should be called when the route matches.
     pub handler: Handler,
     /// The path (in Rocket format) that should be matched against.
-    pub path: URIBuf,
+    pub path: URI<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The Content-Type this route matches against.
@@ -44,7 +44,7 @@ impl Route {
             method: m,
             handler: handler,
             rank: default_rank(path.as_ref()),
-            path: URIBuf::from(path.as_ref()),
+            path: URI::from(path.as_ref().to_string()),
             content_type: ContentType::Any,
         }
     }
@@ -55,7 +55,7 @@ impl Route {
     {
         Route {
             method: m,
-            path: URIBuf::from(path.as_ref()),
+            path: URI::from(path.as_ref().to_string()),
             handler: handler,
             rank: rank,
             content_type: ContentType::Any,
@@ -65,7 +65,7 @@ impl Route {
     /// Sets the path of the route. Does not update the rank or any other
     /// parameters.
     pub fn set_path<S>(&mut self, path: S) where S: AsRef<str> {
-        self.path = URIBuf::from(path.as_ref());
+        self.path = URI::from(path.as_ref().to_string());
     }
 
     // FIXME: Decide whether a component has to be fully variable or not. That
@@ -75,8 +75,7 @@ impl Route {
     /// dynamic segments in this route.
     #[doc(hidden)]
     pub fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
-        let path_uri = self.path.as_uri();
-        let route_segs = path_uri.segments();
+        let route_segs = self.path.segments();
         let uri_segs = uri.segments();
         let start_addr = uri.as_str().as_ptr() as usize;
 
@@ -147,14 +146,14 @@ impl Collider for Route {
         self.method == b.method
             && self.rank == b.rank
             && self.content_type.collides_with(&b.content_type)
-            && self.path.as_uri().collides_with(&b.path.as_uri())
+            && self.path.collides_with(&b.path)
     }
 }
 
 impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request<'r>) -> bool {
         self.method == req.method()
-            && req.uri().collides_with(&self.path.as_uri())
+            && req.uri().collides_with(&self.path)
             && req.content_type().collides_with(&self.content_type)
     }
 }
