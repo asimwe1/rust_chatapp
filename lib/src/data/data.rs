@@ -20,8 +20,8 @@ pub type BodyReader<'a, 'b> =
 ///
 /// This type is the only means by which the body of a request can be retrieved.
 /// This type is not usually used directly. Instead, types that implement
-/// [FromData](trait.FromData.html) are used via code generation by specifying
-/// the `data = "<param>"` route parameter as follows:
+/// [FromData](/rocket/data/trait.FromData.html) are used via code generation by
+/// specifying the `data = "<param>"` route parameter as follows:
 ///
 /// ```rust,ignore
 /// #[post("/submit", data = "<var>")]

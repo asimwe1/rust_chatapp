@@ -9,11 +9,11 @@
 //! processing next.
 //!
 //! The `Outcome` type is the return type of many of the core Rocket traits,
-//! including [FromRequest](../request/trait.FromRequest.html),
-//! [FromData](../request/trait.FromData.html), and
-//! [Responder](../response/trait.Responder.html). It is also the return type of
-//! request handlers via the [Response](../response/type.Response.html) type
-//! alias.
+//! including [FromRequest](/rocket/request/trait.FromRequest.html),
+//! [FromData](/rocket/data/trait.FromData.html), and
+//! [Responder](/rocket/response/trait.Responder.html). It is also the return
+//! type of request handlers via the
+//! [Response](/rocket/response/struct.Response.html) type.
 //!
 //! # Success
 //!
