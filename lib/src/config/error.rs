@@ -6,9 +6,13 @@ use term_painter::ToStyle;
 /// The type of a configuration parsing error.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ParsingError {
+    /// Start and end byte indices into the source code where parsing failed.
     pub byte_range: (usize, usize),
+    /// The (line, column) in the source code where parsing failure began.
     pub start: (usize, usize),
+    /// The (line, column) in the source code where parsing failure ended.
     pub end: (usize, usize),
+    /// A description of the parsing error that occured.
     pub desc: String,
 }
 
