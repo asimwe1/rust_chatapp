@@ -35,6 +35,22 @@ impl<T> Body<T> {
             Body::Chunked(b, n) => Body::Chunked(f(b), n)
         }
     }
+
+    /// Returns `true` if `self` is a `Body::Sized`.
+    pub fn is_sized(&self) -> bool {
+        match *self {
+            Body::Sized(..) => true,
+            Body::Chunked(..) => false,
+        }
+    }
+
+    /// Returns `true` if `self` is a `Body::Chunked`.
+    pub fn is_chunked(&self) -> bool {
+        match *self {
+            Body::Chunked(..) => true,
+            Body::Sized(..) => false,
+        }
+    }
 }
 
 impl<T: io::Read> Body<T> {
@@ -187,6 +203,11 @@ impl<'r> ResponseBuilder<'r> {
     /// the same name exist, they are all removed, and only the new header and
     /// value will remain.
     ///
+    /// The type of `header` can be any type that implements `Into<Header>`.
+    /// This includes `Header` itself,
+    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
+    /// types](/rocket/http/hyper/header/index.html).
+    ///
     /// # Example
     ///
     /// ```rust
@@ -212,6 +233,11 @@ impl<'r> ResponseBuilder<'r> {
     /// existing headers with the same name that already exist in the
     /// `Response`. This allow for multiple headers with the same name and
     /// potentially different values to be present in the `Response`.
+    ///
+    /// The type of `header` can be any type that implements `Into<Header>`.
+    /// This includes `Header` itself,
+    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
+    /// types](/rocket/http/hyper/header/index.html).
     ///
     /// # Example
     ///
@@ -483,9 +509,6 @@ impl<'r> ResponseBuilder<'r> {
     }
 }
 
-// `join`? Maybe one does one thing, the other does another? IE: `merge`
-// replaces, `join` adds. One more thing that could be done: we could make it
-// some that _some_ headers default to replacing, and other to joining.
 /// An HTTP/Rocket response, returned by `Responder`s.
 #[derive(Default)]
 pub struct Response<'r> {
@@ -495,6 +518,23 @@ pub struct Response<'r> {
 }
 
 impl<'r> Response<'r> {
+    /// Creates a new, empty `Response` without a status, body, or headers.
+    /// Because all HTTP responses must have a status, if a default `Response`
+    /// is written to the client without a status, the status defaults to `200
+    /// Ok`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Status;
+    ///
+    /// let mut response = Response::new();
+    ///
+    /// assert_eq!(response.status(), Status::Ok);
+    /// assert_eq!(response.headers().count(), 0);
+    /// assert!(response.body().is_none());
+    /// ```
     #[inline(always)]
     pub fn new() -> Response<'r> {
         Response {
@@ -504,46 +544,184 @@ impl<'r> Response<'r> {
         }
     }
 
+    /// Returns a `ResponseBuilder` with a base of `Response::new()`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    ///
+    /// let builder = Response::build();
+    /// ```
     #[inline(always)]
     pub fn build() -> ResponseBuilder<'r> {
         Response::build_from(Response::new())
     }
 
+    /// Returns a `ResponseBuilder` with a base of `other`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    ///
+    /// let other = Response::new();
+    /// let builder = Response::build_from(other);
+    /// ```
     #[inline(always)]
     pub fn build_from(other: Response<'r>) -> ResponseBuilder<'r> {
         ResponseBuilder::new(other)
     }
 
+    /// Returns the status of the `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Status;
+    ///
+    /// let mut response = Response::new();
+    /// assert_eq!(response.status(), Status::Ok);
+    ///
+    /// response.set_status(Status::NotFound);
+    /// assert_eq!(response.status(), Status::NotFound);
+    /// ```
     #[inline(always)]
     pub fn status(&self) -> Status {
         self.status.unwrap_or(Status::Ok)
     }
 
+    /// Sets the status of `self` to `status`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Status;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_status(Status::ImATeapot);
+    /// assert_eq!(response.status(), Status::ImATeapot);
+    /// ```
     #[inline(always)]
     pub fn set_status(&mut self, status: Status) {
         self.status = Some(status);
     }
 
+    /// Sets the status of `self` to a custom `status` with status code `code`
+    /// and reason phrase `reason`. This method should be used sparingly; prefer
+    /// to use [set_status](#method.set_status) instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Status;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_raw_status(699, "Tripped a Wire");
+    /// assert_eq!(response.status(), Status::new(699, "Tripped a Wire"));
+    /// ```
     #[inline(always)]
     pub fn set_raw_status(&mut self, code: u16, reason: &'static str) {
         self.status = Some(Status::new(code, reason));
     }
 
+    /// Returns an iterator over all of the headers stored in `self`. Multiple
+    /// headers with the same name may be returned, but all of the headers with
+    /// the same name will be appear in a group in the iterator. The values in
+    /// this group will be emitted in the order they were added to `self`. Aside
+    /// from this grouping, there are no other ordering guarantees.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Header;
+    ///
+    /// let mut response = Response::new();
+    /// response.adjoin_raw_header("X-Custom", "1");
+    /// response.adjoin_raw_header("X-Custom", "2");
+    ///
+    /// let mut headers = response.headers();
+    /// assert_eq!(headers.next(), Some(Header::new("X-Custom", "1")));
+    /// assert_eq!(headers.next(), Some(Header::new("X-Custom", "2")));
+    /// assert_eq!(headers.next(), None);
+    /// ```
     #[inline(always)]
     pub fn headers<'a>(&'a self) -> impl Iterator<Item=Header<'a>> {
         self.headers.iter()
     }
 
+    /// Returns an iterator over all of the values stored in `self` for the
+    /// header with name `name`. The values are returned in FIFO order.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// response.adjoin_raw_header("X-Custom", "1");
+    /// response.adjoin_raw_header("X-Custom", "2");
+    ///
+    /// let values: Vec<_> = response.header_values("X-Custom").collect();
+    /// assert_eq!(values, vec!["1", "2"]);
+    /// ```
     #[inline(always)]
     pub fn header_values<'h>(&'h self, name: &str) -> impl Iterator<Item=&'h str> {
         self.headers.get(name)
     }
 
+    /// Sets the header `header` in `self`. Any existing headers with the name
+    /// `header.name` will be lost, and only `header` will remain. The type of
+    /// `header` can be any type that implements `Into<Header>`. This includes
+    /// `Header` itself, [ContentType](/rocket/http/struct.ContentType.html) and
+    /// [hyper::header types](/rocket/http/hyper/header/index.html).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::ContentType;
+    ///
+    /// let mut response = Response::new();
+    ///
+    /// response.set_header(ContentType::HTML);
+    /// assert_eq!(response.headers().next(), Some(ContentType::HTML.into()));
+    /// assert_eq!(response.headers().count(), 1);
+    ///
+    /// response.set_header(ContentType::JSON);
+    /// assert_eq!(response.headers().next(), Some(ContentType::JSON.into()));
+    /// assert_eq!(response.headers().count(), 1);
+    /// ```
     #[inline(always)]
     pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
         self.headers.replace(header)
     }
 
+    /// Sets the custom header with name `name` and value `value` in `self`. Any
+    /// existing headers with the same `name` will be lost, and the new custom
+    /// header will remain. This method should be used sparingly; prefer to use
+    /// [set_header](#method.set_header) instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Header;
+    ///
+    /// let mut response = Response::new();
+    ///
+    /// response.set_raw_header("X-Custom", "1");
+    /// assert_eq!(response.headers().next(), Some(Header::new("X-Custom", "1")));
+    /// assert_eq!(response.headers().count(), 1);
+    ///
+    /// response.set_raw_header("X-Custom", "2");
+    /// assert_eq!(response.headers().next(), Some(Header::new("X-Custom", "2")));
+    /// assert_eq!(response.headers().count(), 1);
+    /// ```
     #[inline(always)]
     pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V) -> bool
         where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
@@ -551,11 +729,55 @@ impl<'r> Response<'r> {
         self.set_header(Header::new(name, value))
     }
 
+    /// Adds the header `header` to `self`. If `self` contains headers with the
+    /// name `header.name`, another header with the same name and value
+    /// `header.value` is added. The type of `header` can be any type that
+    /// implements `Into<Header>`. This includes `Header` itself,
+    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
+    /// types](/rocket/http/hyper/header/index.html).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::hyper::header::Accept;
+    ///
+    /// let mut response = Response::new();
+    /// response.adjoin_header(Accept::json());
+    /// response.adjoin_header(Accept::text());
+    ///
+    /// let mut accept_headers = response.headers();
+    /// assert_eq!(accept_headers.next(), Some(Accept::json().into()));
+    /// assert_eq!(accept_headers.next(), Some(Accept::text().into()));
+    /// assert_eq!(accept_headers.next(), None);
+    /// ```
     #[inline(always)]
     pub fn adjoin_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         self.headers.add(header)
     }
 
+    /// Adds a custom header with name `name` and value `value` to `self`. If
+    /// `self` already contains headers with the name `name`, another header
+    /// with the same `name` and `value` is added. The type of `header` can be
+    /// any type that implements `Into<Header>`. This includes `Header` itself,
+    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
+    /// types](/rocket/http/hyper/header/index.html).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Header;
+    ///
+    /// let mut response = Response::new();
+    /// response.adjoin_raw_header("X-Custom", "one");
+    /// response.adjoin_raw_header("X-Custom", "two");
+    ///
+    /// let mut custom_headers = response.headers();
+    /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "one")));
+    /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "two")));
+    /// assert_eq!(custom_headers.next(), None);
+    /// ```
     #[inline(always)]
     pub fn adjoin_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
         where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
@@ -563,11 +785,47 @@ impl<'r> Response<'r> {
         self.adjoin_header(Header::new(name, value));
     }
 
+    /// Removes all headers with the name `name`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Header;
+    ///
+    /// let mut response = Response::new();
+    ///
+    /// response.adjoin_raw_header("X-Custom", "one");
+    /// response.adjoin_raw_header("X-Custom", "two");
+    /// response.adjoin_raw_header("X-Other", "hi");
+    /// assert_eq!(response.headers().count(), 3);
+    ///
+    /// response.remove_header("X-Custom");
+    /// assert_eq!(response.headers().count(), 1);
+    /// ```
     #[inline(always)]
     pub fn remove_header(&mut self, name: &str) {
         self.headers.remove(name);
     }
 
+    /// Returns a mutable borrow of the body of `self`, if there is one. The
+    /// body is borrowed mutably to allow for reading.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// assert!(response.body().is_none());
+    ///
+    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    ///
+    /// let body_string = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("Hello, world!".to_string()));
+    /// assert!(response.body().is_some());
+    /// ```
     #[inline(always)]
     pub fn body(&mut self) -> Option<Body<&mut io::Read>> {
         // Looks crazy, right? Needed so Rust infers lifetime correctly. Weird.
@@ -580,13 +838,33 @@ impl<'r> Response<'r> {
         }
     }
 
+    /// Moves the body of `self` out and returns it, if there is one, leaving no
+    /// body in its place.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// assert!(response.body().is_none());
+    ///
+    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// assert!(response.body().is_some());
+    ///
+    /// let body = response.take_body();
+    /// let body_string = body.and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("Hello, world!".to_string()));
+    /// assert!(response.body().is_none());
+    /// ```
     #[inline(always)]
     pub fn take_body(&mut self) -> Option<Body<Box<io::Read + 'r>>> {
         self.body.take()
     }
 
-    // Removes any actual body, but leaves the size if it exists. Only meant to
-    // be used to handle HEAD requests automatically.
+    // Makes the `Read`er in the body empty but leaves the size of the body if
+    // it exists. Only meant to be used to handle HEAD requests automatically.
     #[doc(hidden)]
     #[inline(always)]
     pub fn strip_body(&mut self) {
@@ -598,7 +876,29 @@ impl<'r> Response<'r> {
         }
     }
 
-    #[inline(always)]
+    /// Sets the body of `self` to be the fixed-sized `body`. The size of the
+    /// body is obtained by `seek`ing to the end and then `seek`ing back to the
+    /// start.
+    ///
+    /// # Panics
+    ///
+    /// If either seek fails, this method panics. If you believe it is possible
+    /// for `seek` to panic for `B`, use [set_raw_body](#method.set_raw_body)
+    /// instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    ///
+    /// let body_string = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("Hello, world!".to_string()));
+    /// ```
+    #[inline]
     pub fn set_sized_body<B>(&mut self, mut body: B)
         where B: io::Read + io::Seek + 'r
     {
@@ -606,23 +906,113 @@ impl<'r> Response<'r> {
             .expect("Attempted to retrieve size by seeking, but failed.");
         body.seek(io::SeekFrom::Start(0))
             .expect("Attempted to reset body by seeking after getting size.");
-        self.body = Some(Body::Sized(Box::new(body), size));
+        self.body = Some(Body::Sized(Box::new(body.take(size)), size));
     }
 
+    /// Sets the body of `self` to be `body`, which will be streamed. The chunk
+    /// size of the stream is
+    /// [DEFAULT_CHUNK_SIZE](/rocket/response/constant.DEFAULT_CHUNK_SIZE.html).
+    /// Use [set_chunked_body](#method.set_chunked_body) for custom chunk sizes.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::{Read, repeat};
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_streamed_body(repeat(97).take(5));
+    ///
+    /// let body_string = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("aaaaa".to_string()));
+    /// ```
     #[inline(always)]
     pub fn set_streamed_body<B>(&mut self, body: B) where B: io::Read + 'r {
         self.set_chunked_body(body, DEFAULT_CHUNK_SIZE);
     }
 
+    /// Sets the body of `self` to be `body`, which will be streamed with chunk
+    /// size `chunk_size`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::{Read, repeat};
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_chunked_body(repeat(97).take(5), 10);
+    ///
+    /// let body_string = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("aaaaa".to_string()));
+    /// ```
     #[inline(always)]
     pub fn set_chunked_body<B>(&mut self, body: B, chunk_size: u64)
             where B: io::Read + 'r {
         self.body = Some(Body::Chunked(Box::new(body), chunk_size));
     }
 
+    /// Sets the body of `self` to be `body`. This method should typically not
+    /// be used, opting instead for one of `set_sized_body`,
+    /// `set_streamed_body`, or `set_chunked_body`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::response::{Response, Body};
+    ///
+    /// let body = Body::Sized(Cursor::new("Hello!"), 6);
+    ///
+    /// let mut response = Response::new();
+    /// response.set_raw_body(body);
+    ///
+    /// let body_string = response.body().and_then(|b| b.into_string());
+    /// assert_eq!(body_string, Some("Hello!".to_string()));
+    /// ```
+    #[inline(always)]
+    pub fn set_raw_body<T: io::Read + 'r>(&mut self, body: Body<T>) {
+        self.body = Some(match body {
+            Body::Sized(b, n) => Body::Sized(Box::new(b.take(n)), n),
+            Body::Chunked(b, n) => Body::Chunked(Box::new(b), n),
+        });
+    }
+
     /// Replaces this response's status and body with that of `other`, if they
     /// exist in `other`. Any headers that exist in `other` replace the ones in
     /// `self`. Any in `self` that aren't in `other` remain in `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::{Status, ContentType};
+    ///
+    /// let base = Response::build()
+    ///     .status(Status::NotFound)
+    ///     .header(ContentType::HTML)
+    ///     .raw_header("X-Custom", "value 1")
+    ///     .finalize();
+    ///
+    /// let response = Response::build()
+    ///     .status(Status::ImATeapot)
+    ///     .raw_header("X-Custom", "value 2")
+    ///     .raw_header_adjoin("X-Custom", "value 3")
+    ///     .merge(base)
+    ///     .finalize();
+    ///
+    /// assert_eq!(response.status(), Status::NotFound);
+    ///
+    /// # {
+    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
+    /// # }
+    ///
+    /// # {
+    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// assert_eq!(custom_values, vec!["value 1"]);
+    /// # }
+    /// ```
     pub fn merge(&mut self, other: Response<'r>) {
         if let Some(status) = other.status {
             self.status = Some(status);
@@ -640,6 +1030,38 @@ impl<'r> Response<'r> {
     // Sets `self`'s status and body to that of `other` if they are not already
     // set in `self`. Any headers present in both `other` and `self` are
     // adjoined.
+    //
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::{Status, ContentType};
+    ///
+    /// let other = Response::build()
+    ///     .status(Status::NotFound)
+    ///     .header(ContentType::HTML)
+    ///     .raw_header("X-Custom", "value 1")
+    ///     .finalize();
+    ///
+    /// let response = Response::build()
+    ///     .status(Status::ImATeapot)
+    ///     .raw_header("X-Custom", "value 2")
+    ///     .raw_header_adjoin("X-Custom", "value 3")
+    ///     .join(other)
+    ///     .finalize();
+    ///
+    /// assert_eq!(response.status(), Status::ImATeapot);
+    ///
+    /// # {
+    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
+    /// # }
+    ///
+    /// # {
+    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// assert_eq!(custom_values, vec!["value 2", "value 3", "value 1"]);
+    /// # }
+    /// ```
     pub fn join(&mut self, other: Response<'r>) {
         if self.status.is_none() {
             self.status = other.status;

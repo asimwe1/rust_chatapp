@@ -539,17 +539,12 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [development]
-            address = "!_idk_?"
+            address = "........"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
             [staging]
             address = "1.2.3.4:100"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(RocketConfig::parse(r#"
-            [production]
-            address = "!@#$%^&*()"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
