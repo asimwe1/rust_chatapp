@@ -474,8 +474,9 @@ impl Rocket {
             }
         };
 
-        info!("🚀  {} {}...",
+        info!("🚀  {} {}{}...",
               White.paint("Rocket has launched from"),
+              White.bold().paint("http://"),
               White.bold().paint(&full_addr));
 
         server.handle(self).unwrap();
