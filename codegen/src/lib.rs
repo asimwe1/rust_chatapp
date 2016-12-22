@@ -15,9 +15,12 @@ mod parser;
 mod macros;
 mod decorators;
 
+use std::env;
 use rustc_plugin::Registry;
 use syntax::ext::base::SyntaxExtension;
 use syntax::symbol::Symbol;
+
+const DEBUG_ENV_VAR: &'static str = "ROCKET_CODEGEN_DEBUG";
 
 const PARAM_PREFIX: &'static str = "rocket_param_";
 const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
@@ -35,6 +38,11 @@ macro_rules! register_decorators {
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
+    // Enable logging early if the DEBUG_ENV_VAR is set.
+    if env::var(DEBUG_ENV_VAR).is_ok() {
+        ::rocket::logger::init(::rocket::LoggingLevel::Debug);
+    }
+
     reg.register_macro("routes", macros::routes);
     reg.register_macro("errors", macros::errors);
 

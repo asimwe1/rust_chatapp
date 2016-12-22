@@ -218,9 +218,6 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                            meta_item: &MetaItem,
                            annotated: &Annotatable,
                            push: &mut FnMut(Annotatable)) {
-    // Initialize the logger.
-    ::rocket::logger::init(::rocket::LoggingLevel::Debug);
-
     // Parse the route and generate the code to create the form and param vars.
     let route = RouteParams::from(ecx, sp, known_method, meta_item, annotated);
     debug!("Route params: {:?}", route);
