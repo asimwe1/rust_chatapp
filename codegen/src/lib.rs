@@ -117,7 +117,7 @@ macro_rules! register_decorators {
     )
 }
 
-#[doc(hidden)]
+/// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
