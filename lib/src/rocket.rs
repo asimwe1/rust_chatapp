@@ -308,7 +308,14 @@ impl Rocket {
                White.paint(&config.address),
                White.paint(&config.port));
         info_!("logging: {:?}", White.paint(config.log_level));
-        info_!("session key: {}", White.paint(config.take_session_key().is_some()));
+
+        let session_key = config.take_session_key();
+        if session_key.is_some() {
+            info_!("session key: {}", White.paint("present"));
+            warn_!("Signing and encryption of cookies is currently disabled.");
+            warn_!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
+        }
+
         for (name, value) in config.extras() {
             info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
         }
