@@ -16,3 +16,6 @@ lazy_static = "*"
 path = "../../contrib"
 default-features = false
 features = ["json"]
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

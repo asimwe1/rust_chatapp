@@ -4,7 +4,7 @@ extern crate serde_json;
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
-use rocket::outcome::{Outcome, IntoOutcome};
+use rocket::outcome::Outcome;
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
@@ -78,7 +78,13 @@ impl<T: Deserialize> FromData for JSON<T> {
         }
 
         let reader = data.open().take(MAX_SIZE);
-        serde_json::from_reader(reader).map(|val| JSON(val)).into_outcome()
+        match serde_json::from_reader(reader).map(|val| JSON(val)) {
+            Ok(value) => Outcome::Success(value),
+            Err(e) => {
+                error_!("Couldn't parse JSON body: {:?}", e);
+                Outcome::Failure((Status::BadRequest, e))
+            }
+        }
     }
 }
 

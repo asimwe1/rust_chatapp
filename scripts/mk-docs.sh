@@ -25,3 +25,6 @@ cargo clean
 mk_doc $LIB_DIR
 mk_doc $CODEGEN_DIR
 mk_doc $CONTRIB_DIR  --all-features
+
+# Blank index, for redirection.
+touch ${DOC_DIR}/index.html

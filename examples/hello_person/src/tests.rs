@@ -1,7 +1,7 @@
 use super::rocket;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
-    use rocket::http::Status;
+use rocket::http::Status;
 
 fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
@@ -29,8 +29,8 @@ fn test_hello() {
 #[test]
 fn test_failing_hello() {
     test_404("/hello/Mike/1000");
-    test_404("/hello/Mike/128");
     test_404("/hello/Mike/-129");
+    test_404("/hello/Mike/-1");
 }
 
 #[test]

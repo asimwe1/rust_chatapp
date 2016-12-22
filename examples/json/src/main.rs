@@ -7,6 +7,8 @@ extern crate serde_json;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
+#[cfg(test)] mod tests;
+
 use rocket_contrib::JSON;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -27,22 +29,9 @@ struct Message {
 }
 
 // TODO: This example can be improved by using `route` with muliple HTTP verbs.
-// To be precise, put/post could/should look like:
-// #[route(PUT, POST, path = "/<id>", format = "application/json")]
-// fn f(method: Method, id: ID, message: JSON<Message>) -> Option<JSON<SimpleMap>> {
-//     let mut hashmap = MAP.lock().unwrap();
-//     let exists = hashmap.contains_key(&id);
-//     if method == Method::Put && exists || method == Method::Post && !exists {
-//         hashmap.insert(id, message.0.contents);
-//         return Ok(JSON(map!{ "status" => "ok" }))
-//     }
-//
-//     None
-// }
-
 #[post("/<id>", format = "application/json", data = "<message>")]
 fn new(id: ID, message: JSON<Message>) -> JSON<SimpleMap> {
-    let mut hashmap = MAP.lock().unwrap();
+    let mut hashmap = MAP.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
         JSON(map!{
             "status" => "error",

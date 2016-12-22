@@ -224,13 +224,13 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     }
 }
 
-/// If `self` is `Ok`, responds with the wrapped `Responder`. Otherwise prints a
-/// warning message with the `Err` value returns an `Err` of
+/// If `self` is `Ok`, responds with the wrapped `Responder`. Otherwise prints
+/// an error message with the `Err` value returns an `Err` of
 /// `Status::InternalServerError`.
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     default fn respond(self) -> Result<Response<'r>, Status> {
         self.map(|r| r.respond()).unwrap_or_else(|e| {
-            warn_!("Response was `Err`: {:?}.", e);
+            error_!("Response was `Err`: {:?}.", e);
             Err(Status::InternalServerError)
         })
     }
