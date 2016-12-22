@@ -57,7 +57,6 @@ pub fn emit_item(push: &mut FnMut(Annotatable), item: P<Item>) {
     push(Annotatable::Item(item));
 }
 
-#[macro_export]
 macro_rules! quote_enum {
     ($ecx:expr, $var:expr => $(::$root:ident)+
      { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({

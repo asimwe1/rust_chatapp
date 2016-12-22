@@ -1,3 +1,84 @@
+//! # Rocket - Code Generation
+//!
+//! This crate implements the code generation portions of Rocket. This includes
+//! custom derives, custom attributes, and procedural macros. The documentation
+//! here is purely technical. The code generation facilities are documented
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
+//!
+//! ## Custom Attributes
+//!
+//! This crate implements the following custom attributes:
+//!
+//!   * **route**
+//!   * **get**
+//!   * **put**
+//!   * **post**
+//!   * **delete**
+//!   * **head**
+//!   * **patch**
+//!   * **error**
+//!
+//! The grammar for all _route_ attributes, including **route**, **get**,
+//! **put**, **post**, **delete**, **head**, and **patch**, is defined as:
+//!
+//! <pre>
+//! route := METHOD? '(' ('path' '=')? path (',' kv_param)* ')'
+//!
+//! path := URI_SEG
+//!       | DYNAMIC_PARAM
+//!       | '?' DYNAMIC_PARAM
+//!       | path '/' path
+//!       (string literal)
+//!
+//! kv_param := 'rank' '=' INTEGER
+//!           | 'format' '=' STRING
+//!           | 'data' '=' DYNAMIC_PARAM
+//!
+//! INTEGER := isize, as defined by Rust
+//! STRING := UTF-8 string literal, as defined by Rust
+//! IDENT := Valid identifier, as defined by Rust
+//!
+//! URI_SEG := Valid HTTP URI Segment
+//! DYNAMIC_PARAM := '<' IDENT '>' (string literal)
+//! </pre>
+//!
+//! Note that the **route** attribute takes a method as its first argument,
+//! while the remaining do not. That is, **route** looks like:
+//!
+//!     #[route(GET, path = "/hello")]
+//!
+//! while the equivalent using **get** looks like:
+//!
+//!     #[get("/hello")]
+//!
+//! The syntax for the **error** attribute is:
+//!
+//! <pre>
+//! error := INTEGER
+//! </pre>
+//!
+//! ## Custom Derives
+//!
+//! This crate implements the following custom derives:
+//!
+//!   * **FromForm**
+//!
+//! ## Procedural Macros
+//!
+//! This crate implements the following procedural macros:
+//!
+//!   * **routes**
+//!   * **errors**
+//!
+//! The syntax for both of these is defined as:
+//!
+//! <pre>
+//! macro := PATH (',' macro)*
+//!
+//! PATH := a path, as defined by Rust
+//! </pre>
+//!
+
 #![crate_type = "dylib"]
 #![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
 #![feature(custom_attribute)]
@@ -36,6 +117,7 @@ macro_rules! register_decorators {
     )
 }
 
+#[doc(hidden)]
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
