@@ -1,6 +1,6 @@
 [package]
 name = "rocket_codegen"
-version = "0.0.11"
+version = "0.1.0-rc"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 
 [lib]
