@@ -1,3 +1,9 @@
+# Version 0.1.1 (Dec 23, 2016)
+
+## Core
+
+  * `NamedFile` `Responder` lost its body in the shuffle; it's back!
+
 # Version 0.1.0 (Dec 23, 2016)
 
 This is the first public release of Rocket!
