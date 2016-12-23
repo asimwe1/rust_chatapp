@@ -1,3 +1,40 @@
+# Version 0.1.0 (Dec 23, 2016)
+
+This is the first public release of Rocket!
+
+## Breaking
+
+All of the mentions to `hyper` types in core Rocket types are no more. Rocket
+now implements its own `Request` and `Response` types.
+
+  * `ContentType` uses associated constants instead of static methods.
+  * `StatusCode` removed in favor of new `Status` type.
+  * `Response` type alias superceded by `Response` type.
+  * `Responder::respond` no longer takes in hyper type.
+  * `Responder::respond` returns `Response`, takes `self` by move.
+  * `Handler` returns `Outcome` instead of `Response` type alias.
+  * `ErrorHandler` returns `Result`.
+  * All `Hyper*` types were moved to unprefixed versions in `hyper::`.
+  * `MockRequest::dispatch` now returns a `Response` type.
+  * `URIBuf` removed in favor of unified `URI`.
+  * Rocket panics when an illegal, dynamic mount point is used.
+
+## Core
+
+  * Rocket handles `HEAD` requests automatically.
+  * New `Response` and `ResponseBuilder` types.
+  * New `Request`, `Header`, `Status`, and `ContentType` types.
+
+## Testing
+
+  * `MockRequest` allows any type of header.
+  * `MockRequest` allows cookies.
+
+## Codegen
+
+  * Debug output disabled by default.
+  * The `ROCKET_CODEGEN_DEBUG` environment variables enables codegen logging.
+
 # Version 0.0.11 (Dec 11, 2016)
 
 ## Streaming Requests

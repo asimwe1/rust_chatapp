@@ -74,7 +74,8 @@ You should see `Hello, world!` by visiting `http://localhost:8000`.
 
 To test Rocket, simply run `./scripts/test.sh` from the root of the source tree.
 This will build and test the `core`, `codegen`, and `contrib` libraries as well
-as all of the examples. This is the script that gets run by Travis CI.
+as all of the examples. This is the script that gets run by Travis CI. To test a
+crate individually, run `cargo test --all-features`.
 
 ### Core
 
@@ -90,6 +91,12 @@ extracted from `rustc`, for testing. See the [compiler test
 documentation](https://github.com/rust-lang/rust/blob/master/COMPILER_TESTS.md)
 for information on how to write compiler tests.
 
+## Documentation
+
+You can build the Rocket API documentation locally by running
+`./scripts/mk-docs.sh`. The resulting documentation is what gets uploaded to
+[api.rocket.rs](https://api.rocket.rs).
+
 ## Contributing
 
 Contributions are absolutely, positively welcome and encouraged! Contributions
@@ -98,7 +105,7 @@ come in many forms. You could:
   1. Submit a feature request or bug report as an [issue](https://github.com/SergioBenitez/Rocket/issues).
   2. Ask for improved documentation as an [issue](https://github.com/SergioBenitez/Rocket/issues).
   3. Comment on [issues that require
-        feedback](https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
+     feedback](https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
   4. Contribute code via [pull requests](https://github.com/SergioBenitez/Rocket/pulls).
 
 We aim to keep Rocket's code quality at the highest level. This means that any
@@ -113,7 +120,10 @@ code you contribute must be:
   * **Tested:** You must add (and pass) convincing tests for any functionality you add.
   * **Focused:** Your code should do what it's supposed to do and nothing more.
 
-All pull requests are code reviewed and tested by the CI.
+All pull requests are code reviewed and tested by the CI. Note that unless you
+explicitly state otherwise, any contribution intentionally submitted for
+inclusion in Rocket by you shall be dual licensed under the MIT License and
+Apache License, Version 2.0, without any additional terms or conditions.
 
 ## Performance
 
@@ -130,7 +140,7 @@ world!" benchmark:
   * **Processor:** Intel Xeon X5675 @ 3.07GHz
   * **Operating System:** Mac OS X v10.11.6
 
-**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 300 req/s, +/- 1us latency):
+**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 2000 req/s, +/- 10us latency):
 
     Running 10s test @ http://localhost:80
       2 threads and 10 connections
@@ -141,21 +151,21 @@ world!" benchmark:
     Requests/sec:  55715.98
     Transfer/sec:      8.08MB
 
-**Rocket v0.0.11** (8 LOC) results (best of 3, +/- 200 req/s, +/- 0.5us latency):
+**Rocket v0.1.0** (8 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
 
     Running 10s test @ http://localhost:80
       2 threads and 10 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   163.97us   27.47us 699.00us   70.30%
-        Req/Sec    29.58k     1.02k   32.39k    64.85%
-      594546 requests in 10.10s, 82.78MB read
-    Requests/sec:  58868.83
-    Transfer/sec:      8.20MB
+        Latency   161.33us   37.40us   2.08ms   75.89%
+        Req/Sec    30.10k     1.13k   33.28k    72.77%
+      604782 requests in 10.10s, 84.21MB read
+    Requests/sec:  59883.30
+    Transfer/sec:      8.34MB
 
 **Summary:**
 
-  * Rocket throughput higher by 5.7% (higher is better).
-  * Rocket latency lower by 7.4% (lower is better).
+  * Rocket throughput higher by 7.5% (higher is better).
+  * Rocket latency lower by 7.8% (lower is better).
 
 ### Future Improvements
 
@@ -165,3 +175,10 @@ performant HTTP backend is planned. We expect performance to improve
 significantly at that time. The [Stabilize HTTP
 Library](https://github.com/SergioBenitez/Rocket/issues/17) issue tracks the
 progress on this front.
+
+## License
+
+Rocket is licensed under either of the following, at your option:
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
