@@ -2,6 +2,16 @@
 name = "rocket"
 version = "0.1.0-rc"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
+description = """
+Web framework for nightly with a focus on ease-of-use, expressability, and
+speed.
+"""
+documentation = "https://api.rocket.rs"
+homepage = "https://rocket.rs"
+repository = "https://github.com/SergioBenitez/Rocket"
+readme = "../README.md"
+keywords = ["rocket", "web", "framework", "server"]
+license = "MIT/Apache-2.0"
 
 [dependencies]
 term-painter = "^0.2"
@@ -15,8 +25,8 @@ version = "^0.9"
 default-features = false
 
 [dev-dependencies]
-lazy_static = "*"
-rocket_codegen = { path = "../codegen" }
+lazy_static = "0.2"
+rocket_codegen = { version = "0.1.0-rc", path = "../codegen" }
 
 [features]
 testing = []
