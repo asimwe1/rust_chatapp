@@ -39,7 +39,7 @@
 //! IDENT := Valid identifier, as defined by Rust
 //!
 //! URI_SEG := Valid HTTP URI Segment
-//! DYNAMIC_PARAM := '<' IDENT '>' (string literal)
+//! DYNAMIC_PARAM := '<' IDENT '..'? '>' (string literal)
 //! </pre>
 //!
 //! Note that the **route** attribute takes a method as its first argument,
@@ -78,6 +78,16 @@
 //! PATH := a path, as defined by Rust
 //! </pre>
 //!
+//! # Debugging Codegen
+//!
+//! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate logs
+//! the items it has generated to the console at compile-time. For example, you
+//! might run the following to build a Rocket application with codegen logging
+//! enabled:
+//!
+//! ```
+//! ROCKET_CODEGEN_DEBUG=1 cargo build
+//! ```
 
 #![crate_type = "dylib"]
 #![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
