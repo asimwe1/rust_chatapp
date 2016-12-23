@@ -254,6 +254,15 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 /// the matched segments (via the
 /// [Segments](/rocket/http/uri/struct.Segments.html) iterator) into the
 /// implementing type.
+///
+/// # Provided Implementations
+///
+/// Rocket implements `FromParam` for `PathBuf`. The `PathBuf` implementation
+/// constructs a path from the segments iterator. Each segment is
+/// percent-decoded. If a segment equals ".." before or after decoding, the
+/// previous segment (if any) is omitted. For security purposes, any other
+/// segments that begin with "*" or "." are ignored.  If a percent-decoded
+/// segment results in invalid UTF8, an `Err` is returned with the `Utf8Error`.
 pub trait FromSegments<'a>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error: Debug;

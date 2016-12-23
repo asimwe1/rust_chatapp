@@ -32,7 +32,7 @@
 //!
 //! The testing methadology is simple:
 //!
-//!   1. Construct a `Rocket` instance
+//!   1. Construct a `Rocket` instance.
 //!   2. Construct a request.
 //!   3. Dispatch the request using the Rocket instance.
 //!   4. Inspect, validate, and verify the response.
