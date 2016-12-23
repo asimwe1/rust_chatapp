@@ -4,19 +4,17 @@ use std::borrow::Cow;
 use rocket::request::FromParam;
 use rand::{self, Rng};
 
+/// Table to retrieve base62 values from.
 const BASE62: &'static [u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-fn valid_id(id: &str) -> bool {
-    id.chars().all(|c| {
-        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-    })
-}
-
+/// A _probably_ unique paste ID.
 pub struct PasteID<'a>(Cow<'a, str>);
 
 impl<'a> PasteID<'a> {
-    /// Here's how this works: get `size` random 8-bit integers, convert them
-    /// into base-62 characters, and concat them to get the ID.
+    /// Generate a _probably_ unique ID with `size` characters. For readability,
+    /// the characters used are from the sets [0-9], [A-Z], [a-z]. The
+    /// probability of a collision depends on the value of `size`. In
+    /// particular, the probability of a collision is 1/62^(size).
     pub fn new(size: usize) -> PasteID<'static> {
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
@@ -28,6 +26,23 @@ impl<'a> PasteID<'a> {
     }
 }
 
+impl<'a> fmt::Display for PasteID<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Returns `true` if `id` is a valid paste ID and `false` otherwise.
+fn valid_id(id: &str) -> bool {
+    id.chars().all(|c| {
+        (c >= 'a' && c <= 'z')
+            || (c >= 'A' && c <= 'Z')
+            || (c >= '0' && c <= '9')
+    })
+}
+
+/// Returns an instance of `PasteID` if the path segment is a valid ID.
+/// Otherwise returns the invalid ID as the `Err` value.
 impl<'a> FromParam<'a> for PasteID<'a> {
     type Error = &'a str;
 
@@ -36,12 +51,6 @@ impl<'a> FromParam<'a> for PasteID<'a> {
             true => Ok(PasteID(Cow::Borrowed(param))),
             false => Err(param)
         }
-    }
-}
-
-impl<'a> fmt::Display for PasteID<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
