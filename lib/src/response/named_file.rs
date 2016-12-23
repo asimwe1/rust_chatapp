@@ -76,11 +76,6 @@ impl NamedFile {
 /// [ContentType::from_extension](/rocket/http/struct.ContentType.html#method.from_extension)
 /// for more information. If you would like to stream a file with a different
 /// Content-Type than that implied by its extension, use a `File` directly.
-///
-/// # Failure
-///
-/// If reading the file fails permanently at any point during the response, an
-/// `Outcome` of `Failure` is returned, and the response is terminated abrubtly.
 impl<'r> Responder<'r> for NamedFile {
     fn respond(self) -> Result<Response<'r>, Status> {
         let mut response = Response::new();
