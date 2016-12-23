@@ -88,13 +88,16 @@ impl<T: Deserialize> FromData for JSON<T> {
     }
 }
 
+// Serializes the wrapped value into JSON. Returns a response with Content-Type
+// JSON and a fixed-size body with the serialization. If serialization fails, an
+// `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for JSON<T> {
     fn respond(self) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {
             content::JSON(string).respond().unwrap()
         }).map_err(|e| {
             error_!("JSON failed to serialize: {:?}", e);
-            Status::BadRequest
+            Status::InternalServerError
         })
     }
 }

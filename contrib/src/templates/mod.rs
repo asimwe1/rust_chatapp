@@ -25,10 +25,10 @@ use rocket::http::{ContentType, Status};
 ///
 /// Templating in Rocket words by first discovering all of the templates inside
 /// the template directory. The template directory is configurable via the
-/// `template_dir` configuration parameter. The path set in `template_dir`
-/// should be relative to the Rocket configuration file. See the [configuration
-/// chapter](https://rocket.rs/guide/configuration) of the guide for more
-/// information on configuration.
+/// `template_dir` configuration parameter and defaults to `templates/`. The
+/// path set in `template_dir` should be relative to the Rocket configuration
+/// file. See the [configuration chapter](https://rocket.rs/guide/configuration)
+/// of the guide for more information on configuration.
 ///
 /// Templates are discovered according to their extension. At present, this
 /// library supports the following templates and extensions:
