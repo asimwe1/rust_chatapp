@@ -14,7 +14,7 @@ templates = ["serde", "serde_json", "lazy_static_macro", "glob"]
 lazy_static_macro = ["lazy_static"]
 
 [dependencies]
-rocket = { path = "../lib/" }
+rocket = { version = "0.1.0-rc", path = "../lib/" }
 log = "^0.3"
 
 # JSON and templating dependencies.

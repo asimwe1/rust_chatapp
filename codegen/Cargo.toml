@@ -7,7 +7,7 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 plugin = true
 
 [dependencies]
-rocket = { path = "../lib/" }
+rocket = { version = "0.1.0-rc", path = "../lib/" }
 log = "^0.3"
 
 [dev-dependencies]
