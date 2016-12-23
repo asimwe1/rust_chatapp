@@ -38,6 +38,12 @@ impl NamedFile {
         &self.1
     }
 
+    /// Take the underlying `File`.
+    #[inline(always)]
+    pub fn take_file(self) -> File {
+        self.1
+    }
+
     /// Retrieve a mutable borrow to the underlying `File`.
     #[inline(always)]
     pub fn file_mut(&mut self) -> &mut File {
@@ -87,6 +93,7 @@ impl<'r> Responder<'r> for NamedFile {
             }
         }
 
+        response.set_streamed_body(self.take_file());
         Ok(response)
     }
 }
