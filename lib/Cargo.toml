@@ -6,7 +6,7 @@ description = """
 Web framework for nightly with a focus on ease-of-use, expressability, and
 speed.
 """
-documentation = "https://api.rocket.rs"
+documentation = "https://api.rocket.rs/rocket/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../README.md"
