@@ -105,9 +105,7 @@ pub struct TemplateInfo {
     full_path: PathBuf,
     /// The complete path, without `template_dir`, to this template.
     path: PathBuf,
-    /// The complete path, with `template_dir`, without the template extension.
-    canonical_path: PathBuf,
-    /// The extension of for the engine of this template.
+    /// The extension for the engine of this template.
     extension: String,
     /// The extension before the engine extension in the template, if any.
     data_type: Option<String>
@@ -142,7 +140,9 @@ impl Template {
         let name = name.as_ref();
         let template = TEMPLATES.get(name);
         if template.is_none() {
+            let names: Vec<_> = TEMPLATES.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
+            info_!("Known templates: {}", names.join(","));
             info_!("Searched in '{}'.", *TEMPLATE_DIR);
             return Template(None, None);
         }
@@ -173,7 +173,16 @@ impl Responder<'static> for Template {
 
 /// Removes the file path's extension or does nothing if there is none.
 fn remove_extension<P: AsRef<Path>>(path: P) -> PathBuf {
-    PathBuf::from(path.as_ref().file_stem().unwrap())
+    let path = path.as_ref();
+    let stem = match path.file_stem() {
+        Some(stem) => stem,
+        None => return path.to_path_buf()
+    };
+
+    match path.parent() {
+        Some(parent) => parent.join(stem),
+        None => PathBuf::from(stem)
+    }
 }
 
 /// Returns a HashMap of `TemplateInfo`'s for all of the templates in
@@ -188,17 +197,17 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
 
     let mut templates = HashMap::new();
     for ext in engines {
-        let mut path: PathBuf = [&*TEMPLATE_DIR, "**", "*"].iter().collect();
-        path.set_extension(ext);
-        for p in glob(path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
-            let canonical_path = remove_extension(&p);
-            let name = remove_extension(&canonical_path);
-            let data_type = canonical_path.extension();
+        let mut glob_path: PathBuf = [&*TEMPLATE_DIR, "**", "*"].iter().collect();
+        glob_path.set_extension(ext);
+        for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
+            let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
+            let path_no_ext = remove_extension(&rel_path);
+            let data_type = path_no_ext.extension();
+            let name = remove_extension(&path_no_ext);
             templates.insert(name.to_string_lossy().into_owned(), TemplateInfo {
-                full_path: p.to_path_buf(),
-                path: p.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf(),
-                canonical_path: canonical_path.clone(),
-                extension: p.extension().unwrap().to_string_lossy().into_owned(),
+                full_path: path.to_path_buf(),
+                path: rel_path,
+                extension: path.extension().unwrap().to_string_lossy().into_owned(),
                 data_type: data_type.map(|d| d.to_string_lossy().into_owned())
             });
         }
