@@ -9,6 +9,11 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $SCRIPT_DIR/config.sh
 
+if ! [ -z "$(git status --porcelain)" ]; then
+  echo "There are uncommited changes! Aborting."
+  exit 1
+fi
+
 # Ensure everything passes before trying to publish.
 echo ":::: Running test suite..."
 cargo clean
@@ -22,7 +27,7 @@ for dir in "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"; do
   pushd ${dir}
   echo ":::: Publishing '${dir}..."
   # We already checked things ourselves. Don't spend time reverifying.
-  cargo publish --no-verify
+  cargo publish --no-verify --allow-dirty
   popd
 done
 
