@@ -1,3 +1,21 @@
+# Version 0.1.2 (Dec 24, 2016)
+
+## Codegen
+
+  * Fix `get_raw_segments` index argument in route codegen
+    ([#41](https://github.com/SergioBenitez/Rocket/issues/41)).
+  * Segments params (`<param..>`) respect prefixes.
+
+## Contrib
+
+  * Fix nested template name resolution
+    ([#42](https://github.com/SergioBenitez/Rocket/issues/42)).
+
+## Infrastructure
+
+  * New script (`publish.sh`) automates publishing to crates.io.
+  * New script (`bump_version.sh`) automates version bumps.
+
 # Version 0.1.1 (Dec 23, 2016)
 
 ## Core
