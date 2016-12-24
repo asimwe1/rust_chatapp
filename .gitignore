@@ -22,3 +22,6 @@ _TODO
 
 # The upload script, for now.
 scripts/upload-docs.sh
+
+# Backup files.
+*.bak
