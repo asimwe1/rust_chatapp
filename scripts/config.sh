@@ -6,11 +6,16 @@ function relative() {
   local full_path="${SCRIPT_DIR}/../${1}"
 
   if [ -d "${full_path}" ]; then
-    # Use readlink as a fallback to readpath for cross-platform compat.
-    if ! command -v realpath >/dev/null 2>&1; then
+    # Try to use readlink as a fallback to readpath for cross-platform compat.
+    if command -v realpath >/dev/null 2>&1; then
+      echo $(realpath "${full_path}")
+    elif ! (readlink -f 2>&1 | grep illegal > /dev/null); then
       echo $(readlink -f "${full_path}")
     else
-      echo $(realpath "${full_path}")
+      echo "Rocket's scripts require 'realpath' or 'readlink -f' support." >&2
+      echo "Install realpath or GNU readlink via your package manager." >&2
+      echo "Aborting." >&2
+      exit 1
     fi
   else
     # when the directory doesn't exist, fallback to this.
@@ -18,11 +23,11 @@ function relative() {
   fi
 }
 
-EXAMPLES_DIR=$(relative "examples")
-LIB_DIR=$(relative "lib")
-CODEGEN_DIR=$(relative "codegen")
-CONTRIB_DIR=$(relative "contrib")
-DOC_DIR=$(relative "target/doc")
+EXAMPLES_DIR=$(relative "examples") || exit $?
+LIB_DIR=$(relative "lib") || exit $?
+CODEGEN_DIR=$(relative "codegen") || exit $?
+CONTRIB_DIR=$(relative "contrib") || exit $?
+DOC_DIR=$(relative "target/doc") || exit $?
 
 if [ "${1}" = "-p" ]; then
   echo $SCRIPT_DIR
