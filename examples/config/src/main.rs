@@ -2,14 +2,12 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
+extern crate config;
+
+#[cfg(test)]
+mod tests;
 
 // This example's illustration is the Rocket.toml file.
-
-#[get("/")]
-fn hello() -> &'static str {
-    "Hello, world!"
-}
-
 fn main() {
-    rocket::ignite().mount("/hello", routes![hello]).launch()
+    rocket::ignite().mount("/hello", routes![config::hello]).launch()
 }
