@@ -16,7 +16,6 @@ fn bug(form_data: Form<FormData>) -> &'static str {
     "OK"
 }
 
-
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
 use rocket::http::ContentType;
