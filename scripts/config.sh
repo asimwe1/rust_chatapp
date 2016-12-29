@@ -23,6 +23,7 @@ function relative() {
   fi
 }
 
+ROOT_DIR=$(relative "") || exit $?
 EXAMPLES_DIR=$(relative "examples") || exit $?
 LIB_DIR=$(relative "lib") || exit $?
 CODEGEN_DIR=$(relative "codegen") || exit $?

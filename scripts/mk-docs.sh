@@ -5,7 +5,7 @@ set -e
 # Builds the rustdocs for all of the libraries.
 #
 
-# Brings in: EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, and CONTRIB_DIR, DOC_DIR
+# Brings in: ROOT_DIR, EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, CONTRIB_DIR, DOC_DIR
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $SCRIPT_DIR/config.sh
 

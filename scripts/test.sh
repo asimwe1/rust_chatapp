@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Brings in: EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, and CONTRIB_DIR, DOC_DIR
+# Brings in: ROOT_DIR, EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, CONTRIB_DIR, DOC_DIR
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $SCRIPT_DIR/config.sh
 
@@ -27,8 +27,6 @@ function build_and_test() {
 
 # Checks that the versions for Cargo projects $@ all match
 function check_versions_match() {
-  echo ":: Ensuring all crate versions match..."
-
   local last_version=""
   for dir in $@; do
     local cargo_toml="${dir}/Cargo.toml"
@@ -47,7 +45,21 @@ function check_versions_match() {
   done
 }
 
+# Ensures there are not tabs in any file in the directories $@.
+function ensure_tab_free() {
+  local matches=$(egrep -I -R '\t' $ROOT_DIR | egrep -v '/target|/.git|LICENSE')
+  if ! [ -z "${matches}" ]; then
+    echo "Tab characters were found in the following:"
+    echo "${matches}"
+    exit 1
+  fi
+}
+
+echo ":: Ensuring all crate versions match..."
 check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
+
+echo ":: Checking for tabs..."
+ensure_tab_free
 
 # Update dependencies before running tests.
 echo ":: Updating dependencies..."
