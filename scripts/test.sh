@@ -47,7 +47,8 @@ function check_versions_match() {
 
 # Ensures there are not tabs in any file in the directories $@.
 function ensure_tab_free() {
-  local matches=$(egrep -I -R '\t' $ROOT_DIR | egrep -v '/target|/.git|LICENSE')
+  local tab=$(printf '\t')
+  local matches=$(grep -I -R "${tab}" $ROOT_DIR | egrep -v '/target|/.git|LICENSE')
   if ! [ -z "${matches}" ]; then
     echo "Tab characters were found in the following:"
     echo "${matches}"
