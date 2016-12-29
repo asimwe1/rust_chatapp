@@ -1,6 +1,9 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
+
 extern crate rocket;
+
+#[cfg(test)] mod tests;
 
 use rocket::response::Redirect;
 
