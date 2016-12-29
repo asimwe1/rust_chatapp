@@ -2,12 +2,11 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::config::Environment;
 
 mod common;
 
 #[test]
-fn test() {
-    common::test_config(Environment::Staging);
+fn test_staging_config() {
+    common::test_config(rocket::config::Environment::Staging);
     common::test_hello();
 }

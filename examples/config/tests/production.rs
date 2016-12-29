@@ -2,12 +2,11 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-use rocket::config::Environment;
 
 mod common;
 
 #[test]
-fn test() {
-    common::test_config(Environment::Production);
+fn test_production_config() {
+    common::test_config(rocket::config::Environment::Production);
     common::test_hello();
 }

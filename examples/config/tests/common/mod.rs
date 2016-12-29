@@ -1,17 +1,18 @@
 extern crate rocket;
 extern crate config as lib;
-use std;
+
 use rocket::config::{self, Environment};
 use rocket::http::Method;
 use rocket::LoggingLevel;
 use rocket::testing::MockRequest;
 
-
 pub fn test_config(environment: Environment) {
-    // Manually set the config environment variable so that Rocket initializes it in `init()`.
-    std::env::set_var("ROCKET_ENV", environment.to_string());
+    // Manually set the config environment variable. Rocket will initialize the
+    // environment in `ignite()`.
+    ::std::env::set_var("ROCKET_ENV", environment.to_string());
     rocket::ignite().mount("/hello", routes![lib::hello]);
 
+    // Get the active environment and ensure that it matches our expectations.
     let config = config::active().unwrap();
     match environment {
         Environment::Development => {
@@ -39,7 +40,7 @@ pub fn test_config(environment: Environment) {
         }
     }
 
-    // Rocket `take`s the key, so this should always be `None`
+    // Rocket `take`s the key, so this should always be `None`.
     assert_eq!(config.take_session_key(), None);
 }
 
