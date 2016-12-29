@@ -42,7 +42,8 @@ extern crate lazy_static;
 
 #[cfg_attr(feature = "json", macro_use)]
 #[cfg(feature = "json")]
-mod json;
+#[doc(hidden)]
+pub mod json;
 
 #[cfg(feature = "templates")]
 mod templates;
@@ -52,6 +53,8 @@ mod uuid;
 
 #[cfg(feature = "json")]
 pub use json::JSON;
+#[cfg(feature = "json")]
+pub use json::Value;
 
 #[cfg(feature = "json")]
 pub use json::SerdeError;

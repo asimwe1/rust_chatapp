@@ -14,6 +14,11 @@ use self::serde::{Serialize, Deserialize};
 
 pub use self::serde_json::error::Error as SerdeError;
 
+pub use self::serde_json::value::Value;
+
+#[doc(hidden)]
+pub use self::serde_json::to_value;
+
 /// The JSON type, which implements `FromData` and `Responder`. This type allows
 /// you to trivially consume and respond with JSON in your Rocket application.
 ///
@@ -117,31 +122,38 @@ impl<T> DerefMut for JSON<T> {
     }
 }
 
-/// A nice little macro to create simple HashMaps. Really convenient for
+/// A nice little macro to create JSON serializable HashMaps, convenient for
 /// returning ad-hoc JSON messages.
+///
+/// Keys can be any type that implements `Serialize`. All keys must have the
+/// same type, which is usually an `&'static str`. Values can be any type that
+/// implements `Serialize` as well, but each value is allowed to be a different
+/// type.
 ///
 /// # Examples
 ///
 /// ```
 /// # #[macro_use] extern crate rocket_contrib;
-/// use std::collections::HashMap;
 /// # fn main() {
-/// let map: HashMap<&str, usize> = map! {
-///     "status" => 0,
-///     "count" => 100
+/// let map = map! {
+///     "message" => "Done!",
+///     "success" => true,
+///     "count" => 3,
 /// };
 ///
-/// assert_eq!(map.len(), 2);
-/// assert_eq!(map.get("status"), Some(&0));
-/// assert_eq!(map.get("count"), Some(&100));
+/// assert_eq!(map.len(), 3);
+/// assert_eq!(map.get("message").and_then(|v| v.as_str()), Some("Done!"));
+/// assert_eq!(map.get("success").and_then(|v| v.as_bool()), Some(true));
+/// assert_eq!(map.get("count").and_then(|v| v.as_u64()), Some(3));
 /// # }
 /// ```
 #[macro_export]
 macro_rules! map {
     ($($key:expr => $value:expr),+) => ({
-        use std::collections::HashMap;
-        let mut map = HashMap::new();
-        $(map.insert($key, $value);)+
+        use ::std::collections::HashMap;
+        use $crate::json::{Value, to_value};
+        let mut map: HashMap<_, Value> = HashMap::new();
+        $(map.insert($key, to_value($value));)+
         map
     });
 

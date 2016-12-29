@@ -9,13 +9,15 @@ extern crate serde_json;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::JSON;
+use rocket_contrib::{JSON, Value};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
 // The type to represent the ID of a message.
 type ID = usize;
-type SimpleMap = HashMap<&'static str, &'static str>;
+
+// The type of a `map!` invocation.
+type SimpleMap = HashMap<&'static str, Value>;
 
 // We're going to store all of the messages here. No need for a DB.
 lazy_static! {
