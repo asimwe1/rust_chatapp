@@ -9,6 +9,7 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
+build = "build.rs"
 
 [lib]
 plugin = true
@@ -19,3 +20,6 @@ log = "^0.3"
 
 [dev-dependencies]
 compiletest_rs = "^0.2"
+
+[build-dependencies]
+ansi_term = "^0.9"
