@@ -74,8 +74,7 @@ impl<'v> FromFormValue<'v> for String {
     // This actually parses the value according to the standard.
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
         let replaced = v.replace("+", " ");
-        let result = URI::percent_decode(replaced.as_bytes());
-        match result {
+        match URI::percent_decode(replaced.as_bytes()) {
             Err(_) => Err(v),
             Ok(string) => Ok(string.into_owned())
         }
