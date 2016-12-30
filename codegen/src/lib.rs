@@ -160,5 +160,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "delete" => delete_decorator,
         "head" => head_decorator,
         "patch" => patch_decorator
+        // TODO: Allow this once Diesel incompatibility is fixed. Fix docs too.
+        // "options" => options_decorator
     );
 }

@@ -290,5 +290,8 @@ method_decorator!(get_decorator, Get);
 method_decorator!(put_decorator, Put);
 method_decorator!(post_decorator, Post);
 method_decorator!(delete_decorator, Delete);
-method_decorator!(patch_decorator, Patch);
 method_decorator!(head_decorator, Head);
+method_decorator!(patch_decorator, Patch);
+
+// TODO: Allow this once Diesel incompatibility is fixed.
+// method_decorator!(options_decorator, Options);
