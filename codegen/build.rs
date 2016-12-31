@@ -66,6 +66,6 @@ fn main() {
         }
     }
 
-    printerr!("{}", Yellow.paint("Warning: Rocket was unable to check rustc compatbility."));
+    printerr!("{}", Yellow.paint("Warning: Rocket was unable to check rustc compatibility."));
     printerr!("{}", Yellow.paint("Build may fail due to incompatible rustc version."));
 }
