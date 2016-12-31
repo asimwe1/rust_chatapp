@@ -16,11 +16,11 @@
   * Codegen will refuse to build with incompatible rustc, presenting error
     message and suggestion.
   * Added `head` as a valid decorator for `HEAD` requests.
-  * Added `route(OPTIONS)` is a valid decorator for `OPTIONS` requests.
+  * Added `route(OPTIONS)` as a valid decorator for `OPTIONS` requests.
 
 ## Contrib
 
-  * Files with the `.tera` extension are properly autoescaped.
+  * Templates with the `.tera` extension are properly autoescaped.
   * Nested template names are properly resolved on Windows.
   * Template implements `Display`.
   * Tera dependency updated to version 0.6.
