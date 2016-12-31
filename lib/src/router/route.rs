@@ -77,14 +77,15 @@ impl Route {
     pub fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
         let route_segs = self.path.segments();
         let uri_segs = uri.segments();
-        let start_addr = uri.as_str().as_ptr() as usize;
+        let start_addr = uri.path().as_ptr() as usize;
 
         let mut result = Vec::with_capacity(self.path.segment_count());
         for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
+            let i = (uri_seg.as_ptr() as usize) - start_addr;
             if route_seg.ends_with("..>") {
+                result.push((i, uri.path().len()));
                 break;
             } else if route_seg.ends_with('>') {
-                let i = (uri_seg.as_ptr() as usize) - start_addr;
                 let j = i + uri_seg.len();
                 result.push((i, j));
             }
