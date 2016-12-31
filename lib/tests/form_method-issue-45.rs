@@ -42,6 +42,6 @@ fn get_passes_through() {
         .header(ContentType::Form)
         .body("_method=patch&form_data=Form+data");
 
-    let mut response = req.dispatch_with(&rocket);
+    let response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), Status::NotFound);
 }
