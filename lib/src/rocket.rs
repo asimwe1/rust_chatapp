@@ -90,7 +90,7 @@ impl Rocket {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
         for header in response.headers() {
-            let name = header.name.into_owned();
+            let name = header.name.into_string();
             let value = vec![header.value.into_owned().into()];
             hyp_res.headers_mut().set_raw(name, value);
         }

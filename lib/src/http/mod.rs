@@ -13,6 +13,7 @@ mod method;
 mod content_type;
 mod status;
 mod header;
+mod ascii;
 
 pub use self::method::Method;
 pub use self::content_type::ContentType;
