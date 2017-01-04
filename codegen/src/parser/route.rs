@@ -249,7 +249,7 @@ fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
 fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
     if let LitKind::Int(n, _) = *kv.value() {
         let max = isize::max_value();
-        if n <= max as u64 {
+        if n <= max as u128 {
             return n as isize;
         } else {
             let msg = format!("rank must be less than or equal to {}", max);

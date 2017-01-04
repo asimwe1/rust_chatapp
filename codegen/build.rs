@@ -14,7 +14,7 @@ use std::process::Command;
 use ansi_term::Colour::{Red, Yellow, Blue, White};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
-const MIN_VERSION: &'static str = "2016-12-28";
+const MIN_VERSION: &'static str = "2017-01-03";
 
 // Convenience macro for writing to stderr.
 macro_rules! printerr {
