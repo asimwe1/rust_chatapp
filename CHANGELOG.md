@@ -1,3 +1,13 @@
+# Version 0.1.4 (Jan 4, 2017)
+
+## Core
+
+  * Header names are treated as case-preserving.
+
+## Codegen
+
+  * Minimum supported nightly is `2017-01-03`.
+
 # Version 0.1.3 (Dec 31, 2016)
 
 ## Core

@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_contrib/"
@@ -21,7 +21,7 @@ templates = ["serde", "serde_json", "lazy_static_macro", "glob"]
 lazy_static_macro = ["lazy_static"]
 
 [dependencies]
-rocket = { version = "0.1.3", path = "../lib/" }
+rocket = { version = "0.1.4", path = "../lib/" }
 log = "^0.3"
 
 # JSON and templating dependencies.
