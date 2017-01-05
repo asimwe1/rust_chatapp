@@ -30,26 +30,30 @@ fn dual(user: String, path: Segments) -> String {
     user + "/is/" + &path.collect::<Vec<_>>().join("/")
 }
 
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+#[cfg(feature = "testing")]
+mod tests {
+    use super::*;
+    use rocket::testing::MockRequest;
+    use rocket::http::Method::*;
 
-#[test]
-fn segments_works() {
-    let rocket = rocket::ignite()
-        .mount("/", routes![test, two, one_two, none, dual])
-        .mount("/point", routes![test, two, one_two, dual]);
+    #[test]
+    fn segments_works() {
+        let rocket = rocket::ignite()
+            .mount("/", routes![test, two, one_two, none, dual])
+            .mount("/point", routes![test, two, one_two, dual]);
 
-    // We construct a path that matches each of the routes above. We ensure the
-    // prefix is stripped, confirming that dynamic segments are working.
-    for prefix in &["", "/test", "/two", "/one/two",
-                    "/point/test", "/point/two", "/point/one/two",
-                    "/static", "/point/static"]
-    {
-        let path = "this/is/the/path/we/want";
-        let mut req = MockRequest::new(Get, format!("{}/{}", prefix, path));
+        // We construct a path that matches each of the routes above. We ensure the
+        // prefix is stripped, confirming that dynamic segments are working.
+        for prefix in &["", "/test", "/two", "/one/two",
+                        "/point/test", "/point/two", "/point/one/two",
+                        "/static", "/point/static"]
+        {
+            let path = "this/is/the/path/we/want";
+            let mut req = MockRequest::new(Get, format!("{}/{}", prefix, path));
 
-        let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some(path.into()));
+            let mut response = req.dispatch_with(&rocket);
+            let body_str = response.body().and_then(|b| b.into_string());
+            assert_eq!(body_str, Some(path.into()));
+        }
     }
 }
