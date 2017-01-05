@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, Write, Cursor, BufReader};
+use std::io::{self, Read, BufRead, Write, Cursor, BufReader};
 use std::path::Path;
 use std::fs::File;
 
@@ -11,13 +11,33 @@ pub type BodyReader<'a, 'b> =
 
 const PEEK_BYTES: usize = 4096;
 
+pub struct DataStream {
+    stream: BufReader<Cursor<Vec<u8>>>,
+}
+
+impl Read for DataStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.stream.read(buf)
+    }
+}
+
+impl BufRead for DataStream {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        self.stream.fill_buf()
+    }
+
+    fn consume(&mut self, amt: usize) {
+        self.stream.consume(amt)
+    }
+}
+
 pub struct Data {
     data: Vec<u8>,
 }
 
 impl Data {
-    pub fn open(self) -> impl BufRead {
-        BufReader::new(Cursor::new(self.data))
+    pub fn open(self) -> DataStream {
+        DataStream { stream: BufReader::new(Cursor::new(self.data)) }
     }
 
     #[inline(always)]

@@ -1,11 +1,25 @@
 //! Types and traits for reading and parsing request body data.
 
-#[cfg(any(test, feature = "testing"))] mod test_data;
-#[cfg(not(any(test, feature = "testing")))] mod data;
-#[cfg(not(any(test, feature = "testing")))] mod data_stream;
+#[cfg(any(test, feature = "testing"))]
+#[path = "."]
+mod items {
+    mod test_data;
+
+    pub use self::test_data::Data;
+    pub use self::test_data::DataStream;
+}
+
+#[cfg(not(any(test, feature = "testing")))]
+#[path = "."]
+mod items {
+    mod data;
+    mod data_stream;
+
+    pub use self::data::Data;
+    pub use self::data_stream::DataStream;
+}
+
 mod from_data;
 
 pub use self::from_data::{FromData, Outcome};
-
-#[cfg(any(test, feature = "testing"))] pub use self::test_data::Data;
-#[cfg(not(any(test, feature = "testing")))] pub use self::data::Data;
+pub use self::items::{Data, DataStream};

@@ -7,9 +7,22 @@ use http::hyper::h1::HttpReader;
 pub type StreamReader = HttpReader<HttpStream>;
 pub type InnerStream = Chain<Take<Cursor<Vec<u8>>>, BufReader<StreamReader>>;
 
+/// Raw data stream of a request body.
+///
+/// This stream can only be obtained by calling
+/// [Data::open](/rocket/data/struct.Data.html#method.open). The stream contains
+/// all of the data in the body of the request. It exposes no methods directly.
+/// Instead, it must be used as an opaque `Read` or `BufRead` structure.
 pub struct DataStream {
-    pub stream: InnerStream,
-    pub network: HttpStream,
+    stream: InnerStream,
+    network: HttpStream,
+}
+
+impl DataStream {
+    #[doc(hidden)]
+    pub fn new(stream: InnerStream, network: HttpStream) -> DataStream {
+        DataStream { stream: stream, network: network, }
+    }
 }
 
 impl Read for DataStream {

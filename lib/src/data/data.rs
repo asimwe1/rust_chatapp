@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, Read, Write, Cursor, BufReader};
+use std::io::{self, Read, Write, Cursor, BufReader};
 use std::path::Path;
 use std::fs::File;
 use std::time::Duration;
@@ -61,7 +61,7 @@ impl Data {
     /// including that in the `peek` buffer. The method consumes the `Data`
     /// instance. This ensures that a `Data` type _always_ represents _all_ of
     /// the data in a request.
-    pub fn open(mut self) -> impl BufRead {
+    pub fn open(mut self) -> DataStream {
         // Swap out the buffer and stream for empty ones so we can move.
         let mut buffer = vec![];
         let mut stream = EmptyReader(self.stream.get_ref().clone());
@@ -71,13 +71,15 @@ impl Data {
         // Setup the underlying reader at the correct pointers.
         let mut cursor = Cursor::new(buffer);
         cursor.set_position(self.position as u64);
-        let buffered = cursor.take((self.capacity - self.position) as u64);
 
-        // Create the actual DataSteam.
-        DataStream {
-            network: stream.get_ref().clone(),
-            stream: buffered.chain(BufReader::new(stream)),
-        }
+        // Get a reference to the underlying network stream.
+        let network = stream.get_ref().clone();
+
+        // The first part of the stream is the buffer. Then the real steam.
+        let buf = cursor.take((self.capacity - self.position) as u64);
+        let stream = buf.chain(BufReader::new(stream));
+
+        DataStream::new(stream, network)
     }
 
     #[doc(hidden)]
