@@ -29,6 +29,34 @@ impl PartialEq for UncasedAsciiRef {
     }
 }
 
+impl PartialEq<str> for UncasedAsciiRef {
+    #[inline(always)]
+    fn eq(&self, other: &str) -> bool {
+        self.0.eq_ignore_ascii_case(other)
+    }
+}
+
+impl PartialEq<UncasedAsciiRef> for str {
+    #[inline(always)]
+    fn eq(&self, other: &UncasedAsciiRef) -> bool {
+        other.0.eq_ignore_ascii_case(self)
+    }
+}
+
+impl<'a> PartialEq<&'a str> for UncasedAsciiRef {
+    #[inline(always)]
+    fn eq(&self, other: & &'a str) -> bool {
+        self.0.eq_ignore_ascii_case(other)
+    }
+}
+
+impl<'a> PartialEq<UncasedAsciiRef> for &'a str {
+    #[inline(always)]
+    fn eq(&self, other: &UncasedAsciiRef) -> bool {
+        other.0.eq_ignore_ascii_case(self)
+    }
+}
+
 impl<'a> From<&'a str> for &'a UncasedAsciiRef {
     #[inline(always)]
     fn from(string: &'a str) -> &'a UncasedAsciiRef {
@@ -65,7 +93,7 @@ impl Ord for UncasedAsciiRef {
 /// An uncased (case-preserving) ASCII string.
 #[derive(Clone, Debug)]
 pub struct UncasedAscii<'s> {
-    string: Cow<'s, str>
+    pub string: Cow<'s, str>
 }
 
 impl<'s> UncasedAscii<'s> {
@@ -181,6 +209,34 @@ impl<'a, 'b> PartialEq<UncasedAscii<'b>> for UncasedAscii<'a> {
     }
 }
 
+impl<'a> PartialEq<str> for UncasedAscii<'a> {
+    #[inline(always)]
+    fn eq(&self, other: &str) -> bool {
+        self.as_ref().eq(other)
+    }
+}
+
+impl<'b> PartialEq<UncasedAscii<'b>> for str {
+    #[inline(always)]
+    fn eq(&self, other: &UncasedAscii<'b>) -> bool {
+        other.as_ref().eq(self)
+    }
+}
+
+impl<'a, 'b> PartialEq<&'b str> for UncasedAscii<'a> {
+    #[inline(always)]
+    fn eq(&self, other: & &'b str) -> bool {
+        self.as_ref().eq(other)
+    }
+}
+
+impl<'a, 'b> PartialEq<UncasedAscii<'b>> for &'a str {
+    #[inline(always)]
+    fn eq(&self, other: &UncasedAscii<'b>) -> bool {
+        other.as_ref().eq(self)
+    }
+}
+
 impl<'s> Eq for UncasedAscii<'s> {  }
 
 impl<'s> Hash for UncasedAscii<'s> {
@@ -215,13 +271,19 @@ mod tests {
     macro_rules! assert_uncased_eq {
         ($($string:expr),+) => ({
             let mut strings = Vec::new();
-            $(strings.push(UncasedAscii::from($string));)+
+            $(strings.push($string);)+
 
             for i in 0..strings.len() {
                 for j in i..strings.len() {
-                    let (a, b) = (&strings[i], &strings[j]);
-                    assert_eq!(a, b);
-                    assert_eq!(hash(&a), hash(&b));
+                    let (str_a, str_b) = (strings[i], strings[j]);
+                    let ascii_a = UncasedAscii::from(str_a);
+                    let ascii_b = UncasedAscii::from(str_b);
+                    assert_eq!(ascii_a, ascii_b);
+                    assert_eq!(hash(&ascii_a), hash(&ascii_b));
+                    assert_eq!(ascii_a, str_a);
+                    assert_eq!(ascii_b, str_b);
+                    assert_eq!(ascii_a, str_b);
+                    assert_eq!(ascii_b, str_a);
                 }
             }
         })

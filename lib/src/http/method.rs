@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use error::Error;
 use http::hyper;
-use http::ascii;
+use http::ascii::uncased_eq;
 
 use self::Method::*;
 
@@ -78,15 +78,15 @@ impl FromStr for Method {
     // clients don't follow this, so we just do a case-insensitive match here.
     fn from_str(s: &str) -> Result<Method, Error> {
         match s {
-            x if ascii::uncased_eq(x, Get.as_str()) => Ok(Get),
-            x if ascii::uncased_eq(x, Put.as_str()) => Ok(Put),
-            x if ascii::uncased_eq(x, Post.as_str()) => Ok(Post),
-            x if ascii::uncased_eq(x, Delete.as_str()) => Ok(Delete),
-            x if ascii::uncased_eq(x, Options.as_str()) => Ok(Options),
-            x if ascii::uncased_eq(x, Head.as_str()) => Ok(Head),
-            x if ascii::uncased_eq(x, Trace.as_str()) => Ok(Trace),
-            x if ascii::uncased_eq(x, Connect.as_str()) => Ok(Connect),
-            x if ascii::uncased_eq(x, Patch.as_str()) => Ok(Patch),
+            x if uncased_eq(x, Get.as_str()) => Ok(Get),
+            x if uncased_eq(x, Put.as_str()) => Ok(Put),
+            x if uncased_eq(x, Post.as_str()) => Ok(Post),
+            x if uncased_eq(x, Delete.as_str()) => Ok(Delete),
+            x if uncased_eq(x, Options.as_str()) => Ok(Options),
+            x if uncased_eq(x, Head.as_str()) => Ok(Head),
+            x if uncased_eq(x, Trace.as_str()) => Ok(Trace),
+            x if uncased_eq(x, Connect.as_str()) => Ok(Connect),
+            x if uncased_eq(x, Patch.as_str()) => Ok(Patch),
             _ => Err(Error::BadMethod),
         }
     }

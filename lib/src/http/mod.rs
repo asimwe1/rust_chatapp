@@ -13,7 +13,10 @@ mod method;
 mod content_type;
 mod status;
 mod header;
-mod ascii;
+
+// We need to export this for codegen, but otherwise it's unnecessary.
+// TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
+#[doc(hidden)] pub mod ascii;
 
 pub use self::method::Method;
 pub use self::content_type::ContentType;
