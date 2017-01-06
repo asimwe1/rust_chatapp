@@ -102,8 +102,7 @@ impl Responder<'static> for Redirect {
     fn respond(self) -> Result<Response<'static>, Status> {
         Response::build()
             .status(self.0)
-            .header(header::ContentLength(0))
-            .header(header::Location(self.1.clone()))
+            .header(header::Location(self.1))
             .ok()
     }
 }
