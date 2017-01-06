@@ -60,11 +60,10 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
         fn $catch_fn_name<'_b>($err_ident: ::rocket::Error,
                                $req_ident: &'_b ::rocket::Request)
                                -> ::rocket::response::Result<'_b> {
-            let response = $user_fn_name($fn_arguments);
+            let user_response = $user_fn_name($fn_arguments);
+            let response = ::rocket::response::Responder::respond(user_response)?;
             let status = ::rocket::http::Status::raw($code);
-            ::rocket::response::Responder::respond(
-                ::rocket::response::status::Custom(status, response)
-            )
+            ::rocket::response::Response::build().status(status).merge(response).ok()
         }
     ).expect("catch function"));
 
