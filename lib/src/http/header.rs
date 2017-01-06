@@ -51,6 +51,53 @@ impl<'h> Header<'h> {
             value: value.into()
         }
     }
+
+    /// Returns the name of this header with casing preserved. To do a
+    /// case-insensitive equality check, use `.name` directly.
+    ///
+    /// # Example
+    ///
+    /// A case-sensitive equality check:
+    ///
+    /// ```rust
+    /// use rocket::http::Header;
+    ///
+    /// let value = format!("{} value", "custom");
+    /// let header = Header::new("X-Custom-Header", value);
+    /// assert_eq!(header.name(), "X-Custom-Header");
+    /// assert!(header.name() != "X-CUSTOM-HEADER");
+    /// ```
+    ///
+    /// A case-insensitive equality check via `.name`:
+    ///
+    /// ```rust
+    /// use rocket::http::Header;
+    ///
+    /// let header = Header::new("X-Custom-Header", "custom value");
+    /// assert_eq!(header.name, "X-Custom-Header");
+    /// assert_eq!(header.name, "X-CUSTOM-HEADER");
+    /// ```
+    #[inline(always)]
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Returns the value of this header.
+    ///
+    /// # Example
+    ///
+    /// A case-sensitive equality check:
+    ///
+    /// ```rust
+    /// use rocket::http::Header;
+    ///
+    /// let header = Header::new("X-Custom-Header", "custom value");
+    /// assert_eq!(header.value(), "custom value");
+    /// ```
+    #[inline(always)]
+    pub fn value(&self) -> &str {
+        &self.value
+    }
 }
 
 impl<'h> fmt::Display for Header<'h> {
