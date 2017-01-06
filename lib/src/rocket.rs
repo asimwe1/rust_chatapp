@@ -164,6 +164,7 @@ impl Rocket {
         // Route the request to get a response.
         match self.route(request, data) {
             Outcome::Success(mut response) => {
+                // A user's route responded!
                 let cookie_delta = request.cookies().delta();
                 if !cookie_delta.is_empty() {
                     response.adjoin_header(header::SetCookie(cookie_delta));
@@ -172,6 +173,7 @@ impl Rocket {
                 response
             }
             Outcome::Forward(data) => {
+                // There was no matching route.
                 // Rust thinks `request` is still borrowed here, but it's
                 // obviously not (data has nothing to do with it), so we
                 // convince it to give us another mutable reference.
@@ -198,9 +200,9 @@ impl Rocket {
 
     /// Tries to find a `Responder` for a given `request`. It does this by
     /// routing the request and calling the handler for each matching route
-    /// until one of the handlers returns success or failure. If a handler
-    /// returns a failure, or there are no matching handlers willing to accept
-    /// the request, this function returns an `Err` with the status code.
+    /// until one of the handlers returns success or failure, or there are no
+    /// additional routes to try (forward). The corresponding outcome for each
+    /// condition is returned.
     #[doc(hidden)]
     #[inline(always)]
     pub fn route<'r>(&self, request: &'r Request, mut data: Data)
