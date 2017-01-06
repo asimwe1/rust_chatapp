@@ -40,6 +40,13 @@ Rocket is extensively documented:
 [Guide]: https://rocket.rs/guide
 [API Documentation]: https://api.rocket.rs/rocket
 
+The official community support channel is via the [Mozilla IRC
+Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` in channel `#rocket`.
+If you're not familiar with IRC, see Mozilla's [Getting Started with
+IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
+guide. You can find general Rust support in `#rust` or `#rust-beginners` on the
+same network.
+
 ## Building
 
 ### Nightly
