@@ -244,9 +244,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
             $return_err_stmt;
         }
 
-        return Ok($self_ident {
-            $result_fields
-        });
+        Ok($self_ident { $result_fields })
     });
 
     stmts.extend(final_block.unwrap().stmts);
