@@ -45,10 +45,9 @@ fn test_index() {
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
-    let template = Template::render("index", &context);
 
     // Test the route with the "message" cookie.
-    test_body(Some(Cookie::new("message".to_string(),
-                               "Hello from Rocket!".to_string())),
-              template.to_string());
+    let cookie = Cookie::new("message".into(), "Hello from Rocket!".into());
+    let template = Template::render("index", &context);
+    test_body(Some(cookie), template.to_string());
 }
