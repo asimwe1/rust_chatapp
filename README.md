@@ -148,7 +148,7 @@ Rocket is designed to be performant. At this time, its performance is
 [bottlenecked by the Hyper HTTP
 library](https://github.com/SergioBenitez/Rocket/issues/17). Even so, Rocket
 currently performs _better_ than the latest version of Hyper on a simple "Hello,
-world!" benchmark:
+world!" benchmark. Rocket also performs better than the Iron web framework:
 
 **Machine Specs:**
 
@@ -156,6 +156,17 @@ world!" benchmark:
   * **Memory:** 24gb ECC DDR3 @ 1600mhz
   * **Processor:** Intel Xeon X5675 @ 3.07GHz
   * **Operating System:** Mac OS X v10.11.6
+
+**Rocket v0.1.4** (8 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+
+    Running 10s test @ http://localhost:80
+      2 threads and 10 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   162.40us   28.41us 377.00us   69.21%
+        Req/Sec    29.88k     1.29k   33.72k    70.30%
+      600412 requests in 10.10s, 83.60MB read
+    Requests/sec:  59448.48
+    Transfer/sec:      8.28MB
 
 **Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 2000 req/s, +/- 10us latency):
 
@@ -168,21 +179,23 @@ world!" benchmark:
     Requests/sec:  55715.98
     Transfer/sec:      8.08MB
 
-**Rocket v0.1.0** (8 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+**Iron v0.4.0** (11 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
 
     Running 10s test @ http://localhost:80
       2 threads and 10 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   161.33us   37.40us   2.08ms   75.89%
-        Req/Sec    30.10k     1.13k   33.28k    72.77%
-      604782 requests in 10.10s, 84.21MB read
-    Requests/sec:  59883.30
-    Transfer/sec:      8.34MB
+        Latency   189.93us   40.05us   2.06ms   67.57%
+        Req/Sec    25.80k     2.26k   34.01k    77.72%
+      518575 requests in 10.10s, 64.79MB read
+    Requests/sec:  51346.00
+    Transfer/sec:      6.41MB
 
 **Summary:**
 
-  * Rocket throughput higher by 7.5% (higher is better).
-  * Rocket latency lower by 7.8% (lower is better).
+  * Rocket throughput higher by 6.7% (higher is better) compared to Hyper.
+  * Rocket throughput higher by 15.8% (higher is better) compared to Iron.
+  * Rocket latency lower by 7.3% (lower is better) compared to Hyper.
+  * Rocket latency lower by 14.5% (lower is better) compared to Iron.
 
 ### Future Improvements
 
