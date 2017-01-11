@@ -1,4 +1,10 @@
-# Rocket [![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket) [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs) [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
+# Rocket
+
+[![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket)
+[![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
+[![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
+[![Chat on Matrix](https://img.shields.io/badge/style-matrix-blue.svg?style=flat&label=chat)](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org)
+[![IRC: #rocket on irc.mozilla.org](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=mozilla)](https://kiwiirc.com/client/irc.mozilla.org/#rocket)
 
 Rocket is web framework for Rust (nightly) with a focus on ease-of-use,
 expressability, and speed. Here's an example of a complete Rocket application:
@@ -40,12 +46,16 @@ Rocket is extensively documented:
 [Guide]: https://rocket.rs/guide
 [API Documentation]: https://api.rocket.rs/rocket
 
-The official community support channel is via the [Mozilla IRC
-Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` in channel `#rocket`.
-If you're not familiar with IRC, see Mozilla's [Getting Started with
+The official community support channels are the `#rocket` IRC channel on the
+[Mozilla IRC Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` and the
+bridged [Rocket room on
+Matrix](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org). If you're not
+familiar with IRC, we recommend chatting through [Matrix via
+Riot](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org) or via the [Kiwi
+web IRC client](https://kiwiirc.com/client/irc.mozilla.org/#rocket). You can
+learn more about IRC via Mozilla's [Getting Started with
 IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
-guide. You can find general Rust support in `#rust` or `#rust-beginners` on the
-same network.
+guide.
 
 ## Building
 
