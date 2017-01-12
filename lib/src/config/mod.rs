@@ -123,30 +123,31 @@
 mod error;
 mod environment;
 mod config;
+mod builder;
 
 use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
 use std::collections::HashMap;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::env;
 
+use toml;
+
+pub use toml::{Array, Table, Value};
 pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;
 pub use self::config::Config;
+pub use self::builder::ConfigBuilder;
+
 use self::Environment::*;
-
-use toml;
-pub use toml::{Array, Table, Value};
-
 use logger::{self, LoggingLevel};
 
 static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
-
 const GLOBAL_ENV_NAME: &'static str = "global";
 
 /// Wraps `std::result` with the error type of
@@ -161,8 +162,29 @@ pub struct RocketConfig {
 }
 
 impl RocketConfig {
-    /// Iteratively search for `file` in `pwd` and its parents, returning the path
-    /// to the file or an Error::NoKey if the file couldn't be found.
+    /// TODO: Doc.
+    fn new(config: Config) -> RocketConfig {
+        let f = config.config_path.clone();
+        let active_env = config.environment;
+
+        // None of these unwraps should fail since the filename is coming from
+        // an existing connfig.
+        let mut configs = HashMap::new();
+        configs.insert(Development, Config::default_for(Development, &f).unwrap());
+        configs.insert(Staging, Config::default_for(Staging, &f).unwrap());
+        configs.insert(Production, Config::default_for(Production, &f).unwrap());
+        configs.insert(active_env, config);
+
+        RocketConfig {
+            active_env: active_env,
+            config: configs
+        }
+    }
+
+    /// Iteratively search for `CONFIG_FILENAME` starting at the current working
+    /// directory and working up through its parents. Returns the path to the
+    /// file or an Error::NoKey if the file couldn't be found. If the current
+    /// working directory can't be determined, return `BadCWD`.
     fn find() -> Result<PathBuf> {
         let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
         let mut current = cwd.as_path();
@@ -182,8 +204,11 @@ impl RocketConfig {
         Err(ConfigError::NotFound)
     }
 
-    fn set(&mut self, env: Environment, kvs: &Table)
-            -> Result<()> {
+    /// Set the configuration for the environment `env` to be the configuration
+    /// derived from the TOML table `kvs`. The environment must already exist in
+    /// `self`, otherwise this function panics. Any existing values are
+    /// overriden by those in `kvs`.
+    fn set(&mut self, env: Environment, kvs: &Table) -> Result<()> {
         let config = match self.config.get_mut(&env) {
             Some(config) => config,
             None => panic!("set(): {} config is missing.", env),
@@ -196,6 +221,7 @@ impl RocketConfig {
         Ok(())
     }
 
+    /// Retrieves the `Config` for the environment `env`.
     pub fn get(&self, env: Environment) -> &Config {
         match self.config.get(&env) {
             Some(config) => config,
@@ -203,22 +229,29 @@ impl RocketConfig {
         }
     }
 
+    /// Retrieves the `Config` for the active environment.
     pub fn active(&self) -> &Config {
         self.get(self.active_env)
     }
 
-    fn parse(src: String, filename: &str) -> Result<RocketConfig> {
+    fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
+        // Get a PathBuf version of the filename.
+        let path = filename.as_ref().to_path_buf();
+
         // Parse the source as TOML, if possible.
         let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or_else(|| ConfigError::ParseError(
-            src.clone(), filename.into(),
-            parser.errors.iter().map(|error| ParsingError {
-                byte_range: (error.lo, error.hi),
-                start: parser.to_linecol(error.lo),
-                end: parser.to_linecol(error.hi),
-                desc: error.desc.clone(),
-            }).collect()
-        ))?;
+        let toml = parser.parse().ok_or_else(|| {
+            let source = src.clone();
+            let errors = parser.errors.iter()
+                .map(|error| ParsingError {
+                    byte_range: (error.lo, error.hi),
+                    start: parser.to_linecol(error.lo),
+                    end: parser.to_linecol(error.hi),
+                    desc: error.desc.clone(),
+                });
+
+            ConfigError::ParseError(source, path.clone(), errors.collect())
+        })?;
 
         // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
@@ -232,20 +265,21 @@ impl RocketConfig {
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
                 None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), filename.into()
+                    entry, "a table", value.type_str(), path.clone()
                 ))
             };
 
+            // Store the global table for later use and move on.
             if entry.as_str() == GLOBAL_ENV_NAME {
                 global = Some(kv_pairs.clone());
-            } else {
-                // Parse the environment from the table entry name.
-                let env = entry.as_str().parse().map_err(|_| {
-                    ConfigError::BadEntry(entry.clone(), filename.into())
-                })?;
+                continue;
+            }
 
-                // Set the environment configuration from the kv pairs.
-                config.set(env, kv_pairs)?;
+            // This is not the global table. Parse the environment name from the
+            // table entry name and then set all of the key/values.
+            match entry.as_str().parse() {
+                Ok(env) => config.set(env, kv_pairs)?,
+                Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
             }
         }
 
@@ -271,14 +305,14 @@ impl RocketConfig {
         handle.read_to_string(&mut contents).map_err(|_| ConfigError::IOError)?;
 
         // Parse the contents from the file.
-        RocketConfig::parse(contents, &file.to_string_lossy())
+        RocketConfig::parse(contents, &file)
     }
 
-    pub fn active_default(filename: &str) -> Result<RocketConfig> {
+    pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
         let mut defaults = HashMap::new();
-        defaults.insert(Development, Config::default_for(Development, filename)?);
-        defaults.insert(Staging, Config::default_for(Staging, filename)?);
-        defaults.insert(Production, Config::default_for(Production, filename)?);
+        defaults.insert(Development, Config::default_for(Development, &filename)?);
+        defaults.insert(Staging, Config::default_for(Staging, &filename)?);
+        defaults.insert(Production, Config::default_for(Production, &filename)?);
 
         Ok(RocketConfig {
             active_env: Environment::active()?,
@@ -314,6 +348,20 @@ pub fn init() -> (&'static Config, bool) {
     }
 }
 
+#[doc(hidden)]
+pub fn custom_init(config: Config) -> (&'static Config, bool) {
+    let mut this_init = false;
+
+    unsafe {
+        INIT.call_once(|| {
+            CONFIG = Some(RocketConfig::new(config));
+            this_init = true;
+        });
+
+        (CONFIG.as_ref().unwrap().active(), this_init)
+    }
+}
+
 unsafe fn private_init() {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
@@ -335,8 +383,7 @@ unsafe fn private_init() {
             Err(_) => bail(ConfigError::BadCWD)
         };
 
-        let filename = default_path.to_string_lossy();
-        RocketConfig::active_default(&filename).unwrap_or_else(|e| bail(e))
+        RocketConfig::active_default(&default_path).unwrap_or_else(|e| bail(e))
     });
 
     CONFIG = Some(config);
@@ -356,13 +403,12 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{RocketConfig, ConfigError, GLOBAL_ENV_NAME};
-    use super::environment::{Environment, CONFIG_ENV};
+    use super::{RocketConfig, ConfigError, ConfigBuilder};
+    use super::{Environment, GLOBAL_ENV_NAME};
+    use super::environment::CONFIG_ENV;
     use super::Environment::*;
-    use super::config::Config;
     use super::Result;
 
-    use ::toml::Value;
     use ::logger::LoggingLevel;
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
@@ -373,15 +419,17 @@ mod test {
 
     macro_rules! check_config {
         ($rconfig:expr, $econfig:expr) => (
+            let expected = $econfig.finalize().unwrap();
             match $rconfig {
-                Ok(config) => assert_eq!(config.active(), &$econfig),
+                Ok(config) => assert_eq!(config.active(), &expected),
                 Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
             }
         );
 
         ($env:expr, $rconfig:expr, $econfig:expr) => (
+            let expected = $econfig.finalize().unwrap();
             match $rconfig {
-                Ok(ref config) => assert_eq!(config.get($env), &$econfig),
+                Ok(ref config) => assert_eq!(config.get($env), &expected),
                 Err(ref e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
             }
         );
@@ -391,8 +439,8 @@ mod test {
         RocketConfig::active_default(TEST_CONFIG_FILENAME)
     }
 
-    fn default_config(env: Environment) -> Config {
-        Config::default_for(env, TEST_CONFIG_FILENAME).expect("config")
+    fn default_config(env: Environment) -> ConfigBuilder {
+        ConfigBuilder::new(env)
     }
 
     #[test]
@@ -462,30 +510,29 @@ mod test {
         "#;
 
         let mut expected = default_config(Development)
-                .address("1.2.3.4".to_string())
-                .port(7810)
-                .log_level(LoggingLevel::Critical)
-                .session_key("01234567890123456789012345678901".into());
+            .address("1.2.3.4")
+            .port(7810)
+            .log_level(LoggingLevel::Critical)
+            .session_key("01234567890123456789012345678901")
+            .extra("template_dir", "mine")
+            .extra("json", true)
+            .extra("pi", 3.14);
 
-        expected.set("template_dir", &Value::String("mine".into())).unwrap();
-        expected.set("json", &Value::Boolean(true)).unwrap();
-        expected.set("pi", &Value::Float(3.14)).unwrap();
-
-        expected.env = Development;
+        expected.environment = Development;
         let dev_config = ["[dev]", config_str].join("\n");
         let parsed = RocketConfig::parse(dev_config, TEST_CONFIG_FILENAME);
-        check_config!(Development, parsed, expected);
+        check_config!(Development, parsed, expected.clone());
         check_config!(Staging, parsed, default_config(Staging));
         check_config!(Production, parsed, default_config(Production));
 
-        expected.env = Staging;
+        expected.environment = Staging;
         let stage_config = ["[stage]", config_str].join("\n");
         let parsed = RocketConfig::parse(stage_config, TEST_CONFIG_FILENAME);
-        check_config!(Staging, parsed, expected);
+        check_config!(Staging, parsed, expected.clone());
         check_config!(Development, parsed, default_config(Development));
         check_config!(Production, parsed, default_config(Production));
 
-        expected.env = Production;
+        expected.environment = Production;
         let prod_config = ["[prod]", config_str].join("\n");
         let parsed = RocketConfig::parse(prod_config, TEST_CONFIG_FILENAME);
         check_config!(Production, parsed, expected);
@@ -503,21 +550,21 @@ mod test {
                           [development]
                           address = "localhost"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("localhost".into())
+                          default_config(Development).address("localhost")
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [dev]
                           address = "127.0.0.1"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("127.0.0.1".into())
+                          default_config(Development).address("127.0.0.1")
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [dev]
                           address = "0.0.0.0"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("0.0.0.0".into())
+                          default_config(Development).address("0.0.0.0")
                       });
     }
 
@@ -670,7 +717,7 @@ mod test {
                           session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5".into()
+                              "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
                           )
                       });
 
@@ -679,7 +726,7 @@ mod test {
                           session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz".into()
+                              "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
                           )
                       });
     }
@@ -740,27 +787,21 @@ mod test {
                               [{}]
                               address = "7.6.5.4"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address(
-                                  "7.6.5.4".into()
-                              )
+                              default_config(*env).address("7.6.5.4")
                           });
 
             check_config!(RocketConfig::parse(format!(r#"
                               [{}]
                               database = "mysql"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).extra("database",
-                                  &Value::String("mysql".into())
-                              )
+                              default_config(*env).extra("database", "mysql")
                           });
 
             check_config!(RocketConfig::parse(format!(r#"
                               [{}]
                               port = 3980
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).port(
-                                  3980
-                              )
+                              default_config(*env).port(3980)
                           });
         }
     }

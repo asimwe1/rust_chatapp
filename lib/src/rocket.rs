@@ -24,8 +24,7 @@ use http::uri::URI;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    address: String,
-    port: u16,
+    config: &'static Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
@@ -276,17 +275,12 @@ impl Rocket {
     pub fn ignite() -> Rocket {
         // Note: init() will exit the process under config errors.
         let (config, initted) = config::init();
-        if initted {
-            logger::init(config.log_level);
-        }
-
-        Rocket::custom(config)
+        Rocket::configured(config, initted)
     }
 
     /// Creates a new `Rocket` application using the supplied custom
-    /// configuration information. Ignores the `Rocket.toml` file. Does not
-    /// enable logging. To enable logging, use the hidden
-    /// `logger::init(LoggingLevel)` method.
+    /// configuration information. The `Rocket.toml` file, if present, is
+    /// ignored. If `log` is `true`, logging is enabled.
     ///
     /// This method is typically called through the `rocket::custom` alias.
     ///
@@ -297,16 +291,26 @@ impl Rocket {
     /// # use rocket::config::ConfigError;
     ///
     /// # fn try_config() -> Result<(), ConfigError> {
-    /// let config = Config::default_for(Environment::active()?, "/custom")?
-    ///     .address("1.2.3.4".into())
-    ///     .port(9234);
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("1.2.3.4")
+    ///     .port(9234)
+    ///     .finalize()?;
     ///
-    /// let app = rocket::custom(&config);
+    /// let app = rocket::custom(config, false);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn custom(config: &Config) -> Rocket {
-        info!("🔧  Configured for {}.", config.env);
+    pub fn custom(config: Config, log: bool) -> Rocket {
+        let (config, initted) = config::custom_init(config);
+        Rocket::configured(config, log && initted)
+    }
+
+    fn configured(config: &'static Config, log: bool) -> Rocket {
+        if log {
+            logger::init(config.log_level);
+        }
+
+        info!("🔧  Configured for {}.", config.environment);
         info_!("listening: {}:{}",
                White.paint(&config.address),
                White.paint(&config.port));
@@ -324,8 +328,7 @@ impl Rocket {
         }
 
         Rocket {
-            address: config.address.clone(),
-            port: config.port,
+            config: config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
@@ -468,7 +471,7 @@ impl Rocket {
             warn!("Route collisions detected!");
         }
 
-        let full_addr = format!("{}:{}", self.address, self.port);
+        let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let server = match hyper::Server::http(full_addr.as_str()) {
             Ok(hyper_server) => hyper_server,
             Err(e) => {
