@@ -32,4 +32,5 @@ serde_json = { version = "^0.8", optional = true }
 handlebars = { version = "^0.24", optional = true, features = ["serde_type"] }
 glob = { version = "^0.2", optional = true }
 lazy_static = { version = "^0.2", optional = true }
-tera = { version = "^0.6", optional = true }
+# tera = { version = "^0.6", optional = true }
+tera = { git = "https://github.com/SergioBenitez/tera", optional = true }
