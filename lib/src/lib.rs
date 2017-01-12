@@ -95,6 +95,7 @@ extern crate term_painter;
 extern crate hyper;
 extern crate url;
 extern crate toml;
+extern crate num_cpus;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

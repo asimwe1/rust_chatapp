@@ -315,6 +315,7 @@ impl Rocket {
                White.paint(&config.address),
                White.paint(&config.port));
         info_!("logging: {:?}", White.paint(config.log_level));
+        info_!("workers: {}", White.paint(config.workers));
 
         let session_key = config.take_session_key();
         if session_key.is_some() {
@@ -485,6 +486,7 @@ impl Rocket {
               White.bold().paint("http://"),
               White.bold().paint(&full_addr));
 
-        server.handle(self).unwrap();
+        let threads = self.config.workers as usize;
+        server.handle_threads(self, threads).unwrap();
     }
 }

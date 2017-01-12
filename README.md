@@ -147,8 +147,9 @@ Apache License, Version 2.0, without any additional terms or conditions.
 Rocket is designed to be performant. At this time, its performance is
 [bottlenecked by the Hyper HTTP
 library](https://github.com/SergioBenitez/Rocket/issues/17). Even so, Rocket
-currently performs _better_ than the latest version of Hyper on a simple "Hello,
-world!" benchmark. Rocket also performs better than the Iron web framework:
+currently performs _significantly better_ than the latest version of
+asynchronous Hyper on a simple "Hello, world!" benchmark. Rocket also performs
+_significantly better_ than the Iron web framework:
 
 **Machine Specs:**
 
@@ -157,45 +158,45 @@ world!" benchmark. Rocket also performs better than the Iron web framework:
   * **Processor:** Intel Xeon X5675 @ 3.07GHz
   * **Operating System:** Mac OS X v10.11.6
 
-**Rocket v0.1.4** (8 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+**Rocket v0.2-rc** (8 LOC) results (best of 3, +/- 2000 req/s, +/- 5us latency):
 
     Running 10s test @ http://localhost:80
-      2 threads and 10 connections
+      1 threads and 18 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   162.40us   28.41us 377.00us   69.21%
-        Req/Sec    29.88k     1.29k   33.72k    70.30%
-      600412 requests in 10.10s, 83.60MB read
-    Requests/sec:  59448.48
-    Transfer/sec:      8.28MB
+        Latency   153.01us   42.25us 449.00us   75.54%
+        Req/Sec    75.58k    11.75k   90.22k    54.46%
+      758044 requests in 10.10s, 105.55MB read
+    Requests/sec:  75051.28
+    Transfer/sec:     10.45MB
 
-**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 2000 req/s, +/- 10us latency):
+**Hyper v0.11.0-a.0 (1/12/2016)** (46 LOC) results (best of 3, +/- 5000 req/s, +/- 30us latency):
 
     Running 10s test @ http://localhost:80
-      2 threads and 10 connections
+      1 threads and 18 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   175.12us   40.38us 429.00us   70.79%
-        Req/Sec    28.00k     2.41k   36.79k    72.28%
-      562692 requests in 10.10s, 81.57MB read
-    Requests/sec:  55715.98
-    Transfer/sec:      8.08MB
+        Latency   287.81us   77.09us 606.00us   70.47%
+        Req/Sec    59.94k     6.01k   79.72k    71.00%
+      596231 requests in 10.00s, 83.02MB read
+    Requests/sec:  59621.32
+    Transfer/sec:      8.30MB
 
-**Iron v0.4.0** (11 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+**Iron v0.5.0** (11 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
 
     Running 10s test @ http://localhost:80
-      2 threads and 10 connections
+      1 threads and 18 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   189.93us   40.05us   2.06ms   67.57%
-        Req/Sec    25.80k     2.26k   34.01k    77.72%
-      518575 requests in 10.10s, 64.79MB read
-    Requests/sec:  51346.00
-    Transfer/sec:      6.41MB
+        Latency   512.36us    5.57ms 149.99ms   99.60%
+        Req/Sec    58.25k    11.61k   70.47k    46.00%
+      579227 requests in 10.00s, 80.65MB read
+    Requests/sec:  57920.73
+    Transfer/sec:      8.06MB
 
 **Summary:**
 
-  * Rocket throughput higher by 6.7% (higher is better) compared to Hyper.
-  * Rocket throughput higher by 15.8% (higher is better) compared to Iron.
-  * Rocket latency lower by 7.3% (lower is better) compared to Hyper.
-  * Rocket latency lower by 14.5% (lower is better) compared to Iron.
+  * Rocket throughput higher by 25.9% (higher is better) compared to Hyper.
+  * Rocket throughput higher by 29.6% (higher is better) compared to Iron.
+  * Rocket latency lower by 46.8% (lower is better) compared to Hyper.
+  * Rocket latency lower by 70.1% (lower is better) compared to Iron.
 
 ### Future Improvements
 

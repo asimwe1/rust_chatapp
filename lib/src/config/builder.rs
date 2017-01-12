@@ -13,6 +13,8 @@ pub struct ConfigBuilder {
     pub address: String,
     /// The port to serve on.
     pub port: u16,
+    /// The number of workers to run in parallel.
+    pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The session key.
@@ -30,6 +32,7 @@ impl ConfigBuilder {
             environment: config.environment,
             address: config.address,
             port: config.port,
+            workers: config.workers,
             log_level: config.log_level,
             session_key: None,
             extras: config.extras,
@@ -47,6 +50,13 @@ impl ConfigBuilder {
     #[inline(always)]
     pub fn port(mut self, port: u16) -> Self {
         self.port = port;
+        self
+    }
+
+    /// Sets the `workers` in `self` to `workers` and returns the structure.
+    #[inline(always)]
+    pub fn workers(mut self, workers: u16) -> Self {
+        self.workers = workers;
         self
     }
 
@@ -84,6 +94,7 @@ impl ConfigBuilder {
         let mut config = Config::new(self.environment)?;
         config.set_address(self.address)?;
         config.set_port(self.port);
+        config.set_workers(self.workers);
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
 

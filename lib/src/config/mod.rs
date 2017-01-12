@@ -35,6 +35,8 @@
 //!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
 //!   * **port**: _[integer]_ a port number to listen on
 //!     * examples: `"8000"`, `"80"`, `"4242"`
+//!   * **workers**: _[integer]_ the number of concurrent workers to use
+//!     * examples: `"12"`, `"1"`, `"4"`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
 //!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32
@@ -58,11 +60,13 @@
 //! [development]
 //! address = "localhost"
 //! port = 8000
+//! workers = max(number_of_cpus, 2)
 //! log = "normal"
 //!
 //! [staging]
 //! address = "0.0.0.0"
 //! port = 80
+//! workers = max(number_of_cpus, 2)
 //! log = "normal"
 //! # don't use this key! generate your own and keep it private!
 //! session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
@@ -70,10 +74,15 @@
 //! [production]
 //! address = "0.0.0.0"
 //! port = 80
+//! workers = max(number_of_cpus, 2)
 //! log = "critical"
 //! # don't use this key! generate your own and keep it private!
 //! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
 //! ```
+//!
+//! The `workers` parameter is computed by Rocket automatically; the value above
+//! is not valid TOML syntax. When manually specifying the number of workers,
+//! the value should be an integer: `workers = 10`.
 //!
 //! The "global" pseudo-environment can be used to set and/or override
 //! configuration parameters globally. A parameter defined in a `[global]` table
@@ -502,6 +511,7 @@ mod test {
         let config_str = r#"
             address = "1.2.3.4"
             port = 7810
+            workers = 21
             log = "critical"
             session_key = "01234567890123456789012345678901"
             template_dir = "mine"
@@ -512,6 +522,7 @@ mod test {
         let mut expected = default_config(Development)
             .address("1.2.3.4")
             .port(7810)
+            .workers(21)
             .log_level(LoggingLevel::Critical)
             .session_key("01234567890123456789012345678901")
             .extra("template_dir", "mine")
@@ -652,6 +663,66 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             port = 105836
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    #[test]
+    fn test_good_workers_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::set_var(CONFIG_ENV, "stage");
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          workers = 1
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).workers(1)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          workers = 300
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).workers(300)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          workers = 65535
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).workers(65535)
+                      });
+    }
+
+    #[test]
+    fn test_bad_workers_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::remove_var(CONFIG_ENV);
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            workers = true
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [production]
+            workers = "hello"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            workers = -1
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            workers = 65536
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            workers = 105836
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 

@@ -9,22 +9,25 @@ use std::env;
 use config::Environment::*;
 use config::{self, Value, ConfigBuilder, Environment, ConfigError};
 
+use num_cpus;
 use logger::LoggingLevel;
 
 /// The core configuration structure.
 pub struct Config {
+    /// The environment that this configuration corresponds to.
+    pub environment: Environment,
     /// The address to serve on.
     pub address: String,
     /// The port to serve on.
     pub port: u16,
+    /// The number of workers to run concurrently.
+    pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
-    /// The environment that this configuration corresponds to.
-    pub environment: Environment,
-    /// The path to the configuration file this config belongs to.
-    pub config_path: PathBuf,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
+    /// The path to the configuration file this config belongs to.
+    pub config_path: PathBuf,
     /// The session key.
     session_key: RwLock<Option<String>>,
 }
@@ -75,37 +78,43 @@ impl Config {
                 "Configuration files must be rooted in a directory."));
         }
 
+        // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
+        let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
+
         Ok(match env {
             Development => {
                 Config {
+                    environment: Development,
                     address: "localhost".to_string(),
                     port: 8000,
+                    workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    environment: env,
                     config_path: config_path,
                 }
             }
             Staging => {
                 Config {
+                    environment: Staging,
                     address: "0.0.0.0".to_string(),
                     port: 80,
+                    workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    environment: env,
                     config_path: config_path,
                 }
             }
             Production => {
                 Config {
+                    environment: Production,
                     address: "0.0.0.0".to_string(),
                     port: 80,
+                    workers: default_workers,
                     log_level: LoggingLevel::Critical,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    environment: env,
                     config_path: config_path,
                 }
             }
@@ -132,8 +141,9 @@ impl Config {
     ///
     ///   * **address**: String
     ///   * **port**: Integer (16-bit unsigned)
-    ///   * **session_key**: String (192-bit base64)
+    ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
+    ///   * **session_key**: String (192-bit base64)
     ///
     pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
@@ -141,13 +151,18 @@ impl Config {
             self.set_address(address_str)?;
         } else if name == "port" {
             let port = parse!(self, name, val, as_integer, "an integer")?;
-            if port < 0 {
-                return Err(self.bad_type(name, val.type_str(), "an unsigned integer"));
-            } else if port > (u16::max_value() as i64) {
+            if port < 0 || port > (u16::max_value() as i64) {
                 return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"))
             }
 
             self.set_port(port as u16);
+        } else if name == "workers" {
+            let workers = parse!(self, name, val, as_integer, "an integer")?;
+            if workers < 0 || workers > (u16::max_value() as i64) {
+                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"));
+            }
+
+            self.set_workers(workers as u16);
         } else if name == "session_key" {
             let key = parse!(self, name, val, as_str, "a string")?;
             self.set_session_key(key)?;
@@ -178,7 +193,11 @@ impl Config {
     }
 
     pub fn set_port(&mut self, port: u16) {
-        self.port = port as u16;
+        self.port = port;
+    }
+
+    pub fn set_workers(&mut self, workers: u16) {
+        self.workers = workers;
     }
 
     pub fn set_session_key<K: Into<String>>(&mut self, key: K) -> config::Result<()> {
@@ -284,8 +303,8 @@ impl Config {
 
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Config[{}] {{ address: {}, port: {}, log_level: {:?}",
-               self.environment, self.address, self.port, self.log_level)?;
+        write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
+               self.environment, self.address, self.port, self.workers, self.log_level)?;
 
         for (key, value) in self.extras() {
             write!(f, ", {}: {}", key, value)?;
@@ -300,6 +319,7 @@ impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
         self.address == other.address
             && self.port == other.port
+            && self.workers == other.workers
             && self.log_level == other.log_level
             && self.environment == other.environment
             && self.extras == other.extras
