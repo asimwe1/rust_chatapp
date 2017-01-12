@@ -180,7 +180,7 @@ _significantly better_ than the Iron web framework:
     Requests/sec:  59621.32
     Transfer/sec:      8.30MB
 
-**Iron v0.5.0** (11 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+**Iron v0.5.0** (11 LOC) results (best of 3, +/- 3000 req/s, +/- 500us latency):
 
     Running 10s test @ http://localhost:80
       1 threads and 18 connections
