@@ -90,6 +90,7 @@ impl ConfigBuilder {
         self
     }
 
+    // TODO: Collect all errors into one `Several` `ConfigError` variant.
     pub fn finalize(self) -> Result<Config> {
         let mut config = Config::new(self.environment)?;
         config.set_address(self.address)?;
