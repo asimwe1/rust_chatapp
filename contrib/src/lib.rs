@@ -48,5 +48,8 @@ mod templates;
 #[cfg(feature = "json")]
 pub use json::JSON;
 
+#[cfg(feature = "json")]
+pub use json::SerdeError;
+
 #[cfg(feature = "templates")]
 pub use templates::Template;
