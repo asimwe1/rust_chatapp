@@ -22,21 +22,19 @@ fn test_root() {
         let mut req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::SeeOther);
-            
             assert!(response.body().is_none());
-            
+
             let location_headers: Vec<_> = response.header_values("Location").collect();
-            
             assert_eq!(location_headers, vec!["/hello/Unknown"]);
         });
     }
-    
+
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
         let mut req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::NotFound);
-            
+
             let mut map = ::std::collections::HashMap::new();
             map.insert("path", "/");
             let expected = Template::render("error/404", &map).to_string();
@@ -53,13 +51,13 @@ fn test_name() {
     let mut req = MockRequest::new(Get, "/hello/Jack");
     run_test!(req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
-        
+
         let context = super::TemplateContext {
             name: "Jack".to_string(),
             items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
         };
-        let expected = Template::render("index", &context).to_string();
 
+        let expected = Template::render("index", &context).to_string();
         let body_string = response.body().and_then(|body| body.into_string());
         assert_eq!(body_string, Some(expected));
     });
@@ -71,7 +69,7 @@ fn test_404() {
     let mut req = MockRequest::new(Get, "/hello/");
     run_test!(req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
-        
+
         let mut map = ::std::collections::HashMap::new();
         map.insert("path", "/hello/");
         let expected = Template::render("error/404", &map).to_string();
