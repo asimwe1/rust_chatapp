@@ -3,13 +3,14 @@ extern crate uuid as uuid_ext;
 use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
+
 use rocket::request::FromParam;
 
 pub use self::uuid_ext::ParseError as UuidParseError;
 
 /// The UUID type, which implements `FromParam`. This type allows you to accept
-/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate as
-/// a dynamic parameter in your request handlers.
+/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate as a
+/// dynamic parameter in your request handlers.
 ///
 /// # Usage
 ///
@@ -23,8 +24,7 @@ pub use self::uuid_ext::ParseError as UuidParseError;
 /// features = ["uuid"]
 /// ```
 ///
-/// With the `FromParam` trait, UUID allows you to use it directly as a target
-/// of a dynamic parameter.
+/// You can use the `UUID` type directly as a target of a dynamic parameter:
 ///
 /// ```rust,ignore
 /// #[get("/users/<id>")]
@@ -36,7 +36,7 @@ pub use self::uuid_ext::ParseError as UuidParseError;
 pub struct UUID(uuid_ext::Uuid);
 
 impl UUID {
-    /// Consumes the UUID wrapper returning the underlying Uuid type.
+    /// Consumes the UUID wrapper returning the underlying `Uuid` type.
     ///
     /// # Example
     /// ```rust
@@ -59,7 +59,7 @@ impl UUID {
 }
 
 impl fmt::Display for UUID {
-    #[inline]
+    #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -69,7 +69,8 @@ impl<'a> FromParam<'a> for UUID {
     type Error = UuidParseError;
 
     /// A value is successfully parsed if the `str` is a properly formatted
-    /// UUID, otherwise `UuidParseError` is returned.
+    /// UUID. Otherwise, a `UuidParseError` is returned.
+    #[inline(always)]
     fn from_param(p: &'a str) -> Result<UUID, Self::Error> {
         p.parse()
     }
@@ -78,6 +79,7 @@ impl<'a> FromParam<'a> for UUID {
 impl FromStr for UUID {
     type Err = UuidParseError;
 
+    #[inline]
     fn from_str(s: &str) -> Result<UUID, Self::Err> {
         Ok(UUID(try!(s.parse())))
     }
@@ -92,6 +94,7 @@ impl Deref for UUID {
 }
 
 impl PartialEq<uuid_ext::Uuid> for UUID {
+    #[inline(always)]
     fn eq(&self, other: &uuid_ext::Uuid) -> bool {
         self.0.eq(other)
     }
@@ -139,10 +142,6 @@ mod test {
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
         let uuid_result = UUID::from_param(uuid_str);
-        assert!(!uuid_result.is_ok());
-        match uuid_result {
-            Err(e) => assert_eq!(e, UuidParseError::InvalidLength(37)),
-            _ => unreachable!(),
-        }
+        assert_eq!(uuid_result, Err(UuidParseError::InvalidLength(37)));
     }
 }
