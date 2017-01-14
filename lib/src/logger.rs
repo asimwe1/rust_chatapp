@@ -1,6 +1,7 @@
 //! Rocket's logging infrastructure.
 
 use std::str::FromStr;
+use std::fmt;
 
 use log::{self, Log, LogLevel, LogRecord, LogMetadata};
 use term_painter::Color::*;
@@ -41,6 +42,18 @@ impl FromStr for LoggingLevel {
         };
 
         Ok(level)
+    }
+}
+
+impl fmt::Display for LoggingLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let string = match *self {
+            LoggingLevel::Critical => "critical",
+            LoggingLevel::Normal => "normal",
+            LoggingLevel::Debug => "debug",
+        };
+
+        write!(f, "{}", string)
     }
 }
 

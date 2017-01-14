@@ -1,7 +1,7 @@
-use std::collections::{HashMap, BTreeMap};
-use std::hash::Hash;
+use std::collections::HashMap;
 
 use config::{Result, Config, Value, Environment};
+use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
 /// The core configuration structure.
@@ -111,69 +111,3 @@ impl ConfigBuilder {
         self.finalize().expect("ConfigBuilder::unwrap() failed")
     }
 }
-
-pub trait IntoValue {
-    fn into_value(self) -> Value;
-}
-
-impl<'a> IntoValue for &'a str {
-    fn into_value(self) -> Value {
-        Value::String(self.to_string())
-    }
-}
-
-impl IntoValue for Value {
-    fn into_value(self) -> Value {
-        self
-    }
-}
-
-impl<V: IntoValue> IntoValue for Vec<V> {
-    fn into_value(self) -> Value {
-        Value::Array(self.into_iter().map(|v| v.into_value()).collect())
-    }
-}
-
-impl<S: Into<String>, V: IntoValue> IntoValue for BTreeMap<S, V> {
-    fn into_value(self) -> Value {
-        let table = self.into_iter()
-            .map(|(s, v)| (s.into(), v.into_value()))
-            .collect();
-
-        Value::Table(table)
-    }
-}
-
-impl<S: Into<String> + Hash + Eq, V: IntoValue> IntoValue for HashMap<S, V> {
-    fn into_value(self) -> Value {
-        let table = self.into_iter()
-            .map(|(s, v)| (s.into(), v.into_value()))
-            .collect();
-
-        Value::Table(table)
-    }
-}
-
-macro_rules! impl_into_value {
-    ($variant:ident : $t:ty) => ( impl_into_value!($variant: $t,); );
-
-    ($variant:ident : $t:ty, $($extra:tt)*) => (
-        impl IntoValue for $t {
-            fn into_value(self) -> Value {
-                Value::$variant(self $($extra)*)
-            }
-        }
-    )
-}
-
-impl_into_value!(String: String);
-impl_into_value!(Integer: i64);
-impl_into_value!(Integer: isize, as i64);
-impl_into_value!(Integer: i32, as i64);
-impl_into_value!(Integer: i8, as i64);
-impl_into_value!(Integer: u8, as i64);
-impl_into_value!(Integer: u32, as i64);
-impl_into_value!(Boolean: bool);
-impl_into_value!(Float: f64);
-impl_into_value!(Float: f32, as f64);
-

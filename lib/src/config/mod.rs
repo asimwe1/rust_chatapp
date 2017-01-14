@@ -101,6 +101,20 @@
 //! address = "0.0.0.0"
 //! ```
 //!
+//! ## Environment Variables
+//!
+//! All configuration parameters, including extras, can be overridden through
+//! environment variables. To override the configuration parameter `param`, use
+//! an environment variable named `ROCKET_PARAM`. For instance, to override the
+//! "port" configuration parameter, you can run your application with:
+//!
+//! ```sh
+//! ROCKET_PORT=3721 ./your_application
+//! ```
+//!
+//! Environment variables take precedence over all other configuration methods:
+//! if the variable is set, it will be used as the value for the parameter.
+//!
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
@@ -133,6 +147,7 @@ mod error;
 mod environment;
 mod config;
 mod builder;
+mod toml_ext;
 
 use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
@@ -149,15 +164,21 @@ pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
+pub use self::toml_ext::IntoValue;
 
 use self::Environment::*;
+use self::environment::CONFIG_ENV;
+use self::toml_ext::parse_simple_toml_value;
 use logger::{self, LoggingLevel};
+use http::ascii::uncased_eq;
 
 static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &'static str = "global";
+const ENV_VAR_PREFIX: &'static str = "ROCKET_";
+const PREHANDLED_VARS: [&'static str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
 
 /// Wraps `std::result` with the error type of
 /// [ConfigError](enum.ConfigError.html).
@@ -171,8 +192,15 @@ pub struct RocketConfig {
 }
 
 impl RocketConfig {
-    /// TODO: Doc.
-    fn new(config: Config) -> RocketConfig {
+    /// Create a new configuration using the passed in `config` for all
+    /// environments. The Rocket.toml file is ignored, as are environment
+    /// variables.
+    ///
+    /// # Panics
+    ///
+    /// If the current working directory can't be retrieved, this function
+    /// panics.
+    pub fn new(config: Config) -> RocketConfig {
         let f = config.config_path.clone();
         let active_env = config.environment;
 
@@ -188,6 +216,41 @@ impl RocketConfig {
             active_env: active_env,
             config: configs
         }
+    }
+
+    /// Read the configuration from the `Rocket.toml` file. The file is search
+    /// for recursively up the tree, starting from the CWD.
+    pub fn read() -> Result<RocketConfig> {
+        // Find the config file, starting from the `cwd` and working backwords.
+        let file = RocketConfig::find()?;
+
+        // Try to open the config file for reading.
+        let mut handle = File::open(&file).map_err(|_| ConfigError::IOError)?;
+
+        // Read the configure file to a string for parsing.
+        let mut contents = String::new();
+        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IOError)?;
+
+        // Parse the config and return the result.
+        RocketConfig::parse(contents, &file)
+    }
+
+    /// Return the default configuration for all environments and marks the
+    /// active environment (via the CONFIG_ENV variable) as active.
+    pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
+        let mut defaults = HashMap::new();
+        defaults.insert(Development, Config::default_for(Development, &filename)?);
+        defaults.insert(Staging, Config::default_for(Staging, &filename)?);
+        defaults.insert(Production, Config::default_for(Production, &filename)?);
+
+        let mut config = RocketConfig {
+            active_env: Environment::active()?,
+            config: defaults,
+        };
+
+        // Override any variables from the environment.
+        config.override_from_env()?;
+        Ok(config)
     }
 
     /// Iteratively search for `CONFIG_FILENAME` starting at the current working
@@ -213,18 +276,20 @@ impl RocketConfig {
         Err(ConfigError::NotFound)
     }
 
+    fn get_mut(&mut self, env: Environment) -> &mut Config {
+        match self.config.get_mut(&env) {
+            Some(config) => config,
+            None => panic!("set(): {} config is missing.", env),
+        }
+    }
+
     /// Set the configuration for the environment `env` to be the configuration
     /// derived from the TOML table `kvs`. The environment must already exist in
     /// `self`, otherwise this function panics. Any existing values are
     /// overriden by those in `kvs`.
-    fn set(&mut self, env: Environment, kvs: &Table) -> Result<()> {
-        let config = match self.config.get_mut(&env) {
-            Some(config) => config,
-            None => panic!("set(): {} config is missing.", env),
-        };
-
+    fn set_from_table(&mut self, env: Environment, kvs: &Table) -> Result<()> {
         for (key, value) in kvs {
-            config.set(key, value)?;
+            self.get_mut(env).set(key, value)?;
         }
 
         Ok(())
@@ -243,6 +308,41 @@ impl RocketConfig {
         self.get(self.active_env)
     }
 
+    // Override all environments with values from env variables if present.
+    fn override_from_env(&mut self) -> Result<()> {
+        'outer: for (env_key, env_val) in env::vars() {
+            if env_key.len() < ENV_VAR_PREFIX.len() {
+                continue
+            } else if !uncased_eq(&env_key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
+                continue
+            }
+
+            // Skip environment variables that are handled elsewhere.
+            for prehandled_var in PREHANDLED_VARS.iter() {
+                if uncased_eq(&env_key, &prehandled_var) {
+                    continue 'outer
+                }
+            }
+
+            // Parse the key and value and try to set the variable for all envs.
+            let key = env_key[ENV_VAR_PREFIX.len()..].to_lowercase();
+            let val = parse_simple_toml_value(&env_val);
+            for env in &Environment::all() {
+                match self.get_mut(*env).set(&key, &val) {
+                    Err(ConfigError::BadType(_, exp, _, _)) => {
+                        return Err(ConfigError::BadEnvVal(env_key, env_val, exp))
+                    }
+                    Err(e) => return Err(e),
+                    Ok(_) => { /* move along */ }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parses the configuration from the Rocket.toml file. Also overrides any
+    /// values there with values from the environment.
     fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
         // Get a PathBuf version of the filename.
         let path = filename.as_ref().to_path_buf();
@@ -287,7 +387,7 @@ impl RocketConfig {
             // This is not the global table. Parse the environment name from the
             // table entry name and then set all of the key/values.
             match entry.as_str().parse() {
-                Ok(env) => config.set(env, kv_pairs)?,
+                Ok(env) => config.set_from_table(env, kv_pairs)?,
                 Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
             }
         }
@@ -295,38 +395,14 @@ impl RocketConfig {
         // Override all of the environments with the global values.
         if let Some(ref global_kv_pairs) = global {
             for env in &Environment::all() {
-                config.set(*env, global_kv_pairs)?;
+                config.set_from_table(*env, global_kv_pairs)?;
             }
         }
 
+        // Override any variables from the environment.
+        config.override_from_env()?;
+
         Ok(config)
-    }
-
-    pub fn read() -> Result<RocketConfig> {
-        // Find the config file, starting from the `cwd` and working backwords.
-        let file = RocketConfig::find()?;
-
-        // Try to open the config file for reading.
-        let mut handle = File::open(&file).map_err(|_| ConfigError::IOError)?;
-
-        // Read the configure file to a string for parsing.
-        let mut contents = String::new();
-        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IOError)?;
-
-        // Parse the contents from the file.
-        RocketConfig::parse(contents, &file)
-    }
-
-    pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
-        let mut defaults = HashMap::new();
-        defaults.insert(Development, Config::default_for(Development, &filename)?);
-        defaults.insert(Staging, Config::default_for(Staging, &filename)?);
-        defaults.insert(Production, Config::default_for(Production, &filename)?);
-
-        Ok(RocketConfig {
-            active_env: Environment::active()?,
-            config: defaults,
-        })
     }
 }
 
@@ -382,7 +458,7 @@ unsafe fn private_init() {
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
             ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
-                | BadFilePath(..) => bail(e),
+                | BadFilePath(..) | BadEnvVal(..) => bail(e),
             IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
@@ -412,7 +488,7 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{RocketConfig, ConfigError, ConfigBuilder};
+    use super::{RocketConfig, Config, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
     use super::Environment::*;
@@ -874,6 +950,90 @@ mod test {
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
                               default_config(*env).port(3980)
                           });
+        }
+    }
+
+    #[test]
+    fn test_env_override() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+
+        let pairs = [
+            ("log", "critical"), ("LOG", "debug"), ("PORT", "8110"),
+            ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
+        ];
+
+        let check_value = |key: &str, val: &str, config: &Config| {
+            match key {
+                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
+                "port" => assert_eq!(config.port, val.parse().unwrap()),
+                "address" => assert_eq!(config.address, val),
+                "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
+                "workers" => assert_eq!(config.workers, val.parse().unwrap()),
+                _ => panic!("Unexpected key: {}", key)
+            }
+        };
+
+        // Check that setting the environment variable actually changes the
+        // config for the default active and nonactive environments.
+        for &(key, val) in &pairs {
+            env::set_var(format!("ROCKET_{}", key), val);
+
+            let rconfig = active_default().unwrap();
+            // Check that it overrides the active config.
+            for env in &Environment::all() {
+                env::set_var(CONFIG_ENV, env.to_string());
+                let rconfig = active_default().unwrap();
+                check_value(&*key.to_lowercase(), val, rconfig.active());
+            }
+
+            // And non-active configs.
+            for env in &Environment::all() {
+                check_value(&*key.to_lowercase(), val, rconfig.get(*env));
+            }
+        }
+
+        // Clear the variables so they don't override for the next test.
+        for &(key, _) in &pairs {
+            env::remove_var(format!("ROCKET_{}", key))
+        }
+
+        // Now we build a config file to test that the environment variables
+        // override configurations from files as well.
+        let toml = r#"
+            [dev]
+            address = "1.2.3.4"
+
+            [stage]
+            address = "2.3.4.5"
+
+            [prod]
+            address = "10.1.1.1"
+
+            [global]
+            address = "1.2.3.4"
+            port = 7810
+            workers = 21
+            log = "normal"
+        "#.to_string();
+
+        // Check that setting the environment variable actually changes the
+        // config for the default active environments.
+        for &(key, val) in &pairs {
+            env::set_var(format!("ROCKET_{}", key), val);
+
+            let r = RocketConfig::parse(toml.clone(), TEST_CONFIG_FILENAME).unwrap();
+            check_value(&*key.to_lowercase(), val, r.active());
+
+            // And non-active configs.
+            for env in &Environment::all() {
+                check_value(&*key.to_lowercase(), val, r.get(*env));
+            }
+        }
+
+        // Clear the variables so they don't override for the next test.
+        for &(key, _) in &pairs {
+            env::remove_var(format!("ROCKET_{}", key))
         }
     }
 }

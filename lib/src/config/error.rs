@@ -47,6 +47,10 @@ pub enum ConfigError {
     ///
     /// Parameters: (toml_source_string, filename, error_list)
     ParseError(String, PathBuf, Vec<ParsingError>),
+    /// There was a TOML parsing error in a config environment variable.
+    ///
+    /// Parameters: (env_key, env_value, expected type)
+    BadEnvVal(String, String, &'static str),
 }
 
 impl ConfigError {
@@ -89,6 +93,12 @@ impl ConfigError {
                     info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
                     trace_!("'{}' - {}", error_source, White.paint(&error.desc));
                 }
+            }
+            BadEnvVal(ref key, ref value, ref expected) => {
+                error!("environment variable '{}={}' could not be parsed",
+                       White.paint(key), White.paint(value));
+                info_!("value for {:?} must be {}",
+                       White.paint(key), White.paint(expected))
             }
         }
     }

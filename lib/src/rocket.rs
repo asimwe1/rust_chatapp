@@ -300,6 +300,7 @@ impl Rocket {
 
     /// Creates a new `Rocket` application using the supplied custom
     /// configuration information. The `Rocket.toml` file, if present, is
+    /// ignored. Any environment variables setting config parameters are
     /// ignored. If `log` is `true`, logging is enabled.
     ///
     /// This method is typically called through the `rocket::custom` alias.
@@ -331,10 +332,9 @@ impl Rocket {
         }
 
         info!("🔧  Configured for {}.", config.environment);
-        info_!("listening: {}:{}",
-               White.paint(&config.address),
-               White.paint(&config.port));
-        info_!("logging: {:?}", White.paint(config.log_level));
+        info_!("address: {}", White.paint(&config.address));
+        info_!("port: {}", White.paint(&config.port));
+        info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
 
         let session_key = config.take_session_key();
