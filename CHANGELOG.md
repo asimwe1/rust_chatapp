@@ -1,3 +1,13 @@
+# Version 0.1.5 (Jan 14, 2017)
+
+## Core
+
+  * Fixed security checks in `FromSegments` implementation for `PathBuf`.
+
+## Infrastructure
+
+  * `proc_macro` feature removed from examples due to stability.
+
 # Version 0.1.4 (Jan 4, 2017)
 
 ## Core
