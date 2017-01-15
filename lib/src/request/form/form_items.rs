@@ -2,6 +2,23 @@
 /// want to use this if you're implementing [FromForm](trait.FromForm.html)
 /// manually, for whatever reason, by iterating over the items in `form_string`.
 ///
+/// **Note:** The returned key/value pairs are _not_ URL decoded. To URL decode
+/// the raw strings, use `String::from_form_value`:
+///
+/// ```rust
+/// use rocket::request::{FormItems, FromFormValue};
+///
+/// let form_string = "greeting=Hello%2C+Mark%21&username=jake%2Fother";
+/// for (key, value) in FormItems(form_string) {
+///     let decoded_value = String::from_form_value(value);
+///     match key {
+///         "greeting" => assert_eq!(decoded_value, Ok("Hello, Mark!".into())),
+///         "username" => assert_eq!(decoded_value, Ok("jake/other".into())),
+///         _ => unreachable!()
+///     }
+/// }
+/// ```
+///
 /// # Examples
 ///
 /// `FormItems` can be used directly as an iterator:
