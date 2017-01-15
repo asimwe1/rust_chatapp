@@ -12,6 +12,7 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../README.md"
 keywords = ["rocket", "web", "framework", "server"]
 license = "MIT/Apache-2.0"
+build = "build.rs"
 
 [dependencies]
 term-painter = "^0.2"
@@ -28,6 +29,10 @@ default-features = false
 [dev-dependencies]
 lazy_static = "0.2"
 rocket_codegen = { version = "0.1.5", path = "../codegen" }
+
+[build-dependencies]
+ansi_term = "^0.9"
+version_check = "^0.1"
 
 [features]
 testing = []

@@ -1,20 +1,15 @@
-#![feature(slice_patterns)]
-
 //! This tiny build script ensures that rocket_codegen is not compiled with an
-//! incompatible version of rust. It does this by executing `rustc --version`
-//! and comparing the version to `MIN_VERSION`, the minimum required version. If
-//! the installed version is less than the minimum required version, an error is
-//! printed out to the console and compilation is halted.
+//! incompatible version of rust.
 
 extern crate ansi_term;
-
-use std::env;
-use std::process::Command;
+extern crate version_check;
 
 use ansi_term::Colour::{Red, Yellow, Blue, White};
+use version_check::{is_nightly, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
-const MIN_VERSION: &'static str = "2017-01-03";
+const MIN_DATE: &'static str = "2017-01-03";
+const MIN_VERSION: &'static str = "1.16.0-nightly";
 
 // Convenience macro for writing to stderr.
 macro_rules! printerr {
@@ -25,47 +20,48 @@ macro_rules! printerr {
     })
 }
 
-// Convert a string of %Y-%m-%d to a single u32 maintaining ordering.
-fn str_to_ymd(ymd: &str) -> Option<u32> {
-    let ymd: Vec<_> = ymd.split("-").filter_map(|s| s.parse::<u32>().ok()).collect();
-    match ymd.as_slice() {
-        &[y, m, d] => Some((y << 9) | (m << 5) | d),
-        _ => None,
-    }
-}
-
 fn main() {
-    // Run rustc to get the version information.
-    let output = env::var("RUSTC").ok()
-        .and_then(|rustc| Command::new(rustc).arg("--version").output().ok())
-        .and_then(|output| String::from_utf8(output.stdout).ok())
-        .and_then(|s| s.split(" ").nth(3).map(|s| s.to_string()))
-        .map(|s| s.trim_right().trim_right_matches(")").to_string());
+    let ok_nightly = is_nightly();
+    let ok_version = is_min_version(MIN_VERSION);
+    let ok_date = is_min_date(MIN_DATE);
 
-    if let Some(ref version) = output {
-        let needed = str_to_ymd(MIN_VERSION);
-        let actual = str_to_ymd(version);
-        if let (Some(needed), Some(actual)) = (needed, actual) {
-            if actual < needed {
+    let print_version_err = |version: &str, date: &str| {
+        printerr!("{} {}. {} {}.",
+                  White.paint("Installed version is:"),
+                  Yellow.paint(format!("{} ({})", version, date)),
+                  White.paint("Minimum required:"),
+                  Yellow.paint(format!("{} ({})", MIN_VERSION, MIN_DATE)));
+    };
+
+    match (ok_nightly, ok_version, ok_date) {
+        (Some(is_nightly), Some((ok_version, version)), Some((ok_date, date))) => {
+            if !is_nightly {
                 printerr!("{} {}",
                           Red.bold().paint("Error:"),
-                          White.paint("Rocket codegen requires a newer version of rustc."));
+                          White.paint("Rocket requires a nightly version of Rust."));
+                print_version_err(&*version, &*date);
+                printerr!("{}{}{}",
+                          Blue.paint("See the getting started guide ("),
+                          White.paint("https://rocket.rs/guide/getting-started/"),
+                          Blue.paint(") for more information."));
+                panic!("Aborting compilation due to incompatible compiler.")
+            }
+
+            if !ok_version || !ok_date {
+                printerr!("{} {}",
+                          Red.bold().paint("Error:"),
+                          White.paint("Rocket codegen requires a more recent version of rustc."));
                 printerr!("{}{}{}",
                           Blue.paint("Use `"),
                           White.paint("rustup update"),
                           Blue.paint("` or your preferred method to update Rust."));
-                printerr!("{} {}. {} {}.",
-                          White.paint("Installed version is:"),
-                          Yellow.paint(version.as_str()),
-                          White.paint("Minimum required:"),
-                          Yellow.paint(MIN_VERSION));
+                print_version_err(&*version, &*date);
                 panic!("Aborting compilation due to incompatible compiler.")
-            } else {
-                return;
             }
+        },
+        _ => {
+            println!("cargo:warning={}", "Rocket was unable to check rustc compatibility.");
+            println!("cargo:warning={}", "Build may fail due to incompatible rustc version.");
         }
     }
-
-    printerr!("{}", Yellow.paint("Warning: Rocket was unable to check rustc compatibility."));
-    printerr!("{}", Yellow.paint("Build may fail due to incompatible rustc version."));
 }
