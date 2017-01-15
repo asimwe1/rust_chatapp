@@ -62,9 +62,13 @@ check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 echo ":: Checking for tabs..."
 ensure_tab_free
 
-# Update dependencies before running tests.
 echo ":: Updating dependencies..."
 cargo update
+
+echo ":: Cleaning cached crates..."
+cargo clean -p rocket
+cargo clean -p rocket_codegen
+cargo clean -p rocket_contrib
 
 echo ":: Building and testing libraries..."
 build_and_test "${LIB_DIR}"
