@@ -43,7 +43,7 @@ use http::uri::{URI, Segments, SegmentError};
 /// Sometimes, a forward is not desired, and instead, we simply want to know
 /// that the dynamic path segment could not be parsed into some desired type
 /// `T`. In these cases, types of `Option<T>` or `Result<T, T::Error>` can be
-/// used. These types implement `FromParam` themeselves. Their implementations
+/// used. These types implement `FromParam` themselves. Their implementations
 /// always return successfully, so they never forward. They can be used to
 /// determine if the `FromParam` call failed and to retrieve the error value
 /// from the failed `from_param` call.

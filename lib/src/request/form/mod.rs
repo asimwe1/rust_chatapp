@@ -9,11 +9,12 @@
 //! ```
 //!
 //! Form parameter types must implement the [FromForm](trait.FromForm.html)
-//! trait, which is automaForwarp derivable. Automatically deriving `FromForm`
-//! for a structure requires that all of its fields implement
-//! [FromFormValue](trait.FormFormValue.html). See the
-//! [codegen](/rocket_codegen/) documentation or the [forms guide](/guide/forms)
-//! for more information on forms and on deriving `FromForm`.
+//! trait, which is auto-derivable. Automatically deriving `FromForm` for a
+//! structure requires that all of its fields implement
+//! [FromFormValue](trait.FormFormValue.html), which parses and validates form
+//! fields. See the [codegen](/rocket_codegen/) documentation or the [forms
+//! guide](/guide/forms) for more information on forms and on deriving
+//! `FromForm`.
 
 mod form_items;
 mod from_form;
