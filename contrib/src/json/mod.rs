@@ -58,9 +58,9 @@ impl<T> JSON<T> {
     /// # use rocket_contrib::JSON;
     /// let string = "Hello".to_string();
     /// let my_json = JSON(string);
-    /// assert_eq!(my_json.unwrap(), "Hello".to_string());
+    /// assert_eq!(my_json.into_inner(), "Hello".to_string());
     /// ```
-    pub fn unwrap(self) -> T {
+    pub fn into_inner(self) -> T {
         self.0
     }
 }
