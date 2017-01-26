@@ -238,20 +238,26 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
         "handlebars_templates" => handlebars_templates,
     ];
 
-    let mut templates = HashMap::new();
+    let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
     for &(ext, _) in &engines {
         let mut glob_path: PathBuf = TEMPLATE_DIR.join("**").join("*");
         glob_path.set_extension(ext);
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
             let (rel_path, name, data_type) = split_path(&path);
-            let info = TemplateInfo {
+            if let Some(info) = templates.get(&*name) {
+                warn_!("Template name '{}' does not have a unique path.", name);
+                info_!("Existing path: {:?}", info.full_path);
+                info_!("Additional path: {:?}", path);
+                warn_!("Using existing path for template '{}'.", name);
+                continue;
+            }
+
+            templates.insert(name, TemplateInfo {
                 full_path: path.to_path_buf(),
                 path: rel_path,
                 extension: ext.to_string(),
                 data_type: data_type,
-            };
-
-            templates.insert(name, info);
+            });
         }
     }
 

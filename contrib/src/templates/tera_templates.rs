@@ -23,7 +23,7 @@ pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
 
     // Collect into a tuple of (name, path) for Tera.
     let tera_templates = templates.iter()
-        .map(|&(name, info)| (name, &info.full_path))
+        .map(|&(name, info)| (&info.full_path, Some(name)))
         .collect::<Vec<_>>();
 
     // Finally try to tell Tera about all of the templates.
