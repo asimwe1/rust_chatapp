@@ -1,3 +1,9 @@
+# Version 0.1.6 (Jan 26, 2017)
+
+## Infrastructure
+
+  * Hyper version pinned to 0.9.14 due to upstream non-semver breaking change.
+
 # Version 0.1.5 (Jan 14, 2017)
 
 ## Core
