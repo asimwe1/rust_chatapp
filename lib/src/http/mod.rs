@@ -23,4 +23,4 @@ pub use self::content_type::ContentType;
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
 
-pub use self::cookies::{Cookie, Cookies};
+pub use self::cookies::{Cookie, Cookies, CookieJar, CookieBuilder};

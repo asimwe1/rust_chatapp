@@ -195,10 +195,11 @@ impl<'r> MockRequest<'r> {
     /// use rocket::http::Cookie;
     ///
     /// let req = MockRequest::new(Get, "/")
-    ///     .cookie(Cookie::new("user_id".into(), "12".into()));
+    ///     .cookie(Cookie::new("username", "sb"))
+    ///     .cookie(Cookie::new("user_id", format!("{}", 12)));
     /// ```
     #[inline]
-    pub fn cookie(self, cookie: Cookie) -> Self {
+    pub fn cookie(self, cookie: Cookie<'static>) -> Self {
         self.request.cookies().add(cookie);
         self
     }

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::borrow::{Borrow, Cow};
 use std::fmt;
 
-use http::hyper::header as hyper;
 use http::ascii::{UncasedAscii, UncasedAsciiRef};
 
 /// Simple representation of an HTTP header.
@@ -104,13 +103,6 @@ impl<'h> fmt::Display for Header<'h> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}: {}", self.name, self.value)
-    }
-}
-
-impl<T> From<T> for Header<'static> where T: hyper::Header + hyper::HeaderFormat {
-    fn from(hyper_header: T) -> Header<'static> {
-        let formatter = hyper::HeaderFormatter(&hyper_header);
-        Header::new(T::header_name(), format!("{}", formatter))
     }
 }
 
@@ -345,16 +337,13 @@ impl<'h> HeaderMap<'h> {
     ///
     /// ```rust
     /// use rocket::http::{Cookie, HeaderMap};
-    /// use rocket::http::hyper::header;
     ///
     /// let mut map = HeaderMap::new();
     ///
-    /// let cookie = vec![Cookie::new("a".to_string(), "b".to_string())];
-    /// map.add(header::SetCookie(cookie));
+    /// map.add(Cookie::new("a", "b"));
     /// assert_eq!(map.get("Set-Cookie").count(), 1);
     ///
-    /// let cookie = vec![Cookie::new("c".to_string(), "d".to_string())];
-    /// map.add(header::SetCookie(cookie));
+    /// map.add(Cookie::new("c", "d"));
     /// assert_eq!(map.get("Set-Cookie").count(), 2);
     /// ```
     #[inline(always)]

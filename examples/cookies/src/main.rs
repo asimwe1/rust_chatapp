@@ -1,8 +1,6 @@
 #![feature(plugin, custom_derive, custom_attribute)]
 #![plugin(rocket_codegen)]
 
-#[macro_use]
-extern crate lazy_static;
 extern crate rocket_contrib;
 extern crate rocket;
 
@@ -23,15 +21,16 @@ struct Message {
 
 #[post("/submit", data = "<message>")]
 fn submit(cookies: &Cookies, message: Form<Message>) -> Redirect {
-    cookies.add(Cookie::new("message".into(), message.into_inner().message));
+    cookies.add(Cookie::new("message", message.into_inner().message));
     Redirect::to("/")
 }
 
 #[get("/")]
 fn index(cookies: &Cookies) -> Template {
+    let cookie = cookies.find("message");
     let mut context = HashMap::new();
-    if let Some(msg) = cookies.find("message").map(|msg| msg.value) {
-        context.insert("message", msg);
+    if let Some(ref cookie) = cookie {
+        context.insert("message", cookie.value());
     }
 
     Template::render("index", &context)

@@ -12,7 +12,7 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, Segments};
-use http::{Method, ContentType, Header, HeaderMap, Cookies};
+use http::{Method, ContentType, Header, HeaderMap, Cookie, Cookies};
 
 use http::hyper;
 
@@ -247,7 +247,8 @@ impl<'r> Request<'r> {
     /// use rocket::http::{Cookie, Method, ContentType};
     ///
     /// let mut request = Request::new(Method::Get, "/uri");
-    /// request.cookies().add(Cookie::new("key".into(), "val".into()))
+    /// request.cookies().add(Cookie::new("key", "val"));
+    /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// ```
     #[inline(always)]
     pub fn cookies(&self) -> &Cookies {
@@ -255,18 +256,6 @@ impl<'r> Request<'r> {
     }
 
     /// Replace all of the cookies in `self` with `cookies`.
-    ///
-    /// # Example
-    ///
-    /// Add a new cookie to a request's cookies:
-    ///
-    /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Cookie, Method, ContentType};
-    ///
-    /// let mut request = Request::new(Method::Get, "/uri");
-    /// request.cookies().add(Cookie::new("key".into(), "val".into()))
-    /// ```
     #[doc(hidden)]
     #[inline(always)]
     pub fn set_cookies(&mut self, cookies: Cookies) {
@@ -430,8 +419,25 @@ impl<'r> Request<'r> {
         let mut request = Request::new(method, uri);
 
         // Set the request cookies, if they exist. TODO: Use session key.
-        if let Some(cookies) = h_headers.get::<hyper::header::Cookie>() {
-            request.set_cookies(cookies.to_cookie_jar(&[]));
+        if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
+            let mut cookies = Cookies::new(&[]);
+            for header in cookie_headers {
+                let raw_str = match ::std::str::from_utf8(header) {
+                    Ok(string) => string,
+                    Err(_) => continue
+                };
+
+                for cookie_str in raw_str.split(";") {
+                    let cookie = match Cookie::parse_encoded(cookie_str.to_string()) {
+                        Ok(cookie) => cookie,
+                        Err(_) => continue
+                    };
+
+                    cookies.add_original(cookie);
+                }
+            }
+
+            request.set_cookies(cookies);
         }
 
         // Set the rest of the headers.

@@ -97,6 +97,8 @@ extern crate url;
 extern crate toml;
 extern crate num_cpus;
 extern crate state;
+extern crate cookie;
+extern crate time;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

@@ -20,7 +20,7 @@ fn test_submit() {
     assert_eq!(location_headers, vec!["/".to_string()]);
 }
 
-fn test_body(optional_cookie: Option<Cookie>, expected_body: String) {
+fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     let rocket = rocket::ignite().mount("/", routes![super::index]);
     let mut request = MockRequest::new(Method::Get, "/");
 
@@ -47,7 +47,7 @@ fn test_index() {
     context.insert("message", "Hello from Rocket!");
 
     // Test the route with the "message" cookie.
-    let cookie = Cookie::new("message".into(), "Hello from Rocket!".into());
+    let cookie = Cookie::new("message", "Hello from Rocket!");
     let template = Template::render("index", &context);
     test_body(Some(cookie), template.to_string());
 }

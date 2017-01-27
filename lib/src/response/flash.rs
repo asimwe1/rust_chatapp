@@ -1,10 +1,11 @@
 use std::convert::AsRef;
 
+use time::Duration;
+
 use outcome::IntoOutcome;
 use response::{Response, Responder};
 use request::{self, Request, FromRequest};
-use http::hyper::header;
-use http::Status;
+use http::{Status, Cookie};
 
 // The name of the actual flash cookie.
 const FLASH_COOKIE_NAME: &'static str = "_flash";
@@ -161,12 +162,12 @@ impl<'r, R: Responder<'r>> Flash<R> {
         Flash::new(responder, "error", msg)
     }
 
-    fn cookie_pair(&self) -> header::CookiePair {
+    fn cookie(&self) -> Cookie<'static> {
         let content = format!("{}{}{}", self.name.len(), self.name, self.message);
-        let mut pair = header::CookiePair::new(FLASH_COOKIE_NAME.to_string(), content);
-        pair.path = Some("/".to_string());
-        pair.max_age = Some(300);
-        pair
+        Cookie::build(FLASH_COOKIE_NAME, content)
+            .max_age(Duration::minutes(5))
+            .path("/")
+            .finish()
     }
 }
 
@@ -177,9 +178,9 @@ impl<'r, R: Responder<'r>> Flash<R> {
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
     fn respond(self) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
-        let cookie = vec![self.cookie_pair()];
+        let cookie = self.cookie();
         Response::build_from(self.responder.respond()?)
-            .header_adjoin(header::SetCookie(cookie))
+            .header_adjoin(cookie)
             .ok()
     }
 }
@@ -221,7 +222,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
             request.cookies().remove(FLASH_COOKIE_NAME);
 
             // Parse the flash.
-            let content = cookie.pair().1;
+            let content = cookie.value();
             let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
                 Some(i) => (&content[..i], &content[i..]),
                 None => (content, ""),

@@ -36,7 +36,7 @@
 //!   * **port**: _[integer]_ a port number to listen on
 //!     * examples: `"8000"`, `"80"`, `"4242"`
 //!   * **workers**: _[integer]_ the number of concurrent workers to use
-//!     * examples: `"12"`, `"1"`, `"4"`
+//!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
 //!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32

@@ -6,7 +6,6 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-lazy_static = "*"
 
 [dependencies.rocket_contrib]
 path = "../../contrib"

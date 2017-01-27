@@ -20,7 +20,7 @@ use catcher::{self, Catcher};
 use outcome::Outcome;
 use error::Error;
 
-use http::{Method, Status};
+use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::URI;
 
@@ -79,7 +79,7 @@ impl Rocket {
     fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(header::Server("rocket".to_string()));
+        response.set_header(Header::new("Server", "rocket"));
 
         match self.write_response(response, hyp_res) {
             Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
@@ -192,9 +192,8 @@ impl Rocket {
         match self.route(request, data) {
             Outcome::Success(mut response) => {
                 // A user's route responded!
-                let cookie_delta = request.cookies().delta();
-                if !cookie_delta.is_empty() {
-                    response.adjoin_header(header::SetCookie(cookie_delta));
+                for cookie in request.cookies().delta() {
+                    response.adjoin_header(cookie);
                 }
 
                 response
