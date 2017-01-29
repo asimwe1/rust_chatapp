@@ -1,12 +1,12 @@
+use ::{CATCH_STRUCT_PREFIX, CATCH_FN_PREFIX, CATCHER_ATTR};
+use parser::ErrorParams;
 use utils::*;
-use ::{CATCH_STRUCT_PREFIX, CATCH_FN_PREFIX};
 
 use syntax::codemap::{Span};
 use syntax::ast::{MetaItem, Ident, TyKind};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::tokenstream::TokenTree;
 use syntax::parse::token;
-use parser::ErrorParams;
 
 const ERR_PARAM: &'static str = "_error";
 const REQ_PARAM: &'static str = "_request";
@@ -46,17 +46,27 @@ impl ErrorGenerateExt for ErrorParams {
     }
 }
 
-pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
-          annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
-    let error = ErrorParams::from(ecx, sp, meta_item, annotated);
+pub fn error_decorator(ecx: &mut ExtCtxt,
+                       sp: Span,
+                       meta_item: &MetaItem,
+                       annotated: Annotatable)
+    -> Vec<Annotatable>
+{
+    let mut output = Vec::new();
 
+    // Parse the parameters from the error annotation.
+    let error = ErrorParams::from(ecx, sp, meta_item, &annotated);
+
+    // Get all of the information we learned from the attribute + function.
     let user_fn_name = error.annotated_fn.ident();
     let catch_fn_name = user_fn_name.prepend(CATCH_FN_PREFIX);
     let code = error.code.node;
-    let (err_ident, req_ident) = (Ident::from_str(ERR_PARAM), Ident::from_str(REQ_PARAM));
+    let err_ident = Ident::from_str(ERR_PARAM);
+    let req_ident = Ident::from_str(REQ_PARAM);
     let fn_arguments = error.generate_fn_arguments(ecx, err_ident, req_ident);
 
-    emit_item(push, quote_item!(ecx,
+    // Push the Rocket generated catch function.
+    emit_item(&mut output, quote_item!(ecx,
         fn $catch_fn_name<'_b>($err_ident: ::rocket::Error,
                                $req_ident: &'_b ::rocket::Request)
                                -> ::rocket::response::Result<'_b> {
@@ -67,8 +77,9 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
         }
     ).expect("catch function"));
 
+    // Push the static catch info. This is what the errors! macro refers to.
     let struct_name = user_fn_name.prepend(CATCH_STRUCT_PREFIX);
-    emit_item(push, quote_item!(ecx,
+    emit_item(&mut output, quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticCatchInfo =
             ::rocket::StaticCatchInfo {
@@ -76,4 +87,11 @@ pub fn error_decorator(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
                 handler: $catch_fn_name
             };
     ).expect("catch info struct"));
+
+    // Attach a `rocket_catcher` attribute to the user's function and emit it.
+    let attr_name = Ident::from_str(CATCHER_ATTR);
+    let catcher_attr = quote_attr!(ecx, #[$attr_name($struct_name)]);
+    attach_and_emit(&mut output, catcher_attr, annotated);
+
+    output
 }

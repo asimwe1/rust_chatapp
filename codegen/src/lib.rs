@@ -97,9 +97,9 @@
 #![allow(deprecated)]
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
-extern crate rustc;
 extern crate rustc_plugin;
 extern crate rocket;
 
@@ -107,6 +107,7 @@ extern crate rocket;
 mod parser;
 mod macros;
 mod decorators;
+mod lints;
 
 use std::env;
 use rustc_plugin::Registry;
@@ -121,10 +122,15 @@ const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &'static str = "rocket_route_fn_";
 const CATCH_FN_PREFIX: &'static str = "rocket_catch_fn_";
 
+const ROUTE_ATTR: &'static str = "rocket_route";
+const ROUTE_INFO_ATTR: &'static str = "rocket_route_info";
+
+const CATCHER_ATTR: &'static str = "rocket_catcher";
+
 macro_rules! register_decorators {
     ($registry:expr, $($name:expr => $func:ident),+) => (
         $($registry.register_syntax_extension(Symbol::intern($name),
-                SyntaxExtension::MultiDecorator(Box::new(decorators::$func)));
+                SyntaxExtension::MultiModifier(Box::new(decorators::$func)));
          )+
     )
 }
@@ -135,6 +141,12 @@ macro_rules! register_derives {
                 SyntaxExtension::MultiDecorator(Box::new(decorators::$func)));
          )+
     )
+}
+
+macro_rules! register_lints {
+    ($registry:expr, $($item:ident),+) => ($(
+        $registry.register_late_lint_pass(Box::new(lints::$item::default()));
+    )+)
 }
 
 /// Compiler hook for Rust to register plugins.
@@ -164,4 +176,6 @@ pub fn plugin_registrar(reg: &mut Registry) {
         // TODO: Allow this once Diesel incompatibility is fixed. Fix docs too.
         // "options" => options_decorator
     );
+
+    register_lints!(reg, ManagedStateLint);
 }

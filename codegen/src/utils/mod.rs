@@ -12,6 +12,7 @@ pub use self::span_ext::SpanExt;
 
 use std::convert::AsRef;
 
+use syntax;
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Item, Expr};
@@ -21,14 +22,13 @@ use syntax::ext::quote::rt::ToTokens;
 use syntax::print::pprust::item_to_string;
 use syntax::ptr::P;
 use syntax::fold::Folder;
-use syntax::ast::{Lifetime, LifetimeDef, Ty};
+use syntax::ast::{Attribute, Lifetime, LifetimeDef, Ty};
+use syntax::attr::HasAttrs;
 
-#[inline]
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
     spanned(span.lo, span.hi, t)
 }
 
-#[inline]
 pub fn sep_by_tok<T>(ecx: &ExtCtxt, things: &[T], token: Token) -> Vec<TokenTree>
     where T: ToTokens
 {
@@ -43,7 +43,6 @@ pub fn sep_by_tok<T>(ecx: &ExtCtxt, things: &[T], token: Token) -> Vec<TokenTree
     output
 }
 
-#[inline]
 pub fn option_as_expr<T: ToTokens>(ecx: &ExtCtxt, opt: &Option<T>) -> P<Expr> {
     match *opt {
         Some(ref item) => quote_expr!(ecx, Some($item)),
@@ -51,10 +50,24 @@ pub fn option_as_expr<T: ToTokens>(ecx: &ExtCtxt, opt: &Option<T>) -> P<Expr> {
     }
 }
 
-#[inline]
-pub fn emit_item(push: &mut FnMut(Annotatable), item: P<Item>) {
-    debug!("Emitting item: {}", item_to_string(&item));
-    push(Annotatable::Item(item));
+pub fn emit_item(items: &mut Vec<Annotatable>, item: P<Item>) {
+    debug!("Emitting item:\n{}", item_to_string(&item));
+    items.push(Annotatable::Item(item));
+}
+
+pub fn attach_and_emit(out: &mut Vec<Annotatable>, attr: Attribute, to: Annotatable) {
+    syntax::attr::mark_used(&attr);
+    syntax::attr::mark_known(&attr);
+
+    // Attach the attribute to the user's function and emit it.
+    if let Annotatable::Item(user_item) = to {
+        let item = user_item.map_attrs(|mut attrs| {
+            attrs.push(attr);
+            attrs
+        });
+
+        emit_item(out, item);
+    }
 }
 
 macro_rules! quote_enum {

@@ -2,9 +2,9 @@ use std::collections::HashSet;
 use std::fmt::Display;
 
 use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
-use utils::{emit_item, span, sep_by_tok, option_as_expr, strip_ty_lifetimes};
-use utils::{SpanExt, IdentExt, ArgExt};
+use ::{ROUTE_ATTR, ROUTE_INFO_ATTR};
 use parser::{Param, RouteParams};
+use utils::*;
 
 use syntax::codemap::{Span, Spanned};
 use syntax::tokenstream::TokenTree;
@@ -169,7 +169,7 @@ impl RouteGenerateExt for RouteParams {
                         !a.named(&p.node.name)
                     })
             } else {
-                ecx.span_err(a.pat.span, "argument names must be identifiers");
+                ecx.span_err(a.pat.span, "route argument names must be identifiers");
                 false
             }
         };
@@ -180,6 +180,7 @@ impl RouteGenerateExt for RouteParams {
             let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
             let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
+                #[allow(non_snake_case)]
                 let $ident: $ty = match
                         ::rocket::request::FromRequest::from_request(_req) {
                     ::rocket::outcome::Outcome::Success(v) => v,
@@ -220,10 +221,13 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                            ecx: &mut ExtCtxt,
                            sp: Span,
                            meta_item: &MetaItem,
-                           annotated: &Annotatable,
-                           push: &mut FnMut(Annotatable)) {
+                           annotated: Annotatable)
+    -> Vec<Annotatable>
+{
+    let mut output = Vec::new();
+
     // Parse the route and generate the code to create the form and param vars.
-    let route = RouteParams::from(ecx, sp, known_method, meta_item, annotated);
+    let route = RouteParams::from(ecx, sp, known_method, meta_item, &annotated);
     debug!("Route params: {:?}", route);
 
     let param_statements = route.generate_param_statements(ecx);
@@ -234,7 +238,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     // Generate and emit the wrapping function with the Rocket handler signature.
     let user_fn_name = route.annotated_fn.ident();
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
-    emit_item(push, quote_item!(ecx,
+    emit_item(&mut output, quote_item!(ecx,
          fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
                 -> ::rocket::handler::Outcome<'_b> {
              $param_statements
@@ -249,7 +253,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     // function as its handler. A proper Rocket route will be created from this.
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let (path, method, content_type, rank) = route.explode(ecx);
-    emit_item(push, quote_item!(ecx,
+    let static_route_info_item =  quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {
@@ -259,24 +263,35 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                 format: $content_type,
                 rank: $rank,
             };
-    ).unwrap());
+    ).expect("static route info");
+
+    // Attach a `rocket_route_info` attribute to the route info and emit it.
+    let attr_name = Ident::from_str(ROUTE_INFO_ATTR);
+    let info_attr = quote_attr!(ecx, #[$attr_name]);
+    attach_and_emit(&mut output, info_attr, Annotatable::Item(static_route_info_item));
+
+    // Attach a `rocket_route` attribute to the user's function and emit it.
+    let attr_name = Ident::from_str(ROUTE_ATTR);
+    let route_attr = quote_attr!(ecx, #[$attr_name($struct_name)]);
+    attach_and_emit(&mut output, route_attr, annotated);
+
+    output
 }
 
-pub fn route_decorator(ecx: &mut ExtCtxt,
-                       sp: Span,
-                       meta_item: &MetaItem,
-                       annotated: &Annotatable,
-                       push: &mut FnMut(Annotatable)) {
-    generic_route_decorator(None, ecx, sp, meta_item, annotated, push);
+pub fn route_decorator(
+    ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem, annotated: Annotatable
+) -> Vec<Annotatable> {
+    generic_route_decorator(None, ecx, sp, meta_item, annotated)
 }
 
 macro_rules! method_decorator {
     ($name:ident, $method:ident) => (
-        pub fn $name(ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem,
-                     annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
+        pub fn $name(
+            ecx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem, annotated: Annotatable
+        ) -> Vec<Annotatable> {
             let i_sp = meta_item.span.shorten_to(stringify!($method).len());
             let method = Some(span(Method::$method, i_sp));
-            generic_route_decorator(method, ecx, sp, meta_item, annotated, push);
+            generic_route_decorator(method, ecx, sp, meta_item, annotated)
         }
     )
 }
