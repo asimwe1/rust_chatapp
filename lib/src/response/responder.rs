@@ -43,7 +43,7 @@ use response::{Response, Stream};
 ///
 ///   * **String**
 ///
-///     Sets the `Content-Type`t to `text/html`. The string is used as the body
+///     Sets the `Content-Type`t to `text/plain`. The string is used as the body
 ///     of the response, which is fixed size and not streamed. To stream a
 ///     string, use `Stream::from(Cursor::new(string))`.
 ///
@@ -188,12 +188,12 @@ impl<'r> Responder<'r> for &'r str {
     }
 }
 
-/// Returns a response with Content-Type `text/html` and a fized-size body
+/// Returns a response with Content-Type `text/html` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl Responder<'static> for String {
     fn respond(self) -> Result<Response<'static>, Status> {
         Response::build()
-            .header(ContentType::HTML)
+            .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
             .ok()
     }
