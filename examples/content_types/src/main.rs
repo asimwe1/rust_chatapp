@@ -9,7 +9,7 @@ extern crate serde_derive;
 #[cfg(test)]
 mod tests;
 
-use rocket::{Request, Error};
+use rocket::Request;
 use rocket::http::ContentType;
 use rocket::response::content;
 
@@ -33,7 +33,7 @@ fn hello(content_type: ContentType, name: String, age: i8) -> content::JSON<Stri
 }
 
 #[error(404)]
-fn not_found(_: Error, request: &Request) -> content::HTML<String> {
+fn not_found(request: &Request) -> content::HTML<String> {
     let html = if !request.content_type().is_json() {
         format!("<p>This server only supports JSON requests, not '{}'.</p>",
                 request.content_type())
