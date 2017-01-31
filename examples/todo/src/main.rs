@@ -5,9 +5,8 @@ extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_codegen;
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
+extern crate rocket_contrib;
 
 mod static_files;
 mod task;

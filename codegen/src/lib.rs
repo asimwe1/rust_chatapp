@@ -100,6 +100,7 @@
 #[macro_use] extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
+extern crate syntax_pos;
 extern crate rustc_plugin;
 extern crate rocket;
 
@@ -177,5 +178,5 @@ pub fn plugin_registrar(reg: &mut Registry) {
         // "options" => options_decorator
     );
 
-    register_lints!(reg, ManagedStateLint);
+    register_lints!(reg, RocketLint);
 }
