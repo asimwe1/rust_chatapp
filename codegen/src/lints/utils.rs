@@ -155,25 +155,12 @@ pub trait DefExt {
 impl DefExt for Def {
     fn def_id_opt(&self) -> Option<DefId> {
         match *self {
-            Def::Fn(id) |
-            Def::Mod(id) |
-            Def::Static(id, _) |
-            Def::Variant(id) |
-            Def::VariantCtor(id, ..) |
-            Def::Enum(id) |
-            Def::TyAlias(id) |
-            Def::AssociatedTy(id) |
-            Def::TyParam(id) |
-            Def::Struct(id) |
-            Def::StructCtor(id, ..) |
-            Def::Union(id) |
-            Def::Trait(id) |
-            Def::Method(id) |
-            Def::Const(id) |
-            Def::AssociatedConst(id) |
-            Def::Local(id) |
-            Def::Upvar(id, ..) |
-            Def::Macro(id) => Some(id),
+            Def::Fn(id) | Def::Mod(id) | Def::Static(id, _) | Def::Variant(id)
+                | Def::VariantCtor(id, ..) | Def::Enum(id) | Def::TyAlias(id)
+                | Def::AssociatedTy(id) | Def::TyParam(id) | Def::Struct(id)
+                | Def::StructCtor(id, ..) | Def::Union(id) | Def::Trait(id)
+                | Def::Method(id) | Def::Const(id) | Def::AssociatedConst(id)
+                | Def::Local(id) | Def::Upvar(id, ..) | Def::Macro(id) => Some(id),
             Def::Label(..) | Def::PrimTy(..) | Def::SelfTy(..) | Def::Err => None,
         }
     }
