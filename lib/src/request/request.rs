@@ -201,13 +201,13 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert!(request.headers().is_empty());
     ///
-    /// request.add_header(ContentType::HTML.into());
+    /// request.add_header(ContentType::HTML);
     /// assert!(request.headers().contains("Content-Type"));
     /// assert_eq!(request.headers().len(), 1);
     /// ```
     #[inline(always)]
-    pub fn add_header(&mut self, header: Header<'r>) {
-        self.headers.add(header);
+    pub fn add_header<H: Into<Header<'r>>>(&mut self, header: H) {
+        self.headers.add(header.into());
     }
 
     /// Replaces the value of the header with `header.name` with `header.value`.
@@ -222,15 +222,15 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert!(request.headers().is_empty());
     ///
-    /// request.add_header(ContentType::HTML.into());
-    /// assert_eq!(request.content_type(), ContentType::HTML);
+    /// request.add_header(ContentType::HTML);
+    /// assert_eq!(request.content_type(), Some(ContentType::HTML));
     ///
-    /// request.replace_header(ContentType::JSON.into());
-    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// request.replace_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
     /// ```
     #[inline(always)]
-    pub fn replace_header(&mut self, header: Header<'r>) {
-        self.headers.replace(header);
+    pub fn replace_header<H: Into<Header<'r>>>(&mut self, header: H) {
+        self.headers.replace(header.into());
     }
 
     /// Returns a borrow to the cookies in `self`.
@@ -262,8 +262,8 @@ impl<'r> Request<'r> {
         self.cookies = cookies;
     }
 
-    /// Returns the Content-Type header of `self`. If the header is not present,
-    /// returns `ContentType::Any`.
+    /// Returns `Some` of the Content-Type header of `self`. If the header is
+    /// not present, returns `None`.
     ///
     /// # Example
     ///
@@ -272,16 +272,15 @@ impl<'r> Request<'r> {
     /// use rocket::http::{Method, ContentType};
     ///
     /// let mut request = Request::new(Method::Get, "/uri");
-    /// assert_eq!(request.content_type(), ContentType::Any);
+    /// assert_eq!(request.content_type(), None);
     ///
-    /// request.replace_header(ContentType::JSON.into());
-    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// request.replace_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
     /// ```
     #[inline(always)]
-    pub fn content_type(&self) -> ContentType {
+    pub fn content_type(&self) -> Option<ContentType> {
         self.headers().get_one("Content-Type")
             .and_then(|value| value.parse().ok())
-            .unwrap_or(ContentType::Any)
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
@@ -458,8 +457,10 @@ impl<'r> fmt::Display for Request<'r> {
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
-        if self.method.supports_payload() && !self.content_type().is_any() {
-            write!(f, " {}", Yellow.paint(self.content_type()))?;
+        if let Some(content_type) = self.content_type() {
+            if self.method.supports_payload() {
+                write!(f, " {}", Yellow.paint(content_type))?;
+            }
         }
 
         Ok(())

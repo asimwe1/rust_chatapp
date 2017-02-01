@@ -161,7 +161,7 @@ impl Rocket {
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
-        let is_form = req.content_type().is_form();
+        let is_form = req.content_type().map_or(false, |ct| ct.is_form());
         if is_form && req.method() == Method::Post && data_len >= min_len {
             let form = unsafe {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])

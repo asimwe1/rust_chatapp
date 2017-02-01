@@ -1,14 +1,11 @@
 use std::fmt;
 use std::convert::From;
 
-use super::Collider; // :D
-
 use term_painter::ToStyle;
 use term_painter::Color::*;
 
 use codegen::StaticRouteInfo;
 use handler::Handler;
-use request::Request;
 use http::{Method, ContentType};
 use http::uri::URI;
 
@@ -23,7 +20,7 @@ pub struct Route {
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The Content-Type this route matches against.
-    pub format: ContentType,
+    pub format: Option<ContentType>,
 }
 
 fn default_rank(path: &str) -> isize {
@@ -45,7 +42,7 @@ impl Route {
             handler: handler,
             rank: default_rank(path.as_ref()),
             path: URI::from(path.as_ref().to_string()),
-            format: ContentType::Any,
+            format: None,
         }
     }
 
@@ -58,7 +55,7 @@ impl Route {
             path: URI::from(path.as_ref().to_string()),
             handler: handler,
             rank: rank,
-            format: ContentType::Any,
+            format: None,
         }
     }
 
@@ -115,11 +112,11 @@ impl fmt::Display for Route {
             write!(f, " [{}]", White.paint(&self.rank))?;
         }
 
-        if !self.format.is_any() {
-            write!(f, " {}", Yellow.paint(&self.format))
-        } else {
-            Ok(())
+        if let Some(ref format) = self.format {
+            write!(f, " {}", Yellow.paint(format))?;
         }
+
+        Ok(())
     }
 }
 
@@ -133,30 +130,11 @@ impl fmt::Debug for Route {
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
-        route.format = info.format.clone().unwrap_or(ContentType::Any);
+        route.format = info.format.clone();
         if let Some(rank) = info.rank {
             route.rank = rank;
         }
 
         route
-    }
-}
-
-impl Collider for Route {
-    fn collides_with(&self, b: &Route) -> bool {
-        self.method == b.method
-            && self.rank == b.rank
-            && self.format.collides_with(&b.format)
-            && self.path.collides_with(&b.path)
-    }
-}
-
-impl<'r> Collider<Request<'r>> for Route {
-    fn collides_with(&self, req: &Request<'r>) -> bool {
-        self.method == req.method()
-            && req.uri().collides_with(&self.path)
-            // FIXME: On payload requests, check Content-Type. On non-payload
-            // requests, check Accept.
-            && req.content_type().collides_with(&self.format)
     }
 }

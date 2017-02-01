@@ -140,9 +140,28 @@ impl<'r> MockRequest<'r> {
     /// let req = MockRequest::new(Get, "/").header(ContentType::JSON);
     /// ```
     #[inline]
-    pub fn header<'h, H: Into<Header<'static>>>(mut self, header: H) -> Self {
+    pub fn header<H: Into<Header<'static>>>(mut self, header: H) -> Self {
         self.request.add_header(header.into());
         self
+    }
+
+    /// Adds a header to this request without consuming `self`.
+    ///
+    /// # Examples
+    ///
+    /// Add the Content-Type header:
+    ///
+    /// ```rust
+    /// use rocket::http::Method::*;
+    /// use rocket::testing::MockRequest;
+    /// use rocket::http::ContentType;
+    ///
+    /// let mut req = MockRequest::new(Get, "/");
+    /// req.add_header(ContentType::JSON);
+    /// ```
+    #[inline]
+    pub fn add_header<H: Into<Header<'static>>>(&mut self, header: H) {
+        self.request.add_header(header.into());
     }
 
     /// Set the remote address of this request.
@@ -162,25 +181,6 @@ impl<'r> MockRequest<'r> {
     pub fn remote(mut self, address: SocketAddr) -> Self {
         self.request.set_remote(address);
         self
-    }
-
-    /// Adds a header to this request. Does not consume `self`.
-    ///
-    /// # Examples
-    ///
-    /// Add the Content-Type header:
-    ///
-    /// ```rust
-    /// use rocket::http::Method::*;
-    /// use rocket::testing::MockRequest;
-    /// use rocket::http::ContentType;
-    ///
-    /// let mut req = MockRequest::new(Get, "/");
-    /// req.add_header(ContentType::JSON);
-    /// ```
-    #[inline]
-    pub fn add_header<'h, H: Into<Header<'static>>>(&mut self, header: H) {
-        self.request.add_header(header.into());
     }
 
     /// Add a cookie to this request.

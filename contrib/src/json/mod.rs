@@ -73,7 +73,7 @@ impl<T: Deserialize> FromData for JSON<T> {
     type Error = SerdeError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
-        if !request.content_type().is_json() {
+        if !request.content_type().map_or(false, |ct| ct.is_json()) {
             error_!("Content-Type is not JSON.");
             return Outcome::Forward(data);
         }

@@ -97,10 +97,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///   * **ContentType**
 ///
 ///     Extracts the [ContentType](/rocket/http/struct.ContentType.html) from
-///     the incoming request. If the request didn't specify a Content-Type, a
-///     Content-Type of `*/*` (`Any`) is returned.
-///
-///     _This implementation always returns successfully._
+///     the incoming request. If the request didn't specify a Content-Type, the
+///     request is forwarded.
 ///
 ///   * **SocketAddr**
 ///
@@ -217,7 +215,10 @@ impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Success(request.content_type())
+        match request.content_type() {
+            Some(content_type) => Success(content_type),
+            None => Forward(())
+        }
     }
 }
 

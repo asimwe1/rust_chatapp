@@ -5,7 +5,6 @@ use std::fmt;
 use http::Header;
 use http::hyper::mime::Mime;
 use http::ascii::{uncased_eq, UncasedAscii};
-use router::Collider;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -416,13 +415,6 @@ impl Into<Header<'static>> for ContentType {
     #[inline]
     fn into(self) -> Header<'static> {
         Header::new("Content-Type", self.to_string())
-    }
-}
-
-impl Collider for ContentType {
-    fn collides_with(&self, other: &ContentType) -> bool {
-        let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
     }
 }
 

@@ -234,7 +234,7 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
     type Error = Option<String>;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        if !request.content_type().is_form() {
+        if !request.content_type().map_or(false, |ct| ct.is_form()) {
             warn_!("Form data does not have form content type.");
             return Forward(data);
         }

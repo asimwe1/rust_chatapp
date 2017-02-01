@@ -99,7 +99,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
-///         if req.content_type() != person_ct {
+///         if req.content_type() != Some(person_ct) {
 ///             return Outcome::Forward(data);
 ///         }
 ///

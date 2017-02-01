@@ -8,8 +8,6 @@ use std::str::Utf8Error;
 
 use url;
 
-use router::Collider;
-
 /// Index (start, end) into a string, to prevent borrowing.
 type Index = (usize, usize);
 
@@ -298,26 +296,6 @@ impl<'a> fmt::Display for URI<'a> {
 }
 
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
-
-impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
-    fn collides_with(&self, other: &URI<'b>) -> bool {
-        for (seg_a, seg_b) in self.segments().zip(other.segments()) {
-            if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
-                return true;
-            }
-
-            if !seg_a.collides_with(seg_b) {
-                return false;
-            }
-        }
-
-        if self.segment_count() != other.segment_count() {
-            return false;
-        }
-
-        true
-    }
-}
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///
