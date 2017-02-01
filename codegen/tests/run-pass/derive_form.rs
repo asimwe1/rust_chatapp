@@ -53,6 +53,17 @@ struct ManualMethod<'r> {
     done: bool
 }
 
+#[derive(Debug, PartialEq, FromForm)]
+struct UnpresentCheckbox {
+    checkbox: bool
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct UnpresentCheckboxTwo<'r> {
+    checkbox: bool,
+    something: &'r str
+}
+
 fn main() {
     // Same number of arguments: simple case.
     let task = TodoTask::from_form_string("description=Hello&completed=on");
@@ -105,5 +116,18 @@ fn main() {
     assert_eq!(manual, Ok(ManualMethod {
         _method: None,
         done: true
+    }));
+
+    // Check that a `bool` value that isn't in the form is marked as `false`.
+    let manual = UnpresentCheckbox::from_form_string("");
+    assert_eq!(manual, Ok(UnpresentCheckbox {
+        checkbox: false
+    }));
+
+    // Check that a `bool` value that isn't in the form is marked as `false`.
+    let manual = UnpresentCheckboxTwo::from_form_string("something=hello");
+    assert_eq!(manual, Ok(UnpresentCheckboxTwo {
+        checkbox: false,
+        something: "hello"
     }));
 }

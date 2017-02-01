@@ -64,8 +64,8 @@ use http::uri::URI;
 ///
 ///     A value is validated successfully as `true` if the the form value is
 ///     `"true"` or `"on"`, and as a `false` value if the form value is
-///     `"false"`, or `"off"`. Otherwise, the raw form value is returned in the
-///     `Err` value.
+///     `"false"`, `"off"`, or not present. In any other case, the raw form
+///     value is returned in the `Err` value.
 ///
 ///   * **str**
 ///
@@ -184,6 +184,10 @@ impl<'v> FromFormValue<'v> for bool {
             "off" | "false" => Ok(false),
             _ => Err(v),
         }
+    }
+
+    fn default() -> Option<bool> {
+        Some(false)
     }
 }
 
