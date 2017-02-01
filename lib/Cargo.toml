@@ -19,7 +19,7 @@ categories = ["web-programming::http-server"]
 term-painter = "^0.2"
 log = "^0.3"
 url = "^1"
-hyper = { version = "0.10", default-features = false }
+hyper = { version = "0.10.4", default-features = false }
 toml = { version = "^0.2", default-features = false }
 num_cpus = "1"
 state = "^0.2"

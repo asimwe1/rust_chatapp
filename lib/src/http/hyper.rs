@@ -27,7 +27,6 @@ pub use hyper::mime;
 pub mod header {
     use http::Header;
 
-    use hyper::header::HeaderFormatter;
     use hyper::header::Header as HyperHeaderTrait;
 
     macro_rules! import_hyper_items {
@@ -38,8 +37,7 @@ pub mod header {
         ($($name:ident),*) => ($(
             impl ::std::convert::From<self::$name> for Header<'static> {
                 fn from(header: self::$name) -> Header<'static> {
-                    let formatter = HeaderFormatter(&header);
-                    Header::new($name::header_name(), format!("{}", formatter))
+                    Header::new($name::header_name(), header.to_string())
                 }
             }
         )*)
