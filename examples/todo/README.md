@@ -21,3 +21,6 @@ cargo install diesel_cli                     # install diesel CLI tools
 DATABASE_URL=db/db.sql diesel migration run  # create db/db.sql
 ```
 
+## Running
+
+Run this example using: `DATABASE_URL=db/db.sql cargo run`

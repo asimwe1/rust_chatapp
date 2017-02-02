@@ -1,15 +1,17 @@
-mod schema {
-    infer_schema!("db/db.sql");
-}
-
 use diesel;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use self::schema::tasks;
 use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
+const DATABASE_FILE: &'static str = env!("DATABASE_URL");
+
+mod schema {
+    infer_schema!("env:DATABASE_URL");
+}
+
 fn db() -> SqliteConnection {
-    SqliteConnection::establish("db/db.sql").expect("Failed to connect to db.")
+    SqliteConnection::establish(DATABASE_FILE).expect("Failed to connect to db.")
 }
 
 #[table_name = "tasks"]

@@ -12,3 +12,5 @@ pushd $SCRIPT_PATH > /dev/null
   # create db/db.sql
   diesel migration --database-url=$DATABASE_URL run
 popd $SCRIPT_PATH > /dev/null
+
+echo "export DATABASE_URL=$DATABASE_URL"
