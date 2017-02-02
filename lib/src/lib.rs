@@ -99,6 +99,7 @@ extern crate num_cpus;
 extern crate state;
 extern crate cookie;
 extern crate time;
+extern crate memchr;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

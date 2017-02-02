@@ -56,8 +56,11 @@ impl RouteGenerateExt for RouteParams {
         ecx.span_err(fn_span, "...but isn't in the function signature.");
     }
 
-    fn gen_form(&self, ecx: &ExtCtxt, param: Option<&Spanned<Ident>>,
-                form_string: P<Expr>) -> Option<Stmt> {
+    fn gen_form(&self,
+                ecx: &ExtCtxt,
+                param: Option<&Spanned<Ident>>,
+                form_string: P<Expr>)
+                -> Option<Stmt> {
         let arg = param.and_then(|p| self.annotated_fn.find_input(&p.node.name));
         if param.is_none() {
             return None;
@@ -70,11 +73,20 @@ impl RouteGenerateExt for RouteParams {
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
-            let $name: $ty =
-                match ::rocket::request::FromForm::from_form_string($form_string) {
+            let $name: $ty = {
+                let mut items = ::rocket::request::FormItems::from($form_string);
+                let obj = match ::rocket::request::FromForm::from_form_items(items.by_ref()) {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Outcome::Forward(_data)
                 };
+
+                if !items.exhausted() {
+                    println!("    => The query string {:?} is malformed.", $form_string);
+                    return ::rocket::Outcome::Failure(::rocket::http::Status::BadRequest);
+                }
+
+                obj
+             }
         ).expect("form statement"))
     }
 

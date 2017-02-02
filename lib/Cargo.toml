@@ -24,6 +24,7 @@ toml = { version = "^0.2", default-features = false }
 num_cpus = "1"
 state = "^0.2"
 time = "^0.1"
+memchr = "1"
 
 [dependencies.cookie]
 version = "^0.6"

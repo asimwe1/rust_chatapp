@@ -155,6 +155,22 @@ pub struct Form<'f, T: FromForm<'f> + 'f> {
     _phantom: PhantomData<&'f T>,
 }
 
+enum FormResult<T, E> {
+    Ok(T),
+    Err(String, E),
+    Invalid(String)
+}
+
+#[cfg(test)]
+impl<T, E> FormResult<T, E> {
+    fn unwrap(self) -> T {
+        match self {
+            FormResult::Ok(val) => val,
+            _ => panic!("Unwrapping non-Ok FormResult.")
+        }
+    }
+}
+
 impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// Immutably borrow the parsed type.
     pub fn get(&'f self) -> &'f T {
@@ -192,18 +208,24 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     // caller via `get()` and contrain everything to that lifetime. This is, in
     // reality a little coarser than necessary, but the user can simply move the
     // call to right after the creation of a Form object to get the same effect.
-    fn new(form_string: String) -> Result<Self, (String, T::Error)> {
+    fn new(form_string: String) -> FormResult<Self, T::Error> {
         let long_lived_string: &'f str = unsafe {
             ::std::mem::transmute(form_string.as_str())
         };
 
-        match T::from_form_string(long_lived_string) {
-            Ok(obj) => Ok(Form {
+        let mut items = FormItems::from(long_lived_string);
+        let result = T::from_form_items(items.by_ref());
+        if !items.exhausted() {
+            return FormResult::Invalid(form_string);
+        }
+
+        match result {
+            Ok(obj) => FormResult::Ok(Form {
                 form_string: form_string,
                 object: obj,
                 _phantom: PhantomData
             }),
-            Err(e) => Err((form_string, e))
+            Err(e) => FormResult::Err(form_string, e)
         }
     }
 }
@@ -240,16 +262,20 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
         }
 
         let mut form_string = String::with_capacity(4096);
-        let mut stream = data.open().take(32768);
+        let mut stream = data.open().take(32768); // TODO: Make this configurable?
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
             Failure((Status::InternalServerError, None))
         } else {
             match Form::new(form_string) {
-                Ok(form) => Success(form),
-                Err((form_string, e)) => {
-                    error_!("Failed to parse value from form: {:?}", e);
+                FormResult::Ok(form) => Success(form),
+                FormResult::Invalid(form_string) => {
+                    error_!("The request's form string was malformed.");
                     Failure((Status::BadRequest, Some(form_string)))
+                }
+                FormResult::Err(form_string, e) => {
+                    error_!("Failed to parse value from form: {:?}", e);
+                    Failure((Status::UnprocessableEntity, Some(form_string)))
                 }
             }
         }
@@ -259,7 +285,7 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
 #[cfg(test)]
 mod test {
     use super::Form;
-    use ::request::FromForm;
+    use ::request::{FromForm, FormItems};
 
     struct Simple<'s> {
         value: &'s str
@@ -270,18 +296,18 @@ mod test {
     }
 
     impl<'s> FromForm<'s> for Simple<'s> {
-        type Error = &'s str;
+        type Error = ();
 
-        fn from_form_string(fs: &'s str) -> Result<Simple<'s>, &'s str> {
-            Ok(Simple { value: fs })
+        fn from_form_items(items: &mut FormItems<'s>) -> Result<Simple<'s>, ()> {
+            Ok(Simple { value: items.inner_str() })
         }
     }
 
     impl<'s> FromForm<'s> for Other {
-        type Error = &'s str;
+        type Error = ();
 
-        fn from_form_string(fs: &'s str) -> Result<Other, &'s str> {
-            Ok(Other { value: fs.to_string() })
+        fn from_form_items(items: &mut FormItems<'s>) -> Result<Other, ()> {
+            Ok(Other { value: items.inner_str().to_string() })
         }
     }
 

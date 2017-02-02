@@ -167,7 +167,7 @@ impl Rocket {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
 
-            let mut form_items = FormItems(form);
+            let mut form_items = FormItems::from(form);
             if let Some(("_method", value)) = form_items.next() {
                 if let Ok(method) = value.parse() {
                     req.set_method(method);

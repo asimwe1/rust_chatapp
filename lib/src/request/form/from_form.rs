@@ -1,4 +1,4 @@
-use error::Error;
+use request::FormItems;
 
 /// Trait to create an instance of some type from an HTTP form. The
 /// [Form](struct.Form.html) type requires that its generic parameter implements
@@ -53,14 +53,15 @@ pub trait FromForm<'f>: Sized {
     /// Parses an instance of `Self` from a raw HTTP form string
     /// (`application/x-www-form-urlencoded data`) or returns an `Error` if one
     /// cannot be parsed.
-    fn from_form_string(form_string: &'f str) -> Result<Self, Self::Error>;
+    fn from_form_items(form_items: &mut FormItems<'f>) -> Result<Self, Self::Error>;
 }
 
 /// This implementation should only be used during debugging!
 impl<'f> FromForm<'f> for &'f str {
-    type Error = Error;
-    fn from_form_string(s: &'f str) -> Result<Self, Error> {
-        Ok(s)
+    type Error = ();
+
+    fn from_form_items(items: &mut FormItems<'f>) -> Result<Self, Self::Error> {
+        items.mark_complete();
+        Ok(items.inner_str())
     }
 }
-
