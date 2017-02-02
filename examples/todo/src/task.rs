@@ -6,7 +6,6 @@ use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
 const DATABASE_FILE: &'static str = env!("DATABASE_URL");
 
-#[allow(dead_code)]
 mod schema {
     infer_schema!("env:DATABASE_URL");
 }
