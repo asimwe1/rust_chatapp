@@ -37,9 +37,25 @@ fn test_bad_login() {
     test_login("Mike", "password", 30, OK, Some("Unrecognized user, 'Mike'."));
 }
 
+fn check_bad_form(form_str: &str, status: Status) {
+    let rocket = rocket::ignite().mount("/", routes![super::user_page, super::login]);
+    let mut req = MockRequest::new(Post, "/login")
+        .header(ContentType::Form)
+        .body(form_str);
+
+    let mut response = req.dispatch_with(&rocket);
+    assert_eq!(response.status(), status);
+}
+
 #[test]
 fn test_bad_form() {
-    // Mess with the form formatting.
-    test_login("Sergio&other=blah", "password", 0, Status::UnprocessableEntity, None);
-    test_login("&&&===&", "password", 0, Status::BadRequest, None);
+    check_bad_form("&", Status::BadRequest);
+    check_bad_form("=", Status::BadRequest);
+    check_bad_form("&&&===&", Status::BadRequest);
+
+    check_bad_form("username=Sergio", Status::UnprocessableEntity);
+    check_bad_form("username=Sergio&", Status::UnprocessableEntity);
+    check_bad_form("username=Sergio&pass=something", Status::UnprocessableEntity);
+    check_bad_form("user=Sergio&password=something", Status::UnprocessableEntity);
+    check_bad_form("password=something", Status::UnprocessableEntity);
 }
