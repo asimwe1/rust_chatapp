@@ -16,6 +16,7 @@
 //!   * **delete**
 //!   * **head**
 //!   * **patch**
+//!   * **options**
 //!   * **error**
 //!
 //! The grammar for all _route_ attributes, including **route**, **get**,
@@ -173,9 +174,8 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "post" => post_decorator,
         "delete" => delete_decorator,
         "head" => head_decorator,
-        "patch" => patch_decorator
-        // TODO: Allow this once Diesel incompatibility is fixed. Fix docs too.
-        // "options" => options_decorator
+        "patch" => patch_decorator,
+        "options" => options_decorator
     );
 
     register_lints!(reg, RocketLint);

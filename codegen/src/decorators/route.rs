@@ -314,6 +314,4 @@ method_decorator!(post_decorator, Post);
 method_decorator!(delete_decorator, Delete);
 method_decorator!(head_decorator, Head);
 method_decorator!(patch_decorator, Patch);
-
-// TODO: Allow this once Diesel incompatibility is fixed.
-// method_decorator!(options_decorator, Options);
+method_decorator!(options_decorator, Options);
