@@ -38,6 +38,7 @@ use http::uri::URI;
 /// following structure:
 ///
 /// ```rust
+/// # #[allow(dead_code)]
 /// struct Person<'r> {
 ///     name: String,
 ///     age: Result<u16, &'r str>
@@ -106,7 +107,6 @@ use http::uri::URI;
 ///
 /// ```rust
 /// use rocket::request::FromFormValue;
-/// use rocket::Error;
 ///
 /// struct AdultAge(usize);
 ///

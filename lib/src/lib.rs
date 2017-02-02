@@ -50,6 +50,7 @@
 //!
 //! ```rust
 //! #![feature(plugin)]
+//! # #![allow(unused_attributes)]
 //! #![plugin(rocket_codegen)]
 //!
 //! extern crate rocket;

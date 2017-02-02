@@ -10,6 +10,7 @@ use request::FormItems;
 /// ```rust
 /// #![feature(plugin, custom_derive)]
 /// #![plugin(rocket_codegen)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 ///
 /// extern crate rocket;
 ///
@@ -25,6 +26,7 @@ use request::FormItems;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;

@@ -137,6 +137,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::ContentType;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Get, "/").header(ContentType::JSON);
     /// ```
     #[inline]
@@ -175,6 +176,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     ///
     /// let address = "8.8.8.8:80".parse().unwrap();
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Get, "/").remote(address);
     /// ```
     #[inline]
@@ -194,6 +196,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::Cookie;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Get, "/")
     ///     .cookie(Cookie::new("username", "sb"))
     ///     .cookie(Cookie::new("user_id", format!("{}", 12)));
@@ -215,6 +218,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::ContentType;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Post, "/")
     ///     .header(ContentType::JSON)
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);

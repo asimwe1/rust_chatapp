@@ -132,6 +132,7 @@
 //!
 //! const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 //!
+//! # #[allow(unused_variables)]
 //! let template_dir = config::active().map(|config| {
 //!     let dir = config.get_str("template_dir")
 //!         .map_err(|e| if !e.is_not_found() { e.pretty_print(); })

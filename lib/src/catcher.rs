@@ -76,6 +76,7 @@ impl Catcher {
     /// # Examples
     ///
     /// ```rust
+    /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
     ///

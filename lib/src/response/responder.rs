@@ -100,6 +100,8 @@ use response::{Response, Stream};
 /// Say that you have a custom type, `Person`:
 ///
 /// ```rust
+///
+/// # #[allow(dead_code)]
 /// struct Person {
 ///     name: String,
 ///     age: u16

@@ -1,11 +1,12 @@
-use super::rocket;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
 use rocket::http::{ContentType, Status};
 
+use super::rocket;
+
 fn test_login(username: &str, password: &str, age: isize, status: Status,
               body: Option<&'static str>) {
-    let rocket = rocket::ignite().mount("/", routes![super::user_page, super::login]);
+    let rocket = rocket();
     let mut req = MockRequest::new(Post, "/login")
         .header(ContentType::Form)
         .body(&format!("username={}&password={}&age={}", username, password, age));
@@ -38,12 +39,12 @@ fn test_bad_login() {
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
-    let rocket = rocket::ignite().mount("/", routes![super::user_page, super::login]);
+    let rocket = rocket();
     let mut req = MockRequest::new(Post, "/login")
         .header(ContentType::Form)
         .body(form_str);
 
-    let mut response = req.dispatch_with(&rocket);
+    let response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
 }
 

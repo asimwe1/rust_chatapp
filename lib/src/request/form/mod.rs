@@ -69,6 +69,7 @@ use outcome::Outcome::*;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #[derive(FromForm)]
@@ -82,6 +83,7 @@ use outcome::Outcome::*;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;
@@ -106,6 +108,7 @@ use outcome::Outcome::*;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #[derive(FromForm)]
@@ -118,6 +121,7 @@ use outcome::Outcome::*;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;

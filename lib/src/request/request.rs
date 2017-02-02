@@ -44,6 +44,7 @@ impl<'r> Request<'r> {
     /// use rocket::Request;
     /// use rocket::http::Method;
     ///
+    /// # #[allow(unused_variables)]
     /// let request = Request::new(Method::Get, "/uri");
     /// ```
     pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
@@ -101,7 +102,7 @@ impl<'r> Request<'r> {
     /// use rocket::Request;
     /// use rocket::http::Method;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// assert_eq!(request.uri().as_str(), "/uri");
     /// ```
     #[inline(always)]
@@ -179,9 +180,9 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
+    /// use rocket::http::Method;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// let header_map = request.headers();
     /// assert!(header_map.is_empty());
     /// ```
@@ -244,9 +245,9 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::Request;
-    /// use rocket::http::{Cookie, Method, ContentType};
+    /// use rocket::http::{Cookie, Method};
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// request.cookies().add(Cookie::new("key", "val"));
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// ```
@@ -300,6 +301,7 @@ impl<'r> Request<'r> {
     /// use rocket::{Request, Data};
     /// use rocket::handler::Outcome;
     ///
+    /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
     ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
     /// }

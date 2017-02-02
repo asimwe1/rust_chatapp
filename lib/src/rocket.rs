@@ -317,12 +317,14 @@ impl Rocket {
     /// use rocket::config::{Config, Environment};
     /// # use rocket::config::ConfigError;
     ///
+    /// # #[allow(dead_code)]
     /// # fn try_config() -> Result<(), ConfigError> {
     /// let config = Config::build(Environment::Staging)
     ///     .address("1.2.3.4")
     ///     .port(9234)
     ///     .finalize()?;
     ///
+    /// # #[allow(unused_variables)]
     /// let app = rocket::custom(config, false);
     /// # Ok(())
     /// # }
@@ -509,6 +511,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
+    ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
     /// #       .launch()
     /// # }

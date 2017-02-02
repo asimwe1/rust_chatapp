@@ -303,7 +303,6 @@ unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 ///
 /// ```rust
 /// use rocket::http::uri::URI;
-/// use rocket::http::uri::Segments;
 ///
 /// let uri = URI::new("/a/////b/c////////d");
 /// let segments = uri.segments();

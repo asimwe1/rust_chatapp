@@ -34,6 +34,7 @@ pub enum StatusClass {
 /// ```rust
 /// use rocket::http::Status;
 ///
+/// # #[allow(unused_variables)]
 /// let ok = Status::Ok;
 /// ```
 ///
@@ -42,6 +43,7 @@ pub enum StatusClass {
 /// ```rust
 /// use rocket::http::Status;
 ///
+/// # #[allow(unused_variables)]
 /// let not_found = Status::NotFound;
 /// ```
 ///

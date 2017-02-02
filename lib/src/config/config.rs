@@ -225,7 +225,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::{Config, Environment, Value};
+    /// use rocket::config::{Config, Environment};
     ///
     /// // Create a new config with a session key.
     /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz";

@@ -22,6 +22,7 @@ use http::ascii::{uncased_eq, UncasedAscii};
 /// ```rust
 /// use rocket::http::ContentType;
 ///
+/// # #[allow(unused_variables)]
 /// let html = ContentType::HTML;
 /// ```
 ///
@@ -34,6 +35,7 @@ use http::ascii::{uncased_eq, UncasedAscii};
 /// use rocket::http::ContentType;
 /// use rocket::response::Response;
 ///
+/// # #[allow(unused_variables)]
 /// let response = Response::build().header(ContentType::HTML).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]

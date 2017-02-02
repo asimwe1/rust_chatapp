@@ -169,6 +169,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// #[get("/sensitive")]
 /// fn sensitive(key: APIKey) -> &'static str {
+/// #   let _key = key;
 ///     "Sensitive data."
 /// }
 ///
