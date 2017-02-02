@@ -190,7 +190,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
             return;
         }
 
-        if let Some(def_id) = cx.tcx.map.opt_local_def_id(item.id) {
+        if let Some(def_id) = cx.tcx.hir.opt_local_def_id(item.id) {
             self.info_structs.insert(item.name, def_id);
         }
     }
