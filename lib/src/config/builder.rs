@@ -4,7 +4,7 @@ use config::{Result, Config, Value, Environment};
 use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
-/// The core configuration structure.
+/// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
 pub struct ConfigBuilder {
     /// The environment that this configuration corresponds to.
@@ -24,6 +24,30 @@ pub struct ConfigBuilder {
 }
 
 impl ConfigBuilder {
+    /// Create a new `ConfigBuilder` instance using the default parameters from
+    /// the given `environment`. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// This method is typically called indirectly via
+    /// [Config::build](/rocket/config/struct.Config.html#method.build).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the current directory cannot be retrieved.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .port(700)
+    ///     .workers(12)
+    ///     .finalize();
+    ///
+    /// # assert!(config.is_ok());
+    /// ```
     pub fn new(environment: Environment) -> ConfigBuilder {
         let config = Config::new(environment)
             .expect("ConfigBuilder::new(): couldn't get current directory.");
@@ -39,58 +63,172 @@ impl ConfigBuilder {
         }
     }
 
-    /// Sets the `address` in `self` to `address` and returns the structure.
-    #[inline(always)]
+    /// Sets the `address` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// ```
     pub fn address<A: Into<String>>(mut self, address: A) -> Self {
         self.address = address.into();
         self
     }
 
-    /// Sets the `port` in `self` to `port` and returns the structure.
-    #[inline(always)]
+    /// Sets the `port` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .port(1329)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.port, 1329);
+    /// ```
+    #[inline]
     pub fn port(mut self, port: u16) -> Self {
         self.port = port;
         self
     }
 
-    /// Sets the `workers` in `self` to `workers` and returns the structure.
-    #[inline(always)]
+    /// Sets `workers` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .workers(64)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.workers, 64);
+    /// ```
+    #[inline]
     pub fn workers(mut self, workers: u16) -> Self {
         self.workers = workers;
         self
     }
 
-    /// Sets the `log_level` in `self` to `log_level` and returns the structure.
-    #[inline(always)]
+    /// Sets the `log_level` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::LoggingLevel;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .log_level(LoggingLevel::Critical)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.log_level, LoggingLevel::Critical);
+    /// ```
+    #[inline]
     pub fn log_level(mut self, log_level: LoggingLevel) -> Self {
         self.log_level = log_level;
         self
     }
 
-    /// Sets the `session_key` in `self` to `key` and returns the structure.
-    #[inline(always)]
+    /// Sets the `session_key` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::LoggingLevel;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5";
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .session_key(key)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.take_session_key(), Some(key.to_string()));
+    /// ```
     pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
         self.session_key = Some(key.into());
         self
     }
 
-    /// Sets the environment in `self` to `env` and returns the structure.
-    #[inline(always)]
+    /// Sets the `environment` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .environment(Environment::Production)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.environment, Environment::Production);
+    /// ```
+    #[inline]
     pub fn environment(mut self, env: Environment) -> Self {
         self.environment = env;
         self
     }
 
-    /// Adds an extra configuration parameter with `name` and `value` to `value`
-    /// and returns the structure. The value can be any type that implements the
-    /// `IntoValue` trait defined in this module.
-    #[inline(always)]
+    /// Adds an extra configuration parameter with `name` and `value` to the
+    /// configuration being built. The value can be any type that implements
+    /// [IntoValue](/config/trait.IntoValue.html) including `&str`, `String`,
+    /// `Vec<V: IntoValue>`, `HashMap<S: Into<String>, V: IntoValue>`, and all
+    /// integer and float types.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("pi", 3.14)
+    ///     .extra("custom_dir", "/a/b/c")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.get_float("pi"), Ok(3.14));
+    /// assert_eq!(config.get_str("custom_dir"), Ok("/a/b/c"));
+    /// ```
     pub fn extra<V: IntoValue>(mut self, name: &str, value: V) -> Self {
         self.extras.insert(name.into(), value.into_value());
         self
     }
 
-    // TODO: Collect all errors into one `Several` `ConfigError` variant.
+    /// Return the `Config` structure that was being built by this builder.
+    ///
+    /// # Errors
+    ///
+    /// If the current working directory cannot be retrieved, returns a `BadCWD`
+    /// error. If the address or session key fail to parse, returns a `BadType`
+    /// error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .port(700)
+    ///     .workers(12)
+    ///     .finalize();
+    ///
+    /// assert!(config.is_ok());
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("?")
+    ///     .finalize();
+    ///
+    /// assert!(config.is_err());
+    /// ```
     pub fn finalize(self) -> Result<Config> {
         let mut config = Config::new(self.environment)?;
         config.set_address(self.address)?;
@@ -106,6 +244,24 @@ impl ConfigBuilder {
         Ok(config)
     }
 
+    /// Return the `Config` structure that was being built by this builder.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the current working directory cannot be retrieved or if the
+    /// supplied address or session key fail to parse.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// ```
     #[inline(always)]
     pub fn unwrap(self) -> Config {
         self.finalize().expect("ConfigBuilder::unwrap() failed")
