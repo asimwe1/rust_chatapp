@@ -257,9 +257,8 @@ impl<'r> Request<'r> {
     }
 
     /// Replace all of the cookies in `self` with `cookies`.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn set_cookies(&mut self, cookies: Cookies) {
+    #[inline]
+    pub(crate) fn set_cookies(&mut self, cookies: Cookies) {
         self.cookies = cookies;
     }
 
@@ -315,9 +314,8 @@ impl<'r> Request<'r> {
     /// was `route`. This should only be used internally by `Rocket` as improper
     /// use may result in out of bounds indexing.
     /// TODO: Figure out the mount path from here.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn set_params(&self, route: &Route) {
+    #[inline]
+    pub(crate) fn set_params(&self, route: &Route) {
         *self.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
@@ -386,24 +384,23 @@ impl<'r> Request<'r> {
     }
 
     /// Get the managed state container, if it exists. For internal use only!
-    #[doc(hidden)]
-    pub fn get_state(&self) -> Option<&'r Container> {
+    #[inline]
+    pub(crate) fn get_state(&self) -> Option<&'r Container> {
         self.state
     }
 
     /// Set the state. For internal use only!
-    #[doc(hidden)]
-    pub fn set_state(&mut self, state: &'r Container) {
+    #[inline]
+    pub(crate) fn set_state(&mut self, state: &'r Container) {
         self.state = Some(state);
     }
 
     /// Convert from Hyper types into a Rocket Request.
-    #[doc(hidden)]
-    pub fn from_hyp(h_method: hyper::Method,
-                    h_headers: hyper::header::Headers,
-                    h_uri: hyper::RequestUri,
-                    h_addr: SocketAddr,
-                    ) -> Result<Request<'r>, String> {
+    pub(crate) fn from_hyp(h_method: hyper::Method,
+                           h_headers: hyper::header::Headers,
+                           h_uri: hyper::RequestUri,
+                           h_addr: SocketAddr,
+                           ) -> Result<Request<'r>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,

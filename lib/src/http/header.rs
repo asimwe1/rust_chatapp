@@ -502,9 +502,8 @@ impl<'h> HeaderMap<'h> {
     /// Consumes `self` and returns an iterator over all of the headers stored
     /// in the map in the way they are stored. This is a low-level machinism and
     /// should likely not be used.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn into_iter_raw(self)
+    #[inline]
+    pub(crate) fn into_iter_raw(self)
             -> impl Iterator<Item=(UncasedAscii<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }

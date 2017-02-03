@@ -420,8 +420,7 @@ impl RocketConfig {
 /// # Panics
 ///
 /// If there is a problem, prints a nice error message and bails.
-#[doc(hidden)]
-pub fn init() -> (&'static Config, bool) {
+pub(crate) fn init() -> (&'static Config, bool) {
     let mut this_init = false;
     unsafe {
         INIT.call_once(|| {
@@ -433,8 +432,7 @@ pub fn init() -> (&'static Config, bool) {
     }
 }
 
-#[doc(hidden)]
-pub fn custom_init(config: Config) -> (&'static Config, bool) {
+pub(crate) fn custom_init(config: Config) -> (&'static Config, bool) {
     let mut this_init = false;
 
     unsafe {

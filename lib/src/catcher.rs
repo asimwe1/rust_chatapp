@@ -96,9 +96,9 @@ impl Catcher {
         Catcher { code: code, handler: handler, is_default: false }
     }
 
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn handle<'r>(&self, err: Error, req: &'r Request) -> response::Result<'r> {
+    pub(crate) fn handle<'r>(&self, err: Error, req: &'r Request)
+            -> response::Result<'r> {
         (self.handler)(err, req)
     }
 
@@ -107,9 +107,8 @@ impl Catcher {
         Catcher { code: code, handler: handler, is_default: true, }
     }
 
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn is_default(&self) -> bool {
+    pub(crate) fn is_default(&self) -> bool {
         self.is_default
     }
 }

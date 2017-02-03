@@ -231,6 +231,27 @@ impl Config {
         Ok(())
     }
 
+    /// Sets the root directory of this configuration to `root`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::path::Path;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// config.set_root("/tmp/my_app");
+    ///
+    /// assert_eq!(config.root(), Path::new("/tmp/my_app"));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_root<P: AsRef<Path>>(&mut self, path: P) {
+        self.config_path = path.as_ref().join("Rocket.custom.toml")
+    }
+
     /// Sets the address of `self` to `address`.
     ///
     /// # Errors

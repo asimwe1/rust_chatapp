@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use config::{Result, Config, Value, Environment};
 use config::toml_ext::IntoValue;
@@ -21,6 +22,8 @@ pub struct ConfigBuilder {
     pub session_key: Option<String>,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
+    /// The root directory of this config.
+    pub root: PathBuf,
 }
 
 impl ConfigBuilder {
@@ -52,6 +55,7 @@ impl ConfigBuilder {
         let config = Config::new(environment)
             .expect("ConfigBuilder::new(): couldn't get current directory.");
 
+        let root_dir = PathBuf::from(config.root());
         ConfigBuilder {
             environment: config.environment,
             address: config.address,
@@ -60,6 +64,7 @@ impl ConfigBuilder {
             log_level: config.log_level,
             session_key: None,
             extras: config.extras,
+            root: root_dir,
         }
     }
 
@@ -178,6 +183,25 @@ impl ConfigBuilder {
         self
     }
 
+    /// Sets the `root` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::path::Path;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .root("/my_app/dir")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.root(), Path::new("/my_app/dir"));
+    /// ```
+    pub fn root<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.root = path.as_ref().to_path_buf();
+        self
+    }
+
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
     /// [IntoValue](/config/trait.IntoValue.html) including `&str`, `String`,
@@ -236,6 +260,7 @@ impl ConfigBuilder {
         config.set_workers(self.workers);
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
+        config.set_root(self.root);
 
         if let Some(key) = self.session_key {
             config.set_session_key(key)?;

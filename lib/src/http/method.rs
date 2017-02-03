@@ -40,11 +40,6 @@ impl Method {
         }
     }
 
-    #[inline]
-    pub(crate) fn to_hyp(&self) -> hyper::Method {
-        self.to_string().as_str().parse().unwrap()
-    }
-
     /// Returns `true` ff an HTTP request with the method represented by `self`
     /// supports a payload.
     ///

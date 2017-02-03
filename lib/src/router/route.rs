@@ -70,8 +70,7 @@ impl Route {
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     /// Given a URI, returns a vector of slices of that URI corresponding to the
     /// dynamic segments in this route.
-    #[doc(hidden)]
-    pub fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
+    pub(crate) fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
         let route_segs = self.path.segments();
         let uri_segs = uri.segments();
         let start_addr = uri.path().as_ptr() as usize;

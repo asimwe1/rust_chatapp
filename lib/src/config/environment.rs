@@ -33,15 +33,13 @@ impl Environment {
     }
 
     /// Returns a string with a comma-seperated list of valid environments.
-    #[doc(hidden)]
-    pub fn valid() -> &'static str {
+    pub(crate) fn valid() -> &'static str {
         "development, staging, production"
     }
 
     /// Returns a list of all of the possible environments.
     #[inline]
-    #[doc(hidden)]
-    pub fn all() -> [Environment; 3] {
+    pub(crate) fn all() -> [Environment; 3] {
         [Development, Staging, Production]
     }
 }

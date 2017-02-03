@@ -176,9 +176,8 @@ impl Rocket {
         }
     }
 
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
+    #[inline]
+    pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
             -> Response<'r> {
         info!("{}:", request);
 
@@ -229,9 +228,8 @@ impl Rocket {
     /// until one of the handlers returns success or failure, or there are no
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn route<'r>(&self, request: &'r Request, mut data: Data)
+    #[inline]
+    pub(crate) fn route<'r>(&self, request: &'r Request, mut data: Data)
             -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         let matches = self.router.route(request);
@@ -258,8 +256,7 @@ impl Rocket {
     }
 
     // TODO: DOC.
-    #[doc(hidden)]
-    pub fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
+    fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Red.paint(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.

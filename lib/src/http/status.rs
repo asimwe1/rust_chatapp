@@ -235,8 +235,8 @@ impl Status {
     /// Returns a status from a given status code. If the status code is a
     /// standard code, then the reason phrase is populated accordingly.
     /// Otherwise the reason phrase is set to "<unknown code>".
-    #[doc(hidden)]
     #[inline]
+    #[doc(hidden)]
     pub fn raw(code: u16) -> Status {
         match Status::from_code(code) {
             Some(status) => status,
