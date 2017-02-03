@@ -513,7 +513,7 @@ impl Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    /// #       .launch()
+    ///         .launch()
     /// # }
     /// }
     /// ```
