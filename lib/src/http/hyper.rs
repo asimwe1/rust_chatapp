@@ -4,24 +4,23 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::server::Request as Request;
-#[doc(hidden)] pub use hyper::server::Response as Response;
-#[doc(hidden)] pub use hyper::server::Server as Server;
-#[doc(hidden)] pub use hyper::server::Handler as Handler;
+pub(crate) use hyper::server::Request as Request;
+pub(crate) use hyper::server::Response as Response;
+pub(crate) use hyper::server::Server as Server;
+pub(crate) use hyper::server::Handler as Handler;
 
+pub(crate) use hyper::net;
 
-#[doc(hidden)] pub use hyper::net;
-
-#[doc(hidden)] pub use hyper::method::Method;
-#[doc(hidden)] pub use hyper::status::StatusCode;
-#[doc(hidden)] pub use hyper::uri::RequestUri;
-#[doc(hidden)] pub use hyper::http::h1;
-#[doc(hidden)] pub use hyper::buffer;
+pub(crate) use hyper::method::Method;
+pub(crate) use hyper::status::StatusCode;
+pub(crate) use hyper::uri::RequestUri;
+pub(crate) use hyper::http::h1;
+pub(crate) use hyper::buffer;
 
 pub use hyper::mime;
 
 /// Type alias to `hyper::Response<'a, hyper::net::Fresh>`.
-#[doc(hidden)] pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
+pub(crate) type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 
 /// Reexported Hyper header types.
 pub mod header {
