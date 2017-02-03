@@ -133,14 +133,16 @@ impl Template {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashMap;
     /// use rocket_contrib::Template;
     ///
     /// // Create a `context`. Here, just an empty `HashMap`.
     /// let mut context = HashMap::new();
+    ///
+    /// # context.insert("test", "test");
     /// let template = Template::render("index", &context);
-    /// ```
+    /// # assert_eq!(template.to_string(), "");
     pub fn render<S, T>(name: S, context: &T) -> Template
         where S: AsRef<str>, T: Serialize
     {
