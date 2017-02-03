@@ -1,9 +1,10 @@
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
-//! custom derives, custom attributes, and procedural macros. The documentation
-//! here is purely technical. The code generation facilities are documented
-//! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
+//! custom derives, custom attributes, procedural macros, and lints. The
+//! documentation here is purely technical. The code generation facilities are
+//! documented thoroughly in the [Rocket programming
+//! guide](https://rocket.rs/guide).
 //!
 //! ## Custom Attributes
 //!
@@ -20,7 +21,8 @@
 //!   * **error**
 //!
 //! The grammar for all _route_ attributes, including **route**, **get**,
-//! **put**, **post**, **delete**, **head**, and **patch**, is defined as:
+//! **put**, **post**, **delete**, **head**, **patch**, and **options** is
+//! defined as:
 //!
 //! <pre>
 //! route := METHOD? '(' ('path' '=')? path (',' kv_param)* ')'
@@ -58,6 +60,10 @@
 //! error := INTEGER
 //! </pre>
 //!
+//! A use of the `error` attribute looks like:
+//!
+//!     #[error(404)]
+//!
 //! ## Custom Derives
 //!
 //! This crate implements the following custom derives:
@@ -78,6 +84,19 @@
 //!
 //! PATH := a path, as defined by Rust
 //! </pre>
+//!
+//! ## Lints
+//!
+//! This crate implements the following lints:
+//!
+//!   * **unmounted_route**: defaults to _warn_
+//!
+//!     emits a warning when a declared route is not mounted
+//!
+//!   * **unmanaged_state**: defaults to _warn_
+//!
+//!     emits a warning when a `State<T>` request guest is used in a mounted
+//!     route without managing a value for `T`
 //!
 //! # Debugging Codegen
 //!
