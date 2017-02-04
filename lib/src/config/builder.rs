@@ -204,9 +204,9 @@ impl ConfigBuilder {
 
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
-    /// [IntoValue](/config/trait.IntoValue.html) including `&str`, `String`,
-    /// `Vec<V: IntoValue>`, `HashMap<S: Into<String>, V: IntoValue>`, and all
-    /// integer and float types.
+    /// [IntoValue](/rocket/config/trait.IntoValue.html) including `&str`,
+    /// `String`, `Vec<V: IntoValue>`, `HashMap<S: Into<String>, V: IntoValue>`,
+    /// and all integer and float types.
     ///
     /// # Example
     ///
