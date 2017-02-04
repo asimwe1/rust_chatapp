@@ -174,10 +174,10 @@ pub fn msg_and_help<'a, T: LintContext<'a>>(cx: &T,
                                             help_sp: Option<Span>,
                                             help: &str) {
     let mut b = cx.struct_span_lint(lint, msg_sp, msg);
+    b.note(note);
     if let Some(span) = help_sp {
         b.span_help(span, help);
     }
 
-    b.note(note);
     b.emit();
 }
