@@ -102,7 +102,7 @@
 //! address = "0.0.0.0"
 //! ```
 //!
-//! ## Environment Variables
+//! ### Environment Variables
 //!
 //! All configuration parameters, including extras, can be overridden through
 //! environment variables. To override the configuration parameter `{param}`,

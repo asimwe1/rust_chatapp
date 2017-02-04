@@ -37,7 +37,7 @@ use outcome::Outcome::*;
 /// A `FromData` type for parsing `FromForm` types.
 ///
 /// This type implements the `FromData` trait. It provides a generic means to
-/// parse arbitrary structure from incoming form data.
+/// parse arbitrary structures from incoming form data.
 ///
 /// # Usage
 ///
@@ -251,12 +251,17 @@ impl<'f, T: FromForm<'f> + Debug + 'f> Debug for Form<'f, T> {
 ///
 /// If the content type of the request data is not
 /// `application/x-www-form-urlencoded`, `Forward`s the request. If the form
-/// data cannot be parsed into a `T` or reading the incoming stream failed,
-/// returns a `Failure` with the raw form string (if avaialble).
+/// data cannot be parsed into a `T`, a `Failure` with status code
+/// `UnprocessableEntity` is returned. If the form string is malformed, a
+/// `Failure` with status code `BadRequest` is returned. Finally, if reading the
+/// incoming stream fails, returns a `Failure` with status code
+/// `InternalServerError`. In all failure cases, the raw form string is returned
+/// if it was able to be retrieved from the incoming stream.
 ///
 /// All relevant warnings and errors are written to the console in Rocket
 /// logging format.
 impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
+    /// The raw form string, if it was able to be retrieved from the request.
     type Error = Option<String>;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {

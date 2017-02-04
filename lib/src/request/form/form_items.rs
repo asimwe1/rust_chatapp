@@ -1,8 +1,6 @@
 use memchr::memchr2;
 
-/// Iterator over the key/value pairs of a given HTTP form string. You'll likely
-/// want to use this if you're implementing [FromForm](trait.FromForm.html)
-/// manually, for whatever reason, by iterating over the items in `form_string`.
+/// Iterator over the key/value pairs of a given HTTP form string.
 ///
 /// **Note:** The returned key/value pairs are _not_ URL decoded. To URL decode
 /// the raw strings, use `String::from_form_value`:
@@ -20,6 +18,23 @@ use memchr::memchr2;
 ///     }
 /// }
 /// ```
+///
+/// # Completion
+///
+/// The iterator keeps track of whether the form string was parsed to completion
+/// to determine if the form string was malformed. The iterator can be queried
+/// for completion via the [completed](#method.completed) method, which returns
+/// `true` if the iterator parsed the entire string that was passed to it. The
+/// iterator can also attempt to parse any remaining contents via
+/// [exhausted](#method.exhausted); this method returns `true` if exhaustion
+/// succeeded.
+///
+/// This iterator guarantees that all valid form strings are parsed to
+/// completion. The iterator attempts to be lenient. In particular, it allows
+/// the following oddball behavior:
+///
+///   * A single trailing `&` character is allowed.
+///   * Empty values are allowed.
 ///
 /// # Examples
 ///
@@ -53,11 +68,71 @@ pub struct FormItems<'f> {
 }
 
 impl<'f> FormItems<'f> {
+    /// Returns `true` if the form string was parsed to completion. Returns
+    /// `false` otherwise. All valid form strings will parse to completion,
+    /// while invalid form strings will not.
+    ///
+    /// # Example
+    ///
+    /// A valid form string parses to completion:
+    ///
+    /// ```rust
+    /// use rocket::request::FormItems;
+    ///
+    /// let mut items = FormItems::from("a=b&c=d");
+    /// let key_values: Vec<_> = items.by_ref().collect();
+    ///
+    /// assert_eq!(key_values.len(), 2);
+    /// assert_eq!(items.completed(), true);
+    /// ```
+    ///
+    /// In invalid form string does not parse to completion:
+    ///
+    /// ```rust
+    /// use rocket::request::FormItems;
+    ///
+    /// let mut items = FormItems::from("a=b&=d");
+    /// let key_values: Vec<_> = items.by_ref().collect();
+    ///
+    /// assert_eq!(key_values.len(), 1);
+    /// assert_eq!(items.completed(), false);
+    /// ```
     #[inline]
     pub fn completed(&self) -> bool {
         self.next_index >= self.string.len()
     }
 
+    /// Parses all remaining key/value pairs and returns `true` if parsing ran
+    /// to completion. All valid form strings will parse to completion, while
+    /// invalid form strings will not.
+    ///
+    /// # Example
+    ///
+    /// A valid form string can be exhausted:
+    ///
+    /// ```rust
+    /// use rocket::request::FormItems;
+    ///
+    /// let mut items = FormItems::from("a=b&c=d");
+    ///
+    /// assert!(items.next().is_some());
+    /// assert_eq!(items.completed(), false);
+    /// assert_eq!(items.exhausted(), true);
+    /// assert_eq!(items.completed(), true);
+    /// ```
+    ///
+    /// An invalid form string cannot be exhausted:
+    ///
+    /// ```rust
+    /// use rocket::request::FormItems;
+    ///
+    /// let mut items = FormItems::from("a=b&=d");
+    ///
+    /// assert!(items.next().is_some());
+    /// assert_eq!(items.completed(), false);
+    /// assert_eq!(items.exhausted(), false);
+    /// assert_eq!(items.completed(), false);
+    /// ```
     pub fn exhausted(&mut self) -> bool {
         while let Some(_) = self.next() {  }
         self.completed()
@@ -69,6 +144,28 @@ impl<'f> FormItems<'f> {
         self.next_index = self.string.len()
     }
 
+    /// Retrieves the original string being parsed by this iterator. The string
+    /// returned by this method does not change, regardless of the status of the
+    /// iterator.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::FormItems;
+    ///
+    /// let form_string = "a=b&c=d";
+    /// let mut items = FormItems::from(form_string);
+    /// assert_eq!(items.inner_str(), form_string);
+    ///
+    /// assert!(items.next().is_some());
+    /// assert_eq!(items.inner_str(), form_string);
+    ///
+    /// assert!(items.next().is_some());
+    /// assert_eq!(items.inner_str(), form_string);
+    ///
+    /// assert!(items.next().is_none());
+    /// assert_eq!(items.inner_str(), form_string);
+    /// ```
     #[inline]
     pub fn inner_str(&self) -> &'f str {
         self.string
@@ -76,6 +173,8 @@ impl<'f> FormItems<'f> {
 }
 
 impl<'f> From<&'f str> for FormItems<'f> {
+    /// Returns an iterator over the key/value pairs in the
+    /// `x-www-form-urlencoded` form `string`.
     fn from(string: &'f str) -> FormItems<'f> {
         FormItems {
             string: string,
@@ -159,6 +258,7 @@ mod test {
         check_form!("a=b&a=", &[("a", "b"), ("a", "")]);
 
         check_form!(@bad "user=&password");
+        check_form!(@bad "user=x&&");
         check_form!(@bad "a=b&a");
         check_form!(@bad "=");
         check_form!(@bad "&");

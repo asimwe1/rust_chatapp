@@ -20,7 +20,7 @@ use http::hyper;
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
 /// should likely only be used when writing
-/// [FromRequest](/rocket/request/struct.Request.html) implementations. It
+/// [FromRequest](/rocket/request/trait.FromRequest.html) implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request<'r> {
@@ -319,7 +319,8 @@ impl<'r> Request<'r> {
         *self.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
-    /// Get the `n`th path parameter as a string, if it exists.
+    /// Get the `n`th path parameter as a string, if it exists. This is used by
+    /// codegen.
     #[doc(hidden)]
     pub fn get_param_str(&self, n: usize) -> Option<&str> {
         let params = self.params.borrow();
@@ -364,7 +365,7 @@ impl<'r> Request<'r> {
     }
 
     /// Get the segments beginning at the `n`th dynamic parameter, if they
-    /// exist.
+    /// exist. Used by codegen.
     #[doc(hidden)]
     pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
         let params = self.params.borrow();

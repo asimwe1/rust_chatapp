@@ -1,8 +1,7 @@
 use request::FormItems;
 
-/// Trait to create an instance of some type from an HTTP form. The
-/// [Form](struct.Form.html) type requires that its generic parameter implements
-/// this trait.
+/// Trait to create an instance of some type from an HTTP form.
+/// [Form](struct.Form.html) requires its generic type to implement this trait.
 ///
 /// This trait can be automatically derived via the
 /// [rocket_codegen](/rocket_codegen) plugin:
@@ -44,17 +43,16 @@ use request::FormItems;
 ///
 /// # Implementing
 ///
-/// If you implement `FormForm` yourself, use the
-/// [FormItems](struct.FormItems.html) iterator to iterate through the form
-/// key/value pairs. Be aware that form fields that are typically hidden from
-/// your application, such as `_method`, will be present while iterating.
+/// An implementation of `FromForm` uses the [FormItems](struct.FormItems.html)
+/// iterator to iterate through the raw form key/value pairs. Be aware that form
+/// fields that are typically hidden from your application, such as `_method`,
+/// will be present while iterating.
 pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error;
 
-    /// Parses an instance of `Self` from a raw HTTP form string
-    /// (`application/x-www-form-urlencoded data`) or returns an `Error` if one
-    /// cannot be parsed.
+    /// Parses an instance of `Self` from the form items or returns an `Error`
+    /// if one cannot be parsed.
     fn from_form_items(form_items: &mut FormItems<'f>) -> Result<Self, Self::Error>;
 }
 

@@ -11,7 +11,7 @@ use http::Status;
 /// number of handlers. A value for the given type must previously have been
 /// registered to be managed by Rocket via the
 /// [manage](/rocket/struct.Rocket.html#method.manage) method. The type being
-/// managed must be thread safe and sendable across thread boundaries. In otehr
+/// managed must be thread safe and sendable across thread boundaries. In other
 /// words, it must implement `Send + Sync + 'static`.
 ///
 /// # Example

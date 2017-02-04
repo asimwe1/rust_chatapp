@@ -71,7 +71,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// Rocket implements `FromRequest` for several built-in types. Their behavior
 /// is documented here.
 ///
-///   * **URI**
+///   * **&URI**
 ///
 ///     Extracts the [URI](/rocket/http/uri/struct.URI.html) from the incoming
 ///     request.
