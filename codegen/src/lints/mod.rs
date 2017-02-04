@@ -179,6 +179,12 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
                     .insert(def_id, expr.span);
             }
         }
+
+        if let Some((recvr, _)) = rocket_method_call("launch", cx, expr) {
+            let instance = recvr.and_then(|r| instance_for(self, r));
+            self.instances.entry(instance)
+                .or_insert_with(|| InstanceInfo::default());
+        }
     }
 
     // We collect all of the names and defids for the info structures that
