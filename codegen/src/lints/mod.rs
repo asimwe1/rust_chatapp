@@ -180,10 +180,13 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
             }
         }
 
-        if let Some((recvr, _)) = rocket_method_call("launch", cx, expr) {
-            let instance = recvr.and_then(|r| instance_for(self, r));
-            self.instances.entry(instance)
-                .or_insert_with(|| InstanceInfo::default());
+        // This captures a corner case where neither `manage` nor `mount` is
+        // called on an instance.
+        if let Some((Some(recvr_expr), _)) = rocket_method_call("launch", cx, expr) {
+            if let Some(instance) = instance_for(self, recvr_expr) {
+                self.instances.entry(Some(instance))
+                    .or_insert_with(|| InstanceInfo::default());
+            }
         }
     }
 
