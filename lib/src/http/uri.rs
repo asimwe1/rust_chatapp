@@ -276,11 +276,11 @@ impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.
         if self.as_str().starts_with('/') && self.segment_count() == 0 {
-            return write!(f, "/");
-        }
-
-        for segment in self.segments() {
-            write!(f, "/{}", segment)?;
+            write!(f, "/")?;
+        } else {
+            for segment in self.segments() {
+                write!(f, "/{}", segment)?;
+            }
         }
 
         if let Some(query_str) = self.query() {

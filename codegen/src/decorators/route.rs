@@ -45,7 +45,7 @@ trait RouteGenerateExt {
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
-    fn explode(&self, ecx: &ExtCtxt) -> (&String, Path, P<Expr>, P<Expr>);
+    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>);
 }
 
 impl RouteGenerateExt for RouteParams {
@@ -217,8 +217,8 @@ impl RouteGenerateExt for RouteParams {
         sep_by_tok(ecx, &args, token::Comma)
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (&String, Path, P<Expr>, P<Expr>) {
-        let path = &self.path.node;
+    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>) {
+        let path = &self.uri.node.as_str();
         let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
         let content_type = option_as_expr(ecx, &content_type_to_expr(ecx, format));
