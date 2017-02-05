@@ -52,6 +52,10 @@ impl<'a> Collider<str> for &'a str {
 
 impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     fn collides_with(&self, other: &URI<'b>) -> bool {
+        if self.query().is_some() != other.query().is_some() {
+            return false;
+        }
+
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
                 return true;
@@ -194,6 +198,17 @@ mod tests {
         assert!(unranked_collide("/<a..>", "///a///"));
     }
 
+
+    #[test]
+    fn query_collisions() {
+        assert!(unranked_collide("/?<a>", "/?<a>"));
+        assert!(unranked_collide("/a/?<a>", "/a/?<a>"));
+        assert!(unranked_collide("/a?<a>", "/a?<a>"));
+        assert!(unranked_collide("/<r>?<a>", "/<r>?<a>"));
+        assert!(unranked_collide("/a/b/c?<a>", "/a/b/c?<a>"));
+        assert!(unranked_collide("/<a>/b/c?<d>", "/a/b/<c>?<d>"));
+    }
+
     #[test]
     fn non_collisions() {
         assert!(!unranked_collide("/a", "/b"));
@@ -212,6 +227,16 @@ mod tests {
         assert!(!unranked_collide("/hi/<a..>", "/hi"));
         assert!(!unranked_collide("/hi/<a..>", "/hi/"));
         assert!(!unranked_collide("/<a..>", "//////"));
+    }
+
+    #[test]
+    fn query_non_collisions() {
+        assert!(!unranked_collide("/?<a>", "/"));
+        assert!(!unranked_collide("/?<a>", "/hi"));
+        assert!(!unranked_collide("/?<a>", "/a"));
+        assert!(!unranked_collide("/a?<a>", "/a"));
+        assert!(!unranked_collide("/a/b?<a>", "/a/b"));
+        assert!(!unranked_collide("/a/b", "/a/b/?<c>"));
     }
 
     #[test]
