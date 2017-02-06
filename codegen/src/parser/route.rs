@@ -8,6 +8,7 @@ use syntax::codemap::{Span, Spanned, dummy_spanned};
 use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
 use super::{Function, ParamIter};
 use super::keyvalue::KVSpanned;
+use super::uri::validate_uri;
 use rocket::http::{Method, ContentType};
 use rocket::http::uri::URI;
 
@@ -151,7 +152,7 @@ pub fn kv_from_nested(item: &NestedMetaItem) -> Option<KVSpanned<LitKind>> {
     })
 }
 
-fn param_string_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>> {
+pub fn param_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>> {
     let string = s.node;
     if string.starts_with('<') && string.ends_with('>') {
         let param = &string[1..(string.len() - 1)];
@@ -187,27 +188,20 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     dummy_spanned(Method::Get)
 }
 
-fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem)
-        -> (Spanned<URI<'static>>, Option<Spanned<Ident>>) {
-    let from_string = |string: &str, sp: Span| {
-        let query_param = string.find('?')
-            .map(|i| span(&string[(i + 1)..], sp.trim_left(i + 1)))
-            .and_then(|spanned_q_param| param_string_to_ident(ecx, spanned_q_param));
-
-        (span(URI::from(string.to_string()), sp), query_param)
-    };
-
+fn parse_path(ecx: &ExtCtxt,
+              meta_item: &NestedMetaItem)
+              -> (Spanned<URI<'static>>, Option<Spanned<Ident>>) {
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
         if name != &"path" {
             ecx.span_err(sp, "the first key, if any, must be 'path'");
         } else if let LitKind::Str(ref s, _) = lit.node {
-            return from_string(&s.as_str(), lit.span);
+            return validate_uri(ecx, &s.as_str(), lit.span);
         } else {
             ecx.span_err(lit.span, "`path` value must be a string")
         }
     } else if let Some(s) = meta_item.str_lit() {
-        return from_string(&s.as_str(), sp);
+        return validate_uri(ecx, &s.as_str(), sp);
     } else {
         ecx.struct_span_err(sp, r#"expected `path = string` or a path string"#)
             .help(r#"you can specify the path directly as a string, \
@@ -229,7 +223,7 @@ fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
     let mut ident = Ident::from_str("unknown");
     if let LitKind::Str(ref s, _) = *kv.value() {
         ident = Ident::from_str(&s.as_str());
-        if let Some(id) = param_string_to_ident(ecx, span(&s.as_str(), kv.value.span)) {
+        if let Some(id) = param_to_ident(ecx, span(&s.as_str(), kv.value.span)) {
             return id.node;
         }
     }
