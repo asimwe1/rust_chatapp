@@ -481,7 +481,7 @@ impl Rocket {
     /// Add `state` to the state managed by this instance of Rocket.
     ///
     /// This method can be called any number of times as long as each call
-    /// referes to a different `T`.
+    /// refers to a different `T`.
     ///
     /// Managed state can be retrieved by any request handler via the
     /// [State](/rocket/struct.State.html) request guard. In particular, if a
