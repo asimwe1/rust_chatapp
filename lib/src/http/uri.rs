@@ -239,6 +239,23 @@ impl<'a> URI<'a> {
         decoder.decode_utf8_lossy()
     }
 
+    /// Returns a URL-encoded version of the string. Any characters outside of
+    /// visible ASCII-range are encoded as well as ' ', '"', '#', '<', '>', '`',
+    /// '?', '{', '}', '%', and '/'.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let encoded = URI::percent_encode("hello?a=<b>hi</b>");
+    /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
+    /// ```
+    pub fn percent_encode(string: &str) -> Cow<str> {
+        let set = url::percent_encoding::PATH_SEGMENT_ENCODE_SET;
+        url::percent_encoding::utf8_percent_encode(string, set).into()
+    }
+
     /// Returns the inner string of this URI.
     ///
     /// The returned string is in raw form. It contains empty segments. If you'd
@@ -275,7 +292,7 @@ impl From<String> for URI<'static> {
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.
-        if self.as_str().starts_with('/') && self.segment_count() == 0 {
+        if self.segment_count() == 0 {
             write!(f, "/")?;
         } else {
             for segment in self.segments() {
