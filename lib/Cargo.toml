@@ -3,7 +3,7 @@ name = "rocket"
 version = "0.1.6"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
-Web framework for nightly with a focus on ease-of-use, expressiveness, and speed.
+Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
 """
 documentation = "https://api.rocket.rs/rocket/"
 homepage = "https://rocket.rs"
