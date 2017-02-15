@@ -638,6 +638,12 @@ mod test {
                           default_config(Development).address("localhost")
                       });
 
+        check_config!(RocketConfig::parse(r#"
+                          [development]
+                          address = "127.0.0.1"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("127.0.0.1")
+                      });
 
         check_config!(RocketConfig::parse(r#"
                           [development]
