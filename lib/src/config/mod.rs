@@ -638,11 +638,19 @@ mod test {
                           default_config(Development).address("localhost")
                       });
 
+
+        check_config!(RocketConfig::parse(r#"
+                          [development]
+                          address = "::"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("::")
+                      });
+
         check_config!(RocketConfig::parse(r#"
                           [dev]
-                          address = "127.0.0.1"
+                          address = "2001:db8::370:7334"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("127.0.0.1")
+                          default_config(Development).address("2001:db8::370:7334")
                       });
 
         check_config!(RocketConfig::parse(r#"
@@ -930,9 +938,9 @@ mod test {
 
             check_config!(RocketConfig::parse(format!(r#"
                               [{}]
-                              address = "7.6.5.4"
+                              address = "::1"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address("7.6.5.4")
+                              default_config(*env).address("::1")
                           });
 
             check_config!(RocketConfig::parse(format!(r#"
