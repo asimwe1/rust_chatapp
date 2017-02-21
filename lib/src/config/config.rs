@@ -547,6 +547,58 @@ impl Config {
         parse!(self, name, value, as_float, "a float")
     }
 
+    /// Attempts to retrieve the extra named `name` as a slice of an array.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not an array, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("numbers", vec![1, 2, 3])
+    ///     .unwrap();
+    ///
+    /// assert!(config.get_slice("numbers").is_ok());
+    /// ```
+    pub fn get_slice(&self, name: &str) -> config::Result<&[Value]> {
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_slice, "a slice")
+    }
+
+    /// Attempts to retrieve the extra named `name` as a table.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not a table, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::collections::BTreeMap;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut table = BTreeMap::new();
+    /// table.insert("my_value".to_string(), 1);
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("my_table", table)
+    ///     .unwrap();
+    ///
+    /// assert!(config.get_table("my_table").is_ok());
+    /// ```
+    pub fn get_table(&self, name: &str) -> config::Result<&config::Table> {
+        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        parse!(self, name, value, as_table, "a table")
+    }
+
     /// Returns the path at which the configuration file for `self` is stored.
     /// For instance, if the configuration file is at `/tmp/Rocket.toml`, the
     /// path `/tmp` is returned.
