@@ -93,9 +93,10 @@ impl Rocket {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
         for header in response.headers() {
+            // FIXME: Using hyper here requires two allocations.
             let name = header.name.into_string();
-            let value = vec![header.value.into_owned().into()];
-            hyp_res.headers_mut().set_raw(name, value);
+            let value = Vec::from(header.value.as_bytes());
+            hyp_res.headers_mut().append_raw(name, value);
         }
 
         if response.body().is_none() {
