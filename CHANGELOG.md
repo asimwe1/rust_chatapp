@@ -1,3 +1,34 @@
+# Version 0.2.1 (Feb 24, 2017)
+
+## Core Fixes
+
+  * `Flash` cookie deletion functions as expected regardless of the path.
+  * `config` properly accepts IPv6 addresses.
+  * Multiple `Set-Cookie` headers are properly set.
+
+## Core Improvements
+
+  * `Display` and `Error` were implemented for `ConfigError`.
+  * `webp`, `ttf`, `otf`, `woff`, and `woff2` were added as known content types.
+  * Routes are presorted for faster routing.
+  * `into_bytes` and `into_inner` methods were added to `Body`.
+
+## Codegen
+
+  * Fixed `unmanaged_state` lint so that it works with prefilled type aliases.
+
+## Contrib
+
+  * Better errors are emitted on Tera template parse errors.
+
+## Documentation
+
+  * Fixed typos in `manage` and `JSON` docs.
+
+## Infrastructure
+
+  * Updated doctests for latest Cargo nightly.
+
 # Version 0.2.0 (Feb 06, 2017)
 
 Detailed release notes for v0.2 can also be found on
