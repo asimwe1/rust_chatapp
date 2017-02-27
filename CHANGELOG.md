@@ -1,3 +1,10 @@
+# Version 0.2.2 (Feb 26, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-02-25`  and `2017-02-26` nightlies.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-02-26)`.
+
 # Version 0.2.1 (Feb 24, 2017)
 
 ## Core Fixes
