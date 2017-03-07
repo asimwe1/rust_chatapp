@@ -14,6 +14,8 @@ use router::Route;
 use http::uri::{URI, Segments};
 use http::{Method, ContentType, Header, HeaderMap, Cookie, Cookies};
 
+use http::CookieJar;
+
 use http::hyper;
 
 /// The type of an incoming web request.
@@ -29,7 +31,7 @@ pub struct Request<'r> {
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     params: RefCell<Vec<(usize, usize)>>,
-    cookies: Cookies,
+    cookies: RefCell<CookieJar>,
     state: Option<&'r Container>,
 }
 
@@ -54,7 +56,7 @@ impl<'r> Request<'r> {
             headers: HeaderMap::new(),
             remote: None,
             params: RefCell::new(Vec::new()),
-            cookies: Cookies::new(&[]),
+            cookies: RefCell::new(CookieJar::new()),
             state: None
         }
     }
@@ -251,15 +253,24 @@ impl<'r> Request<'r> {
     /// request.cookies().add(Cookie::new("key", "val"));
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// ```
-    #[inline(always)]
-    pub fn cookies(&self) -> &Cookies {
-        &self.cookies
+    #[inline]
+    pub fn cookies(&self) -> Cookies {
+        match self.cookies.try_borrow_mut() {
+            Ok(jar) => Cookies::from(jar),
+            Err(_) => {
+                error_!("Multiple `Cookies` instances are active at once.");
+                info_!("An instance of `Cookies` must be dropped before another \
+                       can be retrieved.");
+                warn_!("The retrieved `Cookies` instance will be empty.");
+                Cookies::empty()
+            }
+        }
     }
 
     /// Replace all of the cookies in `self` with `cookies`.
     #[inline]
-    pub(crate) fn set_cookies(&mut self, cookies: Cookies) {
-        self.cookies = cookies;
+    pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
+        self.cookies = RefCell::new(jar);
     }
 
     /// Returns `Some` of the Content-Type header of `self`. If the header is
@@ -419,7 +430,7 @@ impl<'r> Request<'r> {
 
         // Set the request cookies, if they exist. TODO: Use session key.
         if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
-            let mut cookies = Cookies::new(&[]);
+            let mut jar = CookieJar::new();
             for header in cookie_headers {
                 let raw_str = match ::std::str::from_utf8(header) {
                     Ok(string) => string,
@@ -432,11 +443,11 @@ impl<'r> Request<'r> {
                         Err(_) => continue
                     };
 
-                    cookies.add_original(cookie);
+                    jar.add_original(cookie);
                 }
             }
 
-            request.set_cookies(cookies);
+            request.set_cookies(jar);
         }
 
         // Set the rest of the headers.

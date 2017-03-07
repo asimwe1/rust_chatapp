@@ -340,10 +340,10 @@ impl<'h> HeaderMap<'h> {
     ///
     /// let mut map = HeaderMap::new();
     ///
-    /// map.add(Cookie::new("a", "b"));
+    /// map.add(&Cookie::new("a", "b"));
     /// assert_eq!(map.get("Set-Cookie").count(), 1);
     ///
-    /// map.add(Cookie::new("c", "d"));
+    /// map.add(&Cookie::new("c", "d"));
     /// assert_eq!(map.get("Set-Cookie").count(), 2);
     /// ```
     #[inline(always)]

@@ -9,7 +9,7 @@ use std::env;
 use config::Environment::*;
 use config::{self, Value, ConfigBuilder, Environment, ConfigError};
 
-use num_cpus;
+use {num_cpus, base64};
 use logger::LoggingLevel;
 
 /// Structure for Rocket application configuration.
@@ -44,7 +44,7 @@ pub struct Config {
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
     /// The session key.
-    session_key: RwLock<Option<String>>,
+    session_key: RwLock<Option<Vec<u8>>>,
 }
 
 macro_rules! parse {
@@ -175,12 +175,6 @@ impl Config {
         ConfigError::BadType(id, expect, actual, self.config_path.clone())
     }
 
-    // Aliases to `set` before the method is removed.
-    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> config::Result<()> {
-        #[allow(deprecated)]
-        self.set(name, val)
-    }
-
     /// Sets the configuration `val` for the `name` entry. If the `name` is one
     /// of "address", "port", "session_key", "log", or "workers" (the "default"
     /// values), the appropriate value in the `self` Config structure is set.
@@ -195,8 +189,7 @@ impl Config {
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
     ///   * **session_key**: String (192-bit base64)
-    #[deprecated(since="0.2", note="use the set_{param} methods instead")]
-    pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
+    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
             self.set_address(address_str)?;
@@ -335,20 +328,27 @@ impl Config {
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
-    /// assert!(config.set_session_key("VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5").is_ok());
+    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
+    /// assert!(config.set_session_key(key).is_ok());
     /// assert!(config.set_session_key("hello? anyone there?").is_err());
     /// # Ok(())
     /// # }
     /// ```
     pub fn set_session_key<K: Into<String>>(&mut self, key: K) -> config::Result<()> {
         let key = key.into();
-        if key.len() != 32 {
-            return Err(self.bad_type("session_key",
-                                     "string",
-                                     "a 192-bit base64 string"));
+        let error = self.bad_type("session_key", "string",
+                                  "a 256-bit base64 encoded string");
+
+        if key.len() != 44 {
+            return Err(error);
         }
 
-        self.session_key = RwLock::new(Some(key));
+        let bytes = match base64::decode(&key) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(error)
+        };
+
+        self.session_key = RwLock::new(Some(bytes));
         Ok(())
     }
 
@@ -435,21 +435,21 @@ impl Config {
     /// use rocket::config::{Config, Environment};
     ///
     /// // Create a new config with a session key.
-    /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz";
+    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// let config = Config::build(Environment::Staging)
     ///     .session_key(key)
     ///     .unwrap();
     ///
     /// // Get the key for the first time.
     /// let session_key = config.take_session_key();
-    /// assert_eq!(session_key, Some(key.to_string()));
+    /// assert!(session_key.is_some());
     ///
     /// // Try to get the key again.
     /// let session_key_again = config.take_session_key();
     /// assert_eq!(session_key_again, None);
     /// ```
     #[inline]
-    pub fn take_session_key(&self) -> Option<String> {
+    pub fn take_session_key(&self) -> Option<Vec<u8>> {
         let mut key = self.session_key.write().expect("couldn't lock session key");
         key.take()
     }

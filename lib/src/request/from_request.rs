@@ -204,7 +204,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Method {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a Cookies {
+impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {

@@ -16,7 +16,7 @@ struct User<'a> {
 fn get<'r>(name: &str,
            query: User<'r>,
            user: Form<'r, User<'r>>,
-           cookies: &Cookies)
+           cookies: Cookies)
            -> &'static str {
     "hi"
 }

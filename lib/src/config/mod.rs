@@ -40,9 +40,9 @@
 //!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
-//!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32
+//!   * **session_key**: _[string]_ a 256-bit base64 encoded string (44
 //!     characters) to use as the session key
-//!     * example: `"VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"`
+//!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
 //!
 //! ### Rocket.toml
 //!
@@ -70,7 +70,7 @@
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
 //! # don't use this key! generate your own and keep it private!
-//! session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+//! session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
 //!
 //! [production]
 //! address = "0.0.0.0"
@@ -78,7 +78,7 @@
 //! workers = max(number_of_cpus, 2)
 //! log = "critical"
 //! # don't use this key! generate your own and keep it private!
-//! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+//! session_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 //! ```
 //!
 //! The `workers` parameter is computed by Rocket automatically; the value above
@@ -587,7 +587,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            session_key = "01234567890123456789012345678901"
+            session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
             pi = 3.14
@@ -598,7 +598,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .session_key("01234567890123456789012345678901")
+            .session_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
             .extra("pi", 3.14);
@@ -873,19 +873,19 @@ mod test {
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                          session_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                              "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                           )
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                          session_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                              "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                           )
                       });
     }

@@ -25,10 +25,13 @@ state = "^0.2"
 time = "^0.1"
 memchr = "1"
 
+# FIXME: session support should be optional
+base64 = "0.4"
+
+# FIXME: session support should be optional
 [dependencies.cookie]
-version = "^0.6"
-default-features = false
-features = ["percent-encode"]
+version = "^0.7"
+features = ["percent-encode", "secure"]
 
 [dev-dependencies]
 lazy_static = "0.2"
