@@ -4,11 +4,11 @@ Before opening your issue, we ask that you search through existing issues and
 pull requests to see if your bug report, concern, request, or comment has
 already been addressed. Ensure to search through both open and closed issues and
 pull requests. If this is a question, feature request, or general comment,
-please ensure that you read the relevant sections of the documentation before
-posting your issue. Finally, consider asking questions on IRC or Matrix before
-opening an issue.
+please ensure that you have read the relevant sections of the documentation
+before posting your issue. Finally, consider asking questions on IRC or Matrix
+before opening an issue.
 
-If you feel confident that your issue is unique, please including the following
+If you feel confident that your issue is unique, please include the following
 information, selecting the category that best describes your issue:
 
 ## Bug Reports
