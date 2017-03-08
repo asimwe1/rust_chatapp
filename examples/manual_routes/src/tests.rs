@@ -34,30 +34,28 @@ fn test_echo() {
 
 #[test]
 fn test_upload() {
+    let rocket = rocket();
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
-                         magna aliqua";
-    let rocket = rocket();
+                         magna aliqua".to_string();
+
+    // Upload the body.
     let mut request = MockRequest::new(Post, "/upload")
         .header(ContentType::Plain)
-        .body(expected_body);
+        .body(&expected_body);
     let response = request.dispatch_with(&rocket);
-
     assert_eq!(response.status(), Status::Ok);
 
+    // Ensure we get back the same body.
     let mut request = MockRequest::new(Get, "/upload");
     let mut response = request.dispatch_with(&rocket);
-
-    let expected = expected_body.to_string();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(expected));
+    assert_eq!(response.body().and_then(|b| b.into_string()), Some(expected_body));
 }
 
 #[test]
 fn test_not_found() {
     let uri = "/wrong_address";
-    test(uri,
-         ContentType::Plain,
-         Status::NotFound,
-         format!("Couldn't find: {}", uri));
+    let expected_body = format!("Couldn't find: {}", uri);
+    test(uri, ContentType::Plain, Status::NotFound, expected_body);
 }
