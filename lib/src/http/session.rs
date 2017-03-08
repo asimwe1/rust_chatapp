@@ -34,8 +34,8 @@ impl<'a> Session<'a> {
             return None;
         }
 
-        let string = cookie_str[SESSION_PREFIX.len()..].to_string();
-        Cookie::parse(string).ok()
+        Cookie::parse(&cookie_str[SESSION_PREFIX.len()..]).ok()
+            .map(|c| c.into_owned())
     }
 
     pub fn get(&self, name: &str) -> Option<Cookie<'static>> {
