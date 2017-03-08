@@ -14,21 +14,21 @@ license = "MIT/Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 
-[dependencies]
-term-painter = "^0.2"
-log = "^0.3"
-url = "^1"
-hyper = { version = "0.10.4", default-features = false }
-toml = { version = "^0.2", default-features = false }
-num_cpus = "1"
-state = "^0.2"
-time = "^0.1"
-memchr = "1"
+[features]
+testing = []
 
-# FIXME: session support should be optional
+[dependencies]
+term-painter = "0.2"
+log = "0.3"
+url = "1"
+hyper = { version = "0.10.4", default-features = false }
+toml = { version = "0.2", default-features = false }
+num_cpus = "1"
+state = "0.2"
+time = "0.1"
+memchr = "1"
 base64 = "0.4"
 
-# FIXME: session support should be optional
 [dependencies.cookie]
 version = "^0.7"
 features = ["percent-encode", "secure"]
@@ -40,6 +40,3 @@ rocket_codegen = { version = "0.2.2", path = "../codegen" }
 [build-dependencies]
 ansi_term = "^0.9"
 version_check = "^0.1"
-
-[features]
-testing = []

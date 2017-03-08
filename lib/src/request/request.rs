@@ -12,10 +12,7 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, Segments};
-use http::{Method, ContentType, Header, HeaderMap, Cookie, Cookies};
-
-use http::CookieJar;
-
+use http::{Method, ContentType, Header, HeaderMap, Cookies, Session, CookieJar, Key};
 use http::hyper;
 
 /// The type of an incoming web request.
@@ -28,10 +25,12 @@ use http::hyper;
 pub struct Request<'r> {
     method: Method,
     uri: URI<'r>,
+    key: Option<&'r Key>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     params: RefCell<Vec<(usize, usize)>>,
     cookies: RefCell<CookieJar>,
+    session: RefCell<CookieJar>,
     state: Option<&'r Container>,
 }
 
@@ -54,9 +53,11 @@ impl<'r> Request<'r> {
             method: method,
             uri: uri.into(),
             headers: HeaderMap::new(),
+            key: None,
             remote: None,
             params: RefCell::new(Vec::new()),
             cookies: RefCell::new(CookieJar::new()),
+            session: RefCell::new(CookieJar::new()),
             state: None
         }
     }
@@ -256,7 +257,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn cookies(&self) -> Cookies {
         match self.cookies.try_borrow_mut() {
-            Ok(jar) => Cookies::from(jar),
+            Ok(jar) => Cookies::new(jar),
             Err(_) => {
                 error_!("Multiple `Cookies` instances are active at once.");
                 info_!("An instance of `Cookies` must be dropped before another \
@@ -267,10 +268,30 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Replace all of the cookies in `self` with `cookies`.
+    #[inline]
+    pub fn session(&self) -> Session {
+        match self.session.try_borrow_mut() {
+            Ok(jar) => Session::new(jar, self.key.unwrap()),
+            Err(_) => {
+                error_!("Multiple `Session` instances are active at once.");
+                info_!("An instance of `Session` must be dropped before another \
+                       can be retrieved.");
+                warn_!("The retrieved `Session` instance will be empty.");
+                Session::empty(self.key.unwrap())
+            }
+        }
+    }
+
+    /// Replace all of the cookies in `self` with those in `jar`.
     #[inline]
     pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
         self.cookies = RefCell::new(jar);
+    }
+
+    /// Replace all of the session cookie in `self` with those in `jar`.
+    #[inline]
+    pub(crate) fn set_session(&mut self, jar: CookieJar) {
+        self.session = RefCell::new(jar);
     }
 
     /// Returns `Some` of the Content-Type header of `self`. If the header is
@@ -407,6 +428,12 @@ impl<'r> Request<'r> {
         self.state = Some(state);
     }
 
+    /// Set the session key. For internal use only!
+    #[inline]
+    pub(crate) fn set_key(&mut self, key: &'r Key) {
+        self.key = Some(key);
+    }
+
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(h_method: hyper::Method,
                            h_headers: hyper::header::Headers,
@@ -428,26 +455,27 @@ impl<'r> Request<'r> {
         // Construct the request object.
         let mut request = Request::new(method, uri);
 
-        // Set the request cookies, if they exist. TODO: Use session key.
+        // Set the request cookies, if they exist.
         if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
-            let mut jar = CookieJar::new();
+            let mut cookie_jar = CookieJar::new();
+            let mut session_jar = CookieJar::new();
             for header in cookie_headers {
                 let raw_str = match ::std::str::from_utf8(header) {
                     Ok(string) => string,
                     Err(_) => continue
                 };
 
-                for cookie_str in raw_str.split(";") {
-                    let cookie = match Cookie::parse_encoded(cookie_str.to_string()) {
-                        Ok(cookie) => cookie,
-                        Err(_) => continue
-                    };
-
-                    jar.add_original(cookie);
+                for cookie_str in raw_str.split(";").map(|s| s.trim()) {
+                    if let Some(cookie) = Session::parse_cookie(cookie_str) {
+                        session_jar.add_original(cookie);
+                    } else if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
+                        cookie_jar.add_original(cookie);
+                    }
                 }
             }
 
-            request.set_cookies(jar);
+            request.set_cookies(cookie_jar);
+            request.set_session(session_jar);
         }
 
         // Set the rest of the headers.

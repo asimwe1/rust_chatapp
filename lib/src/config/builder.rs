@@ -156,8 +156,6 @@ impl ConfigBuilder {
     /// let mut config = Config::build(Environment::Staging)
     ///     .session_key(key)
     ///     .unwrap();
-    ///
-    /// assert!(config.take_session_key().is_some());
     /// ```
     pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
         self.session_key = Some(key.into());

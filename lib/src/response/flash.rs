@@ -223,10 +223,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
         let r = request.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);
 
-            // Delete the flash cookie from the jar.
-            let orig_cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
-            request.cookies().remove(orig_cookie);
-
             // Parse the flash message.
             let content = cookie.value();
             let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
@@ -238,6 +234,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
             let (name, msg) = (&rest[..name_len], &rest[name_len..]);
             Ok(Flash::named(name, msg))
         });
+
+        // If we found a flash cookie, delete it from the jar.
+        if r.is_ok() {
+            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
+            request.cookies().remove(cookie);
+        }
 
         r.into_outcome()
     }

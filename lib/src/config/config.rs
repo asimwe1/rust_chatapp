@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::net::{IpAddr, lookup_host};
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 use std::convert::AsRef;
 use std::fmt;
 use std::env;
@@ -11,6 +10,29 @@ use config::{self, Value, ConfigBuilder, Environment, ConfigError};
 
 use {num_cpus, base64};
 use logger::LoggingLevel;
+use http::Key;
+
+pub enum SessionKey {
+    Generated(Key),
+    Provided(Key)
+}
+
+impl SessionKey {
+    #[inline]
+    pub fn kind(&self) -> &'static str {
+        match *self {
+            SessionKey::Generated(_) => "generated",
+            SessionKey::Provided(_) => "provided",
+        }
+    }
+
+    #[inline]
+    fn inner(&self) -> &Key {
+        match *self {
+            SessionKey::Generated(ref key) | SessionKey::Provided(ref key) => key
+        }
+    }
+}
 
 /// Structure for Rocket application configuration.
 ///
@@ -44,7 +66,7 @@ pub struct Config {
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
     /// The session key.
-    session_key: RwLock<Option<Vec<u8>>>,
+    pub(crate) session_key: SessionKey,
 }
 
 macro_rules! parse {
@@ -102,22 +124,17 @@ impl Config {
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
 
-    // Aliases to `default_for` before the method is removed.
-    pub(crate) fn default<P>(env: Environment, path: P) -> config::Result<Config>
-        where P: AsRef<Path>
-    {
-        #[allow(deprecated)]
-        Config::default_for(env, path)
-    }
-
     /// Returns the default configuration for the environment `env` given that
     /// the configuration was stored at `config_path`. If `config_path` is not
     /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
-    #[deprecated(since="0.2", note="use the `new` or `build` methods instead")]
-    pub fn default_for<P>(env: Environment, config_path: P) -> config::Result<Config>
+    ///
+    /// # Panics
+    ///
+    /// Panics if randomness cannot be retrieved from the OS.
+    pub(crate) fn default<P>(env: Environment, path: P) -> config::Result<Config>
         where P: AsRef<Path>
     {
-        let config_path = config_path.as_ref().to_path_buf();
+        let config_path = path.as_ref().to_path_buf();
         if config_path.parent().is_none() {
             return Err(ConfigError::BadFilePath(config_path,
                 "Configuration files must be rooted in a directory."));
@@ -125,6 +142,9 @@ impl Config {
 
         // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
         let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
+
+        // Use a generated session key by default.
+        let key = SessionKey::Generated(Key::generate());
 
         Ok(match env {
             Development => {
@@ -134,7 +154,7 @@ impl Config {
                     port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: RwLock::new(None),
+                    session_key: key,
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -146,7 +166,7 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: RwLock::new(None),
+                    session_key: key,
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -158,7 +178,7 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
-                    session_key: RwLock::new(None),
+                    session_key: key,
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -348,7 +368,7 @@ impl Config {
             Err(_) => return Err(error)
         };
 
-        self.session_key = RwLock::new(Some(bytes));
+        self.session_key = SessionKey::Provided(Key::from_master(&bytes));
         Ok(())
     }
 
@@ -425,33 +445,10 @@ impl Config {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
-    /// Moves the session key string out of the `self` Config, if there is one.
-    /// Because the value is moved out, subsequent calls will result in a return
-    /// value of `None`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::{Config, Environment};
-    ///
-    /// // Create a new config with a session key.
-    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
-    /// let config = Config::build(Environment::Staging)
-    ///     .session_key(key)
-    ///     .unwrap();
-    ///
-    /// // Get the key for the first time.
-    /// let session_key = config.take_session_key();
-    /// assert!(session_key.is_some());
-    ///
-    /// // Try to get the key again.
-    /// let session_key_again = config.take_session_key();
-    /// assert_eq!(session_key_again, None);
-    /// ```
+    /// Retrieves the session key from `self`.
     #[inline]
-    pub fn take_session_key(&self) -> Option<Vec<u8>> {
-        let mut key = self.session_key.write().expect("couldn't lock session key");
-        key.take()
+    pub(crate) fn session_key(&self) -> &Key {
+        self.session_key.inner()
     }
 
     /// Attempts to retrieve the extra named `name` as a string.

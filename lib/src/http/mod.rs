@@ -9,6 +9,7 @@ pub mod hyper;
 pub mod uri;
 
 mod cookies;
+mod session;
 mod method;
 mod content_type;
 mod status;
@@ -23,4 +24,5 @@ pub use self::content_type::ContentType;
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
 
-pub use self::cookies::{Cookie, Cookies, CookieJar, CookieBuilder};
+pub use self::cookies::*;
+pub use self::session::*;

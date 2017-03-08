@@ -63,27 +63,29 @@
 //! port = 8000
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
+//! session_key = [randomly generated at launch]
 //!
 //! [staging]
 //! address = "0.0.0.0"
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
+//! session_key = [randomly generated at launch]
 //!
 //! [production]
 //! address = "0.0.0.0"
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "critical"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+//! session_key = [randomly generated at launch]
 //! ```
 //!
-//! The `workers` parameter is computed by Rocket automatically; the value above
-//! is not valid TOML syntax. When manually specifying the number of workers,
-//! the value should be an integer: `workers = 10`.
+//! The `workers` and `session_key` default parameters are computed by Rocket
+//! automatically; the values above are not valid TOML syntax. When manually
+//! specifying the number of workers, the value should be an integer: `workers =
+//! 10`. When manually specifying the session key, the value should a 256-bit
+//! base64 encoded string. Such a string can be generated with the `openssl`
+//! command line tool: `openssl rand -base64 32`.
 //!
 //! The "global" pseudo-environment can be used to set and/or override
 //! configuration parameters globally. A parameter defined in a `[global]` table

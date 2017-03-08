@@ -20,7 +20,7 @@ use catcher::{self, Catcher};
 use outcome::Outcome;
 use error::Error;
 
-use http::{Method, Status, Header};
+use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
 use http::uri::URI;
 
@@ -182,8 +182,9 @@ impl Rocket {
             -> Response<'r> {
         info!("{}:", request);
 
-        // Inform the request about the state.
+        // Inform the request about the state and session key.
         request.set_state(&self.state);
+        request.set_key(&self.config.session_key());
 
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
@@ -191,9 +192,14 @@ impl Rocket {
         // Route the request to get a response.
         match self.route(request, data) {
             Outcome::Success(mut response) => {
-                // A user's route responded!
+                // A user's route responded! Set the regular cookies.
                 for cookie in request.cookies().delta() {
                     response.adjoin_header(cookie);
+                }
+
+                // And now the session cookies.
+                for cookie in request.session().delta() {
+                    response.adjoin_header(Session::header_for(cookie));
                 }
 
                 response
@@ -342,13 +348,7 @@ impl Rocket {
         info_!("port: {}", White.paint(&config.port));
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
-
-        let session_key = config.take_session_key();
-        if session_key.is_some() {
-            info_!("session key: {}", White.paint("present"));
-            warn_!("Signing and encryption of cookies is currently disabled.");
-            warn_!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
-        }
+        info_!("session key: {}", White.paint(config.session_key.kind()));
 
         for (name, value) in config.extras() {
             info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
