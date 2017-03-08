@@ -22,5 +22,5 @@ log = "^0.3"
 compiletest_rs = "^0.2"
 
 [build-dependencies]
-ansi_term = "^0.9"
-version_check = "^0.1"
+ansi_term = "0.9"
+version_check = "0.1"
