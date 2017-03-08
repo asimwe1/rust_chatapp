@@ -1,5 +1,6 @@
 use std::cell::{RefCell, RefMut};
 
+use time::{self, Duration};
 use cookie::{Cookie, CookieJar, Delta};
 pub use cookie::Key;
 
@@ -42,10 +43,18 @@ impl<'a> Session<'a> {
         self.cookies.borrow_mut().private(&self.key).get(name)
     }
 
-    pub fn add(&mut self, mut cookie: Cookie<'static>) {
+    pub fn set(&mut self, mut cookie: Cookie<'static>) {
         cookie.set_http_only(true);
+
         if cookie.path().is_none() {
             cookie.set_path("/");
+        }
+
+        // TODO: Should this be configurable?
+        if cookie.max_age().is_none() && cookie.expires().is_none() {
+            let session_lifetime = Duration::hours(3);
+            cookie.set_max_age(session_lifetime);
+            cookie.set_expires(time::now() + session_lifetime);
         }
 
         self.cookies.get_mut().private(&self.key).add(cookie)

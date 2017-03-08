@@ -40,7 +40,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 #[post("/login", data = "<login>")]
 fn login(mut session: Session, login: Form<Login>) -> Flash<Redirect> {
     if login.get().username == "Sergio" && login.get().password == "password" {
-        session.add(Cookie::new("user_id", 1.to_string()));
+        session.set(Cookie::new("user_id", 1.to_string()));
         Flash::success(Redirect::to("/"), "Successfully logged in.")
     } else {
         Flash::error(Redirect::to("/login"), "Invalid username/password.")

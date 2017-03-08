@@ -30,7 +30,7 @@ memchr = "1"
 base64 = "0.4"
 
 [dependencies.cookie]
-version = "^0.7"
+version = "0.7.2"
 features = ["percent-encode", "secure"]
 
 [dev-dependencies]
