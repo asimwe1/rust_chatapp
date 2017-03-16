@@ -483,9 +483,9 @@ impl<'r> Request<'r> {
         for hyp in h_headers.iter() {
             if let Some(header_values) = h_headers.get_raw(hyp.name()) {
                 for value in header_values {
-                    let value_str = str::from_utf8(value)
-                        .map_err(|_| format!("Bad Header: {:?}", hyp))?;
-                    let header = Header::new(hyp.name().to_string(), value_str.to_string());
+                    // This is not totally correct since values needn't be UTF8.
+                    let value_str = String::from_utf8_lossy(value).into_owned();
+                    let header = Header::new(hyp.name().to_string(), value_str);
                     request.add_header(header);
                 }
             }
