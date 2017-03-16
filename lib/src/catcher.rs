@@ -55,7 +55,7 @@ use term_painter::Color::*;
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().catch(errors![internal_error, not_found]).launch()
+///     rocket::ignite().catch(errors![internal_error, not_found]).launch();
 /// # }
 /// }
 /// ```

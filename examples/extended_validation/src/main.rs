@@ -85,5 +85,5 @@ fn rocket() -> rocket::Rocket {
 }
 
 fn main() {
-    rocket().launch()
+    rocket().launch();
 }

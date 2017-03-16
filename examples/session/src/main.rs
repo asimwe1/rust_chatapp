@@ -83,5 +83,5 @@ fn index() -> Redirect {
 fn main() {
     rocket::ignite()
         .mount("/", routes![index, user_index, login, logout, login_user, login_page])
-        .launch()
+        .launch();
 }

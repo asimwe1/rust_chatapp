@@ -20,8 +20,11 @@ fn not_found(req: &rocket::Request) -> content::HTML<String> {
 }
 
 fn main() {
-    rocket::ignite()
+    let e = rocket::ignite()
         .mount("/", routes![hello])
         .catch(errors![not_found])
         .launch();
+
+    println!("Whoops! Rocket didn't launch!");
+    println!("This went wrong: {}", e);
 }

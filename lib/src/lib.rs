@@ -74,7 +74,7 @@
 //!
 //! fn main() {
 //! # if false { // We don't actually want to launch the server in an example.
-//!     rocket::ignite().mount("/", routes![hello]).launch()
+//!     rocket::ignite().mount("/", routes![hello]).launch();
 //! # }
 //! }
 //! ```
@@ -117,8 +117,8 @@ pub mod outcome;
 pub mod config;
 pub mod data;
 pub mod handler;
+pub mod error;
 
-mod error;
 mod router;
 mod rocket;
 mod codegen;
@@ -133,7 +133,7 @@ mod ext;
 #[doc(inline)] pub use data::Data;
 pub use router::Route;
 pub use request::{Request, State};
-pub use error::Error;
+pub use error::{Error, LaunchError};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 

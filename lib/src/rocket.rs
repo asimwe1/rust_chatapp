@@ -18,7 +18,7 @@ use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::Error;
+use error::{Error, LaunchError};
 
 use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
@@ -391,7 +391,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite().mount("/hello", routes![hi])
-    /// #       .launch()
+    /// #       .launch();
     /// # }
     /// }
     /// ```
@@ -411,7 +411,7 @@ impl Rocket {
     ///
     /// # if false { // We don't actually want to launch the server in an example.
     /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
-    /// #     .launch()
+    /// #     .launch();
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
@@ -459,7 +459,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite().catch(errors![internal_error, not_found])
-    /// #       .launch()
+    /// #       .launch();
     /// # }
     /// }
     /// ```
@@ -514,7 +514,7 @@ impl Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    ///         .launch()
+    ///         .launch();
     /// # }
     /// }
     /// ```
@@ -530,19 +530,23 @@ impl Rocket {
     /// Starts the application server and begins listening for and dispatching
     /// requests to mounted routes and catchers.
     ///
-    /// # Panics
+    /// # Error
     ///
-    /// If the server could not be started, this method prints the reason and
-    /// then exits the process.
+    /// If there is a problem starting the application, a
+    /// [LaunchError](/rocket/struct.LaunchError.html) is returned. Note
+    /// that a value of type `LaunchError` panics if dropped without first being
+    /// inspected. See the [LaunchError
+    /// documentation](/rocket/struct.LaunchError.html) for more
+    /// information.
     ///
     /// # Examples
     ///
     /// ```rust
     /// # if false {
-    /// rocket::ignite().launch()
+    /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) {
+    pub fn launch(self) -> LaunchError {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
         }
@@ -550,10 +554,7 @@ impl Rocket {
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let server = match hyper::Server::http(full_addr.as_str()) {
             Ok(hyper_server) => hyper_server,
-            Err(e) => {
-                error!("Failed to start server.");
-                panic!("{}", e);
-            }
+            Err(e) => return LaunchError::from(e)
         };
 
         info!("🚀  {} {}{}...",
@@ -562,6 +563,10 @@ impl Rocket {
               White.bold().paint(&full_addr));
 
         let threads = self.config.workers as usize;
-        server.handle_threads(self, threads).unwrap();
+        if let Err(e) = server.handle_threads(self, threads) {
+            return LaunchError::from(e);
+        }
+
+        unreachable!("the call to `handle_threads` should block on success")
     }
 }

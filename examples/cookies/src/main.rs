@@ -37,5 +37,5 @@ fn index(cookies: Cookies) -> Template {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![submit, index]).launch()
+    rocket::ignite().mount("/", routes![submit, index]).launch();
 }

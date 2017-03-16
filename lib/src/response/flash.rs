@@ -71,7 +71,7 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().mount("/", routes![login, index]).launch()
+///     rocket::ignite().mount("/", routes![login, index]).launch();
 /// # }
 /// }
 /// ```

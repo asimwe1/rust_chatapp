@@ -46,7 +46,7 @@ use http::Status;
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])
 ///         .manage(config)
-///         .launch()
+///         .launch();
 /// # }
 /// }
 /// ```
