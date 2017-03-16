@@ -528,7 +528,8 @@ impl Rocket {
     }
 
     /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers.
+    /// requests to mounted routes and catchers. Unless there is an error, this
+    /// function does not return and blocks until program termination.
     ///
     /// # Error
     ///
