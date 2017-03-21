@@ -28,6 +28,9 @@ state = "0.2"
 time = "0.1"
 memchr = "1"
 base64 = "0.4"
+smallvec = "0.3"
+pear = "0.0.2"
+pear_codegen = "0.0.2"
 
 [dependencies.cookie]
 version = "0.7.2"

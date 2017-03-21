@@ -6,6 +6,9 @@
 #![feature(type_ascription)]
 #![feature(pub_restricted)]
 #![feature(lookup_host)]
+#![feature(plugin)]
+
+#![plugin(pear_codegen)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -95,6 +98,7 @@
 //!
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate pear;
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
@@ -105,6 +109,7 @@ extern crate cookie;
 extern crate time;
 extern crate memchr;
 extern crate base64;
+extern crate smallvec;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

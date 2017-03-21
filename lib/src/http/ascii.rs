@@ -90,6 +90,13 @@ impl Ord for UncasedAsciiRef {
     }
 }
 
+impl fmt::Display for UncasedAsciiRef {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// An uncased (case-preserving) ASCII string.
 #[derive(Clone, Debug)]
 pub struct UncasedAscii<'s> {
