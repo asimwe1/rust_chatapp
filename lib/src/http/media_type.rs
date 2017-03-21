@@ -148,16 +148,6 @@ impl MediaType {
             })
     }
 
-    #[inline(always)]
-    pub fn into_owned(self) -> MediaType {
-        MediaType {
-            source: self.source.map(|c| c.into_owned().into()),
-            top: self.top,
-            sub: self.sub,
-            params: self.params
-        }
-    }
-
     known_media_types!(media_types);
 }
 
@@ -167,9 +157,7 @@ impl FromStr for MediaType {
 
     #[inline]
     fn from_str(raw: &str) -> Result<MediaType, String> {
-        parse_media_type(raw)
-            .map(|mt| mt.into_owned())
-            .map_err(|e| e.to_string())
+        parse_media_type(raw).map_err(|e| e.to_string())
     }
 }
 
@@ -199,177 +187,5 @@ impl fmt::Display for MediaType {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use std::str::FromStr;
-    use super::MediaType;
-
-    macro_rules! assert_no_parse {
-        ($string:expr) => ({
-            let result = MediaType::from_str($string);
-            if result.is_ok() {
-                panic!("{:?} parsed unexpectedly.", $string)
-            }
-        });
-    }
-
-    macro_rules! assert_parse {
-        ($string:expr) => ({
-            let result = MediaType::from_str($string);
-            match result {
-                Ok(media_type) => media_type,
-                Err(e) => panic!("{:?} failed to parse: {}", $string, e)
-            }
-        });
-    }
-
-    macro_rules! assert_parse_eq {
-        (@full $string:expr, $result:expr, $(($k:expr, $v:expr)),*) => ({
-            let result = assert_parse!($string);
-            assert_eq!(result, $result);
-
-            let result = assert_parse!($string);
-            assert_eq!(result, $result);
-
-            let expected_params: Vec<(&str, &str)> = vec![$(($k, $v)),*];
-            if expected_params.len() > 0 {
-                assert_eq!(result.params().count(), expected_params.len());
-                let all_params = result.params().zip(expected_params.iter());
-                for ((key, val), &(ekey, eval)) in all_params {
-                    assert_eq!(key, ekey);
-                    assert_eq!(val, eval);
-                }
-            }
-        });
-
-        (from: $string:expr, into: $result:expr)
-            => (assert_parse_eq!(@full $string, $result, ));
-        (from: $string:expr, into: $result:expr, params: $(($key:expr, $val:expr)),*)
-            => (assert_parse_eq!(@full $string, $result, $(($key, $val)),*));
-    }
-
-    #[test]
-    fn check_does_parse() {
-        assert_parse!("text/html");
-        assert_parse!("a/b");
-        assert_parse!("*/*");
-    }
-
-    #[test]
-    fn check_parse_eq() {
-        assert_parse_eq!(from: "text/html", into: MediaType::HTML);
-        assert_parse_eq!(from: "text/html; charset=utf-8", into: MediaType::HTML);
-        assert_parse_eq!(from: "text/html", into: MediaType::new("text", "html"));
-
-        assert_parse_eq!(from: "a/b", into: MediaType::new("a", "b"));
-        assert_parse_eq!(from: "*/*", into: MediaType::Any);
-        assert_parse_eq!(from: "application/pdf", into: MediaType::PDF);
-        assert_parse_eq!(from: "application/json", into: MediaType::JSON);
-        assert_parse_eq!(from: "image/svg+xml", into: MediaType::SVG);
-
-        assert_parse_eq!(from: "*/json", into: MediaType::new("*", "json"));
-        assert_parse_eq! {
-            from: "application/*; param=1",
-            into: MediaType::new("application", "*")
-        };
-    }
-
-    #[test]
-    fn check_param_eq() {
-        assert_parse_eq! {
-            from: "text/html; a=b; b=c; c=d",
-            into: MediaType::new("text", "html"),
-            params: ("a", "b"), ("b", "c"), ("c", "d")
-        };
-
-        assert_parse_eq! {
-            from: "text/html;a=b;b=c;     c=d; d=e",
-            into: MediaType::new("text", "html"),
-            params: ("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")
-        };
-
-        assert_parse_eq! {
-            from: "text/html; charset=utf-8",
-            into: MediaType::new("text", "html"),
-            params: ("charset", "utf-8")
-        };
-
-        assert_parse_eq! {
-            from: "application/*; param=1",
-            into: MediaType::new("application", "*"),
-            params: ("param", "1")
-        };
-
-        assert_parse_eq! {
-            from: "*/*;q=0.5;b=c;c=d",
-            into: MediaType::Any,
-            params: ("q", "0.5"), ("b", "c"), ("c", "d")
-        };
-
-        assert_parse_eq! {
-            from: "multipart/form-data; boundary=----WebKitFormBoundarypRshfItmvaC3aEuq",
-            into: MediaType::FormData,
-            params: ("boundary", "----WebKitFormBoundarypRshfItmvaC3aEuq")
-        };
-
-        assert_parse_eq! {
-            from: r#"*/*; a="hello, world!@#$%^&*();;hi""#,
-            into: MediaType::Any,
-            params: ("a", "hello, world!@#$%^&*();;hi")
-        };
-
-        assert_parse_eq! {
-            from: r#"application/json; a=";,;""#,
-            into: MediaType::JSON,
-            params: ("a", ";,;")
-        };
-
-        assert_parse_eq! {
-            from: r#"application/json; a=";,;"; b=c"#,
-            into: MediaType::JSON,
-            params: ("a", ";,;"), ("b", "c")
-        };
-
-        assert_parse_eq! {
-            from: r#"application/json; b=c; a=";.,.;""#,
-            into: MediaType::JSON,
-            params: ("b", "c"), ("a", ";.,.;")
-        };
-
-        assert_parse_eq! {
-            from: r#"*/*; a="a"; b="b"; a=a; b=b; c=c"#,
-            into: MediaType::Any,
-            params: ("a", "a"), ("b", "b"), ("a", "a"), ("b", "b"), ("c", "c")
-        };
-    }
-
-    #[test]
-    fn check_params_do_parse() {
-        assert_parse!("*/*; q=1; q=2");
-        assert_parse!("*/*; q=1;q=2;q=3;a=v;c=1;da=1;sdlkldsadasd=uhisdcb89");
-        assert_parse!("*/*; q=1; q=2");
-        assert_parse!("*/*; q=1; q=2; a=b;c=d;    e=f; a=s;a=e");
-        assert_parse!("*/*; q=1; q=2 ; a=b");
-        assert_parse!("*/*; q=1; q=2; hello=\"world !\"");
-    }
-
-    #[test]
-    fn test_bad_parses() {
-        assert_no_parse!("application//json");
-        assert_no_parse!("application///json");
-        assert_no_parse!("a/b;");
-        assert_no_parse!("*/*; a=b;;");
-        assert_no_parse!("*/*; a=b;a");
-        assert_no_parse!("*/*; a=b; ");
-        assert_no_parse!("*/*; a=b;");
-        assert_no_parse!("*/*; a = b");
-        assert_no_parse!("*/*; a= b");
-        assert_no_parse!("*/*; a =b");
-        assert_no_parse!(r#"*/*; a="b"#);
-        assert_no_parse!(r#"*/*; a="b; c=d"#);
-        assert_no_parse!(r#"*/*; a="b; c=d"#);
     }
 }

@@ -22,6 +22,12 @@ use std::fmt;
 #[derive(Debug)]
 pub struct UncasedAsciiRef(str);
 
+impl UncasedAsciiRef {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl PartialEq for UncasedAsciiRef {
     #[inline(always)]
     fn eq(&self, other: &UncasedAsciiRef) -> bool {
