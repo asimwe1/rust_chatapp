@@ -4,7 +4,6 @@
 #![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(type_ascription)]
-#![feature(pub_restricted)]
 #![feature(lookup_host)]
 #![feature(plugin)]
 
