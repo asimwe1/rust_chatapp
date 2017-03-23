@@ -49,9 +49,10 @@ macro_rules! media_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*),+) => {
         $(
-            #[doc="[MediaType](struct.MediaType.html) for <b>"]
-            #[doc=$str]
-            #[doc="</b>: <i>"] #[doc=$t] #[doc="/"] #[doc=$s] #[doc="</i>"]
+            #[doc="Media type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
+            #[doc=$t] #[doc="/"] #[doc=$s]
+            $(#[doc="; "] #[doc=$k] #[doc=" = "] #[doc=$v])*
+            #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: MediaType = MediaType {
                 source: None,
@@ -60,6 +61,10 @@ macro_rules! media_types {
                 params: MediaParams::Static(&[$((media_str!($k), media_str!($v))),*])
             };
 
+            #[doc="Returns `true` if `self` is the media type for <b>"]
+            #[doc=$str]
+            #[doc="</b>, "]
+            /// without considering parameters.
             #[inline(always)]
             pub fn $check(&self) -> bool {
                 *self == MediaType::$name
@@ -77,6 +82,32 @@ macro_rules! media_types {
 
 macro_rules! from_extension {
     ($($ext:expr => $name:ident),*) => (
+        /// Returns the Media-Type associated with the extension `ext`. Not all
+        /// extensions are recognized. If an extensions is not recognized, then this
+        /// method returns a ContentType of `Any`. The currently recognized
+        /// extensions include
+        $(#[doc=$ext]#[doc=","])*
+        /// and is likely to grow.
+        ///
+        /// # Example
+        ///
+        /// A recognized content type:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let xml = ContentType::from_extension("xml");
+        /// assert!(xml.is_xml());
+        /// ```
+        ///
+        /// An unrecognized content type:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let foo = ContentType::from_extension("foo");
+        /// assert!(foo.is_any());
+        /// ```
         pub fn from_extension(ext: &str) -> Option<MediaType> {
             match ext {
                 $(x if uncased_eq(x, $ext) => Some(MediaType::$name)),*,
@@ -152,7 +183,7 @@ impl MediaType {
 }
 
 impl FromStr for MediaType {
-    // Ideally we'd return a `ParseError`, but that required a lifetime.
+    // Ideally we'd return a `ParseError`, but that requires a lifetime.
     type Err = String;
 
     #[inline]
@@ -162,12 +193,14 @@ impl FromStr for MediaType {
 }
 
 impl PartialEq for MediaType {
+    #[inline(always)]
     fn eq(&self, other: &MediaType) -> bool {
         self.top() == other.top() && self.sub() == other.sub()
     }
 }
 
 impl Hash for MediaType {
+    #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.top().hash(state);
         self.sub().hash(state);
@@ -180,6 +213,7 @@ impl Hash for MediaType {
 }
 
 impl fmt::Display for MediaType {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}/{}", self.top(), self.sub())?;
         for (key, val) in self.params() {

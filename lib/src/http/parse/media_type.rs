@@ -24,10 +24,6 @@ fn quoted_string<'a>(input: &mut &'a str) -> ParseResult<&'a str, &'a str> {
     inner
 }
 
-macro_rules! switch_repeat {
-    ($input:expr, $($cases:tt)*) => (repeat!($input, switch!($($cases)*)))
-}
-
 #[parser]
 fn media_type<'a>(input: &mut &'a str,
                   source: &'a str) -> ParseResult<&'a str, MediaType> {
@@ -38,7 +34,6 @@ fn media_type<'a>(input: &mut &'a str,
     let mut params = SmallVec::new();
     switch_repeat! {
         surrounded(|i| eat(i, ';'), is_whitespace) => {
-            skip_while(is_whitespace);
             let key = take_some_while(|c| is_valid_token(c) && c != '=');
             eat('=');
 
