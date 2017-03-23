@@ -1057,10 +1057,10 @@ impl<'r> Response<'r> {
         }
     }
 
-    // Sets `self`'s status and body to that of `other` if they are not already
-    // set in `self`. Any headers present in both `other` and `self` are
-    // adjoined.
-    //
+    /// Sets `self`'s status and body to that of `other` if they are not already
+    /// set in `self`. Any headers present in both `other` and `self` are
+    /// adjoined.
+    ///
     /// # Example
     ///
     /// ```rust
