@@ -1,3 +1,24 @@
+# Version 0.2.3 (Mar 22, 2017)
+
+## Fixes
+
+  * Multiple header values for the same header name are now properly preserved
+    (#223).
+
+## Core
+
+  * The `get_slice` and `get_table` methods were added to `Config`.
+  * The `pub_restricted` feature has been stabilized!
+
+## Codegen
+
+  * Lints were updated for `2017-03-20` nightly.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-03-22)`.
+
+## Infrastructure
+
+  * The test script now denies trailing whitespace.
+
 # Version 0.2.2 (Feb 26, 2017)
 
 ## Codegen
