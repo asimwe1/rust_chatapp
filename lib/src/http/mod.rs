@@ -22,12 +22,14 @@ mod parse;
 // We need to export this for codegen, but otherwise it's unnecessary.
 // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
 #[doc(hidden)] pub mod ascii;
+#[doc(hidden)] pub use self::parse::IndexedStr;
+#[doc(hidden)] pub use self::media_type::MediaParams;
 
 pub use self::method::Method;
 pub use self::content_type::ContentType;
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
 
-pub use self::media_type::*;
+pub use self::media_type::MediaType;
 pub use self::cookies::*;
 pub use self::session::*;

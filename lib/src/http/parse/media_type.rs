@@ -217,6 +217,14 @@ mod test {
 
     #[test]
     fn test_bad_parses() {
+        assert_no_parse!("*&_/*)()");
+        assert_no_parse!("/json");
+        assert_no_parse!("text/");
+        assert_no_parse!("text//");
+        assert_no_parse!("/");
+        assert_no_parse!("*/");
+        assert_no_parse!("/*");
+        assert_no_parse!("///");
         assert_no_parse!("application//json");
         assert_no_parse!("application///json");
         assert_no_parse!("a/b;");
@@ -230,5 +238,10 @@ mod test {
         assert_no_parse!(r#"*/*; a="b"#);
         assert_no_parse!(r#"*/*; a="b; c=d"#);
         assert_no_parse!(r#"*/*; a="b; c=d"#);
+        assert_no_parse!("*/*;a=@#$%^&*()");
+        assert_no_parse!("*/*;;");
+        assert_no_parse!("*/*;=;");
+        assert_no_parse!("*/*=;");
+        assert_no_parse!("*/*=;=");
     }
 }

@@ -77,7 +77,7 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
 impl Collider for ContentType  {
     fn collides_with(&self, other: &ContentType) -> bool {
         let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
+        collide(self.top(), other.top()) && collide(self.sub(), other.sub())
     }
 }
 

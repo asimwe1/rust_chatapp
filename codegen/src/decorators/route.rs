@@ -24,16 +24,19 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
 
 fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
     ct.map(|ct| {
-        let (top, sub) = (ct.ttype.as_str(), ct.subtype.as_str());
-        quote_expr!(ecx, ::rocket::http::ContentType {
-            ttype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($top)
+        let (top, sub) = (ct.top().as_str(), ct.sub().as_str());
+        quote_expr!(ecx, ::rocket::http::ContentType(
+            ::rocket::http::MediaType {
+                source: None,
+                top: ::rocket::http::IndexedStr::Concrete(
+                    ::std::borrow::Cow::Borrowed($top)
+                ),
+                sub: ::rocket::http::IndexedStr::Concrete(
+                    ::std::borrow::Cow::Borrowed($sub)
+                ),
+                params: ::rocket::http::MediaParams::Static(&[])
             },
-            subtype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($sub)
-            },
-            params: None
-        })
+        ))
     })
 }
 

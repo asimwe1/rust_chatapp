@@ -22,7 +22,8 @@ pub enum MediaParams {
     Dynamic(SmallVec<[(IndexedStr, IndexedStr); 2]>)
 }
 
-// TODO: impl PartialEq, Hash for `MediaType`.
+// Describe a media type. In particular, describe its comparison and hashing
+// semantics.
 #[derive(Debug, Clone)]
 pub struct MediaType {
     /// Storage for the entire media type string. This will be `Some` when the
@@ -118,6 +119,21 @@ macro_rules! from_extension {
 }
 
 impl MediaType {
+    /// Creates a new `MediaType` with top-level type `top` and subtype `sub`.
+    /// This should _only_ be used to construct uncommon or custom media types.
+    /// Use an associated constant for everything else.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `application/x-person` media type:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let custom = MediaType::new("application", "x-person");
+    /// assert_eq!(custom.top(), "application");
+    /// assert_eq!(custom.sub(), "x-person");
+    /// ```
     #[inline]
     pub fn new<T, S>(top: T, sub: S) -> MediaType
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
@@ -130,6 +146,30 @@ impl MediaType {
         }
     }
 
+    /// Creates a new `MediaType` with top-level type `top`, subtype `sub`, and
+    /// parameters `ps`. This should _only_ be used to construct uncommon or
+    /// custom media types. Use an associated constant for everything else.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `application/x-id; id=1` media type:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let id = MediaType::with_params("application", "x-id", Some(("id", "1")));
+    /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
+    /// ```
+    ///
+    /// Create a custom `text/person; name=bob; weight=175` media type:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let params = vec![("name", "bob"), ("ref", "2382")];
+    /// let mt = MediaType::with_params("text", "person", params);
+    /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
+    /// ```
     #[inline]
     pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> MediaType
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
@@ -154,16 +194,66 @@ impl MediaType {
 
     known_extensions!(from_extension);
 
+    /// Returns the top-level type for this media type. The return type,
+    /// `UncasedAsciiRef`, has caseless equality comparison and hashing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let plain = MediaType::Plain;
+    /// assert_eq!(plain.top(), "text");
+    /// assert_eq!(plain.top(), "TEXT");
+    /// assert_eq!(plain.top(), "Text");
+    /// ```
     #[inline]
     pub fn top(&self) -> &UncasedAsciiRef {
         self.top.to_str(self.source.as_ref()).into()
     }
 
+    /// Returns the subtype for this media type. The return type,
+    /// `UncasedAsciiRef`, has caseless equality comparison and hashing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let plain = MediaType::Plain;
+    /// assert_eq!(plain.sub(), "plain");
+    /// assert_eq!(plain.sub(), "PlaIN");
+    /// assert_eq!(plain.sub(), "pLaIn");
+    /// ```
     #[inline]
     pub fn sub(&self) -> &UncasedAsciiRef {
         self.sub.to_str(self.source.as_ref()).into()
     }
 
+    /// Returns an iterator over the (key, value) pairs of the media type's
+    /// parameter list. The iterator will be empty if the media type has no
+    /// parameters.
+    ///
+    /// # Example
+    ///
+    /// The `MediaType::Plain` type has one parameter: `charset=utf-8`:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let plain = MediaType::Plain;
+    /// let plain_params: Vec<_> = plain.params().collect();
+    /// assert_eq!(plain_params, vec![("charset", "utf-8")]);
+    /// ```
+    ///
+    /// The `MediaType::PNG` type has no parameters:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let png = MediaType::PNG;
+    /// assert_eq!(png.params().count(), 0);
+    /// ```
     #[inline]
     pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a str)> + 'a {
         let param_slice = match self.params {
