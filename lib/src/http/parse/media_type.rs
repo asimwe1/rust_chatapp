@@ -25,7 +25,7 @@ fn quoted_string<'a>(input: &mut &'a str) -> ParseResult<&'a str, &'a str> {
 }
 
 #[parser]
-fn media_type<'a>(input: &mut &'a str,
+pub fn media_type<'a>(input: &mut &'a str,
                   source: &'a str) -> ParseResult<&'a str, MediaType> {
     let top = take_some_while(|c| is_valid_token(c) && c != '/');
     eat('/');
@@ -77,8 +77,7 @@ mod test {
 
     macro_rules! assert_parse {
         ($string:expr) => ({
-            let result: Result<_, _> = parse_media_type($string).into();
-            match result {
+            match parse_media_type($string) {
                 Ok(media_type) => media_type,
                 Err(e) => panic!("{:?} failed to parse: {}", $string, e)
             }
@@ -87,9 +86,6 @@ mod test {
 
     macro_rules! assert_parse_eq {
         (@full $string:expr, $result:expr, $(($k:expr, $v:expr)),*) => ({
-            let result = assert_parse!($string);
-            assert_eq!(result, $result);
-
             let result = assert_parse!($string);
             assert_eq!(result, $result);
 

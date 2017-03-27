@@ -17,9 +17,10 @@ mod media_type;
 mod content_type;
 mod status;
 mod header;
+mod accept;
 mod parse;
 
-// We need to export this for codegen, but otherwise it's unnecessary.
+// We need to export these for codegen, but otherwise it's unnecessary.
 // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
 #[doc(hidden)] pub mod ascii;
 #[doc(hidden)] pub use self::parse::IndexedStr;
@@ -27,6 +28,7 @@ mod parse;
 
 pub use self::method::Method;
 pub use self::content_type::ContentType;
+pub use self::accept::{Accept, WeightedMediaType};
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
 
