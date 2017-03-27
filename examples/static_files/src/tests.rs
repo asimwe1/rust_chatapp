@@ -34,15 +34,20 @@ fn read_file_content(path: &str) -> Vec<u8> {
 #[test]
 fn test_index_html() {
     test_query_file("/", "static/index.html", Status::Ok);
+    test_query_file("/?v=1", "static/index.html", Status::Ok);
+    test_query_file("/?this=should&be=ignored", "static/index.html", Status::Ok);
 }
 
 #[test]
 fn test_hidden_file() {
     test_query_file("/hidden/hi.txt", "static/hidden/hi.txt", Status::Ok);
+    test_query_file("/hidden/hi.txt?v=1", "static/hidden/hi.txt", Status::Ok);
+    test_query_file("/hidden/hi.txt?v=1&a=b", "static/hidden/hi.txt", Status::Ok);
 }
 
 #[test]
 fn test_icon_file() {
+    test_query_file("/rocket-icon.jpg", "static/rocket-icon.jpg", Status::Ok);
     test_query_file("/rocket-icon.jpg", "static/rocket-icon.jpg", Status::Ok);
 }
 
@@ -50,4 +55,5 @@ fn test_icon_file() {
 fn test_invalid_path() {
     test_query_file("/thou_shalt_not_exist", None, Status::NotFound);
     test_query_file("/thou/shalt/not/exist", None, Status::NotFound);
+    test_query_file("/thou/shalt/not/exist?a=b&c=d", None, Status::NotFound);
 }

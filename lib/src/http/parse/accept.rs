@@ -35,8 +35,8 @@ pub fn parse_accept(mut input: &str) -> Result<Accept, ParseError<&str>> {
 
 #[cfg(test)]
 mod test {
-    use http::{Accept, MediaType, WeightedMediaType};
-    use super::{ParseResult, parse_accept};
+    use http::MediaType;
+    use super::parse_accept;
 
     macro_rules! assert_no_parse {
         ($string:expr) => ({
