@@ -18,7 +18,8 @@ mod content_type;
 mod status;
 mod header;
 mod accept;
-mod parse;
+
+pub(crate) mod parse;
 
 // We need to export these for codegen, but otherwise it's unnecessary.
 // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)

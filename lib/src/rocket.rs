@@ -182,9 +182,8 @@ impl Rocket {
             -> Response<'r> {
         info!("{}:", request);
 
-        // Inform the request about the state and session key.
-        request.set_state(&self.state);
-        request.set_key(&self.config.session_key());
+        // Inform the request about all of the precomputed state.
+        request.set_preset_state(&self.config.session_key(), &self.state);
 
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);

@@ -21,7 +21,7 @@ fn accept<'a>(input: &mut &'a str) -> ParseResult<&'a str, Accept> {
     let mut media_types = vec![];
     repeat_while!(eat(','), {
         skip_while(is_whitespace);
-        let media_type = media_type(input);
+        let media_type = media_type();
         let weight = q_value(&media_type);
         media_types.push(WeightedMediaType(media_type, weight));
     });

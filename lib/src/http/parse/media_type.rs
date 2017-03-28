@@ -25,8 +25,9 @@ fn quoted_string<'a>(input: &mut &'a str) -> ParseResult<&'a str, &'a str> {
 }
 
 #[parser]
-pub fn media_type<'a>(input: &mut &'a str,
-                  source: &'a str) -> ParseResult<&'a str, MediaType> {
+pub fn media_type<'a>(input: &mut &'a str) -> ParseResult<&'a str, MediaType> {
+    let source: &str = *input;
+
     let top = take_some_while(|c| is_valid_token(c) && c != '/');
     eat('/');
     let sub = take_some_while(is_valid_token);
@@ -58,7 +59,7 @@ pub fn media_type<'a>(input: &mut &'a str,
 }
 
 pub fn parse_media_type(mut input: &str) -> Result<MediaType, ParseError<&str>> {
-    parse!(&mut input, (media_type(input), eof()).0).into()
+    parse!(&mut input, (media_type(), eof()).0).into()
 }
 
 #[cfg(test)]
