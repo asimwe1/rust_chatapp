@@ -6,10 +6,10 @@ use term_painter::Color::*;
 
 use codegen::StaticRouteInfo;
 use handler::Handler;
-use http::{Method, ContentType};
+use http::{Method, MediaType};
 use http::uri::URI;
 
-/// A route: a method, its handler, path, rank, and format/content type.
+/// A route: a method, its handler, path, rank, and format/media type.
 pub struct Route {
     /// The method this route matches against.
     pub method: Method,
@@ -19,8 +19,8 @@ pub struct Route {
     pub path: URI<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
-    /// The Content-Type this route matches against.
-    pub format: Option<ContentType>,
+    /// The media type this route matches against.
+    pub format: Option<MediaType>,
 }
 
 #[inline(always)]
