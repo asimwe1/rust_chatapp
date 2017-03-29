@@ -5,7 +5,7 @@ use http::parse::checkers::is_whitespace;
 use http::parse::media_type::media_type;
 use http::{MediaType, Accept, WeightedMediaType};
 
-fn q_value<'a>(_: &'a str, media_type: &MediaType) -> ParseResult<&'a str, Option<f32>> {
+fn q<'a>(_: &'a str, media_type: &MediaType) -> ParseResult<&'a str, Option<f32>> {
     match media_type.params().next() {
         Some(("q", value)) if value.len() <= 4 => match value.parse::<f32>().ok() {
             Some(q) if q > 1.0 => ParseError::custom("accept", "q value must be <= 1.0"),
@@ -22,11 +22,11 @@ fn accept<'a>(input: &mut &'a str) -> ParseResult<&'a str, Accept> {
     repeat_while!(eat(','), {
         skip_while(is_whitespace);
         let media_type = media_type();
-        let weight = q_value(&media_type);
+        let weight = q(&media_type);
         media_types.push(WeightedMediaType(media_type, weight));
     });
 
-    Accept(media_types)
+    Accept::new(media_types)
 }
 
 pub fn parse_accept(mut input: &str) -> Result<Accept, ParseError<&str>> {

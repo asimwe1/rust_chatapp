@@ -3,7 +3,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-use http::{Header, MediaType};
+use http::{IntoCollection, Header, MediaType};
 use http::hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.
@@ -136,7 +136,7 @@ impl ContentType {
     /// ```rust
     /// use rocket::http::ContentType;
     ///
-    /// let id = ContentType::with_params("application", "x-id", Some(("id", "1")));
+    /// let id = ContentType::with_params("application", "x-id", ("id", "1"));
     /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
     /// ```
     ///
@@ -153,9 +153,19 @@ impl ContentType {
     pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> ContentType
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
               K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
-              P: IntoIterator<Item=(K, V)>
+              P: IntoCollection<(K, V)>
     {
         ContentType(MediaType::with_params(top, sub, ps))
+    }
+
+    #[inline(always)]
+    pub fn media_type(&self) -> &MediaType {
+        &self.0
+    }
+
+    #[inline(always)]
+    pub fn into_media_type(self) -> MediaType {
+        self.0
     }
 
     known_media_types!(content_types);

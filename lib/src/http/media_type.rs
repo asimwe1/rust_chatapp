@@ -3,6 +3,7 @@ use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use http::IntoCollection;
 use http::ascii::{uncased_eq, UncasedAsciiRef};
 use http::parse::{IndexedStr, parse_media_type};
 
@@ -17,7 +18,6 @@ struct MediaParam {
 // FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
 #[derive(Debug, Clone)]
 pub enum MediaParams {
-    Empty,
     Static(&'static [(IndexedStr, IndexedStr)]),
     Dynamic(SmallVec<[(IndexedStr, IndexedStr); 2]>)
 }
@@ -142,7 +142,7 @@ impl MediaType {
             source: None,
             top: IndexedStr::Concrete(top.into()),
             sub: IndexedStr::Concrete(sub.into()),
-            params: MediaParams::Empty,
+            params: MediaParams::Static(&[]),
         }
     }
 
@@ -157,7 +157,7 @@ impl MediaType {
     /// ```rust
     /// use rocket::http::MediaType;
     ///
-    /// let id = MediaType::with_params("application", "x-id", Some(("id", "1")));
+    /// let id = MediaType::with_params("application", "x-id", ("id", "1"));
     /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
     /// ```
     ///
@@ -174,15 +174,13 @@ impl MediaType {
     pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> MediaType
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
               K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
-              P: IntoIterator<Item=(K, V)>
+              P: IntoCollection<(K, V)>
     {
-        let mut params = SmallVec::new();
-        for (key, val) in ps {
-            params.push((
-                IndexedStr::Concrete(key.into()),
-                IndexedStr::Concrete(val.into())
-            ))
-        }
+        let params = ps.mapped(|(key, val)| (
+            IndexedStr::Concrete(key.into()),
+            IndexedStr::Concrete(val.into())
+        ));
+
 
         MediaType {
             source: None,
@@ -259,7 +257,6 @@ impl MediaType {
         let param_slice = match self.params {
             MediaParams::Static(slice) => slice,
             MediaParams::Dynamic(ref vec) => &vec[..],
-            MediaParams::Empty => &[]
         };
 
         param_slice.iter()

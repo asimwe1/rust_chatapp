@@ -1,19 +1,16 @@
-use http::MediaType;
-use http::parse::parse_accept;
-
 use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+use smallvec::SmallVec;
+
+use http::{Header, IntoCollection, MediaType};
+use http::parse::parse_accept;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct WeightedMediaType(pub MediaType, pub Option<f32>);
 
 impl WeightedMediaType {
-    #[inline(always)]
-    pub fn media_type(&self) -> &MediaType {
-        &self.0
-    }
-
     #[inline(always)]
     pub fn weight(&self) -> Option<f32> {
         self.1
@@ -25,8 +22,20 @@ impl WeightedMediaType {
     }
 
     #[inline(always)]
-    pub fn into_inner(self) -> MediaType {
+    pub fn media_type(&self) -> &MediaType {
+        &self.0
+    }
+
+    #[inline(always)]
+    pub fn into_media_type(self) -> MediaType {
         self.0
+    }
+}
+
+impl From<MediaType> for WeightedMediaType {
+    #[inline(always)]
+    fn from(media_type: MediaType) -> WeightedMediaType {
+        WeightedMediaType(media_type, None)
     }
 }
 
@@ -39,14 +48,55 @@ impl Deref for WeightedMediaType {
     }
 }
 
-/// The HTTP Accept header.
-#[derive(Debug, PartialEq)]
-pub struct Accept(pub Vec<WeightedMediaType>);
+// FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
+#[derive(Debug, PartialEq, Clone)]
+pub enum AcceptParams {
+    Static(&'static [WeightedMediaType]),
+    Dynamic(SmallVec<[WeightedMediaType; 1]>)
+}
 
-static ANY: WeightedMediaType = WeightedMediaType(MediaType::Any, None);
+/// The HTTP Accept header.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Accept(AcceptParams);
+
+macro_rules! accept_constructor {
+    ($($name:ident ($check:ident): $str:expr, $t:expr,
+        $s:expr $(; $k:expr => $v:expr)*),+) => {
+        $(
+            #[doc="An `Accept` header with the single media type for <b>"]
+            #[doc=$str] #[doc="</b>: <i>"]
+            #[doc=$t] #[doc="/"] #[doc=$s]
+            #[doc="</i>"]
+            #[allow(non_upper_case_globals)]
+            pub const $name: Accept = Accept(
+                AcceptParams::Static(&[WeightedMediaType(MediaType::$name, None)])
+            );
+         )+
+    };
+}
+
+impl<T: IntoCollection<MediaType>> From<T> for Accept {
+    #[inline(always)]
+    fn from(items: T) -> Accept {
+        Accept(AcceptParams::Dynamic(items.mapped(|item| item.into())))
+    }
+}
 
 impl Accept {
+    #[inline(always)]
+    pub fn new<T: IntoCollection<WeightedMediaType>>(items: T) -> Accept {
+        Accept(AcceptParams::Dynamic(items.into_collection()))
+    }
+
+    // FIXME: IMPLEMENT THIS.
+    // #[inline(always)]
+    // pub fn add<M: Into<WeightedMediaType>>(&mut self, media_type: M) {
+    //     self.0.push(media_type.into());
+    // }
+
     pub fn preferred(&self) -> &WeightedMediaType {
+        static ANY: WeightedMediaType = WeightedMediaType(MediaType::Any, None);
+        //
         // See https://tools.ietf.org/html/rfc7231#section-5.3.2.
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
@@ -55,6 +105,7 @@ impl Accept {
                 preferred = current;
             } else if current.weight_or(0.0) > preferred.weight_or(1.0) {
                 preferred = current;
+                // FIXME: Prefer text/html over text/*, for example.
             } else if current.media_type() == preferred.media_type() {
                 if current.weight() == preferred.weight() {
                     let c_count = current.params().filter(|p| p.0 != "q").count();
@@ -71,22 +122,25 @@ impl Accept {
 
     #[inline(always)]
     pub fn first(&self) -> Option<&WeightedMediaType> {
-        if self.0.len() > 0 {
-            Some(&self.0[0])
-        } else {
-            None
-        }
+        self.iter().next()
     }
 
     #[inline(always)]
     pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a WeightedMediaType> + 'a {
-        self.0.iter()
+        let slice = match self.0 {
+            AcceptParams::Static(slice) => slice,
+            AcceptParams::Dynamic(ref vec) => &vec[..],
+        };
+
+        slice.iter()
     }
 
     #[inline(always)]
     pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
-        self.0.iter().map(|weighted_mt| weighted_mt.media_type())
+        self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
+
+    known_media_types!(accept_constructor);
 }
 
 impl fmt::Display for Accept {
@@ -107,6 +161,15 @@ impl FromStr for Accept {
     #[inline]
     fn from_str(raw: &str) -> Result<Accept, String> {
         parse_accept(raw).map_err(|e| e.to_string())
+    }
+}
+
+/// Creates a new `Header` with name `Accept` and the value set to the HTTP
+/// rendering of this `Accept` header.
+impl Into<Header<'static>> for Accept {
+    #[inline(always)]
+    fn into(self) -> Header<'static> {
+        Header::new("Accept", self.to_string())
     }
 }
 

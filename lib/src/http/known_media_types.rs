@@ -1,8 +1,8 @@
 macro_rules! known_media_types {
     ($cont:ident) => ($cont! {
-        Any (is_any): "any Content-Type", "*", "*",
+        Any (is_any): "any media type", "*", "*",
         HTML (is_html): "HTML", "text", "html" ; "charset" => "utf-8",
-        Plain (is_plain): "plaintext", "text", "plain" ; "charset" => "utf-8",
+        Plain (is_plain): "plain text", "text", "plain" ; "charset" => "utf-8",
         JSON (is_json): "JSON", "application", "json",
         MsgPack (is_msgpack): "MessagePack", "application", "msgpack",
         Form (is_form): "forms", "application", "x-www-form-urlencoded",

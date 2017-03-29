@@ -323,6 +323,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<ContentType> {
+        // FIXME: Don't reparse each time! Use RC? Smarter than that?
+        // Use state::Storage!
         self.headers().get_one("Content-Type").and_then(|value| value.parse().ok())
     }
 
@@ -334,6 +336,20 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn accept_first(&self) -> Option<MediaType> {
         self.headers().get_one("Accept").and_then(|mut v| media_type(&mut v).ok())
+    }
+
+    #[inline(always)]
+    pub fn format(&self) -> Option<MediaType> {
+        if self.method.supports_payload() {
+            self.content_type().map(|ct| ct.into_media_type())
+        } else {
+            // FIXME: Should we be using `accept_first` or `preferred`? Or
+            // should we be checking neither and instead pass things through
+            // where the client accepts the thing at all?
+            self.accept()
+                .map(|accept| accept.preferred().media_type().clone())
+                .or(Some(MediaType::Any))
+        }
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
@@ -438,9 +454,8 @@ impl<'r> Request<'r> {
     }
 
     /// Get the managed state container, if it exists. For internal use only!
-    /// FIXME: Expose?
     #[inline(always)]
-    pub(crate) fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
+    pub fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
         self.preset().managed_state.try_get()
     }
 

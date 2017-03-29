@@ -28,7 +28,7 @@ state = "0.2"
 time = "0.1"
 memchr = "1"
 base64 = "0.4"
-smallvec = "0.3"
+smallvec = { git = "https://github.com/SergioBenitez/rust-smallvec" }
 pear = "0.0.8"
 pear_codegen = "0.0.8"
 
