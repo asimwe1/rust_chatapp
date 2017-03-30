@@ -76,7 +76,7 @@ use http::uri::{URI, Segments, SegmentError};
 ///   * **f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64, bool
 ///     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr**
 ///
-///     A value is parse successfully if the `from_str` method from the given
+///     A value is parsed successfully if the `from_str` method from the given
 ///     type returns successfully. Otherwise, the raw path segment is returned
 ///     in the `Err` value.
 ///
