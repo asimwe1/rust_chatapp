@@ -1,5 +1,5 @@
 language: rust
-cache: cargo
+# cache: cargo # linking failed with cache due to memory exhaustion. why?
 rust:
   - nightly
 script: ./scripts/test.sh
