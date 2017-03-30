@@ -172,7 +172,7 @@ use self::Environment::*;
 use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use logger::{self, LoggingLevel};
-use http::ascii::uncased_eq;
+use http::uncased::uncased_eq;
 
 static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
