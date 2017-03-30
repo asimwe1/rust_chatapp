@@ -228,6 +228,78 @@ impl MediaType {
         self.sub.to_str(self.source.as_ref()).into()
     }
 
+    /// Returns a `u8` representing how specific the top-level type and subtype
+    /// of this media type are.
+    ///
+    /// The return value is either `0`, `1`, or `2`, where `2` is the most
+    /// specific. A `0` is returned when both the top and sublevel types are
+    /// `*`. A `1` is returned when only one of the top or sublevel types is
+    /// `*`, and a `2` is returned when neither the top or sublevel types are
+    /// `*`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let mt = MediaType::Plain;
+    /// assert_eq!(mt.specificity(), 2);
+    ///
+    /// let mt = MediaType::new("text", "*");
+    /// assert_eq!(mt.specificity(), 1);
+    ///
+    /// let mt = MediaType::Any;
+    /// assert_eq!(mt.specificity(), 0);
+    /// ```
+    #[inline]
+    pub fn specificity(&self) -> u8 {
+        (self.top() != "*") as u8 + (self.sub() != "*") as u8
+    }
+
+    /// Compares `self` with `other` and returns `true` if `self` and `other`
+    /// are exactly equal to eachother, including with respect to their
+    /// parameters.
+    ///
+    /// This is different from the `PartialEq` implementation in that it
+    /// considers parameters. If `PartialEq` returns false, this function is
+    /// guaranteed to return false. Similarly, if this function returns `true`,
+    /// `PartialEq` is guaranteed to return true. However, if `PartialEq`
+    /// returns `true`, this function may or may not return `true`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let plain = MediaType::Plain;
+    /// let plain2 = MediaType::with_params("text", "plain", ("charset", "utf-8"));
+    /// let just_plain = MediaType::new("text", "plain");
+    ///
+    /// // The `PartialEq` implementation doesn't consider parameters.
+    /// assert!(plain == just_plain);
+    /// assert!(just_plain == plain2);
+    /// assert!(plain == plain2);
+    ///
+    /// // While `exact_eq` does.
+    /// assert!(!plain.exact_eq(&just_plain));
+    /// assert!(!plain2.exact_eq(&just_plain));
+    /// assert!(plain.exact_eq(&plain2));
+    /// ```
+    pub fn exact_eq(&self, other: &MediaType) -> bool {
+        self == other && {
+            let (mut a_params, mut b_params) = (self.params(), other.params());
+            loop {
+                match (a_params.next(), b_params.next()) {
+                    (Some(a), Some(b)) if a != b => return false,
+                    (Some(_), Some(_)) => continue,
+                    (Some(_), None) => return false,
+                    (None, Some(_)) => return false,
+                    (None, None) => return true
+                }
+            }
+        }
+    }
+
     /// Returns an iterator over the (key, value) pairs of the media type's
     /// parameter list. The iterator will be empty if the media type has no
     /// parameters.

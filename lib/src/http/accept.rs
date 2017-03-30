@@ -96,29 +96,36 @@ impl Accept {
 
     pub fn preferred(&self) -> &WeightedMediaType {
         static ANY: WeightedMediaType = WeightedMediaType(MediaType::Any, None);
-        //
+
         // See https://tools.ietf.org/html/rfc7231#section-5.3.2.
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
-        for current in all {
-            if current.weight().is_none() && preferred.weight().is_some() {
-                preferred = current;
-            } else if current.weight_or(0.0) > preferred.weight_or(1.0) {
-                preferred = current;
-                // FIXME: Prefer text/html over text/*, for example.
-            } else if current.media_type() == preferred.media_type() {
-                if current.weight() == preferred.weight() {
-                    let c_count = current.params().filter(|p| p.0 != "q").count();
-                    let p_count = preferred.params().filter(|p| p.0 != "q").count();
-                    if c_count > p_count {
-                        preferred = current;
-                    }
+        for media_type in all {
+            if media_type.weight().is_none() && preferred.weight().is_some() {
+                // Media types without a `q` parameter are preferred.
+                preferred = media_type;
+            } else if media_type.weight_or(0.0) > preferred.weight_or(1.0) {
+                // Prefer media types with a greater weight, but if one doesn't
+                // have a weight, prefer the one we already have.
+                preferred = media_type;
+            } else if media_type.specificity() > preferred.specificity() {
+                // Prefer more specific media types over less specific ones. IE:
+                // text/html over application/*.
+                preferred = media_type;
+            } else if media_type == preferred {
+                // Finally, all other things being equal, prefer a media type
+                // with more parameters over one with fewer. IE: text/html; a=b
+                // over text/html.
+                if media_type.params().count() > preferred.params().count() {
+                    preferred = media_type;
                 }
             }
         }
 
         preferred
     }
+
+    // */html, text/plain
 
     #[inline(always)]
     pub fn first(&self) -> Option<&WeightedMediaType> {
@@ -189,13 +196,22 @@ mod test {
     #[test]
     fn test_preferred() {
         assert_preference!("text/*", "text/*");
-        assert_preference!("text/*, text/html", "text/*");
+        assert_preference!("text/*, text/html", "text/html");
         assert_preference!("text/*; q=0.1, text/html", "text/html");
         assert_preference!("text/*; q=1, text/html", "text/html");
         assert_preference!("text/html, text/*", "text/html");
+        assert_preference!("text/*, text/html", "text/html");
         assert_preference!("text/html, text/*; q=1", "text/html");
+        assert_preference!("text/html; q=1, text/html", "text/html");
         assert_preference!("text/html, text/*; q=0.1", "text/html");
+
         assert_preference!("text/html, application/json", "text/html");
+        assert_preference!("text/html, application/json; q=1", "text/html");
+        assert_preference!("application/json; q=1, text/html", "text/html");
+
+        assert_preference!("text/*, application/json", "application/json");
+        assert_preference!("*/*, text/*", "text/*");
+        assert_preference!("*/*, text/*, text/plain", "text/plain");
 
         assert_preference!("a/b; q=0.1, a/b; q=0.2", "a/b; q=0.2");
         assert_preference!("a/b; q=0.1, b/c; q=0.2", "b/c; q=0.2");
