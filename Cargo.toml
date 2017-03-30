@@ -32,5 +32,5 @@ members = [
   "examples/state",
   "examples/uuid",
   "examples/session",
-  # "examples/raw_sqlite",
+  "examples/raw_sqlite",
 ]
