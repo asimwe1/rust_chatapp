@@ -18,6 +18,7 @@ mod content_type;
 mod status;
 mod header;
 mod accept;
+mod raw_str;
 
 pub(crate) mod parse;
 
@@ -32,6 +33,7 @@ pub use self::content_type::ContentType;
 pub use self::accept::{Accept, WeightedMediaType};
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
+pub use self::raw_str::RawStr;
 
 pub use self::media_type::MediaType;
 pub use self::cookies::*;

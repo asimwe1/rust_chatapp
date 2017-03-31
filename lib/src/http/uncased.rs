@@ -23,6 +23,7 @@ use std::fmt;
 pub struct UncasedStr(str);
 
 impl UncasedStr {
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         &self.0
     }
