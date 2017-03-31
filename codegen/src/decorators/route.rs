@@ -81,7 +81,7 @@ impl RouteGenerateExt for RouteParams {
                     Err(_) => return ::rocket::Outcome::Forward(_data)
                 };
 
-                if !items.exhausted() {
+                if !items.exhaust() {
                     println!("    => The query string {:?} is malformed.", $form_string);
                     return ::rocket::Outcome::Failure(::rocket::http::Status::BadRequest);
                 }

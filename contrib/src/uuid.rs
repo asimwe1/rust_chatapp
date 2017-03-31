@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::ops::Deref;
 
 use rocket::request::{FromParam, FromFormValue};
+use rocket::http::RawStr;
 
 pub use self::uuid_ext::ParseError as UuidParseError;
 
@@ -89,11 +90,12 @@ impl<'a> FromParam<'a> for UUID {
 }
 
 impl<'v> FromFormValue<'v> for UUID {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
     /// A value is successfully parsed if `form_value` is a properly formatted
     /// UUID. Otherwise, the raw form value is returned.
-    fn from_form_value(form_value: &'v str) -> Result<UUID, &'v str> {
+    #[inline(always)]
+    fn from_form_value(form_value: &'v RawStr) -> Result<UUID, &'v RawStr> {
         form_value.parse().map_err(|_| form_value)
     }
 }

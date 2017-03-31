@@ -3,12 +3,12 @@
 
 extern crate rocket;
 
-use rocket::http::Cookies;
+use rocket::http::{Cookies, RawStr};
 use rocket::request::Form;
 
 #[derive(FromForm)]
 struct User<'a> {
-    name: &'a str,
+    name: &'a RawStr,
     nickname: String,
 }
 

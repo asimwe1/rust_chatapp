@@ -6,6 +6,7 @@
 #![feature(type_ascription)]
 #![feature(lookup_host)]
 #![feature(plugin)]
+#![feature(never_type)]
 
 #![plugin(pear_codegen)]
 
