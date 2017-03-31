@@ -8,7 +8,7 @@ extern crate rocket;
 use rocket::response::content;
 
 #[get("/hello/<name>/<age>")]
-fn hello(name: &str, age: i8) -> String {
+fn hello(name: String, age: i8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 

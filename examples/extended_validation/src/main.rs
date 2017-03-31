@@ -75,7 +75,7 @@ fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
 }
 
 #[get("/user/<username>")]
-fn user_page(username: &str) -> String {
+fn user_page(username: &RawStr) -> String {
     format!("This is {}'s page.", username)
 }
 

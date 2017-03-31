@@ -53,9 +53,10 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 /// #
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
+/// use rocket::http::RawStr;
 ///
 /// #[post("/login/<name>")]
-/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
+/// fn login(name: &RawStr) -> Result<&'static str, Flash<Redirect>> {
 ///     if name == "special_user" {
 ///         Ok("Hello, special user!")
 ///     } else {

@@ -14,7 +14,7 @@ use super::{FromParam, FromSegments};
 use router::Route;
 use http::uri::{URI, Segments};
 use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar, Key};
-use http::{ContentType, Accept, MediaType};
+use http::{RawStr, ContentType, Accept, MediaType};
 use http::parse::media_type;
 use http::hyper;
 
@@ -362,7 +362,7 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Retrieve parameter `0`, which is expected to be an `&str`, in a manual
+    /// Retrieve parameter `0`, which is expected to be a `String`, in a manual
     /// route:
     ///
     /// ```rust
@@ -371,7 +371,7 @@ impl<'r> Request<'r> {
     ///
     /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
+    ///     Outcome::of(req.get_param::<String>(0).unwrap_or("unnamed".into()))
     /// }
     /// ```
     pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
@@ -391,7 +391,7 @@ impl<'r> Request<'r> {
     /// Get the `n`th path parameter as a string, if it exists. This is used by
     /// codegen.
     #[doc(hidden)]
-    pub fn get_param_str(&self, n: usize) -> Option<&str> {
+    pub fn get_param_str(&self, n: usize) -> Option<&RawStr> {
         let params = self.extra.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param count {}", n, params.len());
@@ -405,7 +405,7 @@ impl<'r> Request<'r> {
             return None;
         }
 
-        Some(&path[i..j])
+        Some(path[i..j].into())
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request

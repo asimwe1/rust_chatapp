@@ -13,7 +13,7 @@ struct User<'a> {
 }
 
 #[post("/<name>?<query>", format = "application/json", data = "<user>", rank = 2)]
-fn get<'r>(name: &str,
+fn get<'r>(name: &RawStr,
            query: User<'r>,
            user: Form<'r, User<'r>>,
            cookies: Cookies)
