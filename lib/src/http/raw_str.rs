@@ -30,17 +30,40 @@ impl RawStr {
         self.as_str().into()
     }
 
-    /// Returns a URL-decoded version of the string. If the percent encoded
-    /// values are not valid UTF-8, an `Err` is returned.
+    /// Returns a URL-decoded version of the string. This is identical to
+    /// percent decoding except that '+' characters are converted into spaces.
+    /// This is the encoding used by form values.
+    ///
+    /// If the percent encoded values are not valid UTF-8, an `Err` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str: &RawStr = "Hello%2C+world%21".into();
+    /// let decoded = raw_str.url_decode();
+    /// assert_eq!(decoded, Ok("Hello, world!".to_string()));
+    /// ```
     #[inline]
+    pub fn url_decode(&self) -> Result<String, Utf8Error> {
+        let replaced = self.replace("+", " ");
+        RawStr::from_str(replaced.as_str())
+            .percent_decode()
+            .map(|cow| cow.into_owned())
+    }
+
+    /// Returns a percent-decoded version of the string. If the percent encoded
+    /// values are not valid UTF-8, an `Err` is returned.
+    #[inline(always)]
     pub fn percent_decode(&self) -> Result<Cow<str>, Utf8Error> {
         url::percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
     }
 
-    /// Returns a URL-decoded version of the path. Any invalid UTF-8
+    /// Returns a percent-decoded version of the string. Any invalid UTF-8
     /// percent-encoded byte sequences will be replaced � U+FFFD, the
     /// replacement character.
-    #[inline]
+    #[inline(always)]
     pub fn percent_decode_lossy(&self) -> Cow<str> {
         url::percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
     }
