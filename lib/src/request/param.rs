@@ -291,7 +291,7 @@ impl<'a> FromSegments<'a> for Segments<'a> {
 /// For security purposes, if a segment meets any of the following conditions,
 /// an `Err` is returned indicating the condition met:
 ///
-///   * Decoded segment starts with any of: `.`, `*`
+///   * Decoded segment starts with any of: `.` (except `..`), `*`
 ///   * Decoded segment ends with any of: `:`, `>`, `<`
 ///   * Decoded segment contains any of: `/`
 ///   * On Windows, decoded segment contains any of: '\'
