@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{self, Read};
 
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
@@ -184,14 +184,28 @@ impl<T: FromData> FromData for Option<T> {
 }
 
 impl FromData for String {
-    type Error = ();
+    type Error = io::Error;
 
     // FIXME: Doc.
     fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
         let mut string = String::new();
         match data.open().read_to_string(&mut string) {
             Ok(_) => Success(string),
-            Err(_) => Failure((Status::UnprocessableEntity, ()))
+            Err(e) => Failure((Status::BadRequest, e))
+        }
+    }
+}
+
+// FIXME Implement this.
+impl FromData for Vec<u8> {
+    type Error = io::Error;
+
+    // FIXME: Doc.
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut bytes = Vec::new();
+        match data.open().read_to_end(&mut bytes) {
+            Ok(_) => Success(bytes),
+            Err(e) => Failure((Status::BadRequest, e))
         }
     }
 }
