@@ -1,10 +1,12 @@
 #![allow(unused_imports)] // FIXME: Why is this coming from quote_tokens?
 
 use std::mem::transmute;
+use std::collections::HashMap;
 
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData, Ident};
+use syntax::ast::StructField;
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
@@ -13,7 +15,7 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-use utils::strip_ty_lifetimes;
+use utils::{strip_ty_lifetimes, SpanExt};
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
@@ -47,6 +49,55 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
         },
         _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
     }
+}
+
+pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
+        -> (Ident, String, Span) {
+    let ident = match struct_field.ident {
+        Some(ident) => ident,
+        None => ecx.span_fatal(struct_field.span, ONLY_STRUCTS_ERR)
+    };
+
+    let field_attrs: Vec<_> = struct_field.attrs.iter()
+        .filter(|attr| attr.check_name("form"))
+        .collect();
+
+    let default = |ident: Ident| (ident, ident.to_string(), struct_field.span);
+    if field_attrs.len() == 0 {
+        return default(ident);
+    } else if field_attrs.len() > 1 {
+        ecx.span_err(struct_field.span, "only a single #[form(..)] \
+            attribute can be applied to a given struct field at a time");
+        return default(ident);
+    }
+
+    let field_attr = field_attrs[0];
+    ::syntax::attr::mark_known(&field_attr);
+    if !field_attr.meta_item_list().map_or(false, |l| l.len() == 1) {
+        ecx.struct_span_err(field_attr.span, "incorrect use of attribute")
+            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    let inner_item = &field_attr.meta_item_list().unwrap()[0];
+    if !inner_item.check_name("field") {
+        ecx.struct_span_err(inner_item.span, "invalid `form` attribute contents")
+            .help(r#"only the 'field' key is supported: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    if !inner_item.is_value_str() {
+        ecx.struct_span_err(inner_item.span, "invalid `field` in attribute")
+            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    let name = inner_item.value_str().unwrap().as_str().to_string();
+    let sp = inner_item.span.shorten_upto(name.len() + 2);
+    (ident, name, sp)
 }
 
 // TODO: Use proper logging to emit the error messages.
@@ -144,19 +195,25 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         _ => cx.span_bug(trait_span, "impossible substructure in `from_form`")
     };
 
-    // Create a vector of (ident, type) pairs, one for each field in struct.
-    let mut fields_and_types = vec![];
+    // Vec of (ident: Ident, type: Ty, name: String), one for each field.
+    let mut names = HashMap::new();
+    let mut fields_info = vec![];
     for field in fields {
-        let ident = match field.ident {
-            Some(ident) => ident,
-            None => cx.span_fatal(trait_span, ONLY_STRUCTS_ERR)
-        };
-
+        let (ident, name, span) = extract_field_ident_name(cx, field);
         let stripped_ty = strip_ty_lifetimes(field.ty.clone());
-        fields_and_types.push((ident, stripped_ty));
+
+        if let Some(sp) = names.get(&name).map(|sp| *sp) {
+            cx.struct_span_err(span, "field with duplicate name")
+                .span_note(sp, "original was declared here")
+                .emit();
+        } else {
+            names.insert(name.clone(), span);
+        }
+
+        fields_info.push((ident, stripped_ty, name));
     }
 
-    debug!("Fields and types: {:?}", fields_and_types);
+    debug!("Fields, types, attrs: {:?}", fields_info);
     let mut stmts = Vec::new();
 
     // The thing to do when we wish to exit with an error.
@@ -168,7 +225,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // placed into the final struct. They start out as `None` and are changed
     // to Some when a parse completes, or some default value if the parse was
     // unsuccessful and default() returns Some.
-    for &(ref ident, ref ty) in &fields_and_types {
+    for &(ref ident, ref ty, _) in &fields_info {
         stmts.push(quote_stmt!(cx,
             let mut $ident: ::std::option::Option<$ty> = None;
         ).unwrap());
@@ -177,17 +234,15 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // Generating an arm for each struct field. This matches against the key and
     // tries to parse the value according to the type.
     let mut arms = vec![];
-    for &(ref ident, _) in &fields_and_types {
-        let ident_string = ident.to_string();
-        let id_str = ident_string.as_str();
+    for &(ref ident, _, ref name) in &fields_info {
         arms.push(quote_tokens!(cx,
-            $id_str => {
+            $name => {
                 let r = ::rocket::http::RawStr::from_str(v);
                 $ident = match ::rocket::request::FromFormValue::from_form_value(r) {
                     Ok(v) => Some(v),
                     Err(e) => {
                         println!("    => Error parsing form val '{}': {:?}",
-                                 $id_str, e);
+                                 $name, e);
                         $return_err_stmt
                     }
                 };
@@ -219,7 +274,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
 
-    for &(ref ident, ref ty) in (&fields_and_types).iter() {
+    for &(ref ident, ref ty, _) in (&fields_info).iter() {
         failure_conditions.push(quote_tokens!(cx,
             if $ident.is_none() &&
                 <$ty as ::rocket::request::FromFormValue>::default().is_none() {
@@ -232,7 +287,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The fields of the struct, which are just the let bindings declared above
     // or the default value.
     let mut result_fields = vec![];
-    for &(ref ident, ref ty) in &fields_and_types {
+    for &(ref ident, ref ty, _) in &fields_info {
         result_fields.push(quote_tokens!(cx,
             $ident: $ident.unwrap_or_else(||
                 <$ty as ::rocket::request::FromFormValue>::default().unwrap()

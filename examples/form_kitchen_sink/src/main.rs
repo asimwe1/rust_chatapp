@@ -33,9 +33,11 @@ impl<'v> FromFormValue<'v> for FormOption {
 struct FormInput {
     checkbox: bool,
     number: usize,
+    #[form(field = "type")]
     radio: FormOption,
     password: String,
-    textarea: String,
+    #[form(field = "textarea")]
+    text_area: String,
     select: FormOption,
 }
 
