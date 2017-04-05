@@ -81,3 +81,17 @@ struct MyForm10 {
     //~^ ERROR: field with duplicate name
     other: String,
 }
+
+#[derive(FromForm)]
+struct MyForm11 {
+    #[form(field = "hello world")]
+    //~^ ERROR: invalid form field
+    first: String,
+}
+
+#[derive(FromForm)]
+struct MyForm12 {
+    #[form(field = "!@#$%^&*()_")]
+    //~^ ERROR: invalid form field
+    first: String,
+}

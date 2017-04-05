@@ -15,7 +15,7 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-use utils::{strip_ty_lifetimes, SpanExt};
+use utils::{strip_ty_lifetimes, is_valid_ident, SpanExt};
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
@@ -49,55 +49,6 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
         },
         _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
     }
-}
-
-pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
-        -> (Ident, String, Span) {
-    let ident = match struct_field.ident {
-        Some(ident) => ident,
-        None => ecx.span_fatal(struct_field.span, ONLY_STRUCTS_ERR)
-    };
-
-    let field_attrs: Vec<_> = struct_field.attrs.iter()
-        .filter(|attr| attr.check_name("form"))
-        .collect();
-
-    let default = |ident: Ident| (ident, ident.to_string(), struct_field.span);
-    if field_attrs.len() == 0 {
-        return default(ident);
-    } else if field_attrs.len() > 1 {
-        ecx.span_err(struct_field.span, "only a single #[form(..)] \
-            attribute can be applied to a given struct field at a time");
-        return default(ident);
-    }
-
-    let field_attr = field_attrs[0];
-    ::syntax::attr::mark_known(&field_attr);
-    if !field_attr.meta_item_list().map_or(false, |l| l.len() == 1) {
-        ecx.struct_span_err(field_attr.span, "incorrect use of attribute")
-            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
-            .emit();
-        return default(ident);
-    }
-
-    let inner_item = &field_attr.meta_item_list().unwrap()[0];
-    if !inner_item.check_name("field") {
-        ecx.struct_span_err(inner_item.span, "invalid `form` attribute contents")
-            .help(r#"only the 'field' key is supported: #[form(field = "..")]"#)
-            .emit();
-        return default(ident);
-    }
-
-    if !inner_item.is_value_str() {
-        ecx.struct_span_err(inner_item.span, "invalid `field` in attribute")
-            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
-            .emit();
-        return default(ident);
-    }
-
-    let name = inner_item.value_str().unwrap().as_str().to_string();
-    let sp = inner_item.span.shorten_upto(name.len() + 2);
-    (ident, name, sp)
 }
 
 // TODO: Use proper logging to emit the error messages.
@@ -171,6 +122,59 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
     };
 
     trait_def.expand(ecx, meta_item, annotated, push);
+}
+
+pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
+        -> (Ident, String, Span) {
+    let ident = match struct_field.ident {
+        Some(ident) => ident,
+        None => ecx.span_fatal(struct_field.span, ONLY_STRUCTS_ERR)
+    };
+
+    let field_attrs: Vec<_> = struct_field.attrs.iter()
+        .filter(|attr| attr.check_name("form"))
+        .collect();
+
+    let default = |ident: Ident| (ident, ident.to_string(), struct_field.span);
+    if field_attrs.len() == 0 {
+        return default(ident);
+    } else if field_attrs.len() > 1 {
+        ecx.span_err(struct_field.span, "only a single #[form(..)] \
+            attribute can be applied to a given struct field at a time");
+        return default(ident);
+    }
+
+    let field_attr = field_attrs[0];
+    ::syntax::attr::mark_known(&field_attr);
+    if !field_attr.meta_item_list().map_or(false, |l| l.len() == 1) {
+        ecx.struct_span_err(field_attr.span, "incorrect use of attribute")
+            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    let inner_item = &field_attr.meta_item_list().unwrap()[0];
+    if !inner_item.check_name("field") {
+        ecx.struct_span_err(inner_item.span, "invalid `form` attribute contents")
+            .help(r#"only the 'field' key is supported: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    if !inner_item.is_value_str() {
+        ecx.struct_span_err(inner_item.span, "invalid `field` in attribute")
+            .help(r#"the `form` attribute must have the form: #[form(field = "..")]"#)
+            .emit();
+        return default(ident);
+    }
+
+    let name = inner_item.value_str().unwrap().as_str().to_string();
+    let sp = inner_item.span.shorten_upto(name.len() + 2);
+    if !is_valid_ident(&name) {
+        ecx.span_err(sp, "invalid form field identifier");
+    }
+
+    (ident, name, sp)
 }
 
 fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
