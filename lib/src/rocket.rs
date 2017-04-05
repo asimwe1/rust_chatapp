@@ -570,4 +570,10 @@ impl Rocket {
 
         unreachable!("the call to `handle_threads` should block on success")
     }
+
+    /// Retrieves all of the mounted routes.
+    #[inline(always)]
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+        self.router.routes()
+    }
 }

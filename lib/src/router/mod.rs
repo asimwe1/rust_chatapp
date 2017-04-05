@@ -59,6 +59,11 @@ impl Router {
 
         result
     }
+
+    #[inline]
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+        self.routes.values().flat_map(|v| v.iter())
+    }
 }
 
 #[cfg(test)]
