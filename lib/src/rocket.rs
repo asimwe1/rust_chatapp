@@ -387,9 +387,9 @@ impl Rocket {
         if tls_configured && cfg!(feature = "tls") {
             info_!("tls: {}", White.paint("enabled"));
         } else {
-            info_!("tls: {}", White.paint("disabled"));
+            error_!("tls: {}", White.paint("disabled"));
             if tls_configured {
-                warn_!("tls is configured, but the tls feature is disabled");
+                error_!("tls is configured, but the tls feature is disabled");
             }
         }
 
@@ -602,7 +602,7 @@ impl Rocket {
                 Err(e) => return LaunchError::from(e)
             };
 
-            info!("🚀  {} {}{}",
+            launch_info!("🚀  {} {}{}",
                   White.paint("Rocket has launched from"),
                   White.bold().paint(proto),
                   White.bold().paint(&full_addr));

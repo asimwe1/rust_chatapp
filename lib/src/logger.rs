@@ -67,6 +67,13 @@ macro_rules! log_ {
 }
 
 #[doc(hidden)] #[macro_export]
+macro_rules! launch_info {
+    ($format:expr, $($args:expr),*) => {
+        error!(target: "launch", $format, $($args),*)
+    }
+}
+
+#[doc(hidden)] #[macro_export]
 macro_rules! error_ { ($($args:expr),+) => { log_!(error: $($args),+); }; }
 #[doc(hidden)] #[macro_export]
 macro_rules! info_ { ($($args:expr),+) => { log_!(info: $($args),+); }; }
@@ -78,6 +85,7 @@ macro_rules! debug_ { ($($args:expr),+) => { log_!(debug: $($args),+); }; }
 macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 
 impl Log for RocketLogger {
+    #[inline(always)]
     fn enabled(&self, md: &LogMetadata) -> bool {
         md.level() <= self.0.max_log_level()
     }
@@ -87,6 +95,14 @@ impl Log for RocketLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
+
+        // We use the `launch_info` macro to "fake" a high priority info
+        // message. We want to print the message unless the user uses a custom
+        // drain, so we set it's status to critical, but reset it here to info.
+        let level = match record.target() {
+            "launch" => Info,
+            _ => record.level()
+        };
 
         // Don't print Hyper or Rustls messages unless debug is enabled.
         let from_hyper = record.location().module_path().starts_with("hyper::");
@@ -101,7 +117,7 @@ impl Log for RocketLogger {
         }
 
         use log::LogLevel::*;
-        match record.level() {
+        match level {
             Info => println!("{}", Blue.paint(record.args())),
             Trace => println!("{}", Magenta.paint(record.args())),
             Error => {
