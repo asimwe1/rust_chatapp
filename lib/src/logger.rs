@@ -32,13 +32,14 @@ impl LoggingLevel {
 }
 
 impl FromStr for LoggingLevel {
-    type Err = ();
+    type Err = &'static str;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let level = match s {
             "critical" => LoggingLevel::Critical,
             "normal" => LoggingLevel::Normal,
             "debug" => LoggingLevel::Debug,
-            _ => return Err(())
+            _ => return Err("a log level (debug, normal, critical)")
         };
 
         Ok(level)
@@ -87,9 +88,10 @@ impl Log for RocketLogger {
             return;
         }
 
-        // Don't print Hyper's messages unless Debug is enabled.
+        // Don't print Hyper or Rustls messages unless debug is enabled.
         let from_hyper = record.location().module_path().starts_with("hyper::");
-        if from_hyper && self.0 != LoggingLevel::Debug {
+        let from_rustls = record.location().module_path().starts_with("rustls::");
+        if self.0 != LoggingLevel::Debug && (from_hyper || from_rustls) {
             return;
         }
 

@@ -111,6 +111,7 @@ impl LaunchError {
 }
 
 impl From<hyper::Error> for LaunchError {
+    #[inline]
     fn from(error: hyper::Error) -> LaunchError {
         match error {
             hyper::Error::Io(e) => LaunchError::new(LaunchErrorKind::Io(e)),
@@ -120,6 +121,7 @@ impl From<hyper::Error> for LaunchError {
 }
 
 impl fmt::Display for LaunchErrorKind {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
@@ -129,6 +131,7 @@ impl fmt::Display for LaunchErrorKind {
 }
 
 impl fmt::Debug for LaunchError {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.mark_handled();
         write!(f, "{:?}", self.kind())
@@ -136,6 +139,7 @@ impl fmt::Debug for LaunchError {
 }
 
 impl fmt::Display for LaunchError {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.mark_handled();
         write!(f, "{}", self.kind())
@@ -143,6 +147,7 @@ impl fmt::Display for LaunchError {
 }
 
 impl ::std::error::Error for LaunchError {
+    #[inline]
     fn description(&self) -> &str {
         self.mark_handled();
         match *self.kind() {

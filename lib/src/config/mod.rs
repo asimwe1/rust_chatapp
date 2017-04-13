@@ -43,6 +43,10 @@
 //!   * **session_key**: _[string]_ a 256-bit base64 encoded string (44
 //!     characters) to use as the session key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
+//!   * **tls**: _[dict]_ a dictionary with two keys: 1) `certs`: _[string]_ a
+//!     path to a certificate chain in PEM format, and 2) `key`: _[string]_ a
+//!     path to a private key file in PEM format for the certificate in `certs`
+//!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
 //!
 //! ### Rocket.toml
 //!
@@ -118,6 +122,31 @@
 //!
 //! Environment variables take precedence over all other configuration methods:
 //! if the variable is set, it will be used as the value for the parameter.
+//! Variable values are parsed as if they were TOML syntax. As illustration,
+//! consider the following examples:
+//!
+//! ```sh
+//! ROCKET_INTEGER=1
+//! ROCKET_FLOAT=3.14
+//! ROCKET_STRING=Hello
+//! ROCKET_STRING="Hello"
+//! ROCKET_BOOL=true
+//! ROCKET_ARRAY=[1,"b",3.14]
+//! ROCKET_DICT={key="abc",val=123}
+//! ```
+//!
+//! ### TLS Configuration
+//!
+//! TLS can be enabled by specifying the `tls.key` and `tls.certs` parameters.
+//! Rocket must be compiled with the `tls` feature enabled for the parameters to
+//! take effect. The recommended way to specify the parameters is via the
+//! `global` environment:
+//!
+//! ```toml
+//! [global.tls]
+//! certs = "/path/to/certs.pem"
+//! key = "/path/to/key.pem"
+//! ```
 //!
 //! ## Retrieving Configuration Parameters
 //!
@@ -278,6 +307,7 @@ impl RocketConfig {
         Err(ConfigError::NotFound)
     }
 
+    #[inline]
     fn get_mut(&mut self, env: Environment) -> &mut Config {
         match self.config.get_mut(&env) {
             Some(config) => config,
@@ -306,33 +336,37 @@ impl RocketConfig {
     }
 
     /// Retrieves the `Config` for the active environment.
+    #[inline]
     pub fn active(&self) -> &Config {
         self.get(self.active_env)
     }
 
     // Override all environments with values from env variables if present.
     fn override_from_env(&mut self) -> Result<()> {
-        'outer: for (env_key, env_val) in env::vars() {
-            if env_key.len() < ENV_VAR_PREFIX.len() {
+        for (key, val) in env::vars() {
+            if key.len() < ENV_VAR_PREFIX.len() {
                 continue
-            } else if !uncased_eq(&env_key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
+            } else if !uncased_eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
                 continue
             }
 
             // Skip environment variables that are handled elsewhere.
-            for prehandled_var in PREHANDLED_VARS.iter() {
-                if uncased_eq(&env_key, &prehandled_var) {
-                    continue 'outer
-                }
+            if PREHANDLED_VARS.iter().any(|var| uncased_eq(&key, var)) {
+                continue
             }
 
             // Parse the key and value and try to set the variable for all envs.
-            let key = env_key[ENV_VAR_PREFIX.len()..].to_lowercase();
-            let val = parse_simple_toml_value(&env_val);
+            let key = key[ENV_VAR_PREFIX.len()..].to_lowercase();
+            let toml_val = match parse_simple_toml_value(&val) {
+                Ok(val) => val,
+                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e.into()))
+            };
+
             for env in &Environment::all() {
-                match self.get_mut(*env).set_raw(&key, &val) {
-                    Err(ConfigError::BadType(_, exp, _, _)) => {
-                        return Err(ConfigError::BadEnvVal(env_key, env_val, exp))
+                match self.get_mut(*env).set_raw(&key, &toml_val) {
+                    Err(ConfigError::BadType(_, exp, actual, _)) => {
+                        let e = format!("expected {}, but found {}", exp, actual);
+                        return Err(ConfigError::BadEnvVal(key, val, e))
                     }
                     Err(e) => return Err(e),
                     Ok(_) => { /* move along */ }
@@ -458,7 +492,7 @@ unsafe fn private_init() {
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
             ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
-                | BadFilePath(..) | BadEnvVal(..) => bail(e),
+                | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..) => bail(e),
             IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
@@ -694,6 +728,64 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             address = "1.2.3.4:100"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    // Only do this test when the tls feature is disabled since the file paths
+    // we're supplying don't actually exist.
+    #[test]
+    fn test_good_tls_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::set_var(CONFIG_ENV, "dev");
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            tls = { certs = "some/path.pem", key = "some/key.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [staging.tls]
+            certs = "some/path.pem"
+            key = "some/key.pem"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [global.tls]
+            certs = "some/path.pem"
+            key = "some/key.pem"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [global]
+            tls = { certs = "some/path.pem", key = "some/key.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+    }
+
+    #[test]
+    fn test_bad_tls_config() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::remove_var(CONFIG_ENV);
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = "hello"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = { certs = "some/path.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = { certs = "some/path.pem", key = "some/key.pem", extra = "bah" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            tls = { cert = "some/path.pem", key = "some/key.pem" }
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 

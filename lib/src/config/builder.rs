@@ -20,6 +20,8 @@ pub struct ConfigBuilder {
     pub log_level: LoggingLevel,
     /// The session key.
     pub session_key: Option<String>,
+    /// TLS configuration (path to certificates file, path to private key file).
+    pub tls_config: Option<(String, String)>,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -63,6 +65,7 @@ impl ConfigBuilder {
             workers: config.workers,
             log_level: config.log_level,
             session_key: None,
+            tls_config: None,
             extras: config.extras,
             root: root_dir,
         }
@@ -159,6 +162,26 @@ impl ConfigBuilder {
     /// ```
     pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
         self.session_key = Some(key.into());
+        self
+    }
+
+    /// Sets the `tls_config` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem")
+    /// # ; /*
+    ///     .unwrap();
+    /// # */
+    /// ```
+    pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
+        where C: Into<String>, K: Into<String>
+    {
+        self.tls_config = Some((certs_path.into(), key_path.into()));
         self
     }
 
@@ -259,6 +282,10 @@ impl ConfigBuilder {
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_root(self.root);
+
+        if let Some((certs_path, key_path)) = self.tls_config {
+            config.set_tls(&certs_path, &key_path)?;
+        }
 
         if let Some(key) = self.session_key {
             config.set_session_key(key)?;

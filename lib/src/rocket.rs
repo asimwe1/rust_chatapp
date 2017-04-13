@@ -6,9 +6,9 @@ use std::io::{self, Write};
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
-
 use state::Container;
 
+#[cfg(feature = "tls")] use hyper_rustls::TlsServer;
 use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config};
@@ -72,6 +72,35 @@ impl hyper::Handler for Rocket {
         let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }
+}
+
+// This macro is a terrible hack to get around Hyper's Server<L> type. What we
+// want is to use almost exactly the same launch code when we're serving over
+// HTTPS as over HTTP. But Hyper forces two different types, so we can't use the
+// same code, at least not trivially. These macros get around that by passing in
+// the same code as a continuation in `$continue`. This wouldn't work as a
+// regular function taking in a closure because the types of the inputs to the
+// closure would be different depending on whether TLS was enabled or not.
+#[cfg(not(feature = "tls"))]
+macro_rules! serve {
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        let ($proto, $server) = ("http://", hyper::Server::http($addr));
+        $continue
+    })
+}
+
+#[cfg(feature = "tls")]
+macro_rules! serve {
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        if let Some(ref tls) = $rocket.config.tls {
+            let tls = TlsServer::new(tls.certs.clone(), tls.key.clone());
+            let ($proto, $server) = ("https://", hyper::Server::https($addr, tls));
+            $continue
+        } else {
+            let ($proto, $server) = ("http://", hyper::Server::http($addr));
+            $continue
+        }
+    })
 }
 
 impl Rocket {
@@ -262,7 +291,11 @@ impl Rocket {
         Outcome::Forward(data)
     }
 
-    // TODO: DOC.
+    // Finds the error catcher for the status `status` and executes it fo the
+    // given request `req`. If a user has registere a catcher for `status`, the
+    // catcher is called. If the catcher fails to return a good response, the
+    // 500 catcher is executed. if there is no registered catcher for `status`,
+    // the default catcher is used.
     fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Red.paint(&status));
 
@@ -349,6 +382,16 @@ impl Rocket {
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
         info_!("session key: {}", White.paint(config.session_key.kind()));
+
+        let tls_configured = config.tls.is_some();
+        if tls_configured && cfg!(feature = "tls") {
+            info_!("tls: {}", White.paint("enabled"));
+        } else {
+            info_!("tls: {}", White.paint("disabled"));
+            if tls_configured {
+                warn_!("tls is configured, but the tls feature is disabled");
+            }
+        }
 
         for (name, value) in config.extras() {
             info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
@@ -553,22 +596,24 @@ impl Rocket {
         }
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        let server = match hyper::Server::http(full_addr.as_str()) {
-            Ok(hyper_server) => hyper_server,
-            Err(e) => return LaunchError::from(e)
-        };
+        serve!(self, &full_addr, |server, proto| {
+            let server = match server {
+                Ok(server) => server,
+                Err(e) => return LaunchError::from(e)
+            };
 
-        info!("🚀  {} {}{}",
-              White.paint("Rocket has launched from"),
-              White.bold().paint("http://"),
-              White.bold().paint(&full_addr));
+            info!("🚀  {} {}{}",
+                  White.paint("Rocket has launched from"),
+                  White.bold().paint(proto),
+                  White.bold().paint(&full_addr));
 
-        let threads = self.config.workers as usize;
-        if let Err(e) = server.handle_threads(self, threads) {
-            return LaunchError::from(e);
-        }
+            let threads = self.config.workers as usize;
+            if let Err(e) = server.handle_threads(self, threads) {
+                return LaunchError::from(e);
+            }
 
-        unreachable!("the call to `handle_threads` should block on success")
+            unreachable!("the call to `handle_threads` should block on success")
+        })
     }
 
     /// Retrieves all of the mounted routes.

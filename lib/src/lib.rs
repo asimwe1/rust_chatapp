@@ -7,6 +7,7 @@
 #![feature(lookup_host)]
 #![feature(plugin)]
 #![feature(never_type)]
+#![feature(concat_idents)]
 
 #![plugin(pear_codegen)]
 
@@ -99,6 +100,8 @@
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
+#[cfg(feature = "tls")] extern crate rustls;
+#[cfg(feature = "tls")] extern crate hyper_rustls;
 extern crate term_painter;
 extern crate hyper;
 extern crate url;

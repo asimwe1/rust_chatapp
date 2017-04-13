@@ -16,6 +16,7 @@ categories = ["web-programming::http-server"]
 
 [features]
 testing = []
+tls = ["rustls", "hyper-rustls"]
 
 [dependencies]
 term-painter = "0.2"
@@ -31,6 +32,13 @@ base64 = "0.4"
 smallvec = { git = "https://github.com/SergioBenitez/rust-smallvec" }
 pear = "0.0.8"
 pear_codegen = "0.0.8"
+rustls = { version = "0.5.8", optional = true }
+
+[dependencies.hyper-rustls]
+git = "https://github.com/SergioBenitez/hyper-rustls"
+default-features = false
+features = ["server"]
+optional = true
 
 [dependencies.cookie]
 version = "0.7.4"

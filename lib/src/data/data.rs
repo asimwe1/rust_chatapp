@@ -4,9 +4,10 @@ use std::fs::File;
 use std::time::Duration;
 use std::mem::transmute;
 
-use super::data_stream::{DataStream, StreamReader, kill_stream};
+#[cfg(feature = "tls")] use hyper_rustls::WrappedStream;
 
 use ext::ReadExt;
+use super::data_stream::{DataStream, HyperNetStream, StreamReader, kill_stream};
 
 use http::hyper::h1::HttpReader;
 use http::hyper::buffer;
@@ -82,32 +83,47 @@ impl Data {
         DataStream::new(stream, network)
     }
 
+    // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
     pub(crate) fn from_hyp(mut h_body: BodyReader) -> Result<Data, &'static str> {
-        // FIXME: This is asolutely terrible, thanks to Hyper.
+        // Create the Data object from hyper's buffer.
+        let (vec, pos, cap) = h_body.get_mut().take_buf();
+        let net_stream = h_body.get_ref().get_ref();
+
+        #[cfg(feature = "tls")]
+        fn concrete_stream(stream: &&mut NetworkStream) -> Option<HyperNetStream> {
+            stream.downcast_ref::<HttpStream>()
+                .map(|s| HyperNetStream::Http(s.clone()))
+                .or_else(|| {
+                    stream.downcast_ref::<WrappedStream>()
+                        .map(|s| HyperNetStream::Https(s.clone()))
+                })
+        }
+
+        #[cfg(not(feature = "tls"))]
+        fn concrete_stream(stream: &&mut NetworkStream) -> Option<HyperNetStream> {
+            stream.downcast_ref::<HttpStream>()
+                .map(|s| HyperNetStream::Http(s.clone()))
+        }
 
         // Retrieve the underlying HTTPStream from Hyper.
-        let mut stream = match h_body.get_ref().get_ref()
-                                     .downcast_ref::<HttpStream>() {
-            Some(s) => {
-                let owned_stream = s.clone();
-                let buf_len = h_body.get_ref().get_buf().len() as u64;
-                match h_body {
-                    SizedReader(_, n) => SizedReader(owned_stream, n - buf_len),
-                    EofReader(_) => EofReader(owned_stream),
-                    EmptyReader(_) => EmptyReader(owned_stream),
-                    ChunkedReader(_, n) =>
-                        ChunkedReader(owned_stream, n.map(|k| k - buf_len)),
-                }
-            },
-            None => return Err("Stream is not an HTTP stream!"),
+        let stream = match concrete_stream(net_stream) {
+            Some(stream) => stream,
+            None => return Err("Stream is not an HTTP(s) stream!")
         };
 
         // Set the read timeout to 5 seconds.
-        stream.get_mut().set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+        stream.set_read_timeout(Some(Duration::from_secs(5))).expect("timeout set");
 
-        // Create the Data object from hyper's buffer.
-        let (vec, pos, cap) = h_body.get_mut().take_buf();
-        Ok(Data::new(vec, pos, cap, stream))
+        // Create a reader from the stream. Don't read what's already buffered.
+        let buffered = (cap - pos) as u64;
+        let reader = match h_body {
+            SizedReader(_, n) => SizedReader(stream, n - buffered),
+            EofReader(_) => EofReader(stream),
+            EmptyReader(_) => EmptyReader(stream),
+            ChunkedReader(_, n) => ChunkedReader(stream, n.map(|k| k - buffered)),
+        };
+
+        Ok(Data::new(vec, pos, cap, reader))
     }
 
     /// Retrieve the `peek` buffer.
@@ -151,10 +167,10 @@ impl Data {
     // in the buffer is at `pos` and the buffer has `cap` valid bytes. The
     // remainder of the data bytes can be read from `stream`.
     pub(crate) fn new(mut buf: Vec<u8>,
-               pos: usize,
-               mut cap: usize,
-               mut stream: StreamReader)
-               -> Data {
+                      pos: usize,
+                      mut cap: usize,
+                      mut stream: StreamReader
+                     ) -> Data {
         // Make sure the buffer is large enough for the bytes we want to peek.
         const PEEK_BYTES: usize = 4096;
         if buf.len() < PEEK_BYTES {
@@ -198,4 +214,3 @@ impl Drop for Data {
         }
     }
 }
-
