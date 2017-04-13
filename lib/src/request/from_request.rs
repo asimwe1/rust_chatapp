@@ -220,7 +220,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Session<'a> {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for Accept {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
@@ -231,7 +231,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Accept {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
