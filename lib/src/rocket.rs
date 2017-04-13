@@ -387,9 +387,11 @@ impl Rocket {
         if tls_configured && cfg!(feature = "tls") {
             info_!("tls: {}", White.paint("enabled"));
         } else {
-            error_!("tls: {}", White.paint("disabled"));
             if tls_configured {
+                error_!("tls: {}", White.paint("disabled"));
                 error_!("tls is configured, but the tls feature is disabled");
+            } else {
+                info_!("tls: {}", White.paint("disabled"));
             }
         }
 
