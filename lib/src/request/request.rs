@@ -310,10 +310,10 @@ impl<'r> Request<'r> {
         self.extra.session = RefCell::new(jar);
     }
 
-    /// Returns `Some` of the Content-Type header of `self`. If the header is
-    /// not present, returns `None`. The Content-Type header is cached after the
-    /// first call to this function. As a result, subsequent calls will always
-    /// return the same value.
+    /// Returns the Content-Type header of `self`. If the header is not present,
+    /// returns `None`. The Content-Type header is cached after the first call
+    /// to this function. As a result, subsequent calls will always return the
+    /// same value.
     ///
     /// # Example
     ///

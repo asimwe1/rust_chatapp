@@ -1,9 +1,8 @@
 use std::{io, fmt, str};
 use std::borrow::Cow;
 
-use http::{Header, HeaderMap};
 use response::Responder;
-use http::Status;
+use http::{Header, HeaderMap, Status, ContentType};
 
 /// The default size, in bytes, of a chunk for streamed responses.
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -639,6 +638,24 @@ impl<'r> Response<'r> {
     #[inline(always)]
     pub fn set_status(&mut self, status: Status) {
         self.status = Some(status);
+    }
+
+    /// Returns the Content-Type header of `self`. If the header is not present
+    /// or is malformed, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::ContentType;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_header(ContentType::HTML);
+    /// assert_eq!(response.content_type(), Some(ContentType::HTML));
+    /// ```
+    #[inline(always)]
+    pub fn content_type(&self) -> Option<ContentType> {
+        self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
     }
 
     /// Sets the status of `self` to a custom `status` with status code `code`
