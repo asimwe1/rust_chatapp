@@ -18,7 +18,7 @@ fn test_root() {
     run_test!("/", |mut response: Response| {
         assert!(response.body().is_none());
         assert_eq!(response.status(), Status::SeeOther);
-        for h in response.headers() {
+        for h in response.headers().iter() {
             match h.name.as_str() {
                 "Location" => assert_eq!(h.value, "/login"),
                 "Content-Length" => assert_eq!(h.value.parse::<i32>().unwrap(), 0),

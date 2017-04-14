@@ -192,7 +192,8 @@ impl<'r> Request<'r> {
         self.remote = Some(address);
     }
 
-    /// Returns a `HeaderMap` of all of the headers in `self`.
+    /// Returns a [HeaderMap](/rocket/http/struct.HeaderMap.html) of all of the
+    /// headers in `self`.
     ///
     /// # Example
     ///

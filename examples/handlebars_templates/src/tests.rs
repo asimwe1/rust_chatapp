@@ -25,7 +25,7 @@ fn test_root() {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
-            let location_headers: Vec<_> = response.header_values("Location").collect();
+            let location_headers: Vec<_> = response.headers().get("Location").collect();
             assert_eq!(location_headers, vec!["/hello/Unknown"]);
         });
     }

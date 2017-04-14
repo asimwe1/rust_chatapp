@@ -121,7 +121,7 @@ impl Rocket {
     {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
-        for header in response.headers() {
+        for header in response.headers().iter() {
             // FIXME: Using hyper here requires two allocations.
             let name = header.name.into_string();
             let value = Vec::from(header.value.as_bytes());

@@ -243,7 +243,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .header(ContentType::HTML)
     ///     .finalize();
     ///
-    /// assert_eq!(response.header_values("Content-Type").count(), 1);
+    /// assert_eq!(response.headers().get("Content-Type").count(), 1);
     /// ```
     #[inline(always)]
     pub fn header<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
@@ -274,7 +274,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .header_adjoin(Accept::text())
     ///     .finalize();
     ///
-    /// assert_eq!(response.header_values("Accept").count(), 2);
+    /// assert_eq!(response.headers().get("Accept").count(), 2);
     /// ```
     #[inline(always)]
     pub fn header_adjoin<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
@@ -299,7 +299,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .raw_header("X-Custom", "second")
     ///     .finalize();
     ///
-    /// assert_eq!(response.header_values("X-Custom").count(), 1);
+    /// assert_eq!(response.headers().get("X-Custom").count(), 1);
     /// ```
     #[inline(always)]
     pub fn raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
@@ -326,7 +326,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .raw_header_adjoin("X-Custom", "second")
     ///     .finalize();
     ///
-    /// assert_eq!(response.header_values("X-Custom").count(), 2);
+    /// assert_eq!(response.headers().get("X-Custom").count(), 2);
     /// ```
     #[inline(always)]
     pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
@@ -444,12 +444,12 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.status(), Status::NotFound);
     ///
     /// # {
-    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// let ctype: Vec<_> = response.headers().get("Content-Type").collect();
     /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
     /// # }
     ///
     /// # {
-    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 1"]);
     /// # }
     /// ```
@@ -488,12 +488,12 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.status(), Status::ImATeapot);
     ///
     /// # {
-    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// let ctype: Vec<_> = response.headers().get("Content-Type").collect();
     /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
     /// # }
     ///
     /// # {
-    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 2", "value 3", "value 1"]);
     /// # }
     /// ```
@@ -562,7 +562,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     ///
     /// assert_eq!(response.status(), Status::Ok);
-    /// assert_eq!(response.headers().count(), 0);
+    /// assert_eq!(response.headers().len(), 0);
     /// assert!(response.body().is_none());
     /// ```
     #[inline(always)]
@@ -660,11 +660,8 @@ impl<'r> Response<'r> {
         self.status = Some(Status::new(code, reason));
     }
 
-    /// Returns an iterator over all of the headers stored in `self`. Multiple
-    /// headers with the same name may be returned, but all of the headers with
-    /// the same name will be appear in a group in the iterator. The values in
-    /// this group will be emitted in the order they were added to `self`. Aside
-    /// from this grouping, there are no other ordering guarantees.
+    /// Returns a [HeaderMap](/rocket/http/struct.HeaderMap.html) of all of the
+    /// headers in `self`.
     ///
     /// # Example
     ///
@@ -676,34 +673,14 @@ impl<'r> Response<'r> {
     /// response.adjoin_raw_header("X-Custom", "1");
     /// response.adjoin_raw_header("X-Custom", "2");
     ///
-    /// let mut headers = response.headers();
-    /// assert_eq!(headers.next(), Some(Header::new("X-Custom", "1")));
-    /// assert_eq!(headers.next(), Some(Header::new("X-Custom", "2")));
-    /// assert_eq!(headers.next(), None);
+    /// let mut custom_headers = response.headers().iter();
+    /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "1")));
+    /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "2")));
+    /// assert_eq!(custom_headers.next(), None);
     /// ```
     #[inline(always)]
-    pub fn headers<'a>(&'a self) -> impl Iterator<Item=Header<'a>> {
-        self.headers.iter()
-    }
-
-    /// Returns an iterator over all of the values stored in `self` for the
-    /// header with name `name`. The values are returned in FIFO order.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Response;
-    ///
-    /// let mut response = Response::new();
-    /// response.adjoin_raw_header("X-Custom", "1");
-    /// response.adjoin_raw_header("X-Custom", "2");
-    ///
-    /// let values: Vec<_> = response.header_values("X-Custom").collect();
-    /// assert_eq!(values, vec!["1", "2"]);
-    /// ```
-    #[inline(always)]
-    pub fn header_values<'h>(&'h self, name: &str) -> impl Iterator<Item=&'h str> {
-        self.headers.get(name)
+    pub fn headers(&self) -> &HeaderMap<'r> {
+        &self.headers
     }
 
     /// Sets the header `header` in `self`. Any existing headers with the name
@@ -721,12 +698,12 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     ///
     /// response.set_header(ContentType::HTML);
-    /// assert_eq!(response.headers().next(), Some(ContentType::HTML.into()));
-    /// assert_eq!(response.headers().count(), 1);
+    /// assert_eq!(response.headers().iter().next(), Some(ContentType::HTML.into()));
+    /// assert_eq!(response.headers().len(), 1);
     ///
     /// response.set_header(ContentType::JSON);
-    /// assert_eq!(response.headers().next(), Some(ContentType::JSON.into()));
-    /// assert_eq!(response.headers().count(), 1);
+    /// assert_eq!(response.headers().iter().next(), Some(ContentType::JSON.into()));
+    /// assert_eq!(response.headers().len(), 1);
     /// ```
     #[inline(always)]
     pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
@@ -747,12 +724,12 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     ///
     /// response.set_raw_header("X-Custom", "1");
-    /// assert_eq!(response.headers().next(), Some(Header::new("X-Custom", "1")));
-    /// assert_eq!(response.headers().count(), 1);
+    /// assert_eq!(response.headers().get_one("X-Custom"), Some("1"));
+    /// assert_eq!(response.headers().len(), 1);
     ///
     /// response.set_raw_header("X-Custom", "2");
-    /// assert_eq!(response.headers().next(), Some(Header::new("X-Custom", "2")));
-    /// assert_eq!(response.headers().count(), 1);
+    /// assert_eq!(response.headers().get_one("X-Custom"), Some("2"));
+    /// assert_eq!(response.headers().len(), 1);
     /// ```
     #[inline(always)]
     pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V) -> bool
@@ -778,7 +755,7 @@ impl<'r> Response<'r> {
     /// response.adjoin_header(Accept::json());
     /// response.adjoin_header(Accept::text());
     ///
-    /// let mut accept_headers = response.headers();
+    /// let mut accept_headers = response.headers().iter();
     /// assert_eq!(accept_headers.next(), Some(Accept::json().into()));
     /// assert_eq!(accept_headers.next(), Some(Accept::text().into()));
     /// assert_eq!(accept_headers.next(), None);
@@ -805,7 +782,7 @@ impl<'r> Response<'r> {
     /// response.adjoin_raw_header("X-Custom", "one");
     /// response.adjoin_raw_header("X-Custom", "two");
     ///
-    /// let mut custom_headers = response.headers();
+    /// let mut custom_headers = response.headers().iter();
     /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "one")));
     /// assert_eq!(custom_headers.next(), Some(Header::new("X-Custom", "two")));
     /// assert_eq!(custom_headers.next(), None);
@@ -829,10 +806,10 @@ impl<'r> Response<'r> {
     /// response.adjoin_raw_header("X-Custom", "one");
     /// response.adjoin_raw_header("X-Custom", "two");
     /// response.adjoin_raw_header("X-Other", "hi");
-    /// assert_eq!(response.headers().count(), 3);
+    /// assert_eq!(response.headers().len(), 3);
     ///
     /// response.remove_header("X-Custom");
-    /// assert_eq!(response.headers().count(), 1);
+    /// assert_eq!(response.headers().len(), 1);
     /// ```
     #[inline(always)]
     pub fn remove_header(&mut self, name: &str) {
@@ -1034,12 +1011,12 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.status(), Status::NotFound);
     ///
     /// # {
-    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// let ctype: Vec<_> = response.headers().get("Content-Type").collect();
     /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
     /// # }
     ///
     /// # {
-    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 1"]);
     /// # }
     /// ```
@@ -1083,12 +1060,12 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.status(), Status::ImATeapot);
     ///
     /// # {
-    /// let ctype: Vec<_> = response.header_values("Content-Type").collect();
+    /// let ctype: Vec<_> = response.headers().get("Content-Type").collect();
     /// assert_eq!(ctype, vec![ContentType::HTML.to_string()]);
     /// # }
     ///
     /// # {
-    /// let custom_values: Vec<_> = response.header_values("X-Custom").collect();
+    /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 2", "value 3", "value 1"]);
     /// # }
     /// ```
@@ -1111,7 +1088,7 @@ impl<'r> fmt::Debug for Response<'r> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.status())?;
 
-        for header in self.headers() {
+        for header in self.headers().iter() {
             writeln!(f, "{}", header)?;
         }
 

@@ -24,7 +24,7 @@ mod tests {
         let response = req.dispatch_with(&rocket);
         println!("Response:\n{:?}", response);
 
-        let location: Vec<_> = response.header_values("location").collect();
+        let location: Vec<_> = response.headers().get("location").collect();
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(location, vec!["/"]);
     }
