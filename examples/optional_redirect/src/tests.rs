@@ -9,8 +9,7 @@ fn test_200(uri: &str, expected_body: &str) {
     let mut response = request.dispatch_with(&rocket);
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()),
-               Some(expected_body.to_string()));
+    assert_eq!(response.body_string(), Some(expected_body.to_string()));
 }
 
 fn test_303(uri: &str, expected_location: &str) {

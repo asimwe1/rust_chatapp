@@ -31,7 +31,7 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 
     let mut response = request.dispatch_with(&rocket);
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(expected_body));
+    assert_eq!(response.body_string(), Some(expected_body));
 }
 
 #[test]

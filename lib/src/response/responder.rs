@@ -173,9 +173,7 @@ pub trait Responder<'r> {
 /// use rocket::http::ContentType;
 ///
 /// let mut response = "Hello".respond().unwrap();
-///
-/// let body_string = response.body().and_then(|b| b.into_string());
-/// assert_eq!(body_string, Some("Hello".to_string()));
+/// assert_eq!(response.body_string(), Some("Hello".into()));
 ///
 /// let content_type: Vec<_> = response.headers().get("Content-Type").collect();
 /// assert_eq!(content_type.len(), 1);

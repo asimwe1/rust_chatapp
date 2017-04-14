@@ -30,9 +30,8 @@ mod tests {
             .body(format!("form_data={}", raw));
 
         let mut response = req.dispatch_with(&rocket);
-        let body_string = response.body().and_then(|b| b.into_string());
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(Some(decoded.to_string()), body_string);
+        assert_eq!(Some(decoded.to_string()), response.body_string());
     }
 
     #[test]

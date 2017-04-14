@@ -17,7 +17,7 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     let mut response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
 
-    let body_str = response.body().and_then(|body| body.into_string());
+    let body_str = response.body_string();
     if let Some(expected_str) = body.into() {
         assert!(body_str.map_or(false, |s| s.contains(expected_str)));
     }

@@ -829,10 +829,7 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_none());
     ///
     /// response.set_sized_body(Cursor::new("Hello, world!"));
-    ///
-    /// let body_string = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_string, Some("Hello, world!".to_string()));
-    /// assert!(response.body().is_some());
+    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
     /// ```
     #[inline(always)]
     pub fn body(&mut self) -> Option<Body<&mut io::Read>> {
@@ -844,6 +841,29 @@ impl<'r> Response<'r> {
             }),
             None => None
         }
+    }
+
+    /// Consumes `self's` body and reads it into a string. If `self` doesn't
+    /// have a body, reading fails, or string conversion (for non-UTF-8 bodies)
+    /// fails, returns `None`. Note that `self`'s `body` is consumed after a
+    /// call to this method.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// assert!(response.body().is_none());
+    ///
+    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
+    /// assert!(response.body().is_none());
+    /// ```
+    #[inline(always)]
+    pub fn body_string(&mut self) -> Option<String> {
+        self.take_body().and_then(|b| b.into_string())
     }
 
     /// Moves the body of `self` out and returns it, if there is one, leaving no
@@ -901,9 +921,7 @@ impl<'r> Response<'r> {
     ///
     /// let mut response = Response::new();
     /// response.set_sized_body(Cursor::new("Hello, world!"));
-    ///
-    /// let body_string = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_string, Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
     /// ```
     #[inline]
     pub fn set_sized_body<B>(&mut self, mut body: B)
@@ -929,9 +947,7 @@ impl<'r> Response<'r> {
     ///
     /// let mut response = Response::new();
     /// response.set_streamed_body(repeat(97).take(5));
-    ///
-    /// let body_string = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_string, Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string(), Some("aaaaa".to_string()));
     /// ```
     #[inline(always)]
     pub fn set_streamed_body<B>(&mut self, body: B) where B: io::Read + 'r {
@@ -949,9 +965,7 @@ impl<'r> Response<'r> {
     ///
     /// let mut response = Response::new();
     /// response.set_chunked_body(repeat(97).take(5), 10);
-    ///
-    /// let body_string = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_string, Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string(), Some("aaaaa".to_string()));
     /// ```
     #[inline(always)]
     pub fn set_chunked_body<B>(&mut self, body: B, chunk_size: u64)
@@ -974,8 +988,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     /// response.set_raw_body(body);
     ///
-    /// let body_string = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_string, Some("Hello!".to_string()));
+    /// assert_eq!(response.body_string(), Some("Hello!".to_string()));
     /// ```
     #[inline(always)]
     pub fn set_raw_body<T: io::Read + 'r>(&mut self, body: Body<T>) {

@@ -33,7 +33,7 @@ mod remote_rewrite_tests {
 
         let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::Ok);
-        let body_str = response.body().and_then(|b| b.into_string());
+        let body_str = response.body_string();
         match ip {
             Some(ip) => assert_eq!(body_str, Some(format!("{}:{}", ip, port))),
             None => assert_eq!(body_str, Some(KNOWN_IP.into()))
