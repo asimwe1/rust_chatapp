@@ -16,7 +16,7 @@ expressibility, and speed. Here's an example of a complete Rocket application:
 extern crate rocket;
 
 #[get("/<name>/<age>")]
-fn hello(name: &str, age: u8) -> String {
+fn hello(name: String, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 

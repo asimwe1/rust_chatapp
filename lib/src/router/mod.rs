@@ -292,7 +292,7 @@ mod test {
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
                 assert_eq!(got.rank, expected.0);
-                assert_eq!(got.path.as_str() as &str, expected.1);
+                assert_eq!(got.path.as_str(), expected.1);
             }
         })
     }
@@ -361,7 +361,7 @@ mod test {
             let expected = &[$($want),+];
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
-                assert_eq!(got.path.as_str() as &str, expected as &str);
+                assert_eq!(got.path.as_str(), expected as &str);
             }
         })
     }

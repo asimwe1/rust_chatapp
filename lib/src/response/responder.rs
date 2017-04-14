@@ -190,7 +190,7 @@ impl<'r> Responder<'r> for &'r str {
     }
 }
 
-/// Returns a response with Content-Type `text/html` and a fixed-size body
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl Responder<'static> for String {
     fn respond(self) -> Result<Response<'static>, Status> {

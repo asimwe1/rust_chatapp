@@ -181,17 +181,20 @@ impl<T, E> FormResult<T, E> {
 
 impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// Immutably borrow the parsed type.
+    #[inline(always)]
     pub fn get(&'f self) -> &'f T {
         &self.object
     }
 
     /// Mutably borrow the parsed type.
+    #[inline(always)]
     pub fn get_mut(&'f mut self) -> &'f mut T {
         &mut self.object
     }
 
     /// Returns the raw form string that was used to parse the encapsulated
     /// object.
+    #[inline(always)]
     pub fn raw_form_string(&self) -> &str {
         &self.form_string
     }
@@ -240,6 +243,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
 
 impl<'f, T: FromForm<'f> + 'static> Form<'f, T> {
     /// Consume this object and move out the parsed object.
+    #[inline(always)]
     pub fn into_inner(self) -> T {
         self.object
     }
