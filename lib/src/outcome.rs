@@ -38,7 +38,7 @@
 //! fails with some error and no processing can or should continue as a result.
 //! The meaning of a failure depends on the context.
 //!
-//! It Rocket, a `Failure` generally means that a request is taken out of normal
+//! In Rocket, a `Failure` generally means that a request is taken out of normal
 //! processing. The request is then given to the catcher corresponding to some
 //! status code. users can catch failures by requesting a type of `Result<S, E>`
 //! or `Option<S>` in request handlers. For example, if a user's handler looks
