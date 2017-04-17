@@ -43,9 +43,9 @@
 //!   * **session_key**: _[string]_ a 256-bit base64 encoded string (44
 //!     characters) to use as the session key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
-//!   * **tls**: _[dict]_ a dictionary with two keys: 1) `certs`: _[string]_ a
-//!     path to a certificate chain in PEM format, and 2) `key`: _[string]_ a
-//!     path to a private key file in PEM format for the certificate in `certs`
+//!   * **tls**: _[table]_ a table with two keys: 1) `certs`: _[string]_ a path
+//!   to a certificate chain in PEM format, and 2) `key`: _[string]_ a path to a
+//!   private key file in PEM format for the certificate in `certs`
 //!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
 //!
 //! ### Rocket.toml
@@ -196,6 +196,7 @@ pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
 pub use self::toml_ext::IntoValue;
+pub(crate) use self::toml_ext::LoggedValue;
 
 use self::Environment::*;
 use self::environment::CONFIG_ENV;

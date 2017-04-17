@@ -11,7 +11,7 @@ use state::Container;
 #[cfg(feature = "tls")] use hyper_rustls::TlsServer;
 use {logger, handler};
 use ext::ReadExt;
-use config::{self, Config};
+use config::{self, Config, LoggedValue};
 use request::{Request, FormItems};
 use data::Data;
 use response::{Body, Response};
@@ -396,7 +396,8 @@ impl Rocket {
         }
 
         for (name, value) in config.extras() {
-            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+            info_!("{} {}: {}",
+                   Yellow.paint("[extra]"), name, White.paint(LoggedValue(value)));
         }
 
         Rocket {

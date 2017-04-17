@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
 use std::str::FromStr;
@@ -132,6 +133,31 @@ impl_into_value!(Integer: u32, as i64);
 impl_into_value!(Boolean: bool);
 impl_into_value!(Float: f64);
 impl_into_value!(Float: f32, as f64);
+
+/// A simple wrapper over a `Value` reference with a custom implementation of
+/// `Display`. This is used to log config values at initialization.
+pub(crate) struct LoggedValue<'a>(pub &'a Value);
+
+impl<'a> fmt::Display for LoggedValue<'a> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use config::Value::*;
+        match *self.0 {
+            String(_) | Integer(_) | Float(_) | Boolean(_) | Datetime(_) | Array(_) => {
+                self.0.fmt(f)
+            }
+            Table(ref map) => {
+                write!(f, "{{ ")?;
+                for (i, (key, val)) in map.iter().enumerate() {
+                    write!(f, "{} = {}", key, LoggedValue(val))?;
+                    if i != map.len() - 1 { write!(f, ", ")?; }
+                }
+
+                write!(f, " }}")
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
