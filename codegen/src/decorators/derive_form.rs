@@ -70,11 +70,11 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         is_unsafe: false,
         supports_unions: false,
         span: span,
-        // We add this attribute because some `FromFormValue` implementations
+        // We add these attribute because some `FromFormValue` implementations
         // can't fail. This is indicated via the `!` type. Rust checks if a
         // match is made with something of that type, and since we always emit
         // an `Err` match, we'll get this lint warning.
-        attributes: vec![quote_attr!(ecx, #[allow(unreachable_code)])],
+        attributes: vec![quote_attr!(ecx, #[allow(unreachable_code, unreachable_patterns)])],
         path: ty::Path {
             path: vec!["rocket", "request", "FromForm"],
             lifetime: lifetime_var,
@@ -241,12 +241,12 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     for &(ref ident, _, ref name) in &fields_info {
         arms.push(quote_tokens!(cx,
             $name => {
-                let r = ::rocket::http::RawStr::from_str(v);
-                $ident = match ::rocket::request::FromFormValue::from_form_value(r) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
+                let __r = ::rocket::http::RawStr::from_str(__v);
+                $ident = match ::rocket::request::FromFormValue::from_form_value(__r) {
+                    Ok(__v) => Some(__v),
+                    Err(__e) => {
                         println!("    => Error parsing form val '{}': {:?}",
-                                 $name, e);
+                                 $name, __e);
                         $return_err_stmt
                     }
                 };
@@ -257,8 +257,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The actual match statement. Iterate through all of the fields in the form
     // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
-        for (k, v) in $arg {
-            match k.as_str() {
+        for (__k, __v) in $arg {
+            match __k.as_str() {
                 $arms
                 "_method" => {
                     /* This is a Rocket-specific field. If the user hasn't asked
@@ -267,7 +267,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
                 }
                 _ => {
                     println!("    => {}={} has no matching field in struct.",
-                             k, v);
+                             __k, __v);
                     $return_err_stmt
                 }
            };
