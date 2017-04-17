@@ -118,7 +118,7 @@ serialization in a fixed-sized body. If serialization fails, the request is
 forwarded to the **500** error catcher.
 
 For a complete example, see the [JSON example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.5/examples/json).
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.6/examples/json).
 
 ## Templates
 
@@ -147,7 +147,7 @@ The context can be any type that implements `Serialize` and serializes to an
 [Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) API
 documentation contains more information about templates, while the [Handlebars
 Templates example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.5/examples/handlebars_templates)
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.6/examples/handlebars_templates)
 is a fully composed application that makes use of Handlebars templates.
 
 ## Streaming

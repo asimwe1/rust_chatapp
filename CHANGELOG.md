@@ -1,3 +1,12 @@
+# Version 0.2.6 (Apr 17, 2017)
+
+## Codegen
+
+  * Allow `k` and `v` to be used as fields in `FromForm` structures by avoiding
+    identifier collisions ([#265]).
+
+[#265]: https://github.com/SergioBenitez/Rocket/issues/265
+
 # Version 0.2.5 (Apr 16, 2017)
 
 ## Codegen
