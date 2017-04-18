@@ -179,6 +179,7 @@ mod environment;
 mod config;
 mod builder;
 mod toml_ext;
+mod custom_values;
 
 use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
@@ -190,6 +191,7 @@ use std::env;
 
 use toml;
 
+pub use self::custom_values::Limits;
 pub use toml::{Array, Table, Value};
 pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;

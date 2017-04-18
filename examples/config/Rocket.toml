@@ -1,5 +1,10 @@
-# Except for the session key, none of these are actually needed; Rocket has sane
+# Except for the session key, nothing here is necessary; Rocket has sane
 # defaults. We show all of them here explicitly for demonstrative purposes.
+
+[global.limits]
+forms = 32768
+json = 1048576 # this is an extra used by the json contrib module
+msgpack = 1048576 # this is an extra used by the msgpack contrib module
 
 [development]
 address = "localhost"

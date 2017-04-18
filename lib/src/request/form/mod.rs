@@ -28,6 +28,7 @@ use std::marker::PhantomData;
 use std::fmt::{self, Debug};
 use std::io::Read;
 
+use config;
 use http::Status;
 use request::Request;
 use data::{self, Data, FromData};
@@ -255,6 +256,9 @@ impl<'f, T: FromForm<'f> + Debug + 'f> Debug for Form<'f, T> {
     }
 }
 
+/// Default limit for forms is 32KiB.
+const LIMIT: u64 = 32 * (1 << 10);
+
 /// Parses a `Form` from incoming form data.
 ///
 /// If the content type of the request data is not
@@ -279,7 +283,8 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
         }
 
         let mut form_string = String::with_capacity(4096);
-        let mut stream = data.open().take(32768); // TODO: Make this configurable?
+        let limit = config::active().map(|c| c.limits.forms).unwrap_or(LIMIT);
+        let mut stream = data.open().take(limit);
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
             Failure((Status::InternalServerError, None))

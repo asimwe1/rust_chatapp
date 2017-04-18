@@ -382,6 +382,7 @@ impl Rocket {
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
         info_!("session key: {}", White.paint(config.session_key.kind()));
+        info_!("limits: {}", White.paint(&config.limits));
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {

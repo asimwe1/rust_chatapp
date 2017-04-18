@@ -3,6 +3,7 @@ extern crate rmp_serde;
 use std::ops::{Deref, DerefMut};
 use std::io::{Cursor, Read};
 
+use rocket::config;
 use rocket::outcome::Outcome;
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
@@ -70,9 +71,8 @@ impl<T> MsgPack<T> {
     }
 }
 
-/// Maximum size of MessagePack data is 1MB.
-/// TODO: Determine this size from some configuration parameter.
-const MAX_SIZE: u64 = 1048576;
+/// Default limit for MessagePack is 1MB.
+const LIMIT: u64 = 1 << 20;
 
 /// Accepted content types are: `application/msgpack`, `application/x-msgpack`,
 /// `bin/msgpack`, and `bin/x-msgpack`.
@@ -91,8 +91,12 @@ impl<T: Deserialize> FromData for MsgPack<T> {
             return Outcome::Forward(data);
         }
 
+        let size_limit = config::active()
+            .and_then(|c| c.limits.get("msgpack"))
+            .unwrap_or(LIMIT);
+
         let mut buf = Vec::new();
-        if let Err(e) = data.open().take(MAX_SIZE).read_to_end(&mut buf) {
+        if let Err(e) = data.open().take(size_limit).read_to_end(&mut buf) {
             let e = MsgPackError::InvalidDataRead(e);
             error_!("Couldn't read request data: {:?}", e);
             return Outcome::Failure((Status::BadRequest, e));

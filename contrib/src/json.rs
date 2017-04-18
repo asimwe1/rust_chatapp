@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
+use rocket::config;
 use rocket::outcome::Outcome;
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
@@ -65,9 +66,8 @@ impl<T> JSON<T> {
     }
 }
 
-/// Maximum size of JSON is 1MB.
-/// TODO: Determine this size from some configuration parameter.
-const MAX_SIZE: u64 = 1048576;
+/// Default limit for JSON is 1MB.
+const LIMIT: u64 = 1 << 20;
 
 impl<T: Deserialize> FromData for JSON<T> {
     type Error = SerdeError;
@@ -78,7 +78,11 @@ impl<T: Deserialize> FromData for JSON<T> {
             return Outcome::Forward(data);
         }
 
-        let reader = data.open().take(MAX_SIZE);
+        let size_limit = config::active()
+            .and_then(|c| c.limits.get("json"))
+            .unwrap_or(LIMIT);
+
+        let reader = data.open().take(size_limit);
         match serde_json::from_reader(reader).map(|val| JSON(val)) {
             Ok(value) => Outcome::Success(value),
             Err(e) => {

@@ -5,44 +5,12 @@ use std::convert::AsRef;
 use std::fmt;
 use std::env;
 
-#[cfg(feature = "tls")] use rustls::{Certificate, PrivateKey};
-
+use super::custom_values::*;
 use {num_cpus, base64};
 use config::Environment::*;
 use config::{Result, Table, Value, ConfigBuilder, Environment, ConfigError};
 use logger::LoggingLevel;
 use http::Key;
-
-pub enum SessionKey {
-    Generated(Key),
-    Provided(Key)
-}
-
-impl SessionKey {
-    #[inline(always)]
-    pub fn kind(&self) -> &'static str {
-        match *self {
-            SessionKey::Generated(_) => "generated",
-            SessionKey::Provided(_) => "provided",
-        }
-    }
-
-    #[inline(always)]
-    fn inner(&self) -> &Key {
-        match *self {
-            SessionKey::Generated(ref key) | SessionKey::Provided(ref key) => key
-        }
-    }
-}
-
-#[cfg(feature = "tls")]
-pub struct TlsConfig {
-    pub certs: Vec<Certificate>,
-    pub key: PrivateKey
-}
-
-#[cfg(not(feature = "tls"))]
-pub struct TlsConfig;
 
 /// Structure for Rocket application configuration.
 ///
@@ -75,6 +43,8 @@ pub struct Config {
     pub(crate) session_key: SessionKey,
     /// TLS configuration.
     pub(crate) tls: Option<TlsConfig>,
+    /// Streaming read size limits.
+    pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
@@ -92,52 +62,6 @@ macro_rules! config_from_raw {
             _ => $rest
         }
     )
-}
-
-#[inline(always)]
-fn value_as_str<'a>(config: &Config, name: &str, value: &'a Value) -> Result<&'a str> {
-    value.as_str().ok_or(config.bad_type(name, value.type_str(), "a string"))
-}
-
-#[inline(always)]
-fn value_as_u16(config: &Config, name: &str, value: &Value) -> Result<u16> {
-    match value.as_integer() {
-        Some(x) if x >= 0 && x <= (u16::max_value() as i64) => Ok(x as u16),
-        _ => Err(config.bad_type(name, value.type_str(), "a 16-bit unsigned integer"))
-    }
-}
-
-#[inline(always)]
-fn value_as_log_level(config: &Config, name: &str, value: &Value) -> Result<LoggingLevel> {
-    value_as_str(config, name, value)
-        .and_then(|s| s.parse().map_err(|e| config.bad_type(name, value.type_str(), e)))
-}
-
-#[inline(always)]
-fn value_as_tls_config<'v>(config: &Config,
-                           name: &str,
-                           value: &'v Value,
-                          ) -> Result<(&'v str, &'v str)>
-{
-    let (mut certs_path, mut key_path) = (None, None);
-    let table = value.as_table()
-        .ok_or_else(|| config.bad_type(name, value.type_str(), "a table"))?;
-
-    let env = config.environment;
-    for (key, value) in table {
-        match key.as_str() {
-            "certs" => certs_path = Some(value_as_str(config, "tls.certs", value)?),
-            "key" => key_path = Some(value_as_str(config, "tls.key", value)?),
-            _ => return Err(ConfigError::UnknownKey(format!("{}.tls.{}", env, key)))
-        }
-    }
-
-    if let (Some(certs), Some(key)) = (certs_path, key_path) {
-        Ok((certs, key))
-    } else {
-        Err(config.bad_type(name, "a table with missing entries",
-                            "a table with `certs` and `key` entries"))
-    }
 }
 
 impl Config {
@@ -219,6 +143,7 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     session_key: key,
                     tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -232,6 +157,7 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     session_key: key,
                     tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -245,6 +171,7 @@ impl Config {
                     log_level: LoggingLevel::Critical,
                     session_key: key,
                     tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -255,8 +182,10 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    fn bad_type(&self, name: &str, actual: &'static str, expect: &'static str)
-        -> ConfigError {
+    pub(crate) fn bad_type(&self,
+                           name: &str,
+                           actual: &'static str,
+                           expect: &'static str) -> ConfigError {
         let id = format!("{}.{}", self.environment, name);
         ConfigError::BadType(id, expect, actual, self.config_path.clone())
     }
@@ -284,7 +213,8 @@ impl Config {
             workers => (u16, set_workers, ok),
             session_key => (str, set_session_key, id),
             log => (log_level, set_log_level, ok),
-            tls => (tls_config, set_raw_tls, id)
+            tls => (tls_config, set_raw_tls, id),
+            limits => (limits, set_limits, ok)
             | _ => {
                 self.extras.insert(name.into(), val.clone());
                 Ok(())
@@ -440,6 +370,12 @@ impl Config {
     #[inline]
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
         self.log_level = log_level;
+    }
+
+    /// Sets limits.
+    #[inline]
+    pub fn set_limits(&mut self, limits: Limits) {
+        self.limits = limits;
     }
 
     #[cfg(feature = "tls")]

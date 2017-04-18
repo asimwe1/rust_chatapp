@@ -277,6 +277,7 @@ mod test {
                     &[("user", ""), ("password", "pass")]);
 
         check_form!("a=b", &[("a", "b")]);
+        check_form!("value=Hello+World", &[("value", "Hello+World")]);
 
         check_form!("user=", &[("user", "")]);
         check_form!("user=&", &[("user", "")]);
