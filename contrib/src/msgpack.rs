@@ -17,6 +17,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// The `MsgPack` type: implements `FromData` and `Responder`, allowing you to
 /// easily consume and respond with MessagePack data.
 ///
+/// ## Receiving MessagePack
+///
 /// If you're receiving MessagePack data, simply add a `data` parameter to your
 /// route arguments and ensure the type of the parameter is a `MsgPack<T>`,
 /// where `T` is some type you'd like to parse from MessagePack. `T` must
@@ -38,6 +40,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, or
 /// `bin/x-msgpack`.
 ///
+/// ## Sending MessagePack
+///
 /// If you're responding with MessagePack data, return a `MsgPack<T>` type,
 /// where `T` implements `Serialize` from
 /// [Serde](https://github.com/serde-rs/serde). The content type of the response
@@ -50,6 +54,20 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 ///     ...
 ///     MsgPack(user_from_id)
 /// }
+/// ```
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming MessagePack data is 1MiB. Setting a
+/// limit protects your application from denial of service (DOS) attacks and
+/// from resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.msgpack` configuration parameter. For
+/// instance, to increase the MessagePack limit to 5MiB for all environments,
+/// you may add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// msgpack = 5242880
 /// ```
 #[derive(Debug)]
 pub struct MsgPack<T>(pub T);

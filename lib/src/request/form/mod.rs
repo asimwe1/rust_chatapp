@@ -148,16 +148,30 @@ use outcome::Outcome::*;
 ///
 /// ## Performance and Correctness Considerations
 ///
-/// Whether you should use a `str` or `String` in your `FromForm` type depends
-/// on your use case. The primary question to answer is: _Can the input contain
-/// characters that must be URL encoded?_ Note that this includes commmon
-/// characters such as spaces. If so, then you must use `String`, whose
+/// Whether you should use a `&RawStr` or `String` in your `FromForm` type
+/// depends on your use case. The primary question to answer is: _Can the input
+/// contain characters that must be URL encoded?_ Note that this includes
+/// commmon characters such as spaces. If so, then you must use `String`, whose
 /// `FromFormValue` implementation deserializes the URL encoded string for you.
 /// Because the `str` references will refer directly to the underlying form
 /// data, they will be raw and URL encoded.
 ///
-/// If your string values will not contain URL encoded characters, using `str`
-/// will result in fewer allocation and is thus spreferred.
+/// If your string values will not contain URL encoded characters, using
+/// `RawStr` will result in fewer allocation and is thus preferred.
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming form data is 32KiB. Setting a limit
+/// protects your application from denial of service (DOS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.forms` configuration parameter. For
+/// instance, to increase the forms limit to 512KiB for all environments, you
+/// may add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// forms = 524288
+/// ```
 pub struct Form<'f, T: FromForm<'f> + 'f> {
     object: T,
     form_string: String,

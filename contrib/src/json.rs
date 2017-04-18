@@ -18,6 +18,8 @@ pub use serde_json::error::Error as SerdeError;
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
 /// consume and respond with JSON.
 ///
+/// ## Receiving JSON
+///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement `Deserialize`
@@ -36,6 +38,8 @@ pub use serde_json::error::Error as SerdeError;
 /// doesn't specify "application/json" as its `Content-Type` header value will
 /// not be routed to the handler.
 ///
+/// ## Sending JSON
+///
 /// If you're responding with JSON data, return a `JSON<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
 /// content type of the response is set to `application/json` automatically.
@@ -47,6 +51,20 @@ pub use serde_json::error::Error as SerdeError;
 ///     ...
 ///     JSON(user_from_id)
 /// }
+/// ```
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming JSON data is 1MiB. Setting a limit
+/// protects your application from denial of service (DOS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.json` configuration parameter. For
+/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// json = 5242880
 /// ```
 #[derive(Debug)]
 pub struct JSON<T = Value>(pub T);

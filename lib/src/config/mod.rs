@@ -44,9 +44,13 @@
 //!     characters) to use as the session key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
 //!   * **tls**: _[table]_ a table with two keys: 1) `certs`: _[string]_ a path
-//!   to a certificate chain in PEM format, and 2) `key`: _[string]_ a path to a
-//!   private key file in PEM format for the certificate in `certs`
+//!     to a certificate chain in PEM format, and 2) `key`: _[string]_ a path to a
+//!     private key file in PEM format for the certificate in `certs`
 //!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
+//!   * **limits**: _[table]_ a table where the key _[string]_ corresponds to a
+//!     data type and the value _[u64]_ corresponds to the maximum size in bytes
+//!     Rocket should accept for that type.
+//!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
 //!
 //! ### Rocket.toml
 //!
@@ -68,6 +72,7 @@
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
 //! session_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //!
 //! [staging]
 //! address = "0.0.0.0"
@@ -75,6 +80,7 @@
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
 //! session_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //!
 //! [production]
 //! address = "0.0.0.0"
@@ -82,6 +88,7 @@
 //! workers = max(number_of_cpus, 2)
 //! log = "critical"
 //! session_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //! ```
 //!
 //! The `workers` and `session_key` default parameters are computed by Rocket
