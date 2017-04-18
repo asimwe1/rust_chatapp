@@ -11,8 +11,8 @@ address = "localhost"
 port = 8000
 workers = 1
 log = "normal"
-hi = "Hello!"
-is_extra = true
+hi = "Hello!" # this is an unused extra; maybe application specific?
+is_extra = true # this is an unused extra; maybe application specific?
 
 [staging]
 address = "0.0.0.0"
