@@ -269,6 +269,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let (path, method, media_type, rank) = route.explode(ecx);
     let static_route_info_item =  quote_item!(ecx,
+        /// Rocket code generated static route information structure.
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {
