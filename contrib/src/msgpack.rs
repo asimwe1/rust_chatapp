@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use std::io::{Cursor, Read};
 
 use rocket::config;
-use rocket::outcome::Outcome;
+use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, Response};
@@ -120,13 +120,9 @@ impl<T: Deserialize> FromData for MsgPack<T> {
             return Outcome::Failure((Status::BadRequest, e));
         };
 
-        match rmp_serde::from_slice(&buf).map(|val| MsgPack(val)) {
-            Ok(value) => Outcome::Success(value),
-            Err(e) => {
-                error_!("Couldn't parse MessagePack body: {:?}", e);
-                Outcome::Failure((Status::BadRequest, e))
-            }
-        }
+        rmp_serde::from_slice(&buf).map(|val| MsgPack(val))
+            .map_err(|e| { error_!("Couldn't parse MessagePack body: {:?}", e); e })
+            .into_outcome(Status::BadRequest)
     }
 }
 

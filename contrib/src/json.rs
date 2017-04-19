@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
 use rocket::config;
-use rocket::outcome::Outcome;
+use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
@@ -100,14 +100,10 @@ impl<T: Deserialize> FromData for JSON<T> {
             .and_then(|c| c.limits.get("json"))
             .unwrap_or(LIMIT);
 
-        let reader = data.open().take(size_limit);
-        match serde_json::from_reader(reader).map(|val| JSON(val)) {
-            Ok(value) => Outcome::Success(value),
-            Err(e) => {
-                error_!("Couldn't parse JSON body: {:?}", e);
-                Outcome::Failure((Status::BadRequest, e))
-            }
-        }
+        serde_json::from_reader(data.open().take(size_limit))
+            .map(|val| JSON(val))
+            .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
+            .into_outcome(Status::BadRequest)
     }
 }
 

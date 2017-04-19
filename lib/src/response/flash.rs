@@ -242,6 +242,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
             request.cookies().remove(cookie);
         }
 
-        r.into_outcome()
+        r.into_outcome(Status::BadRequest)
     }
 }

@@ -10,11 +10,13 @@ use data::Data;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
 impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+    type Input = Status;
+
     #[inline]
-    fn into_outcome(self) -> Outcome<S, E> {
+    fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((Status::InternalServerError, err))
+            Err(err) => Failure((status, err))
         }
     }
 }
