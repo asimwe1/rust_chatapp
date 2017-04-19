@@ -130,6 +130,13 @@ impl From<hyper::Error> for LaunchError {
     }
 }
 
+impl From<io::Error> for LaunchError {
+    #[inline]
+    fn from(error: io::Error) -> LaunchError {
+        LaunchError::new(LaunchErrorKind::Io(error))
+    }
+}
+
 impl fmt::Display for LaunchErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -601,15 +601,20 @@ impl Rocket {
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         serve!(self, &full_addr, |server, proto| {
-            let server = match server {
+            let mut server = match server {
                 Ok(server) => server,
+                Err(e) => return LaunchError::from(e)
+            };
+
+            let (addr, port) = match server.local_addr() {
+                Ok(server_addr) => (&self.config.address, server_addr.port()),
                 Err(e) => return LaunchError::from(e)
             };
 
             launch_info!("🚀  {} {}{}",
                   White.paint("Rocket has launched from"),
                   White.bold().paint(proto),
-                  White.bold().paint(&full_addr));
+                  White.bold().paint(&format!("{}:{}", addr, port)));
 
             let threads = self.config.workers as usize;
             if let Err(e) = server.handle_threads(self, threads) {

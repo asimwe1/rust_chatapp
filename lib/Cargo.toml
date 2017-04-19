@@ -22,7 +22,6 @@ tls = ["rustls", "hyper-rustls"]
 term-painter = "0.2"
 log = "0.3"
 url = "1"
-hyper = { version = "0.10.4", default-features = false }
 toml = { version = "0.2", default-features = false }
 num_cpus = "1"
 state = "0.2.1"
@@ -34,6 +33,12 @@ pear = "0.0.8"
 pear_codegen = "0.0.8"
 rustls = { version = "0.5.8", optional = true }
 cookie = { version = "0.7.4", features = ["percent-encode", "secure"] }
+
+[dependencies.hyper]
+git = "https://github.com/SergioBenitez/hyper"
+branch = "0.10.x"
+version = "0.10.4"
+default-features = false
 
 [dependencies.hyper-rustls]
 git = "https://github.com/SergioBenitez/hyper-rustls"
