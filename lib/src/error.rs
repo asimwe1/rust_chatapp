@@ -23,11 +23,14 @@ pub enum Error {
 /// The kind of launch error that occured.
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
-/// this represented by the `Io` variant. The `Unknown` variant captures all
-/// other kinds of launch errors.
+/// this is represented by the `Io` variant. A launch error may also occur
+/// because of ill-defined routes that lead to collisions; this is represented
+/// by the `Collision` variant. The `Unknown` variant captures all other kinds
+/// of launch errors.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     Io(io::Error),
+    Collision,
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
@@ -110,6 +113,13 @@ impl LaunchError {
     }
 }
 
+impl From<LaunchErrorKind> for LaunchError {
+    #[inline]
+    fn from(kind: LaunchErrorKind) -> LaunchError {
+        LaunchError::new(kind)
+    }
+}
+
 impl From<hyper::Error> for LaunchError {
     #[inline]
     fn from(error: hyper::Error) -> LaunchError {
@@ -125,6 +135,7 @@ impl fmt::Display for LaunchErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
+            LaunchErrorKind::Collision => write!(f, "route collisions detected"),
             LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
@@ -152,6 +163,7 @@ impl ::std::error::Error for LaunchError {
         self.mark_handled();
         match *self.kind() {
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
+            LaunchErrorKind::Collision => "route collisions were detected",
             LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
         }
     }
@@ -167,6 +179,10 @@ impl Drop for LaunchError {
             LaunchErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");
                 panic!("{}", e);
+            }
+            LaunchErrorKind::Collision => {
+                error!("Rocket failed to launch due to routing collisions.");
+                panic!("route collisions detected");
             }
             LaunchErrorKind::Unknown(ref e) => {
                 error!("Rocket failed to launch due to an unknown error.");

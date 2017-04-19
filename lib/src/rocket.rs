@@ -18,7 +18,7 @@ use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::{Error, LaunchError};
+use error::{Error, LaunchError, LaunchErrorKind};
 
 use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
@@ -596,7 +596,7 @@ impl Rocket {
     /// ```
     pub fn launch(self) -> LaunchError {
         if self.router.has_collisions() {
-            warn!("Route collisions detected!");
+            return LaunchError::from(LaunchErrorKind::Collision);
         }
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);

@@ -51,7 +51,7 @@ impl Router {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
                         result = true;
-                        warn!("{} and {} collide!", a_route, b_route);
+                        error!("{} and {} collide!", a_route, b_route);
                     }
                 }
             }

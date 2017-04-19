@@ -21,6 +21,7 @@ fn not_found(req: &rocket::Request) -> content::HTML<String> {
 
 fn main() {
     let e = rocket::ignite()
+        // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
         .catch(errors![not_found])
         .launch();
