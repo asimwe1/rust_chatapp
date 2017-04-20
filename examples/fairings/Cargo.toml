@@ -1,0 +1,11 @@
+[package]
+name = "fairings"
+version = "0.0.0"
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

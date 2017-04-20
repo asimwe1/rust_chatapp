@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use http::IntoCollection;
+use ext::IntoCollection;
 use http::uncased::{uncased_eq, UncasedStr};
 use http::parse::{IndexedStr, parse_media_type};
 

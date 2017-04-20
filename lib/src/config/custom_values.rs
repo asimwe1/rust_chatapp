@@ -6,6 +6,7 @@ use logger::LoggingLevel;
 use config::{Result, Config, Value, ConfigError};
 use http::Key;
 
+#[derive(Clone)]
 pub enum SessionKey {
     Generated(Key),
     Provided(Key)
@@ -29,12 +30,14 @@ impl SessionKey {
 }
 
 #[cfg(feature = "tls")]
+#[derive(Clone)]
 pub struct TlsConfig {
     pub certs: Vec<Certificate>,
     pub key: PrivateKey
 }
 
 #[cfg(not(feature = "tls"))]
+#[derive(Clone)]
 pub struct TlsConfig;
 
 // Size limit configuration. We cache those used by Rocket internally but don't

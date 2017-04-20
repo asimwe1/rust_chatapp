@@ -3,6 +3,7 @@ use std::str::from_utf8_unchecked;
 use std::cmp::min;
 use std::net::SocketAddr;
 use std::io::{self, Write};
+use std::mem;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -10,7 +11,7 @@ use state::Container;
 
 #[cfg(feature = "tls")] use hyper_rustls::TlsServer;
 use {logger, handler};
-use ext::ReadExt;
+use ext::{ReadExt, IntoCollection};
 use config::{self, Config, LoggedValue};
 use request::{Request, FormItems};
 use data::Data;
@@ -19,6 +20,7 @@ use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
 use error::{Error, LaunchError, LaunchErrorKind};
+use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
@@ -31,7 +33,8 @@ pub struct Rocket {
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    state: Container
+    state: Container,
+    fairings: Fairings
 }
 
 #[doc(hidden)]
@@ -69,6 +72,7 @@ impl hyper::Handler for Rocket {
         };
 
         // Dispatch the request to get a response, then write that response out.
+        // let req = UnsafeCell::new(req);
         let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }
@@ -105,11 +109,7 @@ macro_rules! serve {
 
 impl Rocket {
     #[inline]
-    fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
-        // Add the 'rocket' server header, and write out the response.
-        // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(Header::new("Server", "Rocket"));
-
+    fn issue_response(&self, response: Response, hyp_res: hyper::FreshResponse) {
         match self.write_response(response, hyp_res) {
             Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
             Err(e) => error_!("Failed to write response: {:?}.", e)
@@ -193,6 +193,8 @@ impl Rocket {
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
         if is_form && req.method() == Method::Post && data_len >= min_len {
+            // We're only using this for comparison and throwing it away
+            // afterwards, so it doesn't matter if we have invalid UTF8.
             let form = unsafe {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
@@ -207,19 +209,22 @@ impl Rocket {
         }
     }
 
+    // TODO: Explain this `UnsafeCell` business at a macro level.
     #[inline]
-    pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
-            -> Response<'r> {
+    pub(crate) fn dispatch<'s, 'r>(&'s self,
+                                   request: &'r mut Request<'s>,
+                                   data: Data) -> Response<'r> {
         info!("{}:", request);
 
         // Inform the request about all of the precomputed state.
         request.set_preset_state(&self.config.session_key(), &self.state);
 
-        // Do a bit of preprocessing before routing.
+        // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
+        self.fairings.handle_request(request, &data);
 
         // Route the request to get a response.
-        match self.route(request, data) {
+        let mut response = match self.route(request, data) {
             Outcome::Success(mut response) => {
                 // A user's route responded! Set the regular cookies.
                 for cookie in request.cookies().delta() {
@@ -234,17 +239,16 @@ impl Rocket {
                 response
             }
             Outcome::Forward(data) => {
-                // There was no matching route.
                 // Rust thinks `request` is still borrowed here, but it's
                 // obviously not (data has nothing to do with it), so we
                 // convince it to give us another mutable reference.
-                // FIXME: Pay the cost to copy Request into UnsafeCell? Pay the
-                // cost to use RefCell? Move the call to `issue_response` here
-                // to move Request and move directly into an UnsafeCell?
-                let request: &'r mut Request = unsafe {
-                    &mut *(request as *const Request as *mut Request)
+                // TODO: Use something that is well defined, like UnsafeCell.
+                // But that causes variance issues...so wait for NLL.
+                let request: &'r mut Request<'s> = unsafe {
+                    (&mut *(request as *const _ as *mut _))
                 };
 
+                // There was no matching route.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", White.paint("HEAD"));
                     request.set_method(Method::Get);
@@ -256,7 +260,14 @@ impl Rocket {
                 }
             }
             Outcome::Failure(status) => self.handle_error(status, request),
-        }
+        };
+
+        // Add the 'rocket' server header to the response and run fairings.
+        // TODO: If removing Hyper, write out `Date` header too.
+        response.set_header(Header::new("Server", "Rocket"));
+        self.fairings.handle_response(request, &mut response);
+
+        response
     }
 
     /// Tries to find a `Responder` for a given `request`. It does this by
@@ -406,7 +417,8 @@ impl Rocket {
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
-            state: Container::new()
+            state: Container::new(),
+            fairings: Fairings::new()
         }
     }
 
@@ -574,6 +586,40 @@ impl Rocket {
         self
     }
 
+    /// Attaches zero or more fairings to this instance of Rocket.
+    ///
+    /// The `fairings` parameter to this function is generic: it may be either
+    /// a `Vec<Fairing>`, `&[Fairing]`, or simply `Fairing`. In all cases, all
+    /// supplied fairings are attached.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// use rocket::{Rocket, Fairing};
+    ///
+    /// fn launch_fairing(rocket: Rocket) -> Result<Rocket, Rocket> {
+    ///     println!("Rocket is about to launch! You just see...");
+    ///     Ok(rocket)
+    /// }
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite()
+    ///         .attach(Fairing::Launch(Box::new(launch_fairing)))
+    ///         .launch();
+    /// # }
+    /// }
+    /// ```
+    #[inline]
+    pub fn attach<C: IntoCollection<Fairing>>(mut self, fairings: C) -> Self {
+        let fairings = fairings.into_collection::<[Fairing; 1]>().into_vec();
+        self.fairings.attach_all(fairings);
+        self
+    }
+
     /// Starts the application server and begins listening for and dispatching
     /// requests to mounted routes and catchers. Unless there is an error, this
     /// function does not return and blocks until program termination.
@@ -594,10 +640,13 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) -> LaunchError {
+    pub fn launch(mut self) -> LaunchError {
         if self.router.has_collisions() {
             return LaunchError::from(LaunchErrorKind::Collision);
         }
+
+        info!("📡  {}:", Magenta.paint("Fairings"));
+        self.fairings.pretty_print_counts();
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         serve!(self, &full_addr, |server, proto| {
@@ -606,10 +655,21 @@ impl Rocket {
                 Err(e) => return LaunchError::from(e)
             };
 
+            // Determine the port we actually binded to.
             let (addr, port) = match server.local_addr() {
                 Ok(server_addr) => (&self.config.address, server_addr.port()),
                 Err(e) => return LaunchError::from(e)
             };
+
+            // Run all of the launch fairings.
+            let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+            self = match fairings.handle_launch(self) {
+                Some(rocket) => rocket,
+                None => return LaunchError::from(LaunchErrorKind::FailedFairing)
+            };
+
+            // Make sure we keep the request/response fairings!
+            self.fairings = fairings;
 
             launch_info!("🚀  {} {}{}",
                   White.paint("Rocket has launched from"),
@@ -629,5 +689,11 @@ impl Rocket {
     #[inline(always)]
     pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
         self.router.routes()
+    }
+
+    /// Retrieve the configuration.
+    #[inline(always)]
+    pub fn config(&self) -> &Config {
+        self.config
     }
 }

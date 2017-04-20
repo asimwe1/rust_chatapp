@@ -24,13 +24,15 @@ pub enum Error {
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
 /// this is represented by the `Io` variant. A launch error may also occur
-/// because of ill-defined routes that lead to collisions; this is represented
-/// by the `Collision` variant. The `Unknown` variant captures all other kinds
-/// of launch errors.
+/// because of ill-defined routes that lead to collisions or because a launch
+/// fairing encounted an error; these are represented by the `Collision` and
+/// `FailedFairing` variants, respectively. The `Unknown` variant captures all
+/// other kinds of launch errors.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     Io(io::Error),
     Collision,
+    FailedFairing,
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
@@ -143,6 +145,7 @@ impl fmt::Display for LaunchErrorKind {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision => write!(f, "route collisions detected"),
+            LaunchErrorKind::FailedFairing => write!(f, "a launch fairing failed"),
             LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
@@ -171,6 +174,7 @@ impl ::std::error::Error for LaunchError {
         match *self.kind() {
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
             LaunchErrorKind::Collision => "route collisions were detected",
+            LaunchErrorKind::FailedFairing => "a launch fairing reported an error",
             LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
         }
     }
@@ -190,6 +194,10 @@ impl Drop for LaunchError {
             LaunchErrorKind::Collision => {
                 error!("Rocket failed to launch due to routing collisions.");
                 panic!("route collisions detected");
+            }
+            LaunchErrorKind::FailedFairing => {
+                error!("Rocket failed to launch due to a failing launch fairing.");
+                panic!("launch fairing failure");
             }
             LaunchErrorKind::Unknown(ref e) => {
                 error!("Rocket failed to launch due to an unknown error.");

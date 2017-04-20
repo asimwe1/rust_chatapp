@@ -28,6 +28,7 @@ use http::Key;
 ///     .workers(12)
 ///     .unwrap();
 /// ```
+#[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
     pub environment: Environment,
