@@ -39,6 +39,3 @@ members = [
   "examples/raw_sqlite",
   "examples/hello_tls",
 ]
-
-[replace]
-"hyper:0.10.8" = { git = 'https://github.com/SergioBenitez/hyper', branch = "0.10.x" }
