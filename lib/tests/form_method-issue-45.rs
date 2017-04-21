@@ -16,7 +16,6 @@ fn bug(form_data: Form<FormData>) -> &'static str {
     "OK"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;

@@ -23,7 +23,6 @@ fn specified_html() -> &'static str {
     "specified_html"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 

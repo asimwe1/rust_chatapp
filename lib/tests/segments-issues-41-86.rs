@@ -30,7 +30,6 @@ fn dual(user: String, path: Segments) -> String {
     user + "/is/" + &path.collect::<Vec<_>>().join("/")
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;

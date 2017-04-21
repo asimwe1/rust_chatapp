@@ -10,7 +10,6 @@ fn not_found() -> Redirect {
     Redirect::to("/")
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;

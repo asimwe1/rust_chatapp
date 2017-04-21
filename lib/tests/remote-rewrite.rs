@@ -10,7 +10,6 @@ fn get_ip(remote: SocketAddr) -> String {
     remote.to_string()
 }
 
-#[cfg(feature = "testing")]
 mod remote_rewrite_tests {
     use super::*;
     use rocket::testing::MockRequest;

@@ -14,6 +14,3 @@ serde_derive = "0.9"
 path = "../../contrib"
 default-features = false
 features = ["json"]
-
-[dev-dependencies]
-rocket = { path = "../../lib", features = ["testing"] }

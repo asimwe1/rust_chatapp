@@ -20,7 +20,6 @@ fn other() -> content::JSON<()> {
     content::JSON(())
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 

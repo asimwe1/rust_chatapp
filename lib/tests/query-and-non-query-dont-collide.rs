@@ -18,7 +18,6 @@ fn second() -> &'static str {
     "no query"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 

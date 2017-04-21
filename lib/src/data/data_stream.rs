@@ -1,79 +1,13 @@
 use std::io::{self, BufRead, Read, Cursor, BufReader, Chain, Take};
-use std::net::{SocketAddr, Shutdown};
-use std::time::Duration;
+use std::net::Shutdown;
 
-#[cfg(feature = "tls")] use hyper_rustls::WrappedStream as RustlsStream;
+use super::net_stream::NetStream;
 
-use http::hyper::net::{HttpStream, NetworkStream};
+use http::hyper::net::NetworkStream;
 use http::hyper::h1::HttpReader;
 
-pub type StreamReader = HttpReader<HyperNetStream>;
+pub type StreamReader = HttpReader<NetStream>;
 pub type InnerStream = Chain<Take<Cursor<Vec<u8>>>, BufReader<StreamReader>>;
-
-#[derive(Clone)]
-pub enum HyperNetStream {
-    Http(HttpStream),
-    #[cfg(feature = "tls")]
-    Https(RustlsStream)
-}
-
-macro_rules! with_inner {
-    ($net:expr, |$stream:ident| $body:expr) => ({
-        trace!("{}:{}", file!(), line!());
-        match *$net {
-            HyperNetStream::Http(ref $stream) => $body,
-            #[cfg(feature = "tls")] HyperNetStream::Https(ref $stream) => $body
-        }
-    });
-    ($net:expr, |mut $stream:ident| $body:expr) => ({
-        trace!("{}:{}", file!(), line!());
-        match *$net {
-            HyperNetStream::Http(ref mut $stream) => $body,
-            #[cfg(feature = "tls")] HyperNetStream::Https(ref mut $stream) => $body
-        }
-    })
-}
-
-impl io::Read for HyperNetStream {
-    #[inline(always)]
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        with_inner!(self, |mut stream| io::Read::read(stream, buf))
-    }
-}
-
-impl io::Write for HyperNetStream {
-    #[inline(always)]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        with_inner!(self, |mut stream| io::Write::write(stream, buf))
-    }
-
-    #[inline(always)]
-    fn flush(&mut self) -> io::Result<()> {
-        with_inner!(self, |mut stream| io::Write::flush(stream))
-    }
-}
-
-impl NetworkStream for HyperNetStream {
-    #[inline(always)]
-    fn peer_addr(&mut self) -> io::Result<SocketAddr> {
-        with_inner!(self, |mut stream| NetworkStream::peer_addr(stream))
-    }
-
-    #[inline(always)]
-    fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        with_inner!(self, |stream| NetworkStream::set_read_timeout(stream, dur))
-    }
-
-    #[inline(always)]
-    fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        with_inner!(self, |stream| NetworkStream::set_write_timeout(stream, dur))
-    }
-
-    #[inline(always)]
-    fn close(&mut self, how: Shutdown) -> io::Result<()> {
-        with_inner!(self, |mut stream| NetworkStream::close(stream, how))
-    }
-}
 
 /// Raw data stream of a request body.
 ///
@@ -83,12 +17,12 @@ impl NetworkStream for HyperNetStream {
 /// Instead, it must be used as an opaque `Read` or `BufRead` structure.
 pub struct DataStream {
     stream: InnerStream,
-    network: HyperNetStream,
+    network: NetStream,
 }
 
 impl DataStream {
     #[inline(always)]
-    pub(crate) fn new(stream: InnerStream, network: HyperNetStream) -> DataStream {
+    pub(crate) fn new(stream: InnerStream, network: NetStream) -> DataStream {
         DataStream { stream, network }
     }
 }
@@ -112,19 +46,18 @@ impl BufRead for DataStream {
     }
 }
 
-// pub fn kill_stream<S: Read>(stream: &mut S, network: &mut HyperNetStream) {
-pub fn kill_stream<S: Read, N: NetworkStream>(stream: &mut S, network: &mut N) {
-    io::copy(&mut stream.take(1024), &mut io::sink()).expect("kill_stream: sink");
 
-    // If there are any more bytes, kill it.
-    let mut buf = [0];
-    if let Ok(n) = stream.read(&mut buf) {
-        if n > 0 {
+pub fn kill_stream<S: Read, N: NetworkStream>(stream: &mut S, network: &mut N) {
+    // Take <= 1k from the stream. If there might be more data, force close.
+    const FLUSH_LEN: u64 = 1024;
+    match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
+        Ok(FLUSH_LEN) | Err(_) => {
             warn_!("Data left unread. Force closing network stream.");
             if let Err(e) = network.close(Shutdown::Both) {
                 error_!("Failed to close network stream: {:?}", e);
             }
         }
+        Ok(n) => debug!("flushed {} unread bytes", n)
     }
 }
 

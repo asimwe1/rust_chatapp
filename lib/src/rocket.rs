@@ -645,7 +645,6 @@ impl Rocket {
             return LaunchError::from(LaunchErrorKind::Collision);
         }
 
-        info!("📡  {}:", Magenta.paint("Fairings"));
         self.fairings.pretty_print_counts();
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);

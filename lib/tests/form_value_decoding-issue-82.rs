@@ -15,7 +15,6 @@ fn bug(form_data: Form<FormData>) -> String {
     form_data.into_inner().form_data
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;

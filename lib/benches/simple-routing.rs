@@ -34,7 +34,6 @@ fn rocket() -> rocket::Rocket {
                index_b, index_c, index_dyn_a])
 }
 
-#[cfg(feature = "testing")]
 mod benches {
     extern crate test;
 

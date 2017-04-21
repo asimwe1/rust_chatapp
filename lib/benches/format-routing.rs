@@ -18,7 +18,6 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![get, post])
 }
 
-#[cfg(feature = "testing")]
 mod benches {
     extern crate test;
 

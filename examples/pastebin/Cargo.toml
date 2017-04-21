@@ -7,6 +7,3 @@ workspace = "../../"
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
 rand = "0.3"
-
-[dev-dependencies]
-rocket = { path = "../../lib", features = ["testing"] }

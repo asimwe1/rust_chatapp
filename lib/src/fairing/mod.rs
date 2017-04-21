@@ -173,9 +173,17 @@ impl Fairings {
         }
     }
 
+    fn num_attached(&self) -> usize {
+        self.launch.len() + self.request.len() + self.response.len()
+    }
+
     pub fn pretty_print_counts(&self) {
         use term_painter::ToStyle;
-        use term_painter::Color::White;
+        use term_painter::Color::{White, Magenta};
+
+        if self.num_attached() > 0 {
+            info!("📡  {}:", Magenta.paint("Fairings"));
+        }
 
         if !self.launch.is_empty() {
             info_!("{} launch", White.paint(self.launch.len()));

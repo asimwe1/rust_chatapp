@@ -15,7 +15,6 @@ fn index(form: Form<Simple>) -> String {
     form.into_inner().value
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use rocket;
     use rocket::config::{Environment, Config, Limits};

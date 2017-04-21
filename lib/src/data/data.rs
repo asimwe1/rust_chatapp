@@ -6,8 +6,9 @@ use std::mem::transmute;
 
 #[cfg(feature = "tls")] use hyper_rustls::WrappedStream;
 
+use super::data_stream::{DataStream, StreamReader, kill_stream};
+use super::net_stream::NetStream;
 use ext::ReadExt;
-use super::data_stream::{DataStream, HyperNetStream, StreamReader, kill_stream};
 
 use http::hyper::h1::HttpReader;
 use http::hyper::buffer;
@@ -16,6 +17,9 @@ use http::hyper::net::{HttpStream, NetworkStream};
 
 pub type BodyReader<'a, 'b> =
     self::HttpReader<&'a mut self::buffer::BufReader<&'b mut NetworkStream>>;
+
+/// The number of bytes to read into the "peek" buffer.
+const PEEK_BYTES: usize = 4096;
 
 /// Type representing the data in the body of an incoming request.
 ///
@@ -90,19 +94,19 @@ impl Data {
         let net_stream = h_body.get_ref().get_ref();
 
         #[cfg(feature = "tls")]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<HyperNetStream> {
+        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
-                .map(|s| HyperNetStream::Http(s.clone()))
+                .map(|s| NetStream::Http(s.clone()))
                 .or_else(|| {
                     stream.downcast_ref::<WrappedStream>()
-                        .map(|s| HyperNetStream::Https(s.clone()))
+                        .map(|s| NetStream::Https(s.clone()))
                 })
         }
 
         #[cfg(not(feature = "tls"))]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<HyperNetStream> {
+        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
-                .map(|s| HyperNetStream::Http(s.clone()))
+                .map(|s| NetStream::Http(s.clone()))
         }
 
         // Retrieve the underlying HTTPStream from Hyper.
@@ -164,15 +168,15 @@ impl Data {
     }
 
     // Creates a new data object with an internal buffer `buf`, where the cursor
-    // in the buffer is at `pos` and the buffer has `cap` valid bytes. The
-    // remainder of the data bytes can be read from `stream`.
+    // in the buffer is at `pos` and the buffer has `cap` valid bytes. Thus, the
+    // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
+    // bytes can be read from `stream`.
     pub(crate) fn new(mut buf: Vec<u8>,
                       pos: usize,
                       mut cap: usize,
                       mut stream: StreamReader
                      ) -> Data {
         // Make sure the buffer is large enough for the bytes we want to peek.
-        const PEEK_BYTES: usize = 4096;
         if buf.len() < PEEK_BYTES {
             trace_!("Resizing peek buffer from {} to {}.", buf.len(), PEEK_BYTES);
             buf.resize(PEEK_BYTES, 0);
@@ -201,6 +205,27 @@ impl Data {
             is_done: eof,
             position: pos,
             capacity: cap,
+        }
+    }
+
+    /// This creates a `data` object from a local data source `data`.
+    pub(crate) fn local(mut data: Vec<u8>) -> Data {
+        // Emulate peek buffering.
+        let (buf, rest) = if data.len() <= PEEK_BYTES {
+            (data, vec![])
+        } else {
+            let rest = data.split_off(PEEK_BYTES);
+            (data, rest)
+        };
+
+        let (buf_len, stream_len) = (buf.len(), rest.len() as u64);
+        let stream = NetStream::Local(Cursor::new(rest));
+        Data {
+            buffer: buf,
+            stream: HttpReader::SizedReader(stream, stream_len),
+            is_done: stream_len == 0,
+            position: 0,
+            capacity: buf_len,
         }
     }
 }
