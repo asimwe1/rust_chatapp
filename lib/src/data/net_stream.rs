@@ -2,10 +2,12 @@ use std::io::{self, Cursor};
 use std::net::{SocketAddr, Shutdown};
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use hyper_rustls::WrappedStream as RustlsStream;
+#[cfg(feature = "tls")] use hyper_rustls::{WrappedStream, ServerSession};
 use http::hyper::net::{HttpStream, NetworkStream};
 
 use self::NetStream::*;
+
+#[cfg(feature = "tls")] pub type HttpsStream = WrappedStream<ServerSession>;
 
 // This is a representation of all of the possible network streams we might get.
 // This really shouldn't be necessary, but, you know, Hyper.
@@ -13,7 +15,7 @@ use self::NetStream::*;
 pub enum NetStream {
     Http(HttpStream),
     #[cfg(feature = "tls")]
-    Https(RustlsStream),
+    Https(HttpsStream),
     Local(Cursor<Vec<u8>>)
 }
 

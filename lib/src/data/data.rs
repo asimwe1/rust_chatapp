@@ -3,7 +3,7 @@ use std::path::Path;
 use std::fs::File;
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use hyper_rustls::WrappedStream;
+#[cfg(feature = "tls")] use super::net_stream::HttpsStream;
 
 use super::data_stream::DataStream;
 use super::net_stream::NetStream;
@@ -82,7 +82,7 @@ impl Data {
 
         #[cfg(feature = "tls")]
         fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
-            stream.downcast_ref::<WrappedStream>()
+            stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {
                     stream.downcast_ref::<HttpStream>()
