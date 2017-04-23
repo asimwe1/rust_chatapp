@@ -20,17 +20,21 @@ pub enum NetStream {
 impl io::Read for NetStream {
     #[inline(always)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match *self {
+        trace_!("NetStream::read()");
+        let res = match *self {
             Http(ref mut stream) => stream.read(buf),
             Local(ref mut stream) => stream.read(buf),
             #[cfg(feature = "tls")] Https(ref mut stream) => stream.read(buf)
-        }
+        };
+        trace_!("NetStream::read() -- complete");
+        res
     }
 }
 
 impl io::Write for NetStream {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        trace_!("NetStream::write()");
         match *self {
             Http(ref mut stream) => stream.write(buf),
             Local(ref mut stream) => stream.write(buf),
@@ -85,3 +89,20 @@ impl NetworkStream for NetStream {
         }
     }
 }
+
+// impl Drop for NetStream {
+//     fn drop(&mut self) {
+//         // Take <= 1k from the stream. If there might be more data, force close.
+//         trace_!("Dropping the network stream...");
+//         // const FLUSH_LEN: u64 = 1024;
+//         // match io::copy(&mut self.take(FLUSH_LEN), &mut io::sink()) {
+//         //     Ok(FLUSH_LEN) | Err(_) => {
+//         //         warn_!("Data left unread. Force closing network stream.");
+//         //         if let Err(e) = self.close(Shutdown::Both) {
+//         //             error_!("Failed to close network stream: {:?}", e);
+//         //         }
+//         //     }
+//         //     Ok(n) => debug!("flushed {} unread bytes", n)
+//         // }
+//     }
+// }
