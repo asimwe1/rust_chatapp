@@ -116,6 +116,7 @@ impl Rocket {
         }
     }
 
+    #[inline]
     fn write_response(&self, mut response: Response,
                       mut hyp_res: hyper::FreshResponse) -> io::Result<()>
     {

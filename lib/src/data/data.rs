@@ -18,10 +18,10 @@ pub type HyperBodyReader<'a, 'b> =
     self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut NetworkStream>>;
 
 //                                   |---- from hyper ----|
-pub type BodyReader = HttpReader<Chain<Take<Cursor<Vec<u8>>>, BufReader<NetStream>>>;
+pub type BodyReader = HttpReader<Chain<Cursor<Vec<u8>>, NetStream>>;
 
 /// The number of bytes to read into the "peek" buffer.
-const PEEK_BYTES: usize = 4096;
+const PEEK_BYTES: usize = 512;
 
 /// Type representing the data in the body of an incoming request.
 ///
@@ -48,7 +48,7 @@ const PEEK_BYTES: usize = 4096;
 /// object ensures that holding a `Data` object means that all of the data is
 /// available for reading.
 ///
-/// The `peek` method returns a slice containing at most 4096 bytes of buffered
+/// The `peek` method returns a slice containing at most 512 bytes of buffered
 /// body data. This enables partially or fully reading from a `Data` object
 /// without consuming the `Data` object.
 pub struct Data {
@@ -66,9 +66,12 @@ impl Data {
     /// the data in a request.
     pub fn open(mut self) -> DataStream {
         let buffer = ::std::mem::replace(&mut self.buffer, vec![]);
-        let empty_stream = Cursor::new(vec![]).take(0)
-            .chain(BufReader::new(NetStream::Local(Cursor::new(vec![]))));
+        let empty_stream = Cursor::new(vec![])
+            .chain(NetStream::Local(Cursor::new(vec![])));
 
+        // FIXME: Insert a `BufReader` in front of the `NetStream` with capacity
+        // 4096. We need the new `Chain` methods to get the inner reader to
+        // actually do this, however.
         let empty_http_stream = HttpReader::SizedReader(empty_stream, 0);
         let stream = ::std::mem::replace(&mut self.stream, empty_http_stream);
         DataStream(Cursor::new(buffer).chain(stream))
@@ -77,10 +80,12 @@ impl Data {
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
     pub(crate) fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
         // Steal the internal, undecoded data buffer and net stream from Hyper.
-        let (hyper_buf, pos, cap) = body.get_mut().take_buf();
+        let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
+        unsafe { hyper_buf.set_len(cap); }
         let hyper_net_stream = body.get_ref().get_ref();
 
         #[cfg(feature = "tls")]
+        #[inline(always)]
         fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
@@ -91,6 +96,7 @@ impl Data {
         }
 
         #[cfg(not(feature = "tls"))]
+        #[inline(always)]
         fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
@@ -107,11 +113,10 @@ impl Data {
 
         // TODO: Explain this.
         trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
-        let (start, remaining) = (pos as u64, (cap - pos) as u64);
+
         let mut cursor = Cursor::new(hyper_buf);
-        cursor.set_position(start);
-        let inner_data = cursor.take(remaining)
-            .chain(BufReader::new(net_stream.clone()));
+        cursor.set_position(pos as u64);
+        let inner_data = cursor.chain(net_stream);
 
         // Create an HTTP reader from the stream.
         let http_stream = match body {
@@ -132,7 +137,11 @@ impl Data {
     /// buffer contains _all_ of the data in the body of the request.
     #[inline(always)]
     pub fn peek(&self) -> &[u8] {
-        &self.buffer
+        if self.buffer.len() > PEEK_BYTES {
+            &self.buffer[..PEEK_BYTES]
+        } else {
+            &self.buffer
+        }
     }
 
     /// Returns true if the `peek` buffer contains all of the data in the body
@@ -165,6 +174,7 @@ impl Data {
     // in the buffer is at `pos` and the buffer has `cap` valid bytes. Thus, the
     // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
     // bytes can be read from `stream`.
+    #[inline(always)]
     pub(crate) fn new(mut stream: BodyReader) -> Data {
         trace_!("Date::new({:?})", stream);
         let mut peek_buf = vec![0; PEEK_BYTES];
@@ -196,22 +206,13 @@ impl Data {
 
     /// This creates a `data` object from a local data source `data`.
     pub(crate) fn local(mut data: Vec<u8>) -> Data {
-        // Emulate peek buffering.
-        let (buf, rest) = if data.len() <= PEEK_BYTES {
-            (data, vec![])
-        } else {
-            let rest = data.split_off(PEEK_BYTES);
-            (data, rest)
-        };
-
-        let stream_len = rest.len() as u64;
-        let stream = Cursor::new(vec![]).take(0)
-            .chain(BufReader::new(NetStream::Local(Cursor::new(rest))));
+        let empty_stream = Cursor::new(vec![])
+            .chain(NetStream::Local(Cursor::new(vec![])));
 
         Data {
-            buffer: buf,
-            stream: HttpReader::SizedReader(stream, stream_len),
-            is_complete: stream_len == 0,
+            buffer: data,
+            stream: HttpReader::SizedReader(empty_stream, 0),
+            is_complete: true,
         }
     }
 }
