@@ -10,7 +10,8 @@ use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, Response};
 use rocket::http::{ContentType, Status};
 
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 pub use self::rmp_serde::decode::Error as MsgPackError;
 
@@ -22,8 +23,9 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// If you're receiving MessagePack data, simply add a `data` parameter to your
 /// route arguments and ensure the type of the parameter is a `MsgPack<T>`,
 /// where `T` is some type you'd like to parse from MessagePack. `T` must
-/// implement `Deserialize` from [Serde](https://github.com/serde-rs/serde). The
-/// data is parsed from the HTTP request body.
+/// implement `Deserialize` or `DeserializeOwned` from
+/// [Serde](https://github.com/serde-rs/serde). The data is parsed from the HTTP
+/// request body.
 ///
 /// ```rust,ignore
 /// #[post("/users/", format = "application/msgpack", data = "<user>")]
@@ -100,7 +102,7 @@ fn is_msgpack_content_type(ct: &ContentType) -> bool {
         && (ct.sub() == "msgpack" || ct.sub() == "x-msgpack")
 }
 
-impl<T: Deserialize> FromData for MsgPack<T> {
+impl<T: DeserializeOwned> FromData for MsgPack<T> {
     type Error = MsgPackError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {

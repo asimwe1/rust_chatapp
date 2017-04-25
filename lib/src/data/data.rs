@@ -1,4 +1,4 @@
-use std::io::{self, Read, Write, Cursor, BufReader, Chain, Take};
+use std::io::{self, Read, Write, Cursor, Chain};
 use std::path::Path;
 use std::fs::File;
 use std::time::Duration;
@@ -205,7 +205,7 @@ impl Data {
     }
 
     /// This creates a `data` object from a local data source `data`.
-    pub(crate) fn local(mut data: Vec<u8>) -> Data {
+    pub(crate) fn local(data: Vec<u8>) -> Data {
         let empty_stream = Cursor::new(vec![])
             .chain(NetStream::Local(Cursor::new(vec![])));
 

@@ -8,7 +8,8 @@ use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use serde_json;
 
@@ -22,9 +23,9 @@ pub use serde_json::error::Error as SerdeError;
 ///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
-/// some type you'd like to parse from JSON. `T` must implement `Deserialize`
-/// from [Serde](https://github.com/serde-rs/json). The data is parsed from the
-/// HTTP request body.
+/// some type you'd like to parse from JSON. `T` must implement `Deserialize` or
+/// `DeserializeOwned` from [Serde](https://github.com/serde-rs/json). The data
+/// is parsed from the HTTP request body.
 ///
 /// ```rust,ignore
 /// #[post("/users/", format = "application/json", data = "<user>")]
@@ -87,7 +88,7 @@ impl<T> JSON<T> {
 /// Default limit for JSON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
-impl<T: Deserialize> FromData for JSON<T> {
+impl<T: DeserializeOwned> FromData for JSON<T> {
     type Error = SerdeError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {

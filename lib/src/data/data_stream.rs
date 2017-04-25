@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, Read, Cursor, BufReader, Chain};
+use std::io::{self, Read, Cursor, Chain};
 
 use super::data::BodyReader;
 
