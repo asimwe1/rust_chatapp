@@ -17,14 +17,16 @@ Bug reports _must_ include:
 
   1. The version of Rocket you're using. Ensure it's the latest, if possible.
 
-  2. A brief description of the bug that includes:
+  2. The operating system (distribution and version) where the issue occurs.
+
+  3. A brief description of the bug that includes:
     * The nature of the bug.
     * When the bug occurs.
     * What you expected vs. what actually happened.
 
-  3. How you discovered the bug. Short test cases are especially useful.
+  4. How you uncovered the bug. Short, reproducible tests are especially useful.
 
-  4. Ideas, if any, about what Rocket is doing incorrectly.
+  5. Ideas, if any, about what Rocket is doing incorrectly.
 
 ## Questions
 
