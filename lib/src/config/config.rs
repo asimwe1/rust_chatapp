@@ -382,12 +382,24 @@ impl Config {
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
         use hyper_rustls::util as tls;
+        use hyper_rustls::util::Error::Io;
 
-        let err = "nonexistent or invalid file";
+        let io_err = "nonexistent or unreadable file";
+        let pem_err = "malformed PEM file";
+
+        // Load the certificates.
         let certs = tls::load_certs(certs_path)
-            .map_err(|_| self.bad_type("tls", err, "a readable certificates file"))?;
+            .map_err(|e| match e {
+                Io(_) => self.bad_type("tls", io_err, "a valid certificates file"),
+                _ => self.bad_type("tls", pem_err, "a valid certificates file")
+            })?;
+
+        // And now the private key.
         let key = tls::load_private_key(key_path)
-            .map_err(|_| self.bad_type("tls", err, "a readable private key file"))?;
+            .map_err(|e| match e {
+                Io(_) => self.bad_type("tls", io_err, "a valid private key file"),
+                _ => self.bad_type("tls", pem_err, "a valid private key file")
+            })?;
 
         self.tls = Some(TlsConfig { certs, key });
         Ok(())
