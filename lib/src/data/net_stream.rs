@@ -91,20 +91,3 @@ impl NetworkStream for NetStream {
         }
     }
 }
-
-// impl Drop for NetStream {
-//     fn drop(&mut self) {
-//         // Take <= 1k from the stream. If there might be more data, force close.
-//         trace_!("Dropping the network stream...");
-//         // const FLUSH_LEN: u64 = 1024;
-//         // match io::copy(&mut self.take(FLUSH_LEN), &mut io::sink()) {
-//         //     Ok(FLUSH_LEN) | Err(_) => {
-//         //         warn_!("Data left unread. Force closing network stream.");
-//         //         if let Err(e) = self.close(Shutdown::Both) {
-//         //             error_!("Failed to close network stream: {:?}", e);
-//         //         }
-//         //     }
-//         //     Ok(n) => debug!("flushed {} unread bytes", n)
-//         // }
-//     }
-// }

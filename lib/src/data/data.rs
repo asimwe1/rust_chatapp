@@ -5,7 +5,7 @@ use std::time::Duration;
 
 #[cfg(feature = "tls")] use super::net_stream::HttpsStream;
 
-use super::data_stream::DataStream;
+use super::data_stream::{DataStream, kill_stream};
 use super::net_stream::NetStream;
 use ext::ReadExt;
 
@@ -17,7 +17,7 @@ use http::hyper::net::{HttpStream, NetworkStream};
 pub type HyperBodyReader<'a, 'b> =
     self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut NetworkStream>>;
 
-//                                   |---- from hyper ----|
+//                              |---- from hyper ----|
 pub type BodyReader = HttpReader<Chain<Cursor<Vec<u8>>, NetStream>>;
 
 /// The number of bytes to read into the "peek" buffer.
@@ -217,11 +217,8 @@ impl Data {
     }
 }
 
-// impl Drop for Data {
-//     fn drop(&mut self) {
-//         // FIXME: Do a read; if > 1024, kill the stream. Need access to the
-//         // internals of `Chain` to do this efficiently/without crazy baggage.
-//         // https://github.com/rust-lang/rust/pull/41463
-//         let _ = io::copy(&mut self.stream, &mut io::sink());
-//     }
-// }
+impl Drop for Data {
+    fn drop(&mut self) {
+        kill_stream(&mut self.stream);
+    }
+}

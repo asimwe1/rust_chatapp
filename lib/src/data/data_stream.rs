@@ -1,6 +1,8 @@
 use std::io::{self, Read, Cursor, Chain};
+use std::net::Shutdown;
 
 use super::data::BodyReader;
+use http::hyper::net::NetworkStream;
 
 // It's very unfortunate that we have to wrap `BodyReader` in a `BufReader`
 // since it already contains another `BufReader`. The issue is that Hyper's
@@ -38,11 +40,23 @@ impl Read for DataStream {
 //     }
 // }
 
-// impl Drop for DataStream {
-//     fn drop(&mut self) {
-//         // FIXME: Do a read; if > 1024, kill the stream. Need access to the
-//         // internals of `Chain` to do this efficiently/without crazy baggage.
-//         // https://github.com/rust-lang/rust/pull/41463
-//         let _ = io::copy(&mut self.0, &mut io::sink());
-//     }
-// }
+pub fn kill_stream(stream: &mut BodyReader) {
+    // Take <= 1k from the stream. If there might be more data, force close.
+    const FLUSH_LEN: u64 = 1024;
+    match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
+        Ok(FLUSH_LEN) | Err(_) => {
+            warn_!("Data left unread. Force closing network stream.");
+            let (_, network) = stream.get_mut().get_mut();
+            if let Err(e) = network.close(Shutdown::Both) {
+                error_!("Failed to close network stream: {:?}", e);
+            }
+        }
+        Ok(n) => debug!("flushed {} unread bytes", n)
+    }
+}
+
+impl Drop for DataStream {
+    fn drop(&mut self) {
+        kill_stream(&mut self.0.get_mut().1);
+    }
+}

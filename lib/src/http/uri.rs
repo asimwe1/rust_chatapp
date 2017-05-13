@@ -339,6 +339,7 @@ pub struct Segments<'a>(pub &'a str);
 impl<'a> Iterator for Segments<'a> {
     type Item = &'a str;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         // Find the start of the next segment (first that's not '/').
         let i = match self.0.find(|c| c != '/') {
@@ -348,8 +349,7 @@ impl<'a> Iterator for Segments<'a> {
 
         // Get the index of the first character that _is_ a '/' after start.
         // j = index of first character after i (hence the i +) that's not a '/'
-        let rest = &self.0[i..];
-        let j = rest.find('/').map_or(self.0.len(), |j| i + j);
+        let j = self.0[i..].find('/').map_or(self.0.len(), |j| i + j);
 
         // Save the result, update the iterator, and return!
         let result = Some(&self.0[i..j]);

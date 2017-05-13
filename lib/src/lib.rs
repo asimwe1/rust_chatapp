@@ -8,6 +8,7 @@
 #![feature(plugin)]
 #![feature(never_type)]
 #![feature(concat_idents)]
+#![feature(more_io_inner_methods)]
 
 #![plugin(pear_codegen)]
 

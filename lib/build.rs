@@ -8,7 +8,7 @@ use ansi_term::Color::{Red, Yellow, Blue, White};
 use version_check::{is_nightly, is_min_version};
 
 // Specifies the minimum nightly version needed to compile Rocket.
-const MIN_VERSION: &'static str = "1.16.0-nightly";
+const MIN_VERSION: &'static str = "1.19.0-nightly";
 
 // Convenience macro for writing to stderr.
 macro_rules! printerr {
