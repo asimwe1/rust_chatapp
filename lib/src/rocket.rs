@@ -11,7 +11,7 @@ use state::Container;
 
 #[cfg(feature = "tls")] use hyper_rustls::TlsServer;
 use {logger, handler};
-use ext::{ReadExt, IntoCollection};
+use ext::ReadExt;
 use config::{self, Config, LoggedValue};
 use request::{Request, FormItems};
 use data::Data;
@@ -587,21 +587,18 @@ impl Rocket {
         self
     }
 
-    /// Attaches zero or more fairings to this instance of Rocket.
+    /// Attaches a fairing to this instance of Rocket.
     ///
-    /// The `fairings` parameter to this function is generic: it may be either
-    /// a `Vec<Fairing>`, `&[Fairing]`, or simply `Fairing`. In all cases, all
-    /// supplied fairings are attached.
-    ///
-    /// # Examples
+    /// # Example
     ///
     /// ```rust
     /// # #![feature(plugin)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
-    /// use rocket::{Rocket, Fairing};
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
     ///
-    /// fn launch_fairing(rocket: Rocket) -> Result<Rocket, Rocket> {
+    /// fn youll_see(rocket: Rocket) -> Result<Rocket, Rocket> {
     ///     println!("Rocket is about to launch! You just see...");
     ///     Ok(rocket)
     /// }
@@ -609,15 +606,14 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(Fairing::Launch(Box::new(launch_fairing)))
+    ///         .attach(AdHoc::on_launch(youll_see))
     ///         .launch();
     /// # }
     /// }
     /// ```
     #[inline]
-    pub fn attach<C: IntoCollection<Fairing>>(mut self, fairings: C) -> Self {
-        let fairings = fairings.into_collection::<[Fairing; 1]>().into_vec();
-        self.fairings.attach_all(fairings);
+    pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
+        self.fairings.attach(Box::new(fairing));
         self
     }
 

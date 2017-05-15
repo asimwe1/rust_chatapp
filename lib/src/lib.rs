@@ -126,12 +126,12 @@ pub mod outcome;
 pub mod config;
 pub mod data;
 pub mod handler;
-pub mod error;
 pub mod fairing;
 
 mod router;
 mod rocket;
 mod codegen;
+mod error;
 mod catcher;
 mod ext;
 
@@ -141,7 +141,6 @@ mod ext;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
-#[doc(inline)] pub use fairing::Fairing;
 pub use router::Route;
 pub use request::{Request, State};
 pub use error::{Error, LaunchError};
