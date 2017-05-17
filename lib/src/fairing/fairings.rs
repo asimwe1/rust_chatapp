@@ -4,6 +4,7 @@ use fairing::{Fairing, Kind};
 #[derive(Default)]
 pub struct Fairings {
     all_fairings: Vec<Box<Fairing>>,
+    attach_failure: bool,
     launch: Vec<&'static Fairing>,
     request: Vec<&'static Fairing>,
     response: Vec<&'static Fairing>,
@@ -15,10 +16,15 @@ impl Fairings {
         Fairings::default()
     }
 
-    #[inline]
-    pub fn attach(&mut self, fairing: Box<Fairing>) {
+    pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
         // Get the kind information.
         let kind = fairing.info().kind;
+
+        // Run the `on_attach` callback if this is an 'attach' fairing.
+        if kind.is(Kind::Attach) {
+            rocket = fairing.on_attach(rocket)
+                .unwrap_or_else(|r| { self.attach_failure = true; r })
+        }
 
         // The `Fairings` structure separates `all_fairings` into kind groups so
         // we don't have to search through all fairings and do a comparison at
@@ -36,22 +42,25 @@ impl Fairings {
         // deallocating `Box<Fairing>` structures. As such, the references will
         // always be valid. Note: `ptr` doesn't point into the `Vec`, so
         // reallocations there are irrelvant. Instead, it points into the heap.
-        let ptr: &'static Fairing = unsafe { ::std::mem::transmute(&*fairing) };
+        //
+        // Also, we don't save attach fairings since we don't need them anymore.
+        if !kind.is_exactly(Kind::Attach) {
+            let ptr: &'static Fairing = unsafe { ::std::mem::transmute(&*fairing) };
 
-        self.all_fairings.push(fairing);
-        if kind.is(Kind::Launch) { self.launch.push(ptr); }
-        if kind.is(Kind::Request) { self.request.push(ptr); }
-        if kind.is(Kind::Response) { self.response.push(ptr); }
+            self.all_fairings.push(fairing);
+            if kind.is(Kind::Launch) { self.launch.push(ptr); }
+            if kind.is(Kind::Request) { self.request.push(ptr); }
+            if kind.is(Kind::Response) { self.response.push(ptr); }
+        }
+
+        rocket
     }
 
     #[inline(always)]
-    pub fn handle_launch(&mut self, mut rocket: Rocket) -> Option<Rocket> {
-        let mut success = Some(());
-        for f in &self.launch {
-            rocket = f.on_launch(rocket).unwrap_or_else(|r| { success = None; r });
+    pub fn handle_launch(&self, rocket: &Rocket) {
+        for fairing in &self.launch {
+            fairing.on_launch(rocket);
         }
-
-        success.map(|_| rocket)
     }
 
     #[inline(always)]
@@ -68,6 +77,10 @@ impl Fairings {
         }
     }
 
+    pub fn had_failure(&self) -> bool {
+        self.attach_failure
+    }
+
     pub fn pretty_print_counts(&self) {
         use term_painter::ToStyle;
         use term_painter::Color::{White, Magenta};
@@ -78,8 +91,10 @@ impl Fairings {
 
         fn info_if_nonempty(kind: &str, fairings: &[&Fairing]) {
             let names: Vec<&str> = fairings.iter().map(|f| f.info().name).collect();
-            info_!("{} {}: {}", White.paint(fairings.len()), kind,
-                White.paint(names.join(", ")));
+            info_!("{} {}: {}",
+                   White.paint(fairings.len()),
+                   kind,
+                   White.paint(names.join(", ")));
         }
 
         info_if_nonempty("launch", &self.launch);

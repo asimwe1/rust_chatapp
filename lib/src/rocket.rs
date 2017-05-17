@@ -284,7 +284,6 @@ impl Rocket {
         for route in matches {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
-            // FIXME: Users should not be able to use this.
             request.set_params(route);
 
             // Dispatch the request to the handler.
@@ -598,23 +597,35 @@ impl Rocket {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// fn youll_see(rocket: Rocket) -> Result<Rocket, Rocket> {
-    ///     println!("Rocket is about to launch! You just see...");
-    ///     Ok(rocket)
-    /// }
-    ///
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch(youll_see))
+    ///         .attach(AdHoc::on_launch(|_| {
+    ///             println!("Rocket is about to launch! You just see...");
+    ///         }))
     ///         .launch();
     /// # }
     /// }
     /// ```
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        self.fairings.attach(Box::new(fairing));
+        // Attach the fairings, which requires us to move `self`.
+        let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+        self = fairings.attach(Box::new(fairing), self);
+
+        // Make sure we keep the fairings around!
+        self.fairings = fairings;
         self
+    }
+
+    pub(crate) fn prelaunch_check(&self) -> Option<LaunchError> {
+        if self.router.has_collisions() {
+            Some(LaunchError::from(LaunchErrorKind::Collision))
+        } else if self.fairings.had_failure() {
+            Some(LaunchError::from(LaunchErrorKind::FailedFairing))
+        } else {
+            None
+        }
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -637,9 +648,9 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(mut self) -> LaunchError {
-        if self.router.has_collisions() {
-            return LaunchError::from(LaunchErrorKind::Collision);
+    pub fn launch(self) -> LaunchError {
+        if let Some(error) = self.prelaunch_check() {
+            return error;
         }
 
         self.fairings.pretty_print_counts();
@@ -657,15 +668,8 @@ impl Rocket {
                 Err(e) => return LaunchError::from(e)
             };
 
-            // Run all of the launch fairings.
-            let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
-            self = match fairings.handle_launch(self) {
-                Some(rocket) => rocket,
-                None => return LaunchError::from(LaunchErrorKind::FailedFairing)
-            };
-
-            // Make sure we keep the request/response fairings!
-            self.fairings = fairings;
+            // Run the launch fairings.
+            self.fairings.handle_launch(&self);
 
             launch_info!("🚀  {} {}{}",
                   White.paint("Rocket has launched from"),

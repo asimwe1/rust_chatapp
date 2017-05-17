@@ -10,7 +10,7 @@ use std::ops::BitOr;
 /// # Example
 ///
 /// A simple `Info` structure that can be used for a `Fairing` that implements
-/// all three callbacks:
+/// all four callbacks:
 ///
 /// ```
 /// use rocket::fairing::{Info, Kind};
@@ -18,7 +18,7 @@ use std::ops::BitOr;
 /// # let _unused_info =
 /// Info {
 ///     name: "Example Fairing",
-///     kind: Kind::Launch | Kind::Request | Kind::Response
+///     kind: Kind::Attach | Kind::Launch | Kind::Request | Kind::Response
 /// }
 /// # ;
 /// ```
@@ -35,6 +35,7 @@ pub struct Info {
 /// A fairing can request any combination of any of the following kinds of
 /// callbacks:
 ///
+///   * Attach
 ///   * Launch
 ///   * Request
 ///   * Response
@@ -42,18 +43,20 @@ pub struct Info {
 /// Two `Kind` structures can be `or`d together to represent a combination. For
 /// instance, to represent a fairing that is both a launch and request fairing,
 /// use `Kind::Launch | Kind::Request`. Similarly, to represent a fairing that
-/// is all three kinds, use `Kind::Launch | Kind::Request | Kind::Response`.
+/// is only an attach fairing, use `Kind::Attach`.
 #[derive(Debug, Clone, Copy)]
 pub struct Kind(usize);
 
 #[allow(non_upper_case_globals)]
 impl Kind {
+    /// `Kind` flag representing a request for an 'attach' callback.
+    pub const Attach: Kind = Kind(0b0001);
     /// `Kind` flag representing a request for a 'launch' callback.
-    pub const Launch: Kind = Kind(0b001);
+    pub const Launch: Kind = Kind(0b0010);
     /// `Kind` flag representing a request for a 'request' callback.
-    pub const Request: Kind = Kind(0b010);
+    pub const Request: Kind = Kind(0b0100);
     /// `Kind` flag representing a request for a 'response' callback.
-    pub const Response: Kind = Kind(0b100);
+    pub const Response: Kind = Kind(0b1000);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the kinds in `other` are also in `self`.
@@ -76,6 +79,26 @@ impl Kind {
     #[inline]
     pub fn is(self, other: Kind) -> bool {
         (other.0 & self.0) == other.0
+    }
+
+    /// Returns `true` if `self` is exactly `other`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::fairing::Kind;
+    ///
+    /// let launch_and_req = Kind::Launch | Kind::Request;
+    /// assert!(launch_and_req.is_exactly(Kind::Launch | Kind::Request));
+    ///
+    /// assert!(!launch_and_req.is_exactly(Kind::Launch));
+    /// assert!(!launch_and_req.is_exactly(Kind::Request));
+    /// assert!(!launch_and_req.is_exactly(Kind::Response));
+    /// assert!(!launch_and_req.is_exactly(Kind::Launch | Kind::Response));
+    /// ```
+    #[inline]
+    pub fn is_exactly(self, other: Kind) -> bool {
+        self.0 == other.0
     }
 }
 

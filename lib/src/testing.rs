@@ -76,7 +76,7 @@
 //! ```
 
 use ::{Rocket, Request, Response, Data};
-use http::{Method, Header, Cookie};
+use http::{Method, Status, Header, Cookie};
 
 use std::net::SocketAddr;
 
@@ -201,11 +201,12 @@ impl<'r> MockRequest<'r> {
 
     /// Dispatch this request using a given instance of Rocket.
     ///
-    /// Returns the body of the response if there was a response. The return
-    /// value is `None` if any of the following occurs:
-    ///
-    ///   1. The returned body was not valid UTF8.
-    ///   2. The application failed to respond.
+    /// It is possible that the supplied `rocket` instance contains malformed
+    /// input such as colliding or invalid routes or failed fairings. When this
+    /// is the case, the returned `Response` will contain a status of
+    /// `InternalServerError`, and the body will contain the error that
+    /// occurred. In all other cases, the returned `Response` will be that of
+    /// the application.
     ///
     /// # Examples
     ///
@@ -234,6 +235,13 @@ impl<'r> MockRequest<'r> {
     /// # }
     /// ```
     pub fn dispatch_with<'s>(&'s mut self, rocket: &'r Rocket) -> Response<'s> {
+        if let Some(error) = rocket.prelaunch_check() {
+            return Response::build()
+                .status(Status::InternalServerError)
+                .sized_body(::std::io::Cursor::new(error.to_string()))
+                .finalize()
+        }
+
         let data = ::std::mem::replace(&mut self.data, Data::local(vec![]));
         rocket.dispatch(&mut self.request, data)
     }

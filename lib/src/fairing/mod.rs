@@ -1,4 +1,4 @@
-//! Fairings: structured interposition at launch, request, and response time.
+//! Fairings: callbacks at attach, launch, request, and response time.
 //!
 //! Fairings allow for structured interposition at various points in the
 //! application lifetime. Fairings can be seen as a restricted form of
@@ -26,7 +26,7 @@
 //! ```
 //!
 //! Once a fairing is attached, Rocket will execute it at the appropiate time,
-//! which varies depending on the fairing type. See the
+//! which varies depending on the fairing implementation. See the
 //! [`Fairing`](/rocket/fairing/trait.Fairing.html) trait documentation for more
 //! information on the dispatching of fairing methods.
 //!
@@ -37,7 +37,8 @@
 //! fairing callbacks may not be commutative, it is important to communicate to
 //! the user every consequence of a fairing. Furthermore, a `Fairing` should
 //! take care to act locally so that the actions of other `Fairings` are not
-//! jeopardized.
+//! jeopardized. For instance, unless it is made abundantly clear, a fairing
+//! should not rewrite every request.
 use {Rocket, Request, Response, Data};
 
 mod fairings;
@@ -90,12 +91,29 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// ## Fairing Callbacks
 ///
-/// There are three kinds of fairing callbacks: launch, request, and response.
-/// As mentioned above, a fairing can request any combination of these callbacks
-/// through the `kind` field of the `Info` structure returned from the `info`
-/// method. Rocket will only invoke the callbacks set in the `kind` field.
+/// There are four kinds of fairing callbacks: attach, launch, request, and
+/// response. As mentioned above, a fairing can request any combination of these
+/// callbacks through the `kind` field of the `Info` structure returned from the
+/// `info` method. Rocket will only invoke the callbacks set in the `kind`
+/// field.
 ///
-/// The three callback kinds are as follows:
+/// The four callback kinds are as follows:
+///
+///   * **Attach (`on_attach`)**
+///
+///     An attach callback, represented by the
+///     [`on_attach`](/rocket/fairing/trait.Fairing.html#method.on_attach)
+///     method, is called when a fairing is first attached via the
+///     [`attach`](/rocket/struct.Rocket.html#method.attach) method. The state
+///     of the `Rocket` instance is, at this point, not finalized, as the user
+///     may still add additional information to the `Rocket` instance. As a
+///     result, it is unwise to depend on the state of the `Rocket` instance.
+///
+///     An attach callback can arbitrarily modify the `Rocket` instance being
+///     constructed. It returns `Ok` if it would like launching to proceed
+///     nominally and `Err` otherwise. If a launch callback returns `Err`,
+///     launch will be aborted. All attach callbacks are executed on `launch`,
+///     even if one or more signal a failure.
 ///
 ///   * **Launch (`on_launch`)**
 ///
@@ -103,10 +121,8 @@ pub use self::info_kind::{Info, Kind};
 ///     [`on_launch`](/rocket/fairing/trait.Fairing.html#method.on_launch)
 ///     method, is called immediately before the Rocket application has
 ///     launched. At this point, Rocket has opened a socket for listening but
-///     has not yet begun accepting connections. A launch callback can
-///     arbitrarily modify the `Rocket` instance being launched. It returns `Ok`
-///     if it would like launching to proceed nominally and `Err` otherwise. If
-///     a launch callback returns `Err`, launch is aborted.
+///     has not yet begun accepting connections. A launch callback can inspect
+///     the `Rocket` instance being launched.
 ///
 ///   * **Request (`on_request`)**
 ///
@@ -136,15 +152,15 @@ pub use self::info_kind::{Info, Kind};
 /// # Implementing
 ///
 /// A `Fairing` implementation has one required method: `info`. A `Fairing` can
-/// also implement any of the available callbacks: `on_launch`, `on_request`,
-/// and `on_response`. A `Fairing` _must_ set the appropriate callback kind in
-/// the `kind` field of the returned `Info` structure from `info` for a callback
-/// to actually be issued by Rocket.
+/// also implement any of the available callbacks: `on_attach`, `on_launch`,
+/// `on_request`, and `on_response`. A `Fairing` _must_ set the appropriate
+/// callback kind in the `kind` field of the returned `Info` structure from
+/// `info` for a callback to actually be issued by Rocket.
 ///
 /// A `Fairing` must be `Send + Sync + 'static`. This means that the fairing
 /// must be sendable across thread boundaries (`Send`), thread-safe (`Sync`),
 /// and have no non-`'static` reference (`'static`). Note that these bounds _do
-/// not_ prohibit a `Fairing` from having state: the state need simply be
+/// not_ prohibit a `Fairing` from holding state: the state need simply be
 /// thread-safe and statically available or heap allocated.
 ///
 /// # Example
@@ -154,7 +170,7 @@ pub use self::info_kind::{Info, Kind};
 /// guards](/rocket/request/trait.FromRequest.html) and [managed
 /// state](/rocket/request/struct.State.html), it would require us to annotate
 /// every `GET` and `POST` request with custom types, polluting handler
-/// signatures. Instead, we can create a simple fairing that does this globally.
+/// signatures. Instead, we can create a simple fairing that acts globally.
 ///
 /// The `Counter` fairing below records the number of all `GET` and `POST`
 /// requests received. It makes these counts available at a special `'/counts'`
@@ -238,23 +254,38 @@ pub trait Fairing: Send + Sync + 'static {
     ///     fn info(&self) -> Info {
     ///         Info {
     ///             name: "My Custom Fairing",
-    ///             kind: Kind::Launch | Kind::Response
+    ///             kind: Kind::Attach | Kind::Launch | Kind::Response
     ///         }
     ///     }
     /// }
     /// ```
     fn info(&self) -> Info;
 
-    /// The launch callback. Returns `Ok` if launch should proceed and `Err` if
+    /// The attach callback. Returns `Ok` if launch should proceed and `Err` if
     /// launch should be aborted.
     ///
-    /// This method is called just prior to launching an application if
-    /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `rocket` parameter is the `Rocket` instance that was built
-    /// for this application.
+    /// This method is called when a fairing is attached if `Kind::Attach` is in
+    /// the `kind` field of the `Info` structure for this fairing. The `rocket`
+    /// parameter is the `Rocket` instance that is currently being built for
+    /// this application.
+    ///
+    /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+
+    /// The launch callback.
+    ///
+    /// This method is called just prior to launching the application if
+    /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
+    /// fairing. The `&Rocket` parameter curresponds to the application that
+    /// will be launched.
+    ///
+    /// ## Default Implementation
+    ///
+    /// The default implementation of this method does nothing.
+    #[allow(unused_variables)]
+    fn on_launch(&self, rocket: &Rocket) {}
 
     /// The request callback.
     ///
@@ -263,9 +294,11 @@ pub trait Fairing: Send + Sync + 'static {
     /// `&mut Request` parameter is the incoming request, and the `&Data`
     /// parameter is the incoming data in the request.
     ///
+    /// ## Default Implementation
+    ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_request(&self, request: &mut Request, data: &Data) { }
+    fn on_request(&self, request: &mut Request, data: &Data) {}
 
     /// The response callback.
     ///
@@ -274,7 +307,9 @@ pub trait Fairing: Send + Sync + 'static {
     /// this fairing. The `&Request` parameter is the request that was routed,
     /// and the `&mut Response` parameter is the resulting response.
     ///
+    /// ## Default Implementation
+    ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_response(&self, request: &Request, response: &mut Response) { }
+    fn on_response(&self, request: &Request, response: &mut Response) {}
 }

@@ -6,9 +6,11 @@ extern crate rocket;
 use std::io::Cursor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::{Request, Data, Response};
+use rocket::{Request, State, Data, Response};
 use rocket::fairing::{AdHoc, Fairing, Info, Kind};
 use rocket::http::{Method, ContentType, Status};
+
+struct Token(i64);
 
 #[cfg(test)] mod tests;
 
@@ -56,13 +58,22 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+#[get("/token")]
+fn token(token: State<Token>) -> String {
+    format!("{}", token.0)
+}
+
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![hello])
+        .mount("/", routes![hello, token])
         .attach(Counter::default())
+        .attach(AdHoc::on_attach(|rocket| {
+            println!("Adding token managed state...");
+            let token_val = rocket.config().get_int("token").unwrap_or(-1);
+            Ok(rocket.manage(Token(token_val)))
+        }))
         .attach(AdHoc::on_launch(|rocket| {
-            println!("Rocket is about to launch! Exciting! Here we go...");
-            Ok(rocket)
+            println!("Rocket is about to launch!");
         }))
         .attach(AdHoc::on_request(|req, _| {
             println!("    => Incoming request: {}", req);
