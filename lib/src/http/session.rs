@@ -60,7 +60,11 @@ impl<'a> Session<'a> {
         self.cookies.get_mut().private(&self.key).add(cookie)
     }
 
-    pub fn remove(&mut self, cookie: Cookie<'static>) {
+    pub fn remove(&mut self, mut cookie: Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
+        }
+
         self.cookies.get_mut().private(&self.key).remove(cookie)
     }
 
