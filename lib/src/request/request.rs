@@ -9,17 +9,20 @@ use term_painter::ToStyle;
 use state::{Container, Storage};
 
 use error::Error;
-use super::{FromParam, FromSegments};
+use super::{FromParam, FromSegments, FromRequest, Outcome};
 
 use router::Route;
+use config::{Config, Limits};
 use http::uri::{URI, Segments};
-use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar, Key};
+use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
 
 struct PresetState<'r> {
-    key: &'r Key,
-    managed_state: &'r Container,
+    // The running Rocket instances configuration.
+    config: &'r Config,
+    // The managed state of the running Rocket instance.
+    state: &'r Container,
 }
 
 struct RequestState<'r> {
@@ -286,28 +289,17 @@ impl<'r> Request<'r> {
 
     #[inline]
     pub fn session(&self) -> Session {
+        let key = self.preset().config.secret_key();
         match self.extra.session.try_borrow_mut() {
-            Ok(jar) => Session::new(jar, self.preset().key),
+            Ok(jar) => Session::new(jar, key),
             Err(_) => {
                 error_!("Multiple `Session` instances are active at once.");
                 info_!("An instance of `Session` must be dropped before another \
                        can be retrieved.");
                 warn_!("The retrieved `Session` instance will be empty.");
-                Session::empty(self.preset().key)
+                Session::empty(key)
             }
         }
-    }
-
-    /// Replace all of the cookies in `self` with those in `jar`.
-    #[inline]
-    pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
-        self.extra.cookies = RefCell::new(jar);
-    }
-
-    /// Replace all of the session cookie in `self` with those in `jar`.
-    #[inline]
-    pub(crate) fn set_session(&mut self, jar: CookieJar) {
-        self.extra.session = RefCell::new(jar);
     }
 
     /// Returns the Content-Type header of `self`. If the header is not present,
@@ -352,7 +344,6 @@ impl<'r> Request<'r> {
         self.accept().and_then(|accept| accept.first()).map(|wmt| wmt.media_type())
     }
 
-    #[inline(always)]
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
         if self.method.supports_payload() {
@@ -386,21 +377,12 @@ impl<'r> Request<'r> {
     ///
     /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     Outcome::of(req.get_param::<String>(0).unwrap_or("unnamed".into()))
+    ///     Outcome::from(req, req.get_param::<String>(0).unwrap_or("unnamed".into()))
     /// }
     /// ```
     pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
         let param = self.get_param_str(n).ok_or(Error::NoKey)?;
         T::from_param(param).map_err(|_| Error::BadParse)
-    }
-
-    /// Set `self`'s parameters given that the route used to reach this request
-    /// was `route`. This should only be used internally by `Rocket` as improper
-    /// use may result in out of bounds indexing.
-    /// TODO: Figure out the mount path from here.
-    #[inline]
-    pub(crate) fn set_params(&self, route: &Route) {
-        *self.extra.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
     /// Get the `n`th path parameter as a string, if it exists. This is used by
@@ -468,10 +450,9 @@ impl<'r> Request<'r> {
         Some(Segments(&path[i..j]))
     }
 
-    /// Get the managed state container, if it exists. For internal use only!
-    #[inline(always)]
-    pub fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
-        self.preset().managed_state.try_get()
+    /// Get the limits.
+    pub fn limits(&self) -> &'r Limits {
+        &self.preset().config.limits
     }
 
     #[inline(always)]
@@ -485,10 +466,43 @@ impl<'r> Request<'r> {
         }
     }
 
+    /// Set `self`'s parameters given that the route used to reach this request
+    /// was `route`. This should only be used internally by `Rocket` as improper
+    /// use may result in out of bounds indexing.
+    /// TODO: Figure out the mount path from here.
+    #[inline]
+    pub(crate) fn set_params(&self, route: &Route) {
+        *self.extra.params.borrow_mut() = route.get_param_indexes(self.uri());
+    }
+
+    /// Replace all of the cookies in `self` with those in `jar`.
+    #[inline]
+    pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
+        self.extra.cookies = RefCell::new(jar);
+    }
+
+    /// Replace all of the session cookie in `self` with those in `jar`.
+    #[inline]
+    pub(crate) fn set_session(&mut self, jar: CookieJar) {
+        self.extra.session = RefCell::new(jar);
+    }
+
+    /// Try to derive some guarded value from `self`.
+    #[inline(always)]
+    pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
+        T::from_request(self)
+    }
+
+    /// Get the managed state T, if it exists. For internal use only!
+    #[inline(always)]
+    pub(crate) fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
+        self.preset().state.try_get()
+    }
+
     /// Set the precomputed state. For internal use only!
     #[inline(always)]
-    pub(crate) fn set_preset_state(&mut self, key: &'r Key, state: &'r Container) {
-        self.extra.preset = Some(PresetState { key, managed_state: state });
+    pub(crate) fn set_preset(&mut self, config: &'r Config, state: &'r Container) {
+        self.extra.preset = Some(PresetState { config, state });
     }
 
     /// Convert from Hyper types into a Rocket Request.

@@ -77,8 +77,8 @@ mod test {
     use data::Data;
     use handler::Outcome;
 
-    fn dummy_handler(_req: &Request, _: Data) -> Outcome<'static> {
-        Outcome::of("hi")
+    fn dummy_handler(req: &Request, _: Data) -> Outcome<'static> {
+        Outcome::from(req, "hi")
     }
 
     fn router_with_routes(routes: &[&'static str]) -> Router {

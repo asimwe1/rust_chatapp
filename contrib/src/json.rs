@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
-use rocket::config;
 use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
@@ -80,6 +79,7 @@ impl<T> JSON<T> {
     /// let my_json = JSON(string);
     /// assert_eq!(my_json.into_inner(), "Hello".to_string());
     /// ```
+    #[inline(always)]
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -97,10 +97,7 @@ impl<T: DeserializeOwned> FromData for JSON<T> {
             return Outcome::Forward(data);
         }
 
-        let size_limit = config::active()
-            .and_then(|c| c.limits.get("json"))
-            .unwrap_or(LIMIT);
-
+        let size_limit = request.limits().get("json").unwrap_or(LIMIT);
         serde_json::from_reader(data.open().take(size_limit))
             .map(|val| JSON(val))
             .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
@@ -112,9 +109,9 @@ impl<T: DeserializeOwned> FromData for JSON<T> {
 /// JSON and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for JSON<T> {
-    fn respond(self) -> response::Result<'static> {
+    fn respond_to(self, req: &Request) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {
-            content::JSON(string).respond().unwrap()
+            content::JSON(string).respond_to(req).unwrap()
         }).map_err(|e| {
             error_!("JSON failed to serialize: {:?}", e);
             Status::InternalServerError
@@ -125,12 +122,14 @@ impl<T: Serialize> Responder<'static> for JSON<T> {
 impl<T> Deref for JSON<T> {
     type Target = T;
 
+    #[inline(always)]
     fn deref<'a>(&'a self) -> &'a T {
         &self.0
     }
 }
 
 impl<T> DerefMut for JSON<T> {
+    #[inline(always)]
     fn deref_mut<'a>(&'a mut self) -> &'a mut T {
         &mut self.0
     }

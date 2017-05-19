@@ -181,10 +181,10 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         let cookie = self.cookie();
-        Response::build_from(self.responder.respond()?)
+        Response::build_from(self.responder.respond_to(req)?)
             .header_adjoin(&cookie)
             .ok()
     }

@@ -50,7 +50,8 @@ pub struct Limits {
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { forms: 1024 * 32, extra: Vec::new() }
+        /// Default limit for forms is 32KiB.
+        Limits { forms: 32 * 1024, extra: Vec::new() }
     }
 }
 
@@ -103,33 +104,33 @@ impl fmt::Display for Limits {
     }
 }
 
-pub fn value_as_str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
+pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
     v.as_str().ok_or(conf.bad_type(name, v.type_str(), "a string"))
 }
 
-pub fn value_as_u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
+pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
     match value.as_integer() {
         Some(x) if x >= 0 => Ok(x as u64),
         _ => Err(conf.bad_type(name, value.type_str(), "an unsigned integer"))
     }
 }
 
-pub fn value_as_u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
+pub fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
     match value.as_integer() {
         Some(x) if x >= 0 && x <= (u16::max_value() as i64) => Ok(x as u16),
         _ => Err(conf.bad_type(name, value.type_str(), "a 16-bit unsigned integer"))
     }
 }
 
-pub fn value_as_log_level(conf: &Config,
+pub fn log_level(conf: &Config,
                           name: &str,
                           value: &Value
                          ) -> Result<LoggingLevel> {
-    value_as_str(conf, name, value)
+    str(conf, name, value)
         .and_then(|s| s.parse().map_err(|e| conf.bad_type(name, value.type_str(), e)))
 }
 
-pub fn value_as_tls_config<'v>(conf: &Config,
+pub fn tls_config<'v>(conf: &Config,
                                name: &str,
                                value: &'v Value,
                                ) -> Result<(&'v str, &'v str)> {
@@ -140,8 +141,8 @@ pub fn value_as_tls_config<'v>(conf: &Config,
     let env = conf.environment;
     for (key, value) in table {
         match key.as_str() {
-            "certs" => certs_path = Some(value_as_str(conf, "tls.certs", value)?),
-            "key" => key_path = Some(value_as_str(conf, "tls.key", value)?),
+            "certs" => certs_path = Some(str(conf, "tls.certs", value)?),
+            "key" => key_path = Some(str(conf, "tls.key", value)?),
             _ => return Err(ConfigError::UnknownKey(format!("{}.tls.{}", env, key)))
         }
     }
@@ -154,13 +155,13 @@ pub fn value_as_tls_config<'v>(conf: &Config,
     }
 }
 
-pub fn value_as_limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
+pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
     let table = value.as_table()
         .ok_or_else(|| conf.bad_type(name, value.type_str(), "a table"))?;
 
     let mut limits = Limits::default();
     for (key, val) in table {
-        let val = value_as_u64(conf, &format!("limits.{}", key), val)?;
+        let val = u64(conf, &format!("limits.{}", key), val)?;
         limits = limits.add(key.as_str(), val);
     }
 

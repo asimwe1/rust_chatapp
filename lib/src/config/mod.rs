@@ -158,28 +158,33 @@
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [active](fn.active.html) function and methods on
-//! the [Config](struct.Config.html) structure. The general structure is to call
-//! `active` and then one of the `get_` methods on the returned `Config`
-//! structure.
+//! can be retrieved via the [config](/rocket/struct.Rocket.html#method.config)
+//! method on an instance of `Rocket` and `get_` methods on the
+//! [Config](struct.Config.html) structure.
 //!
-//! As an example, consider the following code used by the `Template` type to
-//! retrieve the value of the `template_dir` configuration parameter. If the
-//! value isn't present or isn't a string, a default value is used.
+//! The retrivial of configuration parameters usually occurs at launch time via
+//! a [launch fairing](/rocket/fairing/trait.Fairing.html). If information about
+//! the configuraiton is needed later in the program, an attach fairing can be
+//! used to store the information as managed state. As an example of the latter,
+//! consider the following short program which reads the `token` configuration
+//! parameter and stores the value or a default in a `Token` managed state
+//! value:
 //!
 //! ```rust
-//! use std::path::PathBuf;
-//! use rocket::config::{self, ConfigError};
+//! use rocket::fairing::AdHoc;
 //!
-//! const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
+//! struct Token(i64);
 //!
-//! # #[allow(unused_variables)]
-//! let template_dir = config::active().ok_or(ConfigError::NotFound)
-//!     .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
-//!     .unwrap_or_else(|_| PathBuf::from(DEFAULT_TEMPLATE_DIR));
+//! fn main() {
+//!     rocket::ignite()
+//!         .attach(AdHoc::on_attach(|rocket| {
+//!             println!("Adding token managed state from config...");
+//!             let token_val = rocket.config().get_int("token").unwrap_or(-1);
+//!             Ok(rocket.manage(Token(token_val)))
+//!         }))
+//! # ;
+//! }
 //! ```
-//!
-//! Libraries should always use a default if a parameter is not defined.
 
 mod error;
 mod environment;
@@ -188,7 +193,6 @@ mod builder;
 mod toml_ext;
 mod custom_values;
 
-use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
 use std::collections::HashMap;
 use std::io::Read;
@@ -212,9 +216,6 @@ use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use logger::{self, LoggingLevel};
 use http::uncased::uncased_eq;
-
-static INIT: Once = ONCE_INIT;
-static mut CONFIG: Option<RocketConfig> = None;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &'static str = "global";
@@ -466,32 +467,7 @@ impl RocketConfig {
 /// # Panics
 ///
 /// If there is a problem, prints a nice error message and bails.
-pub(crate) fn init() -> (&'static Config, bool) {
-    let mut this_init = false;
-    unsafe {
-        INIT.call_once(|| {
-            private_init();
-            this_init = true;
-        });
-
-        (CONFIG.as_ref().unwrap().active(), this_init)
-    }
-}
-
-pub(crate) fn custom_init(config: Config) -> (&'static Config, bool) {
-    let mut this_init = false;
-
-    unsafe {
-        INIT.call_once(|| {
-            CONFIG = Some(RocketConfig::new(config));
-            this_init = true;
-        });
-
-        (CONFIG.as_ref().unwrap().active(), this_init)
-    }
-}
-
-unsafe fn private_init() {
+pub(crate) fn init() -> Config {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
         e.pretty_print();
@@ -515,16 +491,8 @@ unsafe fn private_init() {
         RocketConfig::active_default(&default_path).unwrap_or_else(|e| bail(e))
     });
 
-    CONFIG = Some(config);
-}
-
-/// Retrieve the active configuration, if there is one.
-///
-/// This function is guaranteed to return `Some` once a Rocket application has
-/// started. Before a Rocket application has started, or when there is no active
-/// Rocket application (such as during testing), this function will return None.
-pub fn active() -> Option<&'static Config> {
-    unsafe { CONFIG.as_ref().map(|c| c.active()) }
+    // FIXME: Should probably store all of the config.
+    config.active().clone()
 }
 
 #[cfg(test)]

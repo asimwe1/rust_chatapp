@@ -5,9 +5,11 @@ use rocket::testing::MockRequest;
 use rocket::http::*;
 use rocket_contrib::Template;
 
+const TEMPLATE_ROOT: &'static str = "templates/";
+
 #[test]
 fn test_submit() {
-    let rocket = rocket::ignite().mount("/", routes![super::index, super::submit]);
+    let rocket = rocket();
     let mut request = MockRequest::new(Method::Post, "/submit")
         .header(ContentType::Form)
         .body("message=Hello from Rocket!");
@@ -21,7 +23,7 @@ fn test_submit() {
 }
 
 fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
-    let rocket = rocket::ignite().mount("/", routes![super::index, super::submit]);
+    let rocket = rocket();
     let mut request = MockRequest::new(Method::Get, "/");
 
     // Attach a cookie if one is given.
@@ -38,16 +40,16 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 fn test_index() {
     // Render the template with an empty context to test against.
     let mut context: HashMap<&str, &str> = HashMap::new();
-    let template = Template::render("index", &context);
+    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
 
     // Test the route without sending the "message" cookie.
-    test_body(None, template.to_string());
+    test_body(None, template);
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
 
     // Test the route with the "message" cookie.
     let cookie = Cookie::new("message", "Hello from Rocket!");
-    let template = Template::render("index", &context);
-    test_body(Some(cookie), template.to_string());
+    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+    test_body(Some(cookie), template);
 }

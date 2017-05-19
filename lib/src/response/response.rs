@@ -1129,9 +1129,11 @@ impl<'r> fmt::Debug for Response<'r> {
     }
 }
 
+use request::Request;
+
 impl<'r> Responder<'r> for Response<'r> {
     /// This is the identity implementation. It simply returns `Ok(self)`.
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Ok(self)
     }
 }

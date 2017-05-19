@@ -1,4 +1,7 @@
 #![feature(drop_types_in_const, macro_reexport)]
+#![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
+#![cfg_attr(feature = "templates", feature(associated_consts))]
+#![cfg_attr(feature = "templates", feature(struct_field_attributes))]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -36,10 +39,6 @@
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate rocket;
-
-#[cfg_attr(feature = "lazy_static_macro", macro_use)]
-#[cfg(feature = "lazy_static_macro")]
-extern crate lazy_static;
 
 #[cfg(feature = "serde")]
 extern crate serde;

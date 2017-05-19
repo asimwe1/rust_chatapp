@@ -85,8 +85,8 @@ impl Fairings {
         use term_painter::ToStyle;
         use term_painter::Color::{White, Magenta};
 
-        if self.all_fairings.len() > 0 {
-            info!("📡  {}:", Magenta.paint("Fairings"));
+        if self.all_fairings.is_empty() {
+            return
         }
 
         fn info_if_nonempty(kind: &str, fairings: &[&Fairing]) {
@@ -97,6 +97,7 @@ impl Fairings {
                    White.paint(names.join(", ")));
         }
 
+        info!("📡  {}:", Magenta.paint("Fairings"));
         info_if_nonempty("launch", &self.launch);
         info_if_nonempty("request", &self.request);
         info_if_nonempty("response", &self.response);

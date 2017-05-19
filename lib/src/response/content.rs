@@ -22,6 +22,7 @@
 //! let response = content::HTML("<h1>Hello, world!</h1>");
 //! ```
 
+use request::Request;
 use response::{Response, Responder};
 use http::{Status, ContentType};
 
@@ -47,9 +48,9 @@ pub struct Content<R>(pub ContentType, pub R);
 /// delegates the remainder of the response to the wrapped responder.
 impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
     #[inline(always)]
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         Response::build()
-            .merge(self.1.respond()?)
+            .merge(self.1.respond_to(req)?)
             .header(self.0)
             .ok()
     }
@@ -71,8 +72,8 @@ macro_rules! ctrs {
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
             impl<'r, R: Responder<'r>> Responder<'r> for $name<R> {
-                fn respond(self) -> Result<Response<'r>, Status> {
-                    Content(ContentType::$name, self.0).respond()
+                fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+                    Content(ContentType::$name, self.0).respond_to(req)
                 }
             }
         )+

@@ -128,7 +128,7 @@ fn rocket_route_fn_hello<'_b>(_req: &'_b ::rocket::Request,
                               _data: ::rocket::Data)
                               -> ::rocket::handler::Outcome<'_b> {
     let responder = hello();
-    ::rocket::handler::Outcome::of(responder)
+    ::rocket::handler::Outcome::from(_req, responder)
 }
 ```
 

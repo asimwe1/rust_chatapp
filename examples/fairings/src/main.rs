@@ -72,7 +72,7 @@ fn rocket() -> rocket::Rocket {
             let token_val = rocket.config().get_int("token").unwrap_or(-1);
             Ok(rocket.manage(Token(token_val)))
         }))
-        .attach(AdHoc::on_launch(|rocket| {
+        .attach(AdHoc::on_launch(|_| {
             println!("Rocket is about to launch!");
         }))
         .attach(AdHoc::on_request(|req, _| {

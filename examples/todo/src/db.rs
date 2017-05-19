@@ -32,7 +32,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Conn {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Conn, ()> {
-        let pool = match <State<Pool> as FromRequest>::from_request(request) {
+        let pool = match request.guard::<State<Pool>>() {
             Outcome::Success(pool) => pool,
             Outcome::Failure(e) => return Outcome::Failure(e),
             Outcome::Forward(_) => return Outcome::Forward(()),

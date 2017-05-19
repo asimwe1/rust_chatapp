@@ -57,7 +57,7 @@ macro_rules! config_from_raw {
         $($key:ident => ($type:ident, $set:ident, $map:expr)),+ | _ => $rest:expr) => (
         match $name {
             $(stringify!($key) => {
-                concat_idents!(value_as_, $type)($config, $name, $value)
+                super::custom_values::$type($config, $name, $value)
                     .and_then(|parsed| $map($config.$set(parsed)))
             })+
             _ => $rest

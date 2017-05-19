@@ -17,13 +17,13 @@ fn forward(_req: &Request, data: Data) -> Outcome<'static> {
     Outcome::forward(data)
 }
 
-fn hi(_req: &Request, _: Data) -> Outcome<'static> {
-    Outcome::of("Hello!")
+fn hi(req: &Request, _: Data) -> Outcome<'static> {
+    Outcome::from(req, "Hello!")
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
     let param = req.get_param::<&'a RawStr>(0);
-    Outcome::of(param.map(|r| r.as_str()).unwrap_or("unnamed"))
+    Outcome::from(req, param.map(|r| r.as_str()).unwrap_or("unnamed"))
 }
 
 fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
@@ -32,7 +32,7 @@ fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
         .split_at(6)
         .1;
 
-    Outcome::of(RawStr::from_str(param).url_decode())
+    Outcome::from(req, RawStr::from_str(param).url_decode())
 }
 
 fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
@@ -44,7 +44,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     let file = File::create("/tmp/upload.txt");
     if let Ok(mut file) = file {
         if let Ok(n) = io::copy(&mut data.open(), &mut file) {
-            return Outcome::of(format!("OK: {} bytes uploaded.", n));
+            return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
         }
 
         println!("    => Failed copying.");
@@ -55,12 +55,13 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     }
 }
 
-fn get_upload(_: &Request, _: Data) -> Outcome<'static> {
-    Outcome::of(File::open("/tmp/upload.txt").ok())
+fn get_upload(req: &Request, _: Data) -> Outcome<'static> {
+    Outcome::from(req, File::open("/tmp/upload.txt").ok())
 }
 
 fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
-    Custom(Status::NotFound, format!("Couldn't find: {}", req.uri())).respond()
+    let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
+    res.respond_to(req)
 }
 
 fn rocket() -> rocket::Rocket {

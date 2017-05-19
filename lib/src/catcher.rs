@@ -83,11 +83,12 @@ impl Catcher {
     /// use rocket::http::Status;
     ///
     /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
-    ///     Custom(Status::NotFound, format!("Couldn't find: {}", req.uri())).respond()
+    ///     let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
+    ///     res.respond_to(req)
     /// }
     ///
-    /// fn handle_500<'r>(_: Error, _: &'r Request) -> Result<'r> {
-    ///     "Whoops, we messed up!".respond()
+    /// fn handle_500<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    ///     "Whoops, we messed up!".respond_to(req)
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -156,10 +157,10 @@ macro_rules! default_errors {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(_: Error, _r: &'r Request) -> response::Result<'r> {
+            fn $fn_name<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
                     content::HTML(error_page_template!($code, $name, $description))
-                ).respond()
+                ).respond_to(req)
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));

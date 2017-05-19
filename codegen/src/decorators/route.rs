@@ -78,7 +78,7 @@ impl RouteGenerateExt for RouteParams {
                 let mut items = ::rocket::request::FormItems::from($form_string);
                 let obj = match ::rocket::request::FromForm::from_form_items(items.by_ref()) {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Outcome::Forward(_data)
+                    Err(_) => return ::rocket::Outcome::Forward(__data)
                 };
 
                 if !items.exhaust() {
@@ -106,7 +106,7 @@ impl RouteGenerateExt for RouteParams {
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
             let $name: $ty =
-                match ::rocket::data::FromData::from_data(_req, _data) {
+                match ::rocket::data::FromData::from_data(__req, __data) {
                     ::rocket::Outcome::Success(d) => d,
                     ::rocket::Outcome::Forward(d) =>
                         return ::rocket::Outcome::Forward(d),
@@ -120,9 +120,9 @@ impl RouteGenerateExt for RouteParams {
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
         let param = self.query_param.as_ref();
         let expr = quote_expr!(ecx,
-           match _req.uri().query() {
+           match __req.uri().query() {
                Some(query) => query,
-               None => return ::rocket::Outcome::Forward(_data)
+               None => return ::rocket::Outcome::Forward(__data)
            }
         );
 
@@ -149,13 +149,13 @@ impl RouteGenerateExt for RouteParams {
             // Note: the `None` case shouldn't happen if a route is matched.
             let ident = param.ident().prepend(PARAM_PREFIX);
             let expr = match param {
-                Param::Single(_) => quote_expr!(ecx, match _req.get_param_str($i) {
+                Param::Single(_) => quote_expr!(ecx, match __req.get_param_str($i) {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
-                    None => return ::rocket::Outcome::Forward(_data)
+                    None => return ::rocket::Outcome::Forward(__data)
                 }),
-                Param::Many(_) => quote_expr!(ecx, match _req.get_raw_segments($i) {
+                Param::Many(_) => quote_expr!(ecx, match __req.get_raw_segments($i) {
                     Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
-                    None => return ::rocket::Outcome::Forward(_data)
+                    None => return ::rocket::Outcome::Forward(__data)
                 }),
             };
 
@@ -166,7 +166,7 @@ impl RouteGenerateExt for RouteParams {
                     Err(e) => {
                         println!("    => Failed to parse '{}': {:?}",
                                  stringify!($original_ident), e);
-                        return ::rocket::Outcome::Forward(_data)
+                        return ::rocket::Outcome::Forward(__data)
                     }
                 };
             ).expect("declared param parsing statement"));
@@ -195,10 +195,10 @@ impl RouteGenerateExt for RouteParams {
             fn_param_statements.push(quote_stmt!(ecx,
                 #[allow(non_snake_case)]
                 let $ident: $ty = match
-                        ::rocket::request::FromRequest::from_request(_req) {
+                        ::rocket::request::FromRequest::from_request(__req) {
                     ::rocket::outcome::Outcome::Success(v) => v,
                     ::rocket::outcome::Outcome::Forward(_) =>
-                        return ::rocket::Outcome::forward(_data),
+                        return ::rocket::Outcome::forward(__data),
                     ::rocket::outcome::Outcome::Failure((code, _)) => {
                         return ::rocket::Outcome::Failure(code)
                     },
@@ -254,13 +254,13 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
         // Allow the `unreachable_code` lint for those FromParam impls that have
         // an `Error` associated type of !.
         #[allow(unreachable_code)]
-        fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
+        fn $route_fn_name<'_b>(__req: &'_b ::rocket::Request,  __data: ::rocket::Data)
                 -> ::rocket::handler::Outcome<'_b> {
              $param_statements
              $query_statement
              $data_statement
              let responder = $user_fn_name($fn_arguments);
-            ::rocket::handler::Outcome::of(responder)
+            ::rocket::handler::Outcome::from(__req, responder)
         }
     ).unwrap());
 

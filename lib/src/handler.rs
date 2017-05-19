@@ -12,8 +12,8 @@ pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 
 impl<'r> Outcome<'r> {
     #[inline]
-    pub fn of<T: Responder<'r>>(responder: T) -> Outcome<'r> {
-        match responder.respond() {
+    pub fn from<T: Responder<'r>>(req: &Request, responder: T) -> Outcome<'r> {
+        match responder.respond_to(req) {
             Ok(response) => outcome::Outcome::Success(response),
             Err(status) => outcome::Outcome::Failure(status)
         }

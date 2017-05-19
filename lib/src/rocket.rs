@@ -29,7 +29,7 @@ use http::uri::URI;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    config: &'static Config,
+    config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
@@ -96,8 +96,8 @@ macro_rules! serve {
 #[cfg(feature = "tls")]
 macro_rules! serve {
     ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
-        if let Some(ref tls) = $rocket.config.tls {
-            let tls = TlsServer::new(tls.certs.clone(), tls.key.clone());
+        if let Some(tls) = $rocket.config.tls.clone() {
+            let tls = TlsServer::new(tls.certs, tls.key);
             let ($proto, $server) = ("https://", hyper::Server::https($addr, tls));
             $continue
         } else {
@@ -218,7 +218,7 @@ impl Rocket {
         info!("{}:", request);
 
         // Inform the request about all of the precomputed state.
-        request.set_preset_state(&self.config.secret_key(), &self.state);
+        request.set_preset(&self.config, &self.state);
 
         // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
@@ -346,10 +346,10 @@ impl Rocket {
     /// rocket::ignite()
     /// # };
     /// ```
+    #[inline]
     pub fn ignite() -> Rocket {
         // Note: init() will exit the process under config errors.
-        let (config, initted) = config::init();
-        Rocket::configured(config, initted)
+        Rocket::configured(config::init(), true)
     }
 
     /// Creates a new `Rocket` application using the supplied custom
@@ -377,14 +377,15 @@ impl Rocket {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn custom(config: Config, log: bool) -> Rocket {
-        let (config, initted) = config::custom_init(config);
-        Rocket::configured(config, log && initted)
+        Rocket::configured(config, log)
     }
 
-    fn configured(config: &'static Config, log: bool) -> Rocket {
+    #[inline]
+    fn configured(config: Config, log: bool) -> Rocket {
         if log {
-            logger::init(config.log_level);
+            logger::try_init(config.log_level, false);
         }
 
         info!("🔧  Configured for {}.", config.environment);
@@ -426,16 +427,16 @@ impl Rocket {
     /// path. Mounting a route with path `path` at path `base` makes the route
     /// available at `base/path`.
     ///
+    /// # Panics
+    ///
+    /// The `base` mount point must be a static path. That is, the mount point
+    /// must _not_ contain dynamic path parameters: `<param>`.
+    ///
     /// # Examples
     ///
     /// Use the `routes!` macro to mount routes created using the code
     /// generation facilities. Requests to the `/hello/world` URI will be
     /// dispatched to the `hi` route.
-    ///
-    /// # Panics
-    ///
-    /// The `base` mount point must be a static path. That is, the mount point
-    /// must _not_ contain dynamic path parameters: `<param>`.
     ///
     /// ```rust
     /// # #![feature(plugin)]
@@ -464,8 +465,8 @@ impl Rocket {
     /// use rocket::handler::Outcome;
     /// use rocket::http::Method::*;
     ///
-    /// fn hi(_: &Request, _: Data) -> Outcome<'static> {
-    ///     Outcome::of("Hello!")
+    /// fn hi(req: &Request, _: Data) -> Outcome<'static> {
+    ///     Outcome::from(req, "Hello!")
     /// }
     ///
     /// # if false { // We don't actually want to launch the server in an example.
@@ -473,6 +474,7 @@ impl Rocket {
     /// #     .launch();
     /// # }
     /// ```
+    #[inline]
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
         info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
 
@@ -522,6 +524,7 @@ impl Rocket {
     /// # }
     /// }
     /// ```
+    #[inline]
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("👾  {}:", Magenta.paint("Catchers"));
         for c in catchers {
@@ -577,6 +580,7 @@ impl Rocket {
     /// # }
     /// }
     /// ```
+    #[inline]
     pub fn manage<T: Send + Sync + 'static>(self, state: T) -> Self {
         if !self.state.set::<T>(state) {
             error!("State for this type is already being managed!");
@@ -648,7 +652,7 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) -> LaunchError {
+    pub fn launch(mut self) -> LaunchError {
         if let Some(error) = self.prelaunch_check() {
             return error;
         }
@@ -662,19 +666,20 @@ impl Rocket {
                 Err(e) => return LaunchError::from(e)
             };
 
-            // Determine the port we actually binded to.
-            let (addr, port) = match server.local_addr() {
-                Ok(server_addr) => (&self.config.address, server_addr.port()),
+            // Determine the address and port we actually binded to.
+            match server.local_addr() {
+                Ok(server_addr) => self.config.port = server_addr.port(),
                 Err(e) => return LaunchError::from(e)
-            };
+            }
 
             // Run the launch fairings.
             self.fairings.handle_launch(&self);
 
+            let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("🚀  {} {}{}",
                   White.paint("Rocket has launched from"),
                   White.bold().paint(proto),
-                  White.bold().paint(&format!("{}:{}", addr, port)));
+                  White.bold().paint(&full_addr));
 
             let threads = self.config.workers as usize;
             if let Err(e) = server.handle_threads(self, threads) {
@@ -691,9 +696,9 @@ impl Rocket {
         self.router.routes()
     }
 
-    /// Retrieve the configuration.
+    /// Retrieve the active configuration.
     #[inline(always)]
     pub fn config(&self) -> &Config {
-        self.config
+        &self.config
     }
 }

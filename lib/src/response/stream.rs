@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::fmt::{self, Debug};
 
+use request::Request;
 use response::{Response, Responder, DEFAULT_CHUNK_SIZE};
 use http::Status;
 
@@ -68,7 +69,7 @@ impl<T: Read> From<T> for Stream<T> {
 /// response is abandoned, and the response ends abruptly. An error is printed
 /// to the console with an indication of what went wrong.
 impl<'r, T: Read + 'r> Responder<'r> for Stream<T> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build().chunked_body(self.0, self.1).ok()
     }
 }

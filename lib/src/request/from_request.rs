@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use outcome::{self, IntoOutcome};
 use request::Request;
+use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
 use http::{Status, ContentType, Accept, Method, Cookies, Session};

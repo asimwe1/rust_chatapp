@@ -24,8 +24,8 @@ pub enum Error {
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
 /// this is represented by the `Io` variant. A launch error may also occur
-/// because of ill-defined routes that lead to collisions or because a launch
-/// fairing encounted an error; these are represented by the `Collision` and
+/// because of ill-defined routes that lead to collisions or because a fairing
+/// encountered an error; these are represented by the `Collision` and
 /// `FailedFairing` variants, respectively. The `Unknown` variant captures all
 /// other kinds of launch errors.
 #[derive(Debug)]
@@ -196,7 +196,7 @@ impl Drop for LaunchError {
                 panic!("route collisions detected");
             }
             LaunchErrorKind::FailedFairing => {
-                error!("Rocket failed to launch due to a failing launch fairing.");
+                error!("Rocket failed to launch due to a failing fairing.");
                 panic!("launch fairing failure");
             }
             LaunchErrorKind::Unknown(ref e) => {

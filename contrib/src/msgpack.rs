@@ -3,7 +3,6 @@ extern crate rmp_serde;
 use std::ops::{Deref, DerefMut};
 use std::io::{Cursor, Read};
 
-use rocket::config;
 use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
@@ -111,11 +110,8 @@ impl<T: DeserializeOwned> FromData for MsgPack<T> {
             return Outcome::Forward(data);
         }
 
-        let size_limit = config::active()
-            .and_then(|c| c.limits.get("msgpack"))
-            .unwrap_or(LIMIT);
-
         let mut buf = Vec::new();
+        let size_limit = request.limits().get("msgpack").unwrap_or(LIMIT);
         if let Err(e) = data.open().take(size_limit).read_to_end(&mut buf) {
             let e = MsgPackError::InvalidDataRead(e);
             error_!("Couldn't read request data: {:?}", e);
@@ -132,7 +128,7 @@ impl<T: DeserializeOwned> FromData for MsgPack<T> {
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
-    fn respond(self) -> response::Result<'static> {
+    fn respond_to(self, _: &Request) -> response::Result<'static> {
         rmp_serde::to_vec(&self.0).map_err(|e| {
             error_!("MsgPack failed to serialize: {:?}", e);
             Status::InternalServerError

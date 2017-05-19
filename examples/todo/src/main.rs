@@ -76,5 +76,6 @@ fn main() {
         .manage(db::init_pool())
         .mount("/", routes![index, static_files::all])
         .mount("/todo/", routes![new, toggle, delete])
+        .attach(Template::fairing())
         .launch();
 }

@@ -141,8 +141,8 @@ mod tests {
 
     type SimpleRoute = (Method, &'static str);
 
-    fn dummy_handler(_req: &Request, _: Data) -> Outcome<'static> {
-        Outcome::of("hi")
+    fn dummy_handler(req: &Request, _: Data) -> Outcome<'static> {
+        Outcome::from(req, "hi")
     }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {

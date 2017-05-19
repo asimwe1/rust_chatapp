@@ -1,3 +1,5 @@
+//! Types and traits for handling incoming body data.
+
 mod data;
 mod data_stream;
 mod net_stream;
