@@ -3,6 +3,7 @@ use std::net::Shutdown;
 
 use super::data::BodyReader;
 use http::hyper::net::NetworkStream;
+use http::hyper::h1::HttpReader;
 
 // It's very unfortunate that we have to wrap `BodyReader` in a `BufReader`
 // since it already contains another `BufReader`. The issue is that Hyper's
@@ -41,6 +42,13 @@ impl Read for DataStream {
 // }
 
 pub fn kill_stream(stream: &mut BodyReader) {
+    // Only do the expensive reading if we're not sure we're done.
+    use self::HttpReader::*;
+    match *stream {
+        SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ },
+        _ => return
+    };
+
     // Take <= 1k from the stream. If there might be more data, force close.
     const FLUSH_LEN: u64 = 1024;
     match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
