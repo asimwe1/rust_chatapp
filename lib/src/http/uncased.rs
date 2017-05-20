@@ -24,6 +24,11 @@ pub struct UncasedStr(str);
 
 impl UncasedStr {
     #[inline(always)]
+    pub fn new(string: &str) -> &UncasedStr {
+        unsafe { &*(string as *const str as *const UncasedStr) }
+    }
+
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -67,7 +72,7 @@ impl<'a> PartialEq<UncasedStr> for &'a str {
 impl<'a> From<&'a str> for &'a UncasedStr {
     #[inline(always)]
     fn from(string: &'a str) -> &'a UncasedStr {
-        unsafe { ::std::mem::transmute(string) }
+        UncasedStr::new(string)
     }
 }
 

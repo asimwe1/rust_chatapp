@@ -278,6 +278,13 @@ impl fmt::Display for ContentType {
 impl Into<Header<'static>> for ContentType {
     #[inline(always)]
     fn into(self) -> Header<'static> {
+        // FIXME: For known media types, don't do `to_string`. Store the whole
+        // string as a `source` and have a way to know that the source is
+        // everything. That removes the allocation here. Then, in
+        // `MediaType::fmt`, write the source string out directly as well.
+        //
+        // We could also use an `enum` for MediaType. But that kinda sucks. But
+        // maybe it's what we want.
         Header::new("Content-Type", self.to_string())
     }
 }

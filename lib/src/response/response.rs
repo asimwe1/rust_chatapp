@@ -415,6 +415,29 @@ impl<'r> ResponseBuilder<'r> {
         self
     }
 
+    /// Sets the body of `self` to be `body`. This method should typically not
+    /// be used, opting instead for one of `sized_body`, `streamed_body`, or
+    /// `chunked_body`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::response::{Response, Body};
+    ///
+    /// # #[allow(unused_variables)]
+    /// let response = Response::build()
+    ///     .raw_body(Body::Sized(Cursor::new("Hello!"), 6))
+    ///     .finalize();
+    /// ```
+    #[inline(always)]
+    pub fn raw_body<T: io::Read + 'r>(&mut self, body: Body<T>)
+            -> &mut ResponseBuilder<'r>
+    {
+        self.response.set_raw_body(body);
+        self
+    }
+
     /// Merges the `other` `Response` into `self` by setting any fields in
     /// `self` to the corresponding value in `other` if they are set in `other`.
     /// Fields in `self` are unchanged if they are not set in `other`. If a

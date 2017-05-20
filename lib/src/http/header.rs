@@ -1,6 +1,7 @@
-use std::collections::HashMap;
 use std::borrow::{Borrow, Cow};
 use std::fmt;
+
+use ordermap::OrderMap;
 
 use http::uncased::{Uncased, UncasedStr};
 
@@ -109,14 +110,14 @@ impl<'h> fmt::Display for Header<'h> {
 /// A collection of headers, mapping a header name to its many ordered values.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
-    headers: HashMap<Uncased<'h>, Vec<Cow<'h, str>>>
+    headers: OrderMap<Uncased<'h>, Vec<Cow<'h, str>>>
 }
 
 impl<'h> HeaderMap<'h> {
     /// Returns an empty collection.
     #[inline(always)]
     pub fn new() -> HeaderMap<'h> {
-        HeaderMap { headers: HashMap::new() }
+        HeaderMap { headers: OrderMap::new() }
     }
 
     /// Returns true if `self` contains a header with the name `name`.
@@ -134,7 +135,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn contains(&self, name: &str) -> bool {
-        self.headers.get(name.into() : &UncasedStr).is_some()
+        self.headers.get(UncasedStr::new(name)).is_some()
     }
 
     /// Returns the number of _values_ stored in the map.
