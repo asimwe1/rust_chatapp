@@ -3,7 +3,6 @@
 #![feature(drop_types_in_const)]
 #![feature(associated_consts)]
 #![feature(const_fn)]
-#![feature(type_ascription)]
 #![feature(lookup_host)]
 #![feature(plugin)]
 #![feature(never_type)]

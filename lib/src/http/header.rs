@@ -200,7 +200,7 @@ impl<'h> HeaderMap<'h> {
     #[inline]
     pub fn get<'a>(&'a self, name: &str) -> impl Iterator<Item=&'a str> {
         self.headers
-            .get(name.into() : &UncasedStr)
+            .get(UncasedStr::new(name))
             .into_iter()
             .flat_map(|values| values.iter().map(|val| val.borrow()))
     }
@@ -238,7 +238,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn get_one<'a>(&'a self, name: &str) -> Option<&'a str> {
-        self.headers.get(name.into() : &UncasedStr)
+        self.headers.get(UncasedStr::new(name))
             .and_then(|values| {
                 if values.len() >= 1 { Some(values[0].borrow()) }
                 else { None }
@@ -428,7 +428,7 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(map.len(), 1);
     #[inline(always)]
     pub fn remove(&mut self, name: &str) {
-        self.headers.remove(name.into() : &UncasedStr);
+        self.headers.remove(UncasedStr::new(name));
     }
 
     /// Removes all of the headers stored in this map and returns a vector

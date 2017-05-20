@@ -238,31 +238,31 @@ mod test {
     use super::FormItems;
 
     macro_rules! check_form {
-        (@opt $string:expr, $expected:expr) => ({
-            let mut items = FormItems::from($string);
-            let results: Vec<_> = items.by_ref().collect();
-            if let Some(expected) = $expected {
-                assert_eq!(expected.len(), results.len());
+        (@bad $string:expr) => (check_form($string, None));
+        ($string:expr, $expected:expr) => (check_form($string, Some($expected)));
+    }
 
-                for i in 0..results.len() {
-                    let (expected_key, actual_key) = (expected[i].0, results[i].0);
-                    let (expected_val, actual_val) = (expected[i].1, results[i].1);
+    fn check_form(string: &str, expected: Option<&[(&str, &str)]>) {
+        let mut items = FormItems::from(string);
+        let results: Vec<_> = items.by_ref().collect();
+        if let Some(expected) = expected {
+            assert_eq!(expected.len(), results.len());
 
-                    assert!(actual_key == expected_key,
-                            "key [{}] mismatch: expected {}, got {}",
-                            i, expected_key, actual_key);
+            for i in 0..results.len() {
+                let (expected_key, actual_key) = (expected[i].0, results[i].0);
+                let (expected_val, actual_val) = (expected[i].1, results[i].1);
 
-                    assert!(actual_val == expected_val,
-                            "val [{}] mismatch: expected {}, got {}",
-                            i, expected_val, actual_val);
-                }
-            } else {
-                assert!(!items.exhaust());
+                assert!(actual_key == expected_key,
+                        "key [{}] mismatch: expected {}, got {}",
+                        i, expected_key, actual_key);
+
+                assert!(actual_val == expected_val,
+                        "val [{}] mismatch: expected {}, got {}",
+                        i, expected_val, actual_val);
             }
-        });
-
-        (@bad $string:expr) => (check_form!(@opt $string, None : Option<&[(&str, &str)]>));
-        ($string:expr, $expected:expr) => (check_form!(@opt $string, Some($expected)));
+        } else {
+            assert!(!items.exhaust());
+        }
     }
 
     #[test]
