@@ -1,10 +1,15 @@
 #![feature(test, plugin)]
 #![plugin(rocket_codegen)]
+// #![feature(alloc_system)]
+// extern crate alloc_system;
 
 extern crate rocket;
 
 use rocket::config::{Environment, Config};
 use rocket::http::RawStr;
+
+#[get("/")]
+fn hello_world() -> &'static str { "Hello, world!" }
 
 #[get("/")]
 fn get_index() -> &'static str { "index" }
@@ -27,6 +32,11 @@ fn index_c() -> &'static str { "index" }
 #[get("/<a>")]
 fn index_dyn_a(a: &RawStr) -> &'static str { "index" }
 
+fn hello_world_rocket() -> rocket::Rocket {
+    let config = Config::new(Environment::Production).unwrap();
+    rocket::custom(config, false).mount("/", routes![hello_world])
+}
+
 fn rocket() -> rocket::Rocket {
     let config = Config::new(Environment::Production).unwrap();
     rocket::custom(config, false)
@@ -37,10 +47,20 @@ fn rocket() -> rocket::Rocket {
 mod benches {
     extern crate test;
 
-    use super::rocket;
+    use super::{hello_world_rocket, rocket};
     use self::test::Bencher;
     use rocket::testing::MockRequest;
     use rocket::http::Method::*;
+
+    #[bench]
+    fn bench_hello_world(b: &mut Bencher) {
+        let rocket = hello_world_rocket();
+        let mut request = MockRequest::new(Get, "/");
+
+        b.iter(|| {
+            request.dispatch_with(&rocket);
+        });
+    }
 
     #[bench]
     fn bench_single_get_index(b: &mut Bencher) {

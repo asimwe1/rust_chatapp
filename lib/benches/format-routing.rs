@@ -4,7 +4,6 @@
 extern crate rocket;
 
 use rocket::config::{Environment, Config};
-use rocket::http::RawStr;
 
 #[get("/", format = "application/json")]
 fn get() -> &'static str { "get" }
