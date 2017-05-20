@@ -46,7 +46,7 @@ pub struct Request<'r> {
     uri: URI<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
-    extra: RequestState<'r>
+    state: RequestState<'r>
 }
 
 impl<'r> Request<'r> {
@@ -70,7 +70,7 @@ impl<'r> Request<'r> {
             uri: uri.into(),
             headers: HeaderMap::new(),
             remote: None,
-            extra: RequestState {
+            state: RequestState {
                 preset: None,
                 params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
@@ -150,7 +150,7 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
         self.uri = uri.into();
-        *self.extra.params.borrow_mut() = Vec::new();
+        *self.state.params.borrow_mut() = Vec::new();
     }
 
     /// Returns the address of the remote connection that initiated this
@@ -275,7 +275,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn cookies(&self) -> Cookies {
-        match self.extra.cookies.try_borrow_mut() {
+        match self.state.cookies.try_borrow_mut() {
             Ok(jar) => Cookies::new(jar),
             Err(_) => {
                 error_!("Multiple `Cookies` instances are active at once.");
@@ -290,7 +290,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn session(&self) -> Session {
         let key = self.preset().config.secret_key();
-        match self.extra.session.try_borrow_mut() {
+        match self.state.session.try_borrow_mut() {
             Ok(jar) => Session::new(jar, key),
             Err(_) => {
                 error_!("Multiple `Session` instances are active at once.");
@@ -327,14 +327,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.extra.content_type.get_or_set(|| {
+        self.state.content_type.get_or_set(|| {
             self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
         }).as_ref()
     }
 
     #[inline(always)]
     pub fn accept(&self) -> Option<&Accept> {
-        self.extra.accept.get_or_set(|| {
+        self.state.accept.get_or_set(|| {
             self.headers().get_one("Accept").and_then(|v| v.parse().ok())
         }).as_ref()
     }
@@ -389,7 +389,7 @@ impl<'r> Request<'r> {
     /// codegen.
     #[doc(hidden)]
     pub fn get_param_str(&self, n: usize) -> Option<&RawStr> {
-        let params = self.extra.params.borrow();
+        let params = self.state.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param count {}", n, params.len());
             return None;
@@ -434,7 +434,7 @@ impl<'r> Request<'r> {
     /// exist. Used by codegen.
     #[doc(hidden)]
     pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
-        let params = self.extra.params.borrow();
+        let params = self.state.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param (segments) count {}", n, params.len());
             return None;
@@ -457,7 +457,7 @@ impl<'r> Request<'r> {
 
     #[inline(always)]
     fn preset(&self) -> &PresetState<'r> {
-        match self.extra.preset {
+        match self.state.preset {
             Some(ref state) => state,
             None => {
                 error_!("Internal Rocket error: preset state is unset!");
@@ -472,19 +472,19 @@ impl<'r> Request<'r> {
     /// TODO: Figure out the mount path from here.
     #[inline]
     pub(crate) fn set_params(&self, route: &Route) {
-        *self.extra.params.borrow_mut() = route.get_param_indexes(self.uri());
+        *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
     /// Replace all of the cookies in `self` with those in `jar`.
     #[inline]
     pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
-        self.extra.cookies = RefCell::new(jar);
+        self.state.cookies = RefCell::new(jar);
     }
 
     /// Replace all of the session cookie in `self` with those in `jar`.
     #[inline]
     pub(crate) fn set_session(&mut self, jar: CookieJar) {
-        self.extra.session = RefCell::new(jar);
+        self.state.session = RefCell::new(jar);
     }
 
     /// Try to derive some guarded value from `self`.
@@ -502,7 +502,7 @@ impl<'r> Request<'r> {
     /// Set the precomputed state. For internal use only!
     #[inline(always)]
     pub(crate) fn set_preset(&mut self, config: &'r Config, state: &'r Container) {
-        self.extra.preset = Some(PresetState { config, state });
+        self.state.preset = Some(PresetState { config, state });
     }
 
     /// Convert from Hyper types into a Rocket Request.
