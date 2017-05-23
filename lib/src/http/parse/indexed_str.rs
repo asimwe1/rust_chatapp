@@ -24,7 +24,7 @@ impl IndexedStr {
     /// # Panics
     ///
     /// Panics if `self` is an indexed string and `string` is None.
-    pub fn to_str<'a>(&'a self, string: Option<&'a Cow<str>>) -> &'a str {
+    pub fn to_str<'a>(&'a self, string: Option<&'a str>) -> &'a str {
         if self.is_indexed() && string.is_none() {
             panic!("Cannot convert indexed str to str without base string!")
         }

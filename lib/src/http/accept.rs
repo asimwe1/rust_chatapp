@@ -95,6 +95,7 @@ impl Accept {
     //     self.0.push(media_type.into());
     // }
 
+    /// TODO: Cache this?
     pub fn preferred(&self) -> &WeightedMediaType {
         static ANY: WeightedMediaType = WeightedMediaType(MediaType::Any, None);
 
@@ -125,8 +126,6 @@ impl Accept {
 
         preferred
     }
-
-    // */html, text/plain
 
     #[inline(always)]
     pub fn first(&self) -> Option<&WeightedMediaType> {

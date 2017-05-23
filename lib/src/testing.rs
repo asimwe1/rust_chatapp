@@ -76,12 +76,14 @@
 //! ```
 
 use ::{Rocket, Request, Response, Data};
+use error::LaunchError;
 use http::{Method, Status, Header, Cookie};
 
 use std::net::SocketAddr;
 
 /// A type for mocking requests for testing Rocket applications.
 pub struct MockRequest<'r> {
+    prechecked: Option<&'r Rocket>,
     request: Request<'r>,
     data: Data
 }
@@ -91,6 +93,7 @@ impl<'r> MockRequest<'r> {
     #[inline]
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
         MockRequest {
+            prechecked: None,
             request: Request::new(method, uri.as_ref().to_string()),
             data: Data::local(vec![])
         }
@@ -199,6 +202,28 @@ impl<'r> MockRequest<'r> {
         self
     }
 
+    /// Returns `Some` if there an error checking `rocket`. Returns `None` if
+    /// there's no error and dispatching can continue.
+    fn precheck(&mut self, rocket: &'r Rocket) -> Option<LaunchError> {
+        // Check if we've already prechecked some `Rocket` instance.
+        if let Some(r) = self.prechecked {
+            // Check if the one we've prechecked is indeed `rocket`. This does a
+            // straight pointer comparison. If they're the same, then we know
+            // that the instance must not have changed since we kept an
+            // immutable borrow to it from the precheck.
+            if (r as *const Rocket) == (rocket as *const Rocket) {
+                return None
+            }
+        }
+
+        if let Some(err) = rocket.prelaunch_check() {
+            return Some(err);
+        }
+
+        self.prechecked = Some(rocket);
+        None
+    }
+
     /// Dispatch this request using a given instance of Rocket.
     ///
     /// It is possible that the supplied `rocket` instance contains malformed
@@ -234,11 +259,12 @@ impl<'r> MockRequest<'r> {
     /// assert_eq!(response.body_string(), Some("Hello, world!".into()));
     /// # }
     /// ```
+    #[inline]
     pub fn dispatch_with<'s>(&'s mut self, rocket: &'r Rocket) -> Response<'s> {
-        if let Some(error) = rocket.prelaunch_check() {
+        if let Some(err) = self.precheck(rocket) {
             return Response::build()
                 .status(Status::InternalServerError)
-                .sized_body(::std::io::Cursor::new(error.to_string()))
+                .sized_body(::std::io::Cursor::new(err.to_string()))
                 .finalize()
         }
 

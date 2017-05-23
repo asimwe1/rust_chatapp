@@ -26,7 +26,7 @@ fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
     ct.map(|ct| {
         let (top, sub) = (ct.top().as_str(), ct.sub().as_str());
         quote_expr!(ecx, ::rocket::http::MediaType {
-            source: None,
+            source: ::rocket::http::Source::None,
             top: ::rocket::http::IndexedStr::Concrete(
                 ::std::borrow::Cow::Borrowed($top)
             ),

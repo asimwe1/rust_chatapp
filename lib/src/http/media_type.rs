@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Cow, Borrow};
 use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -22,15 +22,31 @@ pub enum MediaParams {
     Dynamic(SmallVec<[(IndexedStr, IndexedStr); 2]>)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Source {
+    Known(&'static str),
+    Custom(Cow<'static, str>),
+    None
+}
+
+impl Source {
+    #[inline]
+    fn as_str(&self) -> Option<&str> {
+        match *self {
+            Source::Known(s) => Some(s),
+            Source::Custom(ref s) => Some(s.borrow()),
+            Source::None => None
+        }
+    }
+}
+
 // Describe a media type. In particular, describe its comparison and hashing
 // semantics.
 #[derive(Debug, Clone)]
 pub struct MediaType {
-    /// Storage for the entire media type string. This will be `Some` when the
-    /// media type was parsed from a string and `None` when it was created
-    /// manually.
+    /// Storage for the entire media type string.
     #[doc(hidden)]
-    pub source: Option<Cow<'static, str>>,
+    pub source: Source,
     /// The top-level type.
     #[doc(hidden)]
     pub top: IndexedStr,
@@ -56,7 +72,7 @@ macro_rules! media_types {
             #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: MediaType = MediaType {
-                source: None,
+                source: Source::Known(concat!($t, "/", $s, $("; ", $k, "=", $v),*)),
                 top: media_str!($t),
                 sub: media_str!($s),
                 params: MediaParams::Static(&[$((media_str!($k), media_str!($v))),*])
@@ -139,7 +155,7 @@ impl MediaType {
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
     {
         MediaType {
-            source: None,
+            source: Source::None,
             top: IndexedStr::Concrete(top.into()),
             sub: IndexedStr::Concrete(sub.into()),
             params: MediaParams::Static(&[]),
@@ -183,7 +199,7 @@ impl MediaType {
 
 
         MediaType {
-            source: None,
+            source: Source::None,
             top: IndexedStr::Concrete(top.into()),
             sub: IndexedStr::Concrete(sub.into()),
             params: MediaParams::Dynamic(params)
@@ -207,7 +223,7 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn top(&self) -> &UncasedStr {
-        self.top.to_str(self.source.as_ref()).into()
+        self.top.to_str(self.source.as_str()).into()
     }
 
     /// Returns the subtype for this media type. The return type,
@@ -225,7 +241,7 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn sub(&self) -> &UncasedStr {
-        self.sub.to_str(self.source.as_ref()).into()
+        self.sub.to_str(self.source.as_str()).into()
     }
 
     /// Returns a `u8` representing how specific the top-level type and subtype
@@ -333,7 +349,7 @@ impl MediaType {
 
         param_slice.iter()
             .map(move |&(ref key, ref val)| {
-                let source_str = self.source.as_ref();
+                let source_str = self.source.as_str();
                 (key.to_str(source_str), val.to_str(source_str))
             })
     }
@@ -374,11 +390,15 @@ impl Hash for MediaType {
 impl fmt::Display for MediaType {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}/{}", self.top(), self.sub())?;
-        for (key, val) in self.params() {
-            write!(f, "; {}={}", key, val)?;
-        }
+        if let Source::Known(src) = self.source {
+            src.fmt(f)
+        } else {
+            write!(f, "{}/{}", self.top(), self.sub())?;
+            for (key, val) in self.params() {
+                write!(f, "; {}={}", key, val)?;
+            }
 
-        Ok(())
+            Ok(())
+        }
     }
 }

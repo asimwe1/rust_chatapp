@@ -5,7 +5,7 @@ use pear::parsers::*;
 use pear::combinators::*;
 use smallvec::SmallVec;
 
-use http::{MediaType, MediaParams};
+use http::{MediaType, Source, MediaParams};
 use http::parse::checkers::{is_whitespace, is_valid_token};
 use http::parse::IndexedStr;
 
@@ -51,7 +51,7 @@ pub fn media_type<'a>(input: &mut &'a str) -> ParseResult<&'a str, MediaType> {
     }
 
     MediaType {
-        source: Some(Cow::Owned(source.to_string())),
+        source: Source::Custom(Cow::Owned(source.to_string())),
         top: IndexedStr::from(top, source).expect("top in source"),
         sub: IndexedStr::from(sub, source).expect("sub in source"),
         params: MediaParams::Dynamic(params)

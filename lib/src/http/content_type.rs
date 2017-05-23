@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use ext::IntoCollection;
-use http::{Header, MediaType};
+use http::{Header, MediaType, Source};
 use http::hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.
@@ -285,6 +285,10 @@ impl Into<Header<'static>> for ContentType {
         //
         // We could also use an `enum` for MediaType. But that kinda sucks. But
         // maybe it's what we want.
-        Header::new("Content-Type", self.to_string())
+        if let Source::Known(src) = self.0.source {
+            Header::new("Content-Type", src)
+        } else {
+            Header::new("Content-Type", self.to_string())
+        }
     }
 }

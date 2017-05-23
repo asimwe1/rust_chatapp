@@ -38,13 +38,6 @@ mod test {
     use http::MediaType;
     use super::parse_accept;
 
-    macro_rules! assert_no_parse {
-        ($string:expr) => ({
-            let result: Result<_, _> = parse_accept($string).into();
-            if result.is_ok() { panic!("{:?} parsed unexpectedly.", $string) }
-        });
-    }
-
     macro_rules! assert_parse {
         ($string:expr) => ({
             match parse_accept($string) {
@@ -55,16 +48,6 @@ mod test {
     }
 
     macro_rules! assert_parse_eq {
-        ($string:expr, [$($mt:expr),*]) => ({
-            let expected = vec![$($mt),*];
-            let result = assert_parse!($string);
-            for (i, wmt) in result.iter().enumerate() {
-                assert_eq!(wmt.media_type(), &expected[i]);
-            }
-        });
-    }
-
-    macro_rules! assert_quality_eq {
         ($string:expr, [$($mt:expr),*]) => ({
             let expected = vec![$($mt),*];
             let result = assert_parse!($string);
