@@ -62,13 +62,6 @@ fn json() -> content::JSON<&'static str> {
 }
 ```
 
-## Errors
-
-Responders need not _always_ generate a response. Instead, they can return an
-`Err` with a given status code. When this happens, Rocket forwards the request
-to the error catcher for the given status code. If none exists, which can only
-happen when using custom status codes, Rocket uses the **500** error catcher.
-
 ### Result
 
 `Result` is one of the most commonly used responders. Returning a `Result` means
@@ -82,6 +75,22 @@ forwarded to the **500** error catcher.
 `Option` is another commonly used responder. If the `Option` is `Some`, the
 wrapped responder is used to respond to the client. Otherwise, the request is
 forwarded to the **404** error catcher.
+
+## Errors
+
+Responders may fail; they need not _always_ generate a response. Instead, they
+can return an `Err` with a given status code. When this happens, Rocket forwards
+the request to the [error catcher](/guide/requests/#error-catchers) for the
+given status code.
+
+If an error catcher has been registered for the given status code, Rocket will
+invoke it. The catcher creates and returns a response to the client. If no error
+catcher has been registered and the error status code is one of the standard
+HTTP status code, a default error catcher will be used. Default error catchers
+returns an HTML page with the status code and description.
+
+If there is no catcher for a custom status code, Rocket uses the **500** error
+catcher to return a response.
 
 ### Failure
 
