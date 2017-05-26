@@ -18,11 +18,12 @@ pub fn init_pool() -> Pool {
     r2d2::Pool::new(config, manager).expect("db pool")
 }
 
-pub struct Conn(r2d2::PooledConnection<ConnectionManager<SqliteConnection>>);
+pub struct Conn(pub r2d2::PooledConnection<ConnectionManager<SqliteConnection>>);
 
 impl Deref for Conn {
     type Target = SqliteConnection;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
