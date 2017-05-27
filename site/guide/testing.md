@@ -40,7 +40,7 @@ follows:
 
 ```toml
 [dev-dependencies]
-rocket = { version = "0.2.6", features = ["testing"] }
+rocket = { version = "0.2.7", features = ["testing"] }
 ```
 
 With this in place, running `cargo test` will result in Cargo compiling Rocket
@@ -107,7 +107,7 @@ assert_eq!(body_str, Some("Hello, world!".to_string()));
 
 That's it! Run the tests with `cargo test`. The complete application, with
 testing, can be found in the [GitHub testing
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.6/examples/testing).
+example](https://github.com/SergioBenitez/Rocket/tree/v0.2.7/examples/testing).
 
 ## Codegen Debug
 
