@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
+use router::Route;
 use request::Request;
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
@@ -74,6 +75,13 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// Rocket implements `FromRequest` for several built-in types. Their behavior
 /// is documented here.
 ///
+///   * **Method**
+///
+///     Extracts the [Method](/rocket/http/enum.Method.html) from the incoming
+///     request.
+///
+///     _This implementation always returns successfully._
+///
 ///   * **&URI**
 ///
 ///     Extracts the [URI](/rocket/http/uri/struct.URI.html) from the incoming
@@ -81,12 +89,14 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **Method**
+///   * **&Route**
 ///
-///     Extracts the [Method](/rocket/http/enum.Method.html) from the incoming
-///     request.
+///     Extracts the [Route](/rocket/struct.Route.html) from the request if one
+///     is available. If a route is not available, the request is forwarded.
 ///
-///     _This implementation always returns successfully._
+///     For information of when a route is avaiable, see the
+///     [`Request::route`](/rocket/struct.Request.html#method.route)
+///     documentation.
 ///
 ///   * **Cookies**
 ///
@@ -191,6 +201,14 @@ pub trait FromRequest<'a, 'r>: Sized {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
 }
 
+impl<'a, 'r> FromRequest<'a, 'r> for Method {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        Success(request.method())
+    }
+}
+
 impl<'a, 'r> FromRequest<'a, 'r> for &'a URI<'a> {
     type Error = ();
 
@@ -199,11 +217,14 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a URI<'a> {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for Method {
+impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Success(request.method())
+        match request.route() {
+            Some(route) => Success(route),
+            None => Forward(())
+        }
     }
 }
 

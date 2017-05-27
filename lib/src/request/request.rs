@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::net::SocketAddr;
 use std::fmt;
 use std::str;
@@ -28,6 +28,7 @@ struct PresetState<'r> {
 struct RequestState<'r> {
     preset: Option<PresetState<'r>>,
     params: RefCell<Vec<(usize, usize)>>,
+    route: Cell<Option<&'r Route>>,
     cookies: RefCell<CookieJar>,
     session: RefCell<CookieJar>,
     accept: Storage<Option<Accept>>,
@@ -64,7 +65,7 @@ impl<'r> Request<'r> {
     /// let request = Request::new(Method::Get, "/uri");
     /// ```
     #[inline(always)]
-    pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
+    pub fn new<'s: 'r, U: Into<URI<'s>>>(method: Method, uri: U) -> Request<'r> {
         Request {
             method: method,
             uri: uri.into(),
@@ -72,6 +73,7 @@ impl<'r> Request<'r> {
             remote: None,
             state: RequestState {
                 preset: None,
+                route: Cell::new(None),
                 params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
                 session: RefCell::new(CookieJar::new()),
@@ -358,6 +360,18 @@ impl<'r> Request<'r> {
         }
     }
 
+    /// Get the limits.
+    pub fn limits(&self) -> &'r Limits {
+        &self.preset().config.limits
+    }
+
+    /// Get the current route, if any.
+    ///
+    /// No route will be avaiable before routing. So not during request fairing.
+    pub fn route(&self) -> Option<&'r Route> {
+        self.state.route.get()
+    }
+
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
     /// the request. Returns `Error::NoKey` if `n` is greater than the number of
     /// params. Returns `Error::BadParse` if the parameter type `T` can't be
@@ -450,11 +464,6 @@ impl<'r> Request<'r> {
         Some(Segments(&path[i..j]))
     }
 
-    /// Get the limits.
-    pub fn limits(&self) -> &'r Limits {
-        &self.preset().config.limits
-    }
-
     #[inline(always)]
     fn preset(&self) -> &PresetState<'r> {
         match self.state.preset {
@@ -471,7 +480,8 @@ impl<'r> Request<'r> {
     /// use may result in out of bounds indexing.
     /// TODO: Figure out the mount path from here.
     #[inline]
-    pub(crate) fn set_params(&self, route: &Route) {
+    pub(crate) fn set_route(&self, route: &'r Route) {
+        self.state.route.set(Some(route));
         *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 

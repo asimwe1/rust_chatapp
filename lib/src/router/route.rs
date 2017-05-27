@@ -15,7 +15,10 @@ pub struct Route {
     pub method: Method,
     /// A function that should be called when the route matches.
     pub handler: Handler,
-    /// The path (in Rocket format) that should be matched against.
+    /// The base mount point of this `Route`.
+    pub base: URI<'static>,
+    /// The path (in Rocket format) that should be matched against. This path
+    /// already includes the base mount point.
     pub path: URI<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
@@ -48,6 +51,7 @@ impl Route {
             method: m,
             handler: handler,
             rank: default_rank(&uri),
+            base: URI::from("/"),
             path: uri,
             format: None,
         }
@@ -59,11 +63,18 @@ impl Route {
     {
         Route {
             method: m,
-            path: URI::from(path.as_ref().to_string()),
             handler: handler,
+            base: URI::from("/"),
+            path: URI::from(path.as_ref().to_string()),
             rank: rank,
             format: None,
         }
+    }
+
+    /// Sets the base mount point of the route. Does not update the rank or any
+    /// other parameters.
+    pub fn set_base<S>(&mut self, path: S) where S: AsRef<str> {
+        self.base = URI::from(path.as_ref().to_string());
     }
 
     /// Sets the path of the route. Does not update the rank or any other
@@ -104,6 +115,7 @@ impl Clone for Route {
             method: self.method,
             handler: self.handler,
             rank: self.rank,
+            base: self.base.clone(),
             path: self.path.clone(),
             format: self.format.clone(),
         }

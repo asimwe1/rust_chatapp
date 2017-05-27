@@ -276,15 +276,29 @@ impl Rocket {
     /// until one of the handlers returns success or failure, or there are no
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
+    //
+    // FIXME: We _should_ be able to take an `&mut` here and mutate the request
+    // at any pointer _before_ we pass it to a handler as long as we drop the
+    // outcome. That should be safe. Since no mutable borrow can be held
+    // (ensuring `handler` takes an immutable borrow), any caller to `route`
+    // should be able to supply an `&mut` and retain an `&` after the call.
+    //
+    // Why are we even thinking about this? Because we want to set the route
+    // that the current request is trying to respond to so guards/handlers can
+    // get information about it. But we can't use a RefCell<&'r _> since that
+    // cuases lifetime issues since RefCell contains an UnsafeCell
+    // (weirdness...). IDEA: Have an `AtomicRef` type that does a pointer swap
+    // atomically when the ptr's size can be used for atomics.
     #[inline]
-    pub(crate) fn route<'r>(&self, request: &'r Request, mut data: Data)
-            -> handler::Outcome<'r> {
+    pub(crate) fn route<'s, 'r>(&'s self,
+                                request: &'r Request<'s>,
+                                mut data: Data) -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         let matches = self.router.route(request);
         for route in matches {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
-            request.set_params(route);
+            request.set_route(route);
 
             // Dispatch the request to the handler.
             let outcome = (route.handler)(request, data);
@@ -486,6 +500,7 @@ impl Rocket {
 
         for mut route in routes {
             let path = format!("{}/{}", base, route.path);
+            route.set_base(base);
             route.set_path(path);
 
             info_!("{}", route);
