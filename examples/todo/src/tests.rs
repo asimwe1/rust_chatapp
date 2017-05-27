@@ -51,7 +51,9 @@ fn test_insertion_deletion() {
         // Ensure it's gone.
         let final_tasks = Task::all(&conn);
         assert_eq!(final_tasks.len(), init_tasks.len());
-        assert_ne!(final_tasks[0].description, "My first task");
+        if final_tasks.len() > 0 {
+            assert_ne!(final_tasks[0].description, "My first task");
+        }
     })
 }
 
