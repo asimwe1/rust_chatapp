@@ -1,3 +1,9 @@
+# Version 0.2.7 (May 26, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-05-26` nightly.
+
 # Version 0.2.6 (Apr 17, 2017)
 
 ## Codegen
