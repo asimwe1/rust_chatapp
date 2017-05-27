@@ -22,7 +22,7 @@ static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
 static PRIVATE_LIFETIME: &'static str = "'rocket";
 
 fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
-        -> Option<&'static str> {
+        -> Option<String> {
     match *item {
         Annotatable::Item(ref item) => match item.node {
             ItemKind::Struct(_, ref generics) => {
@@ -30,13 +30,7 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
                     0 => None,
                     1 => {
                         let lifetime = generics.lifetimes[0].lifetime;
-                        // According to the documentation, this is safe:
-                        //  Because the interner lives for the life of the
-                        //  thread, this can be safely treated as an immortal
-                        //  string, as long as it never crosses between threads.
-                        let lifetime_name: &'static str =
-                            unsafe { transmute(&*lifetime.name.as_str()) };
-                        Some(lifetime_name)
+                        Some(lifetime.ident.to_string())
                     }
                     _ => {
                         ecx.span_err(item.span, "cannot have more than one \
@@ -56,7 +50,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
     let struct_lifetime = get_struct_lifetime(ecx, annotated, span);
     let (lifetime_var, trait_generics) = match struct_lifetime {
-        lifetime@Some(_) => (lifetime, ty::LifetimeBounds::empty()),
+        Some(ref lifetime) => (Some(lifetime.as_str()), ty::LifetimeBounds::empty()),
         None => (Some(PRIVATE_LIFETIME), ty::LifetimeBounds {
                 lifetimes: vec![(PRIVATE_LIFETIME, vec![])],
                 bounds: vec![]
