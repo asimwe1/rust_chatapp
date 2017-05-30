@@ -277,18 +277,11 @@ impl Rocket {
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
     //
-    // FIXME: We _should_ be able to take an `&mut` here and mutate the request
+    // TODO: We _should_ be able to take an `&mut` here and mutate the request
     // at any pointer _before_ we pass it to a handler as long as we drop the
     // outcome. That should be safe. Since no mutable borrow can be held
     // (ensuring `handler` takes an immutable borrow), any caller to `route`
     // should be able to supply an `&mut` and retain an `&` after the call.
-    //
-    // Why are we even thinking about this? Because we want to set the route
-    // that the current request is trying to respond to so guards/handlers can
-    // get information about it. But we can't use a RefCell<&'r _> since that
-    // cuases lifetime issues since RefCell contains an UnsafeCell
-    // (weirdness...). IDEA: Have an `AtomicRef` type that does a pointer swap
-    // atomically when the ptr's size can be used for atomics.
     #[inline]
     pub(crate) fn route<'s, 'r>(&'s self,
                                 request: &'r Request<'s>,
