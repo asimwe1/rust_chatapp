@@ -27,7 +27,7 @@ state = "0.2.1"
 time = "0.1"
 memchr = "1"
 base64 = "0.5.2"
-smallvec = "0.3.3"
+smallvec = "0.4"
 pear = "0.0.8"
 pear_codegen = "0.0.8"
 rustls = { version = "0.8.0", optional = true }
