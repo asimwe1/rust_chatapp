@@ -1,3 +1,10 @@
+# Version 0.2.8 (Jun 01, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-06-01` nightly.
+  * Minimum required `rustc` is `1.19.0-nightly (2017-06-01)`.
+
 # Version 0.2.7 (May 26, 2017)
 
 ## Codegen

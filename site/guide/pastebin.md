@@ -43,8 +43,8 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rocket = "0.2.7"
-rocket_codegen = "0.2.7"
+rocket = "0.2.8"
+rocket_codegen = "0.2.8"
 ```
 
 And finally, create a skeleton Rocket application to work off of in
@@ -402,4 +402,4 @@ through some of them to get a better feel for Rocket. Here are some ideas:
 
 You can find the full source code for the completed pastebin tutorial in the
 [Rocket Github
-Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.7/examples/pastebin).
+Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
