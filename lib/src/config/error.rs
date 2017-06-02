@@ -5,8 +5,7 @@ use std::fmt;
 use super::Environment;
 use self::ConfigError::*;
 
-use term_painter::Color::White;
-use term_painter::ToStyle;
+use yansi::Color::White;
 
 /// The type of a configuration parsing error.
 #[derive(Debug, PartialEq, Clone)]

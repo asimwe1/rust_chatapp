@@ -1,10 +1,10 @@
 //! This tiny build script ensures that rocket_codegen is not compiled with an
 //! incompatible version of rust.
 
-extern crate ansi_term;
+extern crate yansi;
 extern crate version_check;
 
-use ansi_term::Color::{Red, Yellow, Blue, White};
+use yansi::Color::{Red, Yellow, Blue, White};
 use version_check::{is_nightly, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
@@ -37,7 +37,7 @@ fn main() {
         (Some(is_nightly), Some((ok_version, version)), Some((ok_date, date))) => {
             if !is_nightly {
                 printerr!("{} {}",
-                          Red.bold().paint("Error:"),
+                          Red.paint("Error:").bold(),
                           White.paint("Rocket requires a nightly version of Rust."));
                 print_version_err(&*version, &*date);
                 printerr!("{}{}{}",
@@ -49,7 +49,7 @@ fn main() {
 
             if !ok_version || !ok_date {
                 printerr!("{} {}",
-                          Red.bold().paint("Error:"),
+                          Red.paint("Error:").bold(),
                           White.paint("Rocket codegen requires a more recent version of rustc."));
                 printerr!("{}{}{}",
                           Blue.paint("Use `"),

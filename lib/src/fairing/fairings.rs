@@ -82,8 +82,7 @@ impl Fairings {
     }
 
     pub fn pretty_print_counts(&self) {
-        use term_painter::ToStyle;
-        use term_painter::Color::{White, Magenta};
+        use yansi::Paint;
 
         if self.all_fairings.is_empty() {
             return
@@ -92,12 +91,12 @@ impl Fairings {
         fn info_if_nonempty(kind: &str, fairings: &[&Fairing]) {
             let names: Vec<&str> = fairings.iter().map(|f| f.info().name).collect();
             info_!("{} {}: {}",
-                   White.paint(fairings.len()),
+                   Paint::white(fairings.len()),
                    kind,
-                   White.paint(names.join(", ")));
+                   Paint::white(names.join(", ")));
         }
 
-        info!("📡  {}:", Magenta.paint("Fairings"));
+        info!("📡  {}:", Paint::purple("Fairings"));
         info_if_nonempty("launch", &self.launch);
         info_if_nonempty("request", &self.request);
         info_if_nonempty("response", &self.response);

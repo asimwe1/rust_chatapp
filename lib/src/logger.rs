@@ -4,8 +4,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use log::{self, Log, LogLevel, LogRecord, LogMetadata};
-use term_painter::Color::*;
-use term_painter::ToStyle;
+use yansi::Color::*;
 
 struct RocketLogger(LoggingLevel);
 
@@ -119,20 +118,20 @@ impl Log for RocketLogger {
         use log::LogLevel::*;
         match level {
             Info => println!("{}", Blue.paint(record.args())),
-            Trace => println!("{}", Magenta.paint(record.args())),
+            Trace => println!("{}", Purple.paint(record.args())),
             Error => {
                 println!("{} {}",
-                         Red.bold().paint("Error:"),
+                         Red.paint("Error:").bold(),
                          Red.paint(record.args()))
             }
             Warn => {
                 println!("{} {}",
-                         Yellow.bold().paint("Warning:"),
+                         Yellow.paint("Warning:").bold(),
                          Yellow.paint(record.args()))
             }
             Debug => {
                 let loc = record.location();
-                print!("\n{} ", Blue.bold().paint("-->"));
+                print!("\n{} ", Blue.paint("-->").bold());
                 println!("{}:{}", Blue.paint(loc.file()), Blue.paint(loc.line()));
                 println!("{}", record.args());
             }

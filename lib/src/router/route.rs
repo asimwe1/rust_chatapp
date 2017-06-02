@@ -1,8 +1,7 @@
 use std::fmt;
 use std::convert::From;
 
-use term_painter::ToStyle;
-use term_painter::Color::*;
+use yansi::Color::*;
 
 use codegen::StaticRouteInfo;
 use handler::Handler;

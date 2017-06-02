@@ -5,8 +5,7 @@ use std::net::SocketAddr;
 use std::io::{self, Write};
 use std::mem;
 
-use term_painter::Color::*;
-use term_painter::ToStyle;
+use yansi::Paint;
 use state::Container;
 
 #[cfg(feature = "tls")] use hyper_rustls::TlsServer;
@@ -111,7 +110,7 @@ impl Rocket {
     #[inline]
     fn issue_response(&self, response: Response, hyp_res: hyper::FreshResponse) {
         match self.write_response(response, hyp_res) {
-            Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
+            Ok(_) => info_!("{}", Paint::green("Response succeeded.")),
             Err(e) => error_!("Failed to write response: {:?}.", e)
         }
     }
@@ -251,7 +250,7 @@ impl Rocket {
 
                 // There was no matching route.
                 if request.method() == Method::Head {
-                    info_!("Autohandling {} request.", White.paint("HEAD"));
+                    info_!("Autohandling {} request.", Paint::white("HEAD"));
                     request.set_method(Method::Get);
                     let mut response = self.dispatch(request, data);
                     response.strip_body();
@@ -298,7 +297,7 @@ impl Rocket {
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", White.paint("Outcome:"), outcome);
+            info_!("{} {}", Paint::white("Outcome:"), outcome);
             match outcome {
                 o@Outcome::Success(_) | o @Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
@@ -315,7 +314,7 @@ impl Rocket {
     // 500 catcher is executed. if there is no registered catcher for `status`,
     // the default catcher is used.
     fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
-        warn_!("Responding with {} catcher.", Red.paint(&status));
+        warn_!("Responding with {} catcher.", Paint::red(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.
         let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
@@ -396,28 +395,28 @@ impl Rocket {
         }
 
         info!("🔧  Configured for {}.", config.environment);
-        info_!("address: {}", White.paint(&config.address));
-        info_!("port: {}", White.paint(&config.port));
-        info_!("log: {}", White.paint(config.log_level));
-        info_!("workers: {}", White.paint(config.workers));
-        info_!("secret key: {}", White.paint(config.secret_key.kind()));
-        info_!("limits: {}", White.paint(&config.limits));
+        info_!("address: {}", Paint::white(&config.address));
+        info_!("port: {}", Paint::white(&config.port));
+        info_!("log: {}", Paint::white(config.log_level));
+        info_!("workers: {}", Paint::white(config.workers));
+        info_!("secret key: {}", Paint::white(config.secret_key.kind()));
+        info_!("limits: {}", Paint::white(&config.limits));
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            info_!("tls: {}", White.paint("enabled"));
+            info_!("tls: {}", Paint::white("enabled"));
         } else {
             if tls_configured {
-                error_!("tls: {}", White.paint("disabled"));
+                error_!("tls: {}", Paint::white("disabled"));
                 error_!("tls is configured, but the tls feature is disabled");
             } else {
-                info_!("tls: {}", White.paint("disabled"));
+                info_!("tls: {}", Paint::white("disabled"));
             }
         }
 
         for (name, value) in config.extras() {
             info_!("{} {}: {}",
-                   Yellow.paint("[extra]"), name, White.paint(LoggedValue(value)));
+                   Paint::yellow("[extra]"), name, Paint::white(LoggedValue(value)));
         }
 
         Rocket {
@@ -483,7 +482,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
+        info!("🛰  {} '{}':", Paint::purple("Mounting"), base);
 
         if base.contains('<') {
             error_!("Bad mount point: '{}'.", base);
@@ -534,11 +533,11 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("👾  {}:", Magenta.paint("Catchers"));
+        info!("👾  {}:", Paint::purple("Catchers"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
                 let msg = "(warning: duplicate catcher!)";
-                info_!("{} {}", c, Yellow.paint(msg));
+                info_!("{} {}", c, Paint::yellow(msg));
             } else {
                 info_!("{}", c);
             }
@@ -685,9 +684,9 @@ impl Rocket {
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("🚀  {} {}{}",
-                  White.paint("Rocket has launched from"),
-                  White.bold().paint(proto),
-                  White.bold().paint(&full_addr));
+                  Paint::white("Rocket has launched from"),
+                  Paint::white(proto).bold(),
+                  Paint::white(&full_addr).bold());
 
             let threads = self.config.workers as usize;
             if let Err(e) = server.handle_threads(self, threads) {

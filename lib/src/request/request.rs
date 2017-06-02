@@ -3,8 +3,7 @@ use std::net::SocketAddr;
 use std::fmt;
 use std::str;
 
-use term_painter::Color::*;
-use term_painter::ToStyle;
+use yansi::Paint;
 
 use state::{Container, Storage};
 
@@ -580,10 +579,10 @@ impl<'r> fmt::Display for Request<'r> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
+        write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
         if let Some(content_type) = self.content_type() {
             if self.method.supports_payload() {
-                write!(f, " {}", Yellow.paint(content_type))?;
+                write!(f, " {}", Paint::yellow(content_type))?;
             }
         }
 

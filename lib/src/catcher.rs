@@ -5,8 +5,7 @@ use error::Error;
 use request::Request;
 
 use std::fmt;
-use term_painter::ToStyle;
-use term_painter::Color::*;
+use yansi::Color::*;
 
 /// An error catching route.
 ///

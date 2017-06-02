@@ -101,7 +101,7 @@
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;
 #[cfg(feature = "tls")] extern crate hyper_rustls;
-extern crate term_painter;
+extern crate yansi;
 extern crate hyper;
 extern crate url;
 extern crate toml;
