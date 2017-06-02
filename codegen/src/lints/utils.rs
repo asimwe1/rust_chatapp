@@ -46,18 +46,11 @@ pub fn match_def_path(tcx: ty::TyCtxt, def_id: DefId, path: &[&str]) -> bool {
 
 /// Check if the method call given in `expr` belongs to given type.
 pub fn is_impl_method(cx: &LateContext, expr: &Expr, path: &[&str]) -> bool {
-    let method_call = ty::MethodCall::expr(expr.id);
-
-    let trt_id = cx.tables
-        .method_map
-        .get(&method_call)
-        .and_then(|callee| cx.tcx.impl_of_method(callee.def_id));
-
-    if let Some(trt_id) = trt_id {
-        match_def_path(cx.tcx, trt_id, path)
-    } else {
-        false
-    }
+    cx.tables.type_dependent_defs
+        .get(&expr.id)
+        .and_then(|callee| cx.tcx.impl_of_method(callee.def_id()))
+        .map(|trt_id| match_def_path(cx.tcx, trt_id, path))
+        .unwrap_or(false)
 }
 
 pub fn find_initial_receiver<'e>(cx: &LateContext,
