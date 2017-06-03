@@ -5,7 +5,7 @@ extern crate yansi;
 extern crate version_check;
 
 use yansi::Color::{Red, Yellow, Blue, White};
-use version_check::{is_nightly, is_min_version};
+use version_check::{supports_features, is_min_version};
 
 // Specifies the minimum nightly version needed to compile Rocket.
 const MIN_VERSION: &'static str = "1.19.0-nightly";
@@ -20,7 +20,7 @@ macro_rules! printerr {
 }
 
 fn main() {
-    let (ok_nightly, ok_version) = (is_nightly(), is_min_version(MIN_VERSION));
+    let (ok_channel, ok_version) = (supports_features(), is_min_version(MIN_VERSION));
     let print_version_err = |version: &str| {
         printerr!("{} {}. {} {}.",
                   White.paint("Installed version is:"),
@@ -29,11 +29,11 @@ fn main() {
                   Yellow.paint(MIN_VERSION));
     };
 
-    if let (Some(is_nightly), Some((ok_version, version))) = (ok_nightly, ok_version) {
-        if !is_nightly {
+    if let (Some(ok_channel), Some((ok_version, version))) = (ok_channel, ok_version) {
+        if !ok_channel {
             printerr!("{} {}",
                       Red.paint("Error:").bold(),
-                      White.paint("Rocket requires a nightly version of Rust."));
+                      White.paint("Rocket requires a nightly or dev version of Rust."));
             print_version_err(&*version);
             printerr!("{}{}{}",
                       Blue.paint("See the getting started guide ("),

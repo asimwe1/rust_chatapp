@@ -16,11 +16,11 @@ plugin = true
 
 [dependencies]
 rocket = { version = "0.2.8", path = "../lib/" }
-log = "^0.3"
+log = "0.3"
 
 [dev-dependencies]
-compiletest_rs = "^0.2"
+compiletest_rs = "0.2"
 
 [build-dependencies]
 yansi = "0.2"
-version_check = "0.1"
+version_check = "0.1.2"

@@ -5,7 +5,7 @@ extern crate yansi;
 extern crate version_check;
 
 use yansi::Color::{Red, Yellow, Blue, White};
-use version_check::{is_nightly, is_min_version, is_min_date};
+use version_check::{supports_features, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
 const MIN_DATE: &'static str = "2017-06-01";
@@ -21,7 +21,7 @@ macro_rules! printerr {
 }
 
 fn main() {
-    let ok_nightly = is_nightly();
+    let ok_channel = supports_features();
     let ok_version = is_min_version(MIN_VERSION);
     let ok_date = is_min_date(MIN_DATE);
 
@@ -33,12 +33,12 @@ fn main() {
                   Yellow.paint(format!("{} ({})", MIN_VERSION, MIN_DATE)));
     };
 
-    match (ok_nightly, ok_version, ok_date) {
-        (Some(is_nightly), Some((ok_version, version)), Some((ok_date, date))) => {
-            if !is_nightly {
+    match (ok_channel, ok_version, ok_date) {
+        (Some(ok_channel), Some((ok_version, version)), Some((ok_date, date))) => {
+            if !ok_channel {
                 printerr!("{} {}",
                           Red.paint("Error:").bold(),
-                          White.paint("Rocket requires a nightly version of Rust."));
+                          White.paint("Rocket requires a nightly or dev version of Rust."));
                 print_version_err(&*version, &*date);
                 printerr!("{}{}{}",
                           Blue.paint("See the getting started guide ("),
