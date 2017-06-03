@@ -4,9 +4,12 @@
 extern crate rocket;
 
 use std::io;
+
 use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
+
+#[cfg(test)] mod tests;
 
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug)]
@@ -55,8 +58,10 @@ fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, sink])
+}
+
 fn main() {
-    rocket::ignite()
-        .mount("/", routes![index, sink])
-        .launch();
+    rocket().launch();
 }
