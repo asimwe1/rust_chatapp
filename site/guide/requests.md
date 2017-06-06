@@ -57,7 +57,7 @@ not just the world, we could declare a route and handler like so:
 
 ```rust
 #[get("/hello/<name>")]
-fn hello(name: &str) -> String {
+fn hello(name: String) -> String {
     format!("Hello, {}!", name)
 }
 ```
@@ -76,12 +76,25 @@ illustrate varied usage:
 
 ```rust
 #[get("/hello/<name>/<age>/<cool>")]
-fn hello(name: &str, age: u8, cool: bool) -> String {
+fn hello(name: String, age: u8, cool: bool) -> String {
     if cool {
       format!("You're a cool {} year old, {}!", age, name)
     } else {
       format!("{}, we need to talk about your coolness.", name)
     }
+}
+```
+
+## Raw Strings
+
+Rocket provides the `RawStr` type for handling raw strings. When used as a path
+segment, it is passed directly with no modification. This is used instead of
+the `&str` type.
+
+```rust
+#[get("/hello/<name>")]
+fn hello(name: &RawStr) -> String {
+  format!("Hello, {}!", name)
 }
 ```
 
@@ -107,7 +120,7 @@ fn user(id: usize) -> T { ... }
 fn user_int(id: isize) -> T { ... }
 
 #[get("/user/<id>", rank = 3)]
-fn user_str(id: &str) -> T { ... }
+fn user_str(id: &RawStr) -> T { ... }
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
@@ -125,7 +138,7 @@ be routed as follows:
      route always matches. The `user_str` handler is called.
 
 Forwards can be _caught_ by using a `Result` or `Option` type. For example, if
-the type of `id` in the `user` function was `Result<usize, &str>`, then `user`
+the type of `id` in the `user` function was `Result<usize, &RawStr>`, then `user`
 would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `usize`, while an `Err` would indicate that `<id>` was not a `usize`. The
 `Err`'s value would contain the string that failed to parse as a `usize`.

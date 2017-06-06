@@ -132,7 +132,9 @@ GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json).
 ## Templates
 
 Rocket has built-in support for templating. To respond with a rendered template,
-simply return a
+ensure that you are using
+[`Template::fairing()`](https://api.rocket.rs/rocket_contrib/struct.Template.html#method.fairing)
+and then simply return a
 [Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) type.
 
 ```rust
@@ -140,6 +142,13 @@ simply return a
 fn index() -> Template {
   let context = /* object-like value */;
   Template::render("index", &context)
+}
+
+fn main() {
+  rocket::ignite()
+    .mount("/", routes![index])
+    .attach(Template::fairing())
+    .launch();
 }
 ```
 
