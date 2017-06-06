@@ -112,6 +112,69 @@ impl Config {
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
 
+    /// Returns a builder for `Config` structure where the default parameters
+    /// are set to those of the development environment. The root configuration
+    /// directory is set to the current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::development().unwrap();
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn development() -> Result<Config> {
+        Config::new(Environment::Development)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// staging environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::staging().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn staging() -> Result<Config> {
+        Config::new(Environment::Staging)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// production environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::production().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn production() -> Result<Config> {
+        Config::new(Environment::Production)
+    }
+
     /// Returns the default configuration for the environment `env` given that
     /// the configuration was stored at `config_path`. If `config_path` is not
     /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.

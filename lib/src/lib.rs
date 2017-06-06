@@ -117,7 +117,7 @@ extern crate ordermap;
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
-pub mod testing;
+pub mod local;
 pub mod http;
 pub mod request;
 pub mod response;
@@ -140,6 +140,7 @@ mod ext;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
+#[doc(inline)] pub use config::Config;
 pub use router::Route;
 pub use request::{Request, State};
 pub use error::{Error, LaunchError};

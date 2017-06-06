@@ -6,7 +6,7 @@ use request::Request;
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
-use http::{Status, ContentType, Accept, Method, Cookies, Session};
+use http::{Status, ContentType, Accept, Method, Cookies};
 use http::uri::URI;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
@@ -233,14 +233,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
-    }
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for Session<'a> {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Success(request.session())
     }
 }
 
