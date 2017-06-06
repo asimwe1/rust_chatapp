@@ -18,7 +18,7 @@ categories = ["web-programming::http-server"]
 tls = ["rustls", "hyper-rustls"]
 
 [dependencies]
-yansi = "0.2"
+yansi = "0.3"
 log = "0.3"
 url = "1"
 toml = { version = "0.2", default-features = false }
@@ -47,5 +47,5 @@ lazy_static = "0.2"
 rocket_codegen = { version = "0.2.8", path = "../codegen" }
 
 [build-dependencies]
-yansi = "0.2"
+yansi = "0.3"
 version_check = "0.1.2"

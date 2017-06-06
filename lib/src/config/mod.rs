@@ -399,11 +399,18 @@ impl RocketConfig {
         let toml = parser.parse().ok_or_else(|| {
             let source = src.clone();
             let errors = parser.errors.iter()
-                .map(|error| ParsingError {
-                    byte_range: (error.lo, error.hi),
-                    start: parser.to_linecol(error.lo),
-                    end: parser.to_linecol(error.hi),
-                    desc: error.desc.clone(),
+                .map(|error| {
+                    // workaround for poor error messages `toml`
+                    let debug_desc = format!("{:?}", error.desc);
+                    // strip the leading " and trailing " from debug formatting
+                    let desc = debug_desc[1..debug_desc.len() - 1].to_string();
+
+                    ParsingError {
+                        byte_range: (error.lo, error.hi),
+                        start: parser.to_linecol(error.lo),
+                        end: parser.to_linecol(error.hi),
+                        desc: desc
+                    }
                 });
 
             ConfigError::ParseError(source, path.clone(), errors.collect())

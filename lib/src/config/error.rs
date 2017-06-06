@@ -93,9 +93,9 @@ impl ConfigError {
                     let (line, col) = error.start;
                     let error_source = &source[lo..hi];
 
-                    error!("config file could not be parsed as TOML");
+                    error!("config file failed to parse due to invalid TOML");
                     info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
-                    trace_!("'{}' - {}", error_source, White.paint(&error.desc));
+                    trace_!("{:?} - {}", error_source, White.paint(&error.desc));
                 }
             }
             BadEnvVal(ref key, ref value, ref error) => {
