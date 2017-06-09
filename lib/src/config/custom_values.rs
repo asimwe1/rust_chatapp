@@ -14,17 +14,26 @@ pub enum SecretKey {
 
 impl SecretKey {
     #[inline]
-    pub fn kind(&self) -> &'static str {
+    pub(crate) fn inner(&self) -> &Key {
         match *self {
-            SecretKey::Generated(_) => "generated",
-            SecretKey::Provided(_) => "provided",
+            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
         }
     }
 
     #[inline]
-    pub(crate) fn inner(&self) -> &Key {
+    pub(crate) fn is_generated(&self) -> bool {
         match *self {
-            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
+            SecretKey::Generated(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl fmt::Display for SecretKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SecretKey::Generated(_) => write!(f, "generated"),
+            SecretKey::Provided(_) => write!(f, "provided"),
         }
     }
 }

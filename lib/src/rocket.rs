@@ -391,19 +391,21 @@ impl Rocket {
         info_!("port: {}", Paint::white(&config.port));
         info_!("log: {}", Paint::white(config.log_level));
         info_!("workers: {}", Paint::white(config.workers));
-        info_!("secret key: {}", Paint::white(config.secret_key.kind()));
+        info_!("secret key: {}", Paint::white(&config.secret_key));
         info_!("limits: {}", Paint::white(&config.limits));
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
             info_!("tls: {}", Paint::white("enabled"));
+        } else if tls_configured {
+            error_!("tls: {}", Paint::white("disabled"));
+            error_!("tls is configured, but the tls feature is disabled");
         } else {
-            if tls_configured {
-                error_!("tls: {}", Paint::white("disabled"));
-                error_!("tls is configured, but the tls feature is disabled");
-            } else {
-                info_!("tls: {}", Paint::white("disabled"));
-            }
+            info_!("tls: {}", Paint::white("disabled"));
+        }
+
+        if config.secret_key.is_generated() && config.environment.is_prod() {
+            warn!("environment is 'production', but no `secret_key` is configured");
         }
 
         for (name, value) in config.extras() {
