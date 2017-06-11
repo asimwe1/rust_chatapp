@@ -192,8 +192,8 @@ impl Config {
                 "Configuration files must be rooted in a directory."));
         }
 
-        // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
-        let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
+        // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
+        let default_workers = (num_cpus::get() * 2) as u16;
 
         // Use a generated secret key by default.
         let key = SecretKey::Generated(Key::generate());

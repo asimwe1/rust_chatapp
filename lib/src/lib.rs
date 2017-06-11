@@ -95,9 +95,10 @@
 //!
 //! ## Testing
 //!
-//! The [local](/rocket/local) module contains structures that are facilitate
-//! unit and itegration testing of a Rocket application. The [top-level `local`
-//! module documentation](/rocket/local) includes detailed examples.
+//! The [local](/rocket/local) module contains structures that facilitate unit
+//! and itegration testing of a Rocket application. The [top-level `local`
+//! module documentation](/rocket/local) and the [testing chapter of the
+//! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;

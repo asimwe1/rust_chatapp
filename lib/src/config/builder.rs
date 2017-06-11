@@ -176,7 +176,7 @@ impl ConfigBuilder {
     /// use rocket::config::{Config, Environment, Limits};
     ///
     /// let mut config = Config::build(Environment::Staging)
-    ///     .limits(Limits::default().add("json", 5 * (1 << 20)))
+    ///     .limits(Limits::new().limit("json", 5 * (1 << 20)))
     ///     .unwrap();
     /// ```
     pub fn limits(mut self, limits: Limits) -> Self {

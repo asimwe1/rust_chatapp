@@ -23,7 +23,7 @@ mod limits_tests {
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
         let config = Config::build(Environment::Development)
-            .limits(Limits::default().add("forms", limit))
+            .limits(Limits::default().limit("forms", limit))
             .unwrap();
 
         rocket::custom(config, true).mount("/", routes![super::index])
