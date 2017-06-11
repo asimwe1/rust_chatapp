@@ -100,10 +100,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **Cookies**
 ///
-///     Returns a borrow to the [Cookies](/rocket/http/type.Cookies.html) in the
-///     incoming request. Note that `Cookies` implements internal mutability, so
-///     a handle to `Cookies` allows you to get _and_ set cookies in the
-///     request.
+///     Returns a borrow to the [Cookies](/rocket/http/enum.Cookies.html) in
+///     the incoming request. Note that `Cookies` implements internal
+///     mutability, so a handle to `Cookies` allows you to get _and_ set cookies
+///     in the request.
 ///
 ///     _This implementation always returns successfully._
 ///

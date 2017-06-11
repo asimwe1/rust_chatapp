@@ -86,7 +86,8 @@
 //!     #[test]
 //!     fn test_hello_world() {
 //!         // Construct a client to use for dispatching requests.
-//!         let client = Client::new(rocket::ignite().mount("/", routes![hello]));
+//!         let rocket = rocket::ignite().mount("/", routes![hello]);
+//!         let client = Client::new(rocket).expect("valid rocket instance");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
 //!         let mut response = client.get("/").dispatch();

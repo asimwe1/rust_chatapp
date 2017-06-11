@@ -10,6 +10,9 @@
 
 #![plugin(pear_codegen)]
 
+// TODO: Version URLs.
+#![doc(html_root_url = "https://api.rocket.rs/rocket/")]
+
 //! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!
@@ -92,10 +95,9 @@
 //!
 //! ## Testing
 //!
-//! Rocket includes a small testing library that can be used to test your Rocket
-//! application. For information on how to test your Rocket applications, see
-//! the [testing module](/rocket/testing) documentation.
-//!
+//! The [local](/rocket/local) module contains structures that are facilitate
+//! unit and itegration testing of a Rocket application. The [top-level `local`
+//! module documentation](/rocket/local) includes detailed examples.
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
