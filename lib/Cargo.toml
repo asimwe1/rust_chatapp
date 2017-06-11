@@ -21,7 +21,7 @@ tls = ["rustls", "hyper-rustls"]
 yansi = "0.3"
 log = "0.3"
 url = "1"
-toml = { version = "0.2", default-features = false }
+toml = "0.4"
 num_cpus = "1"
 state = "0.2.2"
 time = "0.1"

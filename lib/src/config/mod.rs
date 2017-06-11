@@ -203,7 +203,7 @@ use std::env;
 use toml;
 
 pub use self::custom_values::Limits;
-pub use toml::{Array, Table, Value};
+pub use toml::value::{Array, Table, Value, Datetime};
 pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;
 pub use self::config::Config;
@@ -391,30 +391,18 @@ impl RocketConfig {
     /// Parses the configuration from the Rocket.toml file. Also overrides any
     /// values there with values from the environment.
     fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
-        // Get a PathBuf version of the filename.
-        let path = filename.as_ref().to_path_buf();
+        use self::ConfigError::ParseError;
 
         // Parse the source as TOML, if possible.
-        let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or_else(|| {
-            let source = src.clone();
-            let errors = parser.errors.iter()
-                .map(|error| {
-                    // workaround for poor error messages `toml`
-                    let debug_desc = format!("{:?}", error.desc);
-                    // strip the leading " and trailing " from debug formatting
-                    let desc = debug_desc[1..debug_desc.len() - 1].to_string();
-
-                    ParsingError {
-                        byte_range: (error.lo, error.hi),
-                        start: parser.to_linecol(error.lo),
-                        end: parser.to_linecol(error.hi),
-                        desc: desc
-                    }
-                });
-
-            ConfigError::ParseError(source, path.clone(), errors.collect())
-        })?;
+        let path = filename.as_ref().to_path_buf();
+        let table = match src.parse::<toml::Value>() {
+            Ok(toml::Value::Table(table)) => table,
+            Ok(value) => {
+                let err = format!("expected a table, found {}", value.type_str());
+                return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
+            }
+            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
+        };
 
         // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
@@ -423,7 +411,7 @@ impl RocketConfig {
         let mut global = None;
 
         // Parse the values from the TOML file.
-        for (entry, value) in toml {
+        for (entry, value) in table {
             // Each environment must be a table.
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
