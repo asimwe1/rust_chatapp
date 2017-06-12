@@ -16,9 +16,9 @@ pub struct Route {
     pub handler: Handler,
     /// The base mount point of this `Route`.
     pub base: URI<'static>,
-    /// The path (in Rocket format) that should be matched against. This path
+    /// The uri (in Rocket format) that should be matched against. This uri
     /// already includes the base mount point.
-    pub path: URI<'static>,
+    pub uri: URI<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The media type this route matches against.
@@ -51,23 +51,29 @@ impl Route {
             handler: handler,
             rank: default_rank(&uri),
             base: URI::from("/"),
-            path: uri,
+            uri: uri,
             format: None,
         }
     }
 
     /// Creates a new route with the given rank, method, path, and handler.
-    pub fn ranked<S>(rank: isize, m: Method, path: S, handler: Handler) -> Route
+    pub fn ranked<S>(rank: isize, m: Method, uri: S, handler: Handler) -> Route
         where S: AsRef<str>
     {
         Route {
             method: m,
             handler: handler,
             base: URI::from("/"),
-            path: URI::from(path.as_ref().to_string()),
+            uri: URI::from(uri.as_ref().to_string()),
             rank: rank,
             format: None,
         }
+    }
+
+    /// Retrieves the base mount point of this route.
+    #[inline]
+    pub fn base(&self) -> &str {
+        self.base.path()
     }
 
     /// Sets the base mount point of the route. Does not update the rank or any
@@ -78,8 +84,8 @@ impl Route {
 
     /// Sets the path of the route. Does not update the rank or any other
     /// parameters.
-    pub fn set_path<S>(&mut self, path: S) where S: AsRef<str> {
-        self.path = URI::from(path.as_ref().to_string());
+    pub fn set_uri<S>(&mut self, uri: S) where S: AsRef<str> {
+        self.uri = URI::from(uri.as_ref().to_string());
     }
 
     // FIXME: Decide whether a component has to be fully variable or not. That
@@ -88,11 +94,11 @@ impl Route {
     /// Given a URI, returns a vector of slices of that URI corresponding to the
     /// dynamic segments in this route.
     pub(crate) fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
-        let route_segs = self.path.segments();
+        let route_segs = self.uri.segments();
         let uri_segs = uri.segments();
         let start_addr = uri.path().as_ptr() as usize;
 
-        let mut result = Vec::with_capacity(self.path.segment_count());
+        let mut result = Vec::with_capacity(self.uri.segment_count());
         for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
             let i = (uri_seg.as_ptr() as usize) - start_addr;
             if route_seg.ends_with("..>") {
@@ -115,7 +121,7 @@ impl Clone for Route {
             handler: self.handler,
             rank: self.rank,
             base: self.base.clone(),
-            path: self.path.clone(),
+            uri: self.uri.clone(),
             format: self.format.clone(),
         }
     }
@@ -123,7 +129,7 @@ impl Clone for Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.path))?;
+        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
 
         if self.rank > 1 {
             write!(f, " [{}]", White.paint(&self.rank))?;

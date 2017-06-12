@@ -94,7 +94,7 @@ impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
         self.method == b.method
             && self.rank == b.rank
-            && self.path.collides_with(&b.path)
+            && self.uri.collides_with(&b.uri)
             && match (self.format.as_ref(), b.format.as_ref()) {
                 (Some(mt_a), Some(mt_b)) => mt_a.collides_with(mt_b),
                 (Some(_), None) => true,
@@ -114,8 +114,8 @@ impl Collider for Route {
 impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request<'r>) -> bool {
         self.method == req.method()
-            && self.path.collides_with(req.uri())
-            && self.path.query().map_or(true, |_| req.uri().query().is_some())
+            && self.uri.collides_with(req.uri())
+            && self.uri.query().map_or(true, |_| req.uri().query().is_some())
             && match self.format {
                 Some(ref mt_a) => match req.format() {
                     Some(ref mt_b) => mt_a.collides_with(mt_b),

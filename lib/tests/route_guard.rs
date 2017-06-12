@@ -8,7 +8,7 @@ use rocket::Route;
 
 #[get("/<path..>")]
 fn files(route: &Route, path: PathBuf) -> String {
-    format!("{}/{}", route.base.path(), path.to_string_lossy())
+    format!("{}/{}", route.base(), path.to_string_lossy())
 }
 
 mod route_guard_tests {

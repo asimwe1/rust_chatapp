@@ -36,7 +36,7 @@ pub enum LaunchErrorKind {
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
-/// An error that occurred during launch.
+/// An error that occurs during launch.
 ///
 /// A `LaunchError` is returned by
 /// [rocket::launch](/rocket/struct.Rocket.html#method.launch) when launching an
@@ -64,7 +64,7 @@ pub enum LaunchErrorKind {
 /// ```
 ///
 /// When a value of this type panics, the corresponding error message is pretty
-/// printed to the console. The following snippet illustrates this:
+/// printed to the console. The following illustrates this:
 ///
 /// ```rust
 /// # if false {
@@ -75,6 +75,18 @@ pub enum LaunchErrorKind {
 /// drop(error);
 /// # }
 /// ```
+///
+/// # Usage
+///
+/// A `LaunchError` value should usually be allowed to `drop` without
+/// inspection. There are two exceptions to this suggestion.
+///
+///   1. If you are writing a library or high-level application on-top of
+///      Rocket, you likely want to inspect the value before it drops to avoid a
+///      Rocket-specific `panic!`. This typically means simply printing the
+///      value.
+///
+///   2. You want to display your own error messages.
 pub struct LaunchError {
     handled: AtomicBool,
     kind: LaunchErrorKind

@@ -485,9 +485,10 @@ impl Rocket {
         }
 
         for mut route in routes {
-            let path = format!("{}/{}", base, route.path);
+            let uri = URI::new(format!("{}/{}", base, route.uri));
+
             route.set_base(base);
-            route.set_path(path);
+            route.set_uri(uri.to_string());
 
             info_!("{}", route);
             self.router.add(route);
@@ -605,9 +606,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch(|_| {
-    ///             println!("Rocket is about to launch! You just see...");
-    ///         }))
+    ///         .attach(AdHoc::on_launch(|_| println!("Rocket is launching!")))
     ///         .launch();
     /// # }
     /// }
@@ -646,7 +645,7 @@ impl Rocket {
     /// documentation](/rocket/struct.LaunchError.html) for more
     /// information.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```rust
     /// # if false {
@@ -691,13 +690,65 @@ impl Rocket {
         })
     }
 
-    /// Retrieves all of the mounted routes.
+    /// Returns an iterator over all of the routes mounted on this instance of
+    /// Rocket.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[get("/hello")]
+    /// fn hello() -> &'static str {
+    ///     "Hello, world!"
+    /// }
+    ///
+    /// fn main() {
+    ///     let rocket = rocket::ignite()
+    ///         .mount("/", routes![hello])
+    ///         .mount("/hi", routes![hello]);
+    ///
+    ///     for route in rocket.routes() {
+    ///         match route.base() {
+    ///             "/" => assert_eq!(route.uri.path(), "/hello"),
+    ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
+    ///             _ => unreachable!("only /hello, /hi/hello are expected")
+    ///         }
+    ///     }
+    ///
+    ///     assert_eq!(rocket.routes().count(), 2);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
         self.router.routes()
     }
 
-    /// Retrieve the active configuration.
+    /// Returns the active configuration.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite()
+    ///         .attach(AdHoc::on_launch(|rocket| {
+    ///             println!("Rocket launch config: {:?}", rocket.config());
+    ///         }))
+    ///         .launch();
+    /// # }
+    /// }
+    /// ```
     #[inline(always)]
     pub fn config(&self) -> &Config {
         &self.config

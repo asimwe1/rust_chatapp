@@ -129,11 +129,11 @@ pub mod config;
 pub mod data;
 pub mod handler;
 pub mod fairing;
+pub mod error;
 
 mod router;
 mod rocket;
 mod codegen;
-mod error;
 mod catcher;
 mod ext;
 
@@ -144,9 +144,9 @@ mod ext;
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
 #[doc(inline)] pub use config::Config;
+#[doc(inline)] pub use error::Error;
 pub use router::Route;
 pub use request::{Request, State};
-pub use error::{Error, LaunchError};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 

@@ -241,7 +241,7 @@ mod test {
     macro_rules! assert_ranked_routes {
         ($routes:expr, $to:expr, $want:expr) => ({
             let router = router_with_routes($routes);
-            let route_path = route(&router, Get, $to).unwrap().path.as_str();
+            let route_path = route(&router, Get, $to).unwrap().uri.as_str();
             assert_eq!(route_path as &str, $want as &str);
         })
     }
@@ -296,7 +296,7 @@ mod test {
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
                 assert_eq!(got.rank, expected.0);
-                assert_eq!(got.path.as_str(), expected.1);
+                assert_eq!(got.uri.as_str(), expected.1);
             }
         })
     }
@@ -365,7 +365,7 @@ mod test {
             let expected = &[$($want),+];
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
-                assert_eq!(got.path.as_str(), expected as &str);
+                assert_eq!(got.uri.as_str(), expected as &str);
             }
         })
     }
