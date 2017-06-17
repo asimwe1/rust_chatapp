@@ -29,7 +29,7 @@ impl Engine for Handlebars {
             return None;
         }
 
-        match self.render(name, &context) {
+        match Handlebars::render(self, name, &context) {
             Ok(string) => Some(string),
             Err(e) => {
                 error_!("Error rendering Handlebars template '{}': {}", name, e);

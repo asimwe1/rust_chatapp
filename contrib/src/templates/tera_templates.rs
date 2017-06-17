@@ -37,7 +37,7 @@ impl Engine for Tera {
             return None;
         };
 
-        match self.render(name, &context) {
+        match Tera::render(self, name, &context) {
             Ok(string) => Some(string),
             Err(e) => {
                 error_!("Error rendering Tera template '{}'.", name);
