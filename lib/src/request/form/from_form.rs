@@ -52,16 +52,16 @@ pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error;
 
-    /// Parses an instance of `Self` from the form items or returns an `Error`
-    /// if one cannot be parsed.
-    fn from_form_items(form_items: &mut FormItems<'f>) -> Result<Self, Self::Error>;
+    /// Parses an instance of `Self` from the iterator of form items `it` or
+    /// returns an instance of `Self::Error` if one cannot be parsed.
+    fn from_form(it: &mut FormItems<'f>, strict: bool) -> Result<Self, Self::Error>;
 }
 
 /// This implementation should only be used during debugging!
 impl<'f> FromForm<'f> for &'f str {
     type Error = ();
 
-    fn from_form_items(items: &mut FormItems<'f>) -> Result<Self, Self::Error> {
+    fn from_form(items: &mut FormItems<'f>, _: bool) -> Result<Self, Self::Error> {
         items.mark_complete();
         Ok(items.inner_str())
     }

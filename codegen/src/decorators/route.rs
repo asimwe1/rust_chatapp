@@ -76,7 +76,8 @@ impl RouteGenerateExt for RouteParams {
         Some(quote_stmt!(ecx,
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
-                let obj = match ::rocket::request::FromForm::from_form_items(items.by_ref()) {
+                let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                let obj = match form {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Outcome::Forward(__data)
                 };

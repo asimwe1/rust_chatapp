@@ -19,14 +19,18 @@ struct Form {
     double: String,
 }
 
-fn parse<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
+fn parse<'f, T: FromForm<'f>>(string: &'f str, strict: bool) -> Option<T> {
     let mut items = FormItems::from(string);
-    let result = T::from_form_items(items.by_ref());
+    let result = T::from_form(items.by_ref(), strict);
     if !items.exhaust() {
         panic!("Invalid form input.");
     }
 
     result.ok()
+}
+
+fn parse_strict<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
+    parse(string, true)
 }
 
 fn main() {
@@ -35,7 +39,7 @@ fn main() {
         "DOUBLE=bing_bong"
     ].join("&");
 
-    let form: Option<Form> = parse(&form_string);
+    let form: Option<Form> = parse_strict(&form_string);
     assert_eq!(form, Some(Form {
         single: 100,
         camel_case: "helloThere".into(),
@@ -49,6 +53,6 @@ fn main() {
         "DOUBLE=bing_bong"
     ].join("&");
 
-    let form: Option<Form> = parse(&form_string);
+    let form: Option<Form> = parse_strict(&form_string);
     assert!(form.is_none());
 }

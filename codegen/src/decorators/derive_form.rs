@@ -79,7 +79,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         generics: trait_generics,
         methods: vec![
             MethodDef {
-                name: "from_form_items",
+                name: "from_form",
                 generics: ty::LifetimeBounds::empty(),
                 explicit_self: None,
                 args: vec![
@@ -91,19 +91,23 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                             global: true
                         })),
                         ty::Borrowed(None, Mutability::Mutable)
-                    )
-                ],
-                ret_ty: ty::Ty::Literal(
-                    ty::Path {
-                        path: vec!["std", "result", "Result"],
+                    ),
+                    ty::Literal(ty::Path {
+                        path: vec!["bool"],
                         lifetime: None,
-                        params: vec![
-                            Box::new(ty::Ty::Self_),
-                            Box::new(error_type.clone())
-                        ],
-                        global: true,
-                    }
-                ),
+                        params: vec![],
+                        global: false,
+                    })
+                ],
+                ret_ty: ty::Literal(ty::Path {
+                    path: vec!["std", "result", "Result"],
+                    lifetime: None,
+                    params: vec![
+                        Box::new(ty::Ty::Self_),
+                        Box::new(error_type.clone())
+                    ],
+                    global: true,
+                }),
                 attributes: vec![],
                 is_unsafe: false,
                 combine_substructure: c_s(Box::new(from_form_substructure)),
@@ -173,16 +177,16 @@ pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
 
 fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
     // Check that we specified the methods to the argument correctly.
-    const EXPECTED_ARGS: usize = 1;
-    let arg = if substr.nonself_args.len() == EXPECTED_ARGS {
-        &substr.nonself_args[0]
+    const EXPECTED_ARGS: usize = 2;
+    let (items_arg, strict_arg) = if substr.nonself_args.len() == EXPECTED_ARGS {
+        (&substr.nonself_args[0], &substr.nonself_args[1])
     } else {
         let msg = format!("incorrect number of arguments in `from_form_string`: \
             expected {}, found {}", EXPECTED_ARGS, substr.nonself_args.len());
         cx.span_bug(trait_span, msg.as_str());
     };
 
-    debug!("argument is: {:?}", arg);
+    debug!("arguments are: {:?}, {:?}", items_arg, strict_arg);
 
     // Ensure the the fields are from a 'StaticStruct' and extract them.
     let fields = match *substr.fields {
@@ -251,18 +255,17 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The actual match statement. Iterate through all of the fields in the form
     // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
-        for (__k, __v) in $arg {
+        for (__k, __v) in $items_arg {
             match __k.as_str() {
                 $arms
-                "_method" => {
-                    /* This is a Rocket-specific field. If the user hasn't asked
-                     * for it, just let it go by without error. This should stay
-                     * in sync with Rocket::preprocess. */
-                }
                 _ => {
-                    println!("    => {}={} has no matching field in struct.",
-                             __k, __v);
-                    $return_err_stmt
+                    // If we're parsing strictly, emit an error for everything
+                    // the user hasn't asked for. Keep synced with 'preprocess'.
+                    if $strict_arg && __k != "_method" {
+                        println!("    => {}={} has no matching field in struct.",
+                                 __k, __v);
+                        $return_err_stmt
+                    }
                 }
            };
        }
