@@ -8,9 +8,8 @@ use std::env;
 use super::custom_values::*;
 use {num_cpus, base64};
 use config::Environment::*;
-use config::{Result, ConfigBuilder, Environment, ConfigError};
+use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use config::{Table, Value, Array, Datetime};
-use logger::LoggingLevel;
 use http::Key;
 
 /// Structure for Rocket application configuration.
@@ -422,8 +421,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
-    /// use rocket::config::{Config, Environment};
+    /// use rocket::config::{Config, LoggingLevel, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -437,31 +435,67 @@ impl Config {
         self.log_level = log_level;
     }
 
-    /// Sets limits.
+    /// Set the receive limits in `self` to `limits`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Limits};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    /// config.set_limits(Limits::default().limit("json", 4 * (1 << 20)));
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     pub fn set_limits(&mut self, limits: Limits) {
         self.limits = limits;
     }
 
+    /// Sets the TLS configuration in `self`.
+    ///
+    /// Certificates are read from `certs_path`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_path`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
+    ///
+    /// # Errors
+    ///
+    /// If reading either the certificates or private key fails, an error of
+    /// variant `Io` is returned. If either the certificates or private key
+    /// files are malformed or cannot be parsed, an error of `BadType` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    /// config.set_tls("/etc/ssl/my_certs.pem", "/etc/ssl/priv.key")?;
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
         use hyper_rustls::util as tls;
         use hyper_rustls::util::Error::Io;
-
-        let io_err = "nonexistent or unreadable file";
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
         let certs = tls::load_certs(certs_path)
             .map_err(|e| match e {
-                Io(_) => self.bad_type("tls", io_err, "a valid certificates file"),
+                Io(e) => ConfigError::Io(e, "tls"),
                 _ => self.bad_type("tls", pem_err, "a valid certificates file")
             })?;
 
         // And now the private key.
         let key = tls::load_private_key(key_path)
             .map_err(|e| match e {
-                Io(_) => self.bad_type("tls", io_err, "a valid private key file"),
+                Io(e) => ConfigError::Io(e, "tls"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")
             })?;
 
@@ -469,6 +503,7 @@ impl Config {
         Ok(())
     }
 
+    #[doc(hidden)]
     #[cfg(not(feature = "tls"))]
     pub fn set_tls(&mut self, _: &str, _: &str) -> Result<()> {
         self.tls = Some(TlsConfig);

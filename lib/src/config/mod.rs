@@ -206,17 +206,18 @@ use toml;
 
 pub use self::custom_values::Limits;
 pub use toml::value::{Array, Table, Value, Datetime};
-pub use self::error::{ConfigError, ParsingError};
+pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
 pub use self::toml_ext::IntoValue;
+pub use logger::LoggingLevel;
 pub(crate) use self::toml_ext::LoggedValue;
 
+use logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
-use logger::{self, LoggingLevel};
 use http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
@@ -269,11 +270,11 @@ impl RocketConfig {
         let file = RocketConfig::find()?;
 
         // Try to open the config file for reading.
-        let mut handle = File::open(&file).map_err(|_| ConfigError::IOError)?;
+        let mut handle = File::open(&file).map_err(|_| ConfigError::IoError)?;
 
         // Read the configure file to a string for parsing.
         let mut contents = String::new();
-        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IOError)?;
+        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IoError)?;
 
         // Parse the config and return the result.
         RocketConfig::parse(contents, &file)
@@ -474,9 +475,9 @@ pub(crate) fn init() -> Config {
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
-            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
+            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
                 | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..) => bail(e),
-            IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
+            IoError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
 

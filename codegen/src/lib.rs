@@ -175,7 +175,7 @@ macro_rules! register_lints {
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
     if env::var(DEBUG_ENV_VAR).is_ok() {
-        ::rocket::logger::init(::rocket::LoggingLevel::Debug);
+        ::rocket::logger::init(::rocket::config::LoggingLevel::Debug);
     }
 
     reg.register_macro("routes", macros::routes);

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment, Limits};
+use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
 use config::toml_ext::IntoValue;
-use logger::LoggingLevel;
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -135,8 +134,7 @@ impl ConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
-    /// use rocket::config::{Config, Environment};
+    /// use rocket::config::{Config, Environment, LoggingLevel};
     ///
     /// let config = Config::build(Environment::Staging)
     ///     .log_level(LoggingLevel::Critical)
@@ -155,8 +153,7 @@ impl ConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
-    /// use rocket::config::{Config, Environment};
+    /// use rocket::config::{Config, Environment, LoggingLevel};
     ///
     /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// let mut config = Config::build(Environment::Staging)
@@ -184,7 +181,11 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the `tls_config` in the configuration being built.
+    /// Sets the TLS configuration in the configuration being built.
+    ///
+    /// Certificates are read from `certs_path`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_path`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
     ///
     /// # Example
     ///

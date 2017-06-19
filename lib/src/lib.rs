@@ -139,7 +139,6 @@ mod ext;
 
 #[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
-#[doc(inline)] pub use logger::LoggingLevel;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;

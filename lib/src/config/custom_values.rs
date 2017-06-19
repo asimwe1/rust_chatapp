@@ -2,8 +2,7 @@ use std::fmt;
 
 #[cfg(feature = "tls")] use rustls::{Certificate, PrivateKey};
 
-use logger::LoggingLevel;
-use config::{Result, Config, Value, ConfigError};
+use config::{Result, Config, Value, ConfigError, LoggingLevel};
 use http::Key;
 
 #[derive(Clone)]

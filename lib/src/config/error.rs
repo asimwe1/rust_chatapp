@@ -1,34 +1,25 @@
 use std::path::PathBuf;
 use std::error::Error;
-use std::fmt;
+use std::{io, fmt};
 
 use super::Environment;
 use self::ConfigError::*;
 
 use yansi::Color::White;
 
-/// The type of a configuration parsing error.
-#[derive(Debug, PartialEq, Clone)]
-pub struct ParsingError {
-    /// Start and end byte indices into the source code where parsing failed.
-    pub byte_range: (usize, usize),
-    /// The (line, column) in the source code where parsing failure began.
-    pub start: (usize, usize),
-    /// The (line, column) in the source code where parsing failure ended.
-    pub end: (usize, usize),
-    /// A description of the parsing error that occured.
-    pub desc: String,
-}
-
 /// The type of a configuration error.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub enum ConfigError {
     /// The current working directory could not be determined.
     BadCWD,
     /// The configuration file was not found.
     NotFound,
     /// There was an I/O error while reading the configuration file.
-    IOError,
+    IoError,
+    /// There was an I/O error while setting a configuration parameter.
+    ///
+    /// Parameters: (io_error, config_param_name)
+    Io(io::Error, &'static str),
     /// The path at which the configuration file was found was invalid.
     ///
     /// Parameters: (path, reason)
@@ -66,7 +57,11 @@ impl ConfigError {
         match *self {
             BadCWD => error!("couldn't get current working directory"),
             NotFound => error!("config file was not found"),
-            IOError => error!("failed reading the config file: IO error"),
+            IoError => error!("failed reading the config file: IO error"),
+            Io(ref error, param) => {
+                error_!("I/O error while setting '{}':", White.paint(param));
+                info_!("{}", error);
+            }
             BadFilePath(ref path, reason) => {
                 error!("configuration file path '{:?}' is invalid", path);
                 info_!("{}", reason);
@@ -109,7 +104,16 @@ impl ConfigError {
         }
     }
 
-    /// Whether this error is of `NotFound` variant.
+    /// Returns `true` if `self` is of `NotFound` variant.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::ConfigError;
+    ///
+    /// let error = ConfigError::NotFound;
+    /// assert!(error.is_not_found());
+    /// ```
     #[inline(always)]
     pub fn is_not_found(&self) -> bool {
         match *self {
@@ -124,7 +128,8 @@ impl fmt::Display for ConfigError {
         match *self {
             BadCWD => write!(f, "couldn't get current working directory"),
             NotFound => write!(f, "config file was not found"),
-            IOError => write!(f, "I/O error while reading the config file"),
+            IoError => write!(f, "I/O error while reading the config file"),
+            Io(ref e, p) => write!(f, "I/O error while setting '{}': {}", p, e),
             BadFilePath(ref p, _) => write!(f, "{:?} is not a valid config path", p),
             BadEnv(ref e) => write!(f, "{:?} is not a valid `ROCKET_ENV` value", e),
             ParseError(..) => write!(f, "the config file contains invalid TOML"),
@@ -147,7 +152,8 @@ impl Error for ConfigError {
         match *self {
             BadCWD => "the current working directory could not be determined",
             NotFound => "config file was not found",
-            IOError => "there was an I/O error while reading the config file",
+            IoError => "there was an I/O error while reading the config file",
+            Io(..) => "an I/O error occured while setting a configuration parameter",
             BadFilePath(..) => "the config file path is invalid",
             BadEntry(..) => "an environment specified as `[environment]` is invalid",
             BadEnv(..) => "the environment specified in `ROCKET_ENV` is invalid",
@@ -155,6 +161,32 @@ impl Error for ConfigError {
             BadType(..) => "a key was specified with a value of the wrong type",
             BadEnvVal(..) => "an environment variable could not be parsed",
             UnknownKey(..) => "an unknown key was used in a disallowed position",
+        }
+    }
+}
+
+impl PartialEq for ConfigError {
+    fn eq(&self, other: &ConfigError) -> bool {
+        match (self, other) {
+            (&BadCWD, &BadCWD) => true,
+            (&NotFound, &NotFound) => true,
+            (&IoError, &IoError) => true,
+            (&Io(_, p1), &Io(_, p2)) => p1 == p2,
+            (&BadFilePath(ref p1, _), &BadFilePath(ref p2, _)) => p1 == p2,
+            (&BadEnv(ref e1), &BadEnv(ref e2)) => e1 == e2,
+            (&ParseError(..), &ParseError(..)) => true,
+            (&UnknownKey(ref k1), &UnknownKey(ref k2)) => k1 == k2,
+            (&BadEntry(ref e1, _), &BadEntry(ref e2, _)) => e1 == e2,
+            (&BadType(ref n1, e1, a1, _), &BadType(ref n2, e2, a2, _)) => {
+                n1 == n2 && e1 == e2 && a1 == a2
+            }
+            (&BadEnvVal(ref k1, ref v1, _), &BadEnvVal(ref k2, ref v2, _)) => {
+                k1 == k2 && v1 == v2
+            }
+            (&BadCWD, _) | (&NotFound, _) | (&IoError, _) | (&Io(..), _)
+                | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
+                | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
+                | (&BadEnvVal(..), _) => false
         }
     }
 }
