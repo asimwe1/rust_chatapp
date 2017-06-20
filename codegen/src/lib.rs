@@ -110,7 +110,7 @@
 //! ```
 
 #![crate_type = "dylib"]
-#![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
+#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
 #![feature(custom_attribute)]
 #![feature(i128_type)]
 #![allow(unused_attributes)]
