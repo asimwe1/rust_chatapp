@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use log::{self, Log, LogLevel, LogRecord, LogMetadata};
-use yansi::Color::*;
+use yansi::Paint;
 
 struct RocketLogger(LoggingLevel);
 
@@ -112,27 +112,27 @@ impl Log for RocketLogger {
 
         // In Rocket, we abuse target with value "_" to indicate indentation.
         if record.target() == "_" && self.0 != LoggingLevel::Critical {
-            print!("    {} ", White.paint("=>"));
+            print!("    {} ", Paint::white("=>"));
         }
 
         use log::LogLevel::*;
         match level {
-            Info => println!("{}", Blue.paint(record.args())),
-            Trace => println!("{}", Purple.paint(record.args())),
+            Info => println!("{}", Paint::blue(record.args())),
+            Trace => println!("{}", Paint::purple(record.args())),
             Error => {
                 println!("{} {}",
-                         Red.paint("Error:").bold(),
-                         Red.paint(record.args()))
+                         Paint::red("Error:").bold(),
+                         Paint::red(record.args()))
             }
             Warn => {
                 println!("{} {}",
-                         Yellow.paint("Warning:").bold(),
-                         Yellow.paint(record.args()))
+                         Paint::yellow("Warning:").bold(),
+                         Paint::yellow(record.args()))
             }
             Debug => {
                 let loc = record.location();
-                print!("\n{} ", Blue.paint("-->").bold());
-                println!("{}:{}", Blue.paint(loc.file()), Blue.paint(loc.line()));
+                print!("\n{} ", Paint::blue("-->").bold());
+                println!("{}:{}", Paint::blue(loc.file()), Paint::blue(loc.line()));
                 println!("{}", record.args());
             }
         }
@@ -141,6 +141,10 @@ impl Log for RocketLogger {
 
 #[doc(hidden)]
 pub fn try_init(level: LoggingLevel, verbose: bool) {
+    if !::isatty::stdout_isatty() {
+        Paint::disable();
+    }
+
     let result = log::set_logger(|max_log_level| {
         max_log_level.set(level.max_log_level().to_log_level_filter());
         Box::new(RocketLogger(level))
