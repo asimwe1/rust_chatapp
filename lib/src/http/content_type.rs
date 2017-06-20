@@ -46,29 +46,13 @@ macro_rules! content_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*),+) => {
         $(
-            #[doc="Media type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
+            #[doc="Content-Type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
             #[doc=$t] #[doc="/"] #[doc=$s]
             $(#[doc="; "] #[doc=$k] #[doc=" = "] #[doc=$v])*
             #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: ContentType = ContentType(MediaType::$name);
-
-            #[doc="Returns `true` if `self` is the media type for <b>"]
-            #[doc=$str]
-            #[doc="</b>, "]
-            /// without considering parameters.
-            #[inline(always)]
-            pub fn $check(&self) -> bool {
-                *self == ContentType::$name
-            }
          )+
-
-        /// Returns `true` if this `ContentType` is known to Rocket, that is,
-        /// there is an associated constant for `self`.
-        pub fn is_known(&self) -> bool {
-            $(if self.$check() { return true })+
-            false
-        }
     };
 }
 
@@ -95,11 +79,12 @@ impl ContentType {
         ContentType(MediaType::new(top, sub))
     }
 
-    /// Returns the Content-Type associated with the extension `ext`. Not all
-    /// extensions are recognized. If an extensions is not recognized, then this
-    /// method returns a ContentType of `Any`. The currently recognized
-    /// extensions are: txt, html, htm, xml, js, css, json, png, gif, bmp, jpeg,
-    /// jpg, and pdf.
+    /// Returns the Content-Type associated with the extension `ext` if the
+    /// extension is recognized. Not all extensions are recognized. If an
+    /// extensions is not recognized, then this method returns `None`. The
+    /// currently recognized extensions are txt, html, htm, xml, csv, js, css,
+    /// json, png, gif, bmp, jpeg, jpg, webp, svg, pdf, ttf, otf, woff, and
+    /// woff2.
     ///
     /// # Example
     ///
@@ -109,7 +94,7 @@ impl ContentType {
     /// use rocket::http::ContentType;
     ///
     /// let xml = ContentType::from_extension("xml");
-    /// assert!(xml.is_xml());
+    /// assert_eq!(xml, Some(ContentType::XML));
     /// ```
     ///
     /// An unrecognized content type:
@@ -118,12 +103,11 @@ impl ContentType {
     /// use rocket::http::ContentType;
     ///
     /// let foo = ContentType::from_extension("foo");
-    /// assert!(foo.is_any());
+    /// assert!(foo.is_none());
     /// ```
-    pub fn from_extension(ext: &str) -> ContentType {
-        MediaType::from_extension(ext)
-            .map(|mt| ContentType(mt))
-            .unwrap_or(ContentType::Any)
+    #[inline]
+    pub fn from_extension(ext: &str) -> Option<ContentType> {
+        MediaType::from_extension(ext).map(ContentType)
     }
 
     /// Creates a new `ContentType` with top-level type `top`, subtype `sub`,
@@ -159,14 +143,19 @@ impl ContentType {
         ContentType(MediaType::with_params(top, sub, ps))
     }
 
+    /// Borrows the inner `MediaType` of `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{ContentType, MediaType};
+    ///
+    /// let http = ContentType::HTML;
+    /// let media_type = http.media_type();
+    /// ```
     #[inline(always)]
     pub fn media_type(&self) -> &MediaType {
         &self.0
-    }
-
-    #[inline(always)]
-    pub fn into_media_type(self) -> MediaType {
-        self.0
     }
 
     known_media_types!(content_types);

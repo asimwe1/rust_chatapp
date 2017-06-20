@@ -14,8 +14,8 @@ use std::fmt;
 /// A reference to an uncased (case-preserving) ASCII string. This is typically
 /// created from an `&str` as follows:
 ///
-/// ```rust,ignore
-/// use rocket::http::ascii::UncasedStr;
+/// ```rust
+/// use rocket::http::uncased::UncasedStr;
 ///
 /// let ascii_ref: &UncasedStr = "Hello, world!".into();
 /// ```
@@ -23,11 +23,34 @@ use std::fmt;
 pub struct UncasedStr(str);
 
 impl UncasedStr {
+    /// Returns a reference to an `UncasedStr` from an `&str`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uncased::UncasedStr;
+    ///
+    /// let uncased_str = UncasedStr::new("Hello!");
+    /// assert_eq!(uncased_str, "hello!");
+    /// assert_eq!(uncased_str, "Hello!");
+    /// assert_eq!(uncased_str, "HeLLo!");
+    /// ```
     #[inline(always)]
     pub fn new(string: &str) -> &UncasedStr {
         unsafe { &*(string as *const str as *const UncasedStr) }
     }
 
+    /// Returns `self` as an `&str`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uncased::UncasedStr;
+    ///
+    /// let uncased_str = UncasedStr::new("Hello!");
+    /// assert_eq!(uncased_str.as_str(), "Hello!");
+    /// assert_ne!(uncased_str.as_str(), "hELLo!");
+    /// ```
     #[inline(always)]
     pub fn as_str(&self) -> &str {
         &self.0
@@ -109,37 +132,44 @@ impl fmt::Display for UncasedStr {
     }
 }
 
-/// An uncased (case-preserving) ASCII string.
+/// An uncased (case-preserving), owned _or_ borrowed ASCII string.
 #[derive(Clone, Debug)]
 pub struct Uncased<'s> {
+    #[doc(hidden)]
     pub string: Cow<'s, str>
 }
 
 impl<'s> Uncased<'s> {
-    /// Creates a new UncaseAscii string.
+    /// Creates a new `Uncased` string from `string` without allocating.
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// use rocket::http::ascii::Uncased;
+    /// ```rust
+    /// use rocket::http::uncased::Uncased;
     ///
-    /// let uncased_ascii = UncasedAScii::new("Content-Type");
+    /// let uncased = Uncased::new("Content-Type");
+    /// assert_eq!(uncased, "content-type");
+    /// assert_eq!(uncased, "CONTENT-Type");
     /// ```
     #[inline(always)]
     pub fn new<S: Into<Cow<'s, str>>>(string: S) -> Uncased<'s> {
         Uncased { string: string.into() }
     }
 
-    /// Converts `self` into an owned `String`, allocating if necessary,
+    /// Converts `self` into an owned `String`, allocating if necessary.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uncased::Uncased;
+    ///
+    /// let uncased = Uncased::new("Content-Type");
+    /// let string = uncased.into_string();
+    /// assert_eq!(string, "Content-Type".to_string());
+    /// ```
     #[inline(always)]
     pub fn into_string(self) -> String {
         self.string.into_owned()
-    }
-
-    /// Borrows the inner string.
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        self.string.borrow()
     }
 
     /// Returns the inner `Cow`.
@@ -155,14 +185,14 @@ impl<'a> Deref for Uncased<'a> {
 
     #[inline(always)]
     fn deref(&self) -> &UncasedStr {
-        self.as_str().into()
+        UncasedStr::new(self.string.borrow())
     }
 }
 
 impl<'a> AsRef<UncasedStr> for Uncased<'a>{
     #[inline(always)]
     fn as_ref(&self) -> &UncasedStr {
-        self.as_str().into()
+        UncasedStr::new(self.string.borrow())
     }
 }
 
@@ -265,9 +295,10 @@ impl<'s> Hash for Uncased<'s> {
     }
 }
 
-/// Returns true if `s1` and `s2` are equal without considering case. That is,
-/// for ASCII strings, this function returns s1.to_lower() == s2.to_lower(), but
-/// does it in a much faster way.
+/// Returns true if `s1` and `s2` are equal without considering case.
+///
+/// That is, for ASCII strings, this function returns `s1.to_lower() ==
+/// s2.to_lower()`, but does it in a much faster way.
 #[inline(always)]
 pub fn uncased_eq<S1: AsRef<str>, S2: AsRef<str>>(s1: S1, s2: S2) -> bool {
     let ascii_ref_1: &UncasedStr = s1.as_ref().into();

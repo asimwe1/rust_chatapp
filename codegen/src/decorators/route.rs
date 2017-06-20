@@ -197,10 +197,10 @@ impl RouteGenerateExt for RouteParams {
                 #[allow(non_snake_case)]
                 let $ident: $ty = match
                         ::rocket::request::FromRequest::from_request(__req) {
-                    ::rocket::outcome::Outcome::Success(v) => v,
-                    ::rocket::outcome::Outcome::Forward(_) =>
-                        return ::rocket::Outcome::forward(__data),
-                    ::rocket::outcome::Outcome::Failure((code, _)) => {
+                    ::rocket::Outcome::Success(v) => v,
+                    ::rocket::Outcome::Forward(_) =>
+                        return ::rocket::Outcome::Forward(__data),
+                    ::rocket::Outcome::Failure((code, _)) => {
                         return ::rocket::Outcome::Failure(code)
                     },
                 };

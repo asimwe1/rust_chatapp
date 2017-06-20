@@ -5,12 +5,7 @@ use super::data::BodyReader;
 use http::hyper::net::NetworkStream;
 use http::hyper::h1::HttpReader;
 
-// It's very unfortunate that we have to wrap `BodyReader` in a `BufReader`
-// since it already contains another `BufReader`. The issue is that Hyper's
-// `HttpReader` doesn't implement `BufRead`. Unfortunately, this will likely
-// stay "double buffered" until we switch HTTP libraries.
 //                          |-- peek buf --|
-// pub type InnerStream = Chain<Cursor<Vec<u8>>, BufReader<BodyReader>>;
 pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 
 /// Raw data stream of a request body.
@@ -18,9 +13,11 @@ pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 /// This stream can only be obtained by calling
 /// [Data::open](/rocket/data/struct.Data.html#method.open). The stream contains
 /// all of the data in the body of the request. It exposes no methods directly.
-/// Instead, it must be used as an opaque `Read` or `BufRead` structure.
+/// Instead, it must be used as an opaque `Read` structure.
 pub struct DataStream(pub(crate) InnerStream);
 
+// TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't
+// possible since Hyper's `HttpReader` doesn't implement `BufRead`.
 impl Read for DataStream {
     #[inline(always)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
@@ -28,18 +25,6 @@ impl Read for DataStream {
         self.0.read(buf)
     }
 }
-
-// impl BufRead for DataStream {
-//     #[inline(always)]
-//     fn fill_buf(&mut self) -> io::Result<&[u8]> {
-//         self.0.fill_buf()
-//     }
-
-//     #[inline(always)]
-//     fn consume(&mut self, amt: usize) {
-//         self.0.consume(amt)
-//     }
-// }
 
 pub fn kill_stream(stream: &mut BodyReader) {
     // Only do the expensive reading if we're not sure we're done.

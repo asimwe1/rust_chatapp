@@ -9,6 +9,7 @@ fn q<'a>(_: &'a str, media_type: &MediaType) -> ParseResult<&'a str, Option<f32>
     match media_type.params().next() {
         Some(("q", value)) if value.len() <= 5 => match value.parse::<f32>().ok() {
             Some(q) if q > 1. => ParseError::custom("accept", "q value must be <= 1"),
+            Some(q) if q < 0. => ParseError::custom("accept", "q value must be > 0"),
             Some(q) => ParseResult::Done(Some(q)),
             None => ParseError::custom("accept", "q value must be float")
         },

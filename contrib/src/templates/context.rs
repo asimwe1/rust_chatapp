@@ -34,7 +34,7 @@ impl Context {
                 }
 
                 let data_type = data_type_str.as_ref()
-                    .map(|ext| ContentType::from_extension(ext))
+                    .and_then(|ext| ContentType::from_extension(ext))
                     .unwrap_or(ContentType::HTML);
 
                 templates.insert(name, TemplateInfo {

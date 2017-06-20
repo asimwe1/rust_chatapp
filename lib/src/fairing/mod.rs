@@ -7,6 +7,9 @@
 //! fairings to rewrite or record information about requests and responses, or
 //! to perform an action once a Rocket application has launched.
 //!
+//! To learn more about writing a fairing, see the [`Fairing` trait
+//! documentation](/rocket/fairing/trait.Fairing.html).
+//!
 //! ## Attaching
 //!
 //! You must inform Rocket about fairings that you wish to be active by calling

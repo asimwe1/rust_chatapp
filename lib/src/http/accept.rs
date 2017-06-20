@@ -26,11 +26,6 @@ impl WeightedMediaType {
     pub fn media_type(&self) -> &MediaType {
         &self.0
     }
-
-    #[inline(always)]
-    pub fn into_media_type(self) -> MediaType {
-        self.0
-    }
 }
 
 impl From<MediaType> for WeightedMediaType {

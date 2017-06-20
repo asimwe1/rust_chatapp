@@ -100,30 +100,29 @@ macro_rules! media_types {
 macro_rules! from_extension {
     ($($ext:expr => $name:ident),*) => (
         /// Returns the Media-Type associated with the extension `ext`. Not all
-        /// extensions are recognized. If an extensions is not recognized, then this
-        /// method returns a ContentType of `Any`. The currently recognized
-        /// extensions include
+        /// extensions are recognized. If an extensions is not recognized,
+        /// `None` is returned. The currently recognized extensions are
         $(#[doc=$ext]#[doc=","])*
         /// and is likely to grow.
         ///
         /// # Example
         ///
-        /// A recognized content type:
+        /// A recognized media type:
         ///
         /// ```rust
-        /// use rocket::http::ContentType;
+        /// use rocket::http::MediaType;
         ///
-        /// let xml = ContentType::from_extension("xml");
-        /// assert!(xml.is_xml());
+        /// let xml = MediaType::from_extension("xml");
+        /// assert_eq!(xml, Some(MediaType::XML));
         /// ```
         ///
-        /// An unrecognized content type:
+        /// An unrecognized media type:
         ///
         /// ```rust
-        /// use rocket::http::ContentType;
+        /// use rocket::http::MediaType;
         ///
-        /// let foo = ContentType::from_extension("foo");
-        /// assert!(foo.is_any());
+        /// let foo = MediaType::from_extension("foo");
+        /// assert!(foo.is_none());
         /// ```
         pub fn from_extension(ext: &str) -> Option<MediaType> {
             match ext {
