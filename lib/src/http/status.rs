@@ -19,7 +19,7 @@ pub enum StatusClass {
     Unknown
 }
 
-/// Structure representing HTTP statuses: an integer code and a reason phrase.
+/// Structure representing an HTTP status: an integer code and a reason phrase.
 ///
 /// # Usage
 ///

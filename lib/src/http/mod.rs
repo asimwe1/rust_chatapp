@@ -29,7 +29,7 @@ pub mod uncased;
 
 pub use self::method::Method;
 pub use self::content_type::ContentType;
-pub use self::accept::{Accept, WeightedMediaType};
+pub use self::accept::{Accept, QMediaType};
 pub use self::status::{Status, StatusClass};
 pub use self::header::{Header, HeaderMap};
 pub use self::raw_str::RawStr;

@@ -8,34 +8,68 @@ use ext::IntoCollection;
 use http::{Header, MediaType};
 use http::parse::parse_accept;
 
+/// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
-pub struct WeightedMediaType(pub MediaType, pub Option<f32>);
+pub struct QMediaType(pub MediaType, pub Option<f32>);
 
-impl WeightedMediaType {
+impl QMediaType {
+    /// Retrieve the weight of the media type, if there is any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.weight(), Some(0.3));
+    /// ```
     #[inline(always)]
     pub fn weight(&self) -> Option<f32> {
         self.1
     }
 
+    /// Retrieve the weight of the media type or a given default value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.weight_or(0.9), 0.3);
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, None);
+    /// assert_eq!(q_type.weight_or(0.9), 0.9);
+    /// ```
     #[inline(always)]
     pub fn weight_or(&self, default: f32) -> f32 {
         self.1.unwrap_or(default)
     }
 
+    /// Borrow the internal `MediaType`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.media_type(), &MediaType::HTML);
+    /// ```
     #[inline(always)]
     pub fn media_type(&self) -> &MediaType {
         &self.0
     }
 }
 
-impl From<MediaType> for WeightedMediaType {
+impl From<MediaType> for QMediaType {
     #[inline(always)]
-    fn from(media_type: MediaType) -> WeightedMediaType {
-        WeightedMediaType(media_type, None)
+    fn from(media_type: MediaType) -> QMediaType {
+        QMediaType(media_type, None)
     }
 }
 
-impl Deref for WeightedMediaType {
+impl Deref for QMediaType {
     type Target = MediaType;
 
     #[inline(always)]
@@ -47,11 +81,53 @@ impl Deref for WeightedMediaType {
 // FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
 #[derive(Debug, PartialEq, Clone)]
 pub enum AcceptParams {
-    Static(&'static [WeightedMediaType]),
-    Dynamic(SmallVec<[WeightedMediaType; 1]>)
+    Static(&'static [QMediaType]),
+    Dynamic(SmallVec<[QMediaType; 1]>)
 }
 
 /// The HTTP Accept header.
+///
+/// An `Accept` header is composed of zero or more media types, each of which
+/// may have an optional quality value (a [`QMediaType`]). The header is sent by an HTTP client to
+/// describe the formats it accepts as well as the order in which it prefers
+/// different formats.
+///
+/// # Usage
+///
+/// The Accept header of an incoming request can be retrieved via the
+/// [`Request::accept`] method. The [`preferred`] method can be used to retrieve
+/// the client's preferred media type.
+///
+/// [`Request::accept`]: /rocket/struct.Request.html#method.accept
+/// [`preferred`]: /rocket/http/struct.Accept.html#method.preferred
+/// [`QMediaType`]: /rocket/http/struct.QMediaType.html
+///
+/// An `Accept` type with a single, common media type can be easily constructed
+/// via provided associated constants.
+///
+/// ## Example
+///
+/// Construct an `Accept` header with a single `application/json` media type:
+///
+/// ```rust
+/// use rocket::http::Accept;
+///
+/// # #[allow(unused_variables)]
+/// let accept_json = Accept::JSON;
+/// ```
+///
+/// # Header
+///
+/// `Accept` implements `Into<Header>`. As such, it can be used in any context
+/// where an `Into<Header>` is expected:
+///
+/// ```rust
+/// use rocket::http::Accept;
+/// use rocket::response::Response;
+///
+/// # #[allow(unused_variables)]
+/// let response = Response::build().header(Accept::JSON).finalize();
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Accept(AcceptParams);
 
@@ -65,7 +141,7 @@ macro_rules! accept_constructor {
             #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: Accept = Accept(
-                AcceptParams::Static(&[WeightedMediaType(MediaType::$name, None)])
+                AcceptParams::Static(&[QMediaType(MediaType::$name, None)])
             );
          )+
     };
@@ -79,20 +155,62 @@ impl<T: IntoCollection<MediaType>> From<T> for Accept {
 }
 
 impl Accept {
+    /// Constructs a new `Accept` header from one or more media types.
+    ///
+    /// The `items` parameter may be of type `QMediaType`, `&[QMediaType]`, or
+    /// `Vec<QMediaType>`. To prevent additional allocations, prefer to provide
+    /// inputs of type `QMediaType` and `Vec<QMediaType>`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// // Construct an `Accept` via a `Vec<QMediaType>`.
+    /// let json_then_html = vec![MediaType::JSON.into(), MediaType::HTML.into()];
+    /// let accept = Accept::new(json_then_html);
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
+    ///
+    /// // Construct an `Accept` via an `&[QMediaType]`.
+    /// let accept = Accept::new(&[MediaType::JSON.into(), MediaType::HTML.into()]);
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
+    ///
+    /// // Construct an `Accept` via a `QMediaType`.
+    /// let accept = Accept::new(QMediaType(MediaType::JSON, None));
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
+    /// ```
     #[inline(always)]
-    pub fn new<T: IntoCollection<WeightedMediaType>>(items: T) -> Accept {
+    pub fn new<T: IntoCollection<QMediaType>>(items: T) -> Accept {
         Accept(AcceptParams::Dynamic(items.into_collection()))
     }
 
-    // FIXME: IMPLEMENT THIS.
+    // TODO: Implement this.
     // #[inline(always)]
-    // pub fn add<M: Into<WeightedMediaType>>(&mut self, media_type: M) {
+    // pub fn add<M: Into<QMediaType>>(&mut self, media_type: M) {
     //     self.0.push(media_type.into());
     // }
 
-    /// TODO: Cache this?
-    pub fn preferred(&self) -> &WeightedMediaType {
-        static ANY: WeightedMediaType = WeightedMediaType(MediaType::Any, None);
+    /// Retrieve the client's preferred media type. This method follows [RFC
+    /// 7231 5.3.2]. If the list of media types is empty, this method returns a
+    /// media type of any with no quality value: (`*/*`).
+    ///
+    /// [RFC 7231 5.3.2]: https://tools.ietf.org/html/rfc7231#section-5.3.2
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// let media_types = vec![
+    ///     QMediaType(MediaType::JSON, Some(0.3)),
+    ///     QMediaType(MediaType::HTML, Some(0.9))
+    /// ];
+    ///
+    /// let accept = Accept::new(media_types);
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::HTML);
+    /// ```
+    pub fn preferred(&self) -> &QMediaType {
+        static ANY: QMediaType = QMediaType(MediaType::Any, None);
 
         // See https://tools.ietf.org/html/rfc7231#section-5.3.2.
         let mut all = self.iter();
@@ -122,13 +240,44 @@ impl Accept {
         preferred
     }
 
+    /// Retrieve the first media type in `self`, if any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// let accept = Accept::new(QMediaType(MediaType::XML, None));
+    /// assert_eq!(accept.first(), Some(&MediaType::XML.into()));
+    /// ```
     #[inline(always)]
-    pub fn first(&self) -> Option<&WeightedMediaType> {
+    pub fn first(&self) -> Option<&QMediaType> {
         self.iter().next()
     }
 
+    /// Returns an iterator over all of the (quality) media types in `self`.
+    /// Media types are returned in the order in which they appear in the
+    /// header.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// let qmedia_types = vec![
+    ///     QMediaType(MediaType::JSON, Some(0.3)),
+    ///     QMediaType(MediaType::HTML, Some(0.9))
+    /// ];
+    ///
+    /// let accept = Accept::new(qmedia_types.clone());
+    ///
+    /// let mut iter = accept.iter();
+    /// assert_eq!(iter.next(), Some(&qmedia_types[0]));
+    /// assert_eq!(iter.next(), Some(&qmedia_types[1]));
+    /// assert_eq!(iter.next(), None);
+    /// ```
     #[inline(always)]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a WeightedMediaType> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
         let slice = match self.0 {
             AcceptParams::Static(slice) => slice,
             AcceptParams::Dynamic(ref vec) => &vec[..],
@@ -137,6 +286,26 @@ impl Accept {
         slice.iter()
     }
 
+    /// Returns an iterator over all of the (bare) media types in `self`. Media
+    /// types are returned in the order in which they appear in the header.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// let qmedia_types = vec![
+    ///     QMediaType(MediaType::JSON, Some(0.3)),
+    ///     QMediaType(MediaType::HTML, Some(0.9))
+    /// ];
+    ///
+    /// let accept = Accept::new(qmedia_types.clone());
+    ///
+    /// let mut iter = accept.media_types();
+    /// assert_eq!(iter.next(), Some(qmedia_types[0].media_type()));
+    /// assert_eq!(iter.next(), Some(qmedia_types[1].media_type()));
+    /// assert_eq!(iter.next(), None);
+    /// ```
     #[inline(always)]
     pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
@@ -148,8 +317,11 @@ impl Accept {
 impl fmt::Display for Accept {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (i, media_type) in self.iter().enumerate() {
-            if i >= 1 { write!(f, ", ")?; }
-            write!(f, "{}", media_type.0)?;
+            if i >= 1 {
+                write!(f, ", {}", media_type.0)?;
+            } else {
+                write!(f, "{}", media_type.0)?;
+            }
         }
 
         Ok(())

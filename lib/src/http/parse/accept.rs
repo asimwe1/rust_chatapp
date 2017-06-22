@@ -3,7 +3,7 @@ use pear::parsers::*;
 
 use http::parse::checkers::is_whitespace;
 use http::parse::media_type::media_type;
-use http::{MediaType, Accept, WeightedMediaType};
+use http::{MediaType, Accept, QMediaType};
 
 fn q<'a>(_: &'a str, media_type: &MediaType) -> ParseResult<&'a str, Option<f32>> {
     match media_type.params().next() {
@@ -24,7 +24,7 @@ fn accept<'a>(input: &mut &'a str) -> ParseResult<&'a str, Accept> {
         skip_while(is_whitespace);
         let media_type = media_type();
         let weight = q(&media_type);
-        media_types.push(WeightedMediaType(media_type, weight));
+        media_types.push(QMediaType(media_type, weight));
     });
 
     Accept::new(media_types)

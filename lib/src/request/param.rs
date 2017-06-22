@@ -82,7 +82,7 @@ use http::RawStr;
 ///     type returns successfully. Otherwise, the raw path segment is returned
 ///     in the `Err` value.
 ///
-///   * **&RawStr**
+///   * **&[`RawStr`](/rocket/http/struct.RawStr.html)**
 ///
 ///     _This implementation always returns successfully._
 ///

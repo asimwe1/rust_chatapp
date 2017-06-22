@@ -40,8 +40,49 @@ impl Source {
     }
 }
 
-// Describe a media type. In particular, describe its comparison and hashing
-// semantics.
+/// An HTTP media type.
+///
+/// # Usage
+///
+/// A `MediaType` should rarely be used directly. Instead, one is typically used
+/// indirectly via types like [`Accept`] and [`ContentType`], which internally
+/// contain `MediaType`s. Nonetheless, a `MediaType` can be created via the
+/// [`new`], [`with_params`], and [`from_extension`] methods. The preferred
+/// method, however, is to create a `MediaType` via an associated constant.
+///
+/// [`Accept`]: /rocket/http/struct.Accept.html
+/// [`ContentType`]: /rocket/http/struct.ContentType.html
+/// [`new`]: /rocket/http/struct.MediaType.html#method.new
+/// [`with_params`]: /rocket/http/struct.MediaType.html#method.with_params
+/// [`from_extension`]: /rocket/http/struct.MediaType.html#method.from_extension
+///
+/// ## Example
+///
+/// A media type of `application/json` can be insantiated via the `JSON`
+/// constant:
+///
+/// ```rust
+/// use rocket::http::MediaType;
+///
+/// let json = MediaType::JSON;
+/// assert_eq!(json.top(), "application");
+/// assert_eq!(json.sub(), "json");
+///
+/// let json = MediaType::new("application", "json");
+/// assert_eq!(MediaType::JSON, json);
+/// ```
+///
+/// # Comparison and Hashing
+///
+/// The `PartialEq` and `Hash` implementations for `MediaType` _do not_ take
+/// into account parameters. This means that a media type of `text/html` is
+/// equal to a media type of `text/html; charset=utf-8`, for instance. This is
+/// typically the comparison that is desired.
+///
+/// If an exact comparison is desired that takes into account parameters, the
+/// [`exact_eq`] method can be used.
+///
+/// [`exact_eq`]: /rocket/http/struct.MediaType.html#method.exact_eq
 #[derive(Debug, Clone)]
 pub struct MediaType {
     /// Storage for the entire media type string.

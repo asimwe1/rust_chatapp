@@ -108,6 +108,13 @@ impl<'h> fmt::Display for Header<'h> {
 }
 
 /// A collection of headers, mapping a header name to its many ordered values.
+///
+/// # Case-Insensitivity
+///
+/// All header names, including those passed in to `HeaderMap` methods and those
+/// stored in an existing `HeaderMap`, are treated case-insensitively. This
+/// means that, for instance, a look for a header by the name of "aBC" will
+/// returns values for headers of names "AbC", "ABC", "abc", and so on.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
     headers: OrderMap<Uncased<'h>, Vec<Cow<'h, str>>>
@@ -115,6 +122,14 @@ pub struct HeaderMap<'h> {
 
 impl<'h> HeaderMap<'h> {
     /// Returns an empty collection.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::HeaderMap;
+    ///
+    /// let map = HeaderMap::new();
+    /// ```
     #[inline(always)]
     pub fn new() -> HeaderMap<'h> {
         HeaderMap { headers: OrderMap::new() }
@@ -277,6 +292,21 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(map.get_one("Content-Type"), Some("image/gif"));
     /// assert_eq!(map.len(), 1);
     /// ```
+    ///
+    /// An example of case-insensitivity.
+    ///
+    /// ```rust
+    /// use rocket::http::{HeaderMap, Header, ContentType};
+    ///
+    /// let mut map = HeaderMap::new();
+    ///
+    /// map.replace(ContentType::JSON);
+    /// assert_eq!(map.get_one("Content-Type"), Some("application/json"));
+    ///
+    /// map.replace(Header::new("CONTENT-type", "image/gif"));
+    /// assert_eq!(map.get_one("Content-Type"), Some("image/gif"));
+    /// assert_eq!(map.len(), 1);
+    /// ```
     #[inline(always)]
     pub fn replace<'p: 'h, H: Into<Header<'p>>>(&mut self, header: H) -> bool {
         let header = header.into();
@@ -309,6 +339,7 @@ impl<'h> HeaderMap<'h> {
 
     /// Replaces all of the values for a header with name `name` with `values`.
     /// This a low-level method and should rarely be used.
+    ///
     ///
     /// # Example
     ///
@@ -475,6 +506,38 @@ impl<'h> HeaderMap<'h> {
     /// Returns an iterator over all of the `Header`s stored in the map. Header
     /// names are returned in no specific order, but all values for a given
     /// header name are grouped together, and values are in FIFO order.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{HeaderMap, Header};
+    ///
+    /// // The headers we'll be storing.
+    /// let all_headers = vec![
+    ///     Header::new("X-Custom", "value_1"),
+    ///     Header::new("X-Other", "other"),
+    ///     Header::new("X-Third", "third"),
+    /// ];
+    ///
+    /// // Create a map, store all of the headers.
+    /// let mut map = HeaderMap::new();
+    /// for header in all_headers {
+    ///     map.add(header)
+    /// }
+    ///
+    /// // Ensure there are three headers via the iterator.
+    /// assert_eq!(map.iter().count(), 3);
+    ///
+    /// // Actually iterate through them.
+    /// for header in map.iter() {
+    ///     match header.name() {
+    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
+    ///         "X-Other" => assert_eq!(header.value(), "other"),
+    ///         "X-Third" => assert_eq!(header.value(), "third"),
+    ///         _ => unreachable!("there are only three headers")
+    ///     }
+    /// }
+    /// ```
     pub fn iter<'s>(&'s self) -> impl Iterator<Item=Header<'s>> {
         self.headers.iter().flat_map(|(key, values)| {
             values.iter().map(move |val| {
@@ -487,7 +550,39 @@ impl<'h> HeaderMap<'h> {
     /// in the map. Header names are returned in no specific order, but all
     /// values for a given header name are grouped together, and values are in
     /// FIFO order.
-    // TODO: Figure out what the return type is to implement IntoIterator.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{HeaderMap, Header};
+    ///
+    /// // The headers we'll be storing.
+    /// let all_headers = vec![
+    ///     Header::new("X-Custom", "value_1"),
+    ///     Header::new("X-Other", "other"),
+    ///     Header::new("X-Third", "third"),
+    /// ];
+    ///
+    /// // Create a map, store all of the headers.
+    /// let mut map = HeaderMap::new();
+    /// for header in all_headers {
+    ///     map.add(header)
+    /// }
+    ///
+    /// // Ensure there are three headers via the iterator.
+    /// assert_eq!(map.iter().count(), 3);
+    ///
+    /// // Actually iterate through them.
+    /// for header in map.into_iter() {
+    ///     match header.name() {
+    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
+    ///         "X-Other" => assert_eq!(header.value(), "other"),
+    ///         "X-Third" => assert_eq!(header.value(), "third"),
+    ///         _ => unreachable!("there are only three headers")
+    ///     }
+    /// }
+    /// ```
+    // TODO: Implement IntoIterator.
     #[inline(always)]
     pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
         self.headers.into_iter().flat_map(|(name, value)| {

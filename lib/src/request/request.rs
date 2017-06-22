@@ -327,11 +327,6 @@ impl<'r> Request<'r> {
         }).as_ref()
     }
 
-    #[inline(always)]
-    pub fn accept_first(&self) -> Option<&MediaType> {
-        self.accept().and_then(|accept| accept.first()).map(|wmt| wmt.media_type())
-    }
-
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
         if self.method.supports_payload() {

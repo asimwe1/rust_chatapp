@@ -67,7 +67,7 @@ use http::RawStr;
 ///     `"false"`, `"off"`, or not present. In any other case, the raw form
 ///     value is returned in the `Err` value.
 ///
-///   * **&RawStr**
+///   * **&[RawStr](/rocket/http/struct.RawStr.html)**
 ///
 ///     _This implementation always returns successfully._
 ///
