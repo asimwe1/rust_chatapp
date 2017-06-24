@@ -80,6 +80,7 @@
 //! `None`.
 
 use std::fmt;
+use std::ops::Try;
 
 use yansi::{Paint, Color};
 
@@ -103,9 +104,24 @@ pub enum Outcome<S, E, F> {
 
 /// Conversion trait from some type into an Outcome type.
 pub trait IntoOutcome<S, E, F> {
-    type Input: Sized;
+    type Failure: Sized;
+    type Forward: Sized;
 
-    fn into_outcome(self, input: Self::Input) -> Outcome<S, E, F>;
+    fn into_outcome(self, failure: Self::Failure) -> Outcome<S, E, F>;
+    fn or_forward(self, forward: Self::Forward) -> Outcome<S, E, F>;
+}
+
+impl<S, E, F> IntoOutcome<S, E, F> for Option<S> {
+    type Failure = E;
+    type Forward = F;
+
+    fn into_outcome(self, val: E) -> Outcome<S, E, F> {
+        Failure(val)
+    }
+
+    fn or_forward(self, val: F) -> Outcome<S, E, F> {
+        Forward(val)
+    }
 }
 
 impl<S, E, F> Outcome<S, E, F> {
@@ -424,6 +440,30 @@ impl<S, E, F> Outcome<S, E, F> {
             Failure(..) => (Color::Red, "Failure"),
             Forward(..) => (Color::Yellow, "Forward"),
         }
+    }
+}
+
+impl<S, E, F> Try for Outcome<S, E, F> {
+    type Ok = S;
+    type Error = Result<F, E>;
+
+    fn into_result(self) -> Result<Self::Ok, Self::Error> {
+        match self {
+            Success(val) => Ok(val),
+            Forward(val) => Err(Ok(val)),
+            Failure(val) => Err(Err(val)),
+        }
+    }
+
+    fn from_error(val: Self::Error) -> Self {
+        match val {
+            Ok(val) => Forward(val),
+            Err(val) => Failure(val),
+        }
+    }
+
+    fn from_ok(val: Self::Ok) -> Self {
+        Success(val)
     }
 }
 

@@ -7,6 +7,7 @@
 #![feature(plugin)]
 #![feature(never_type)]
 #![feature(more_io_inner_methods)]
+#![feature(try_trait)]
 
 #![plugin(pear_codegen)]
 

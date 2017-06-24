@@ -6,7 +6,7 @@ extern crate rocket;
 
 use std::collections::HashMap;
 
-use rocket::Outcome;
+use rocket::outcome::IntoOutcome;
 use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, Cookies};
@@ -25,15 +25,11 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
-        let user = request.cookies()
+        request.cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())
-            .map(|id| User(id));
-
-        match user {
-            Some(user) => Outcome::Success(user),
-            None => Outcome::Forward(())
-        }
+            .map(|id| User(id))
+            .or_forward(())
     }
 }
 

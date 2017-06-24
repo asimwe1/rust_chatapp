@@ -10,7 +10,8 @@ use data::Data;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
 impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
-    type Input = Status;
+    type Failure = Status;
+    type Forward = Data;
 
     #[inline]
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
@@ -18,6 +19,11 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
             Ok(val) => Success(val),
             Err(err) => Failure((status, err))
         }
+    }
+
+    #[inline]
+    fn or_forward(self, data: Data) -> Outcome<S, E> {
+        Forward(data)
     }
 }
 

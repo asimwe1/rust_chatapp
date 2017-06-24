@@ -104,6 +104,7 @@ impl FromStr for Method {
 }
 
 impl fmt::Display for Method {
+    #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.as_str().fmt(f)
     }

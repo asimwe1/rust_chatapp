@@ -276,6 +276,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn cookies(&self) -> Cookies {
+        // FIXME: Can we do better? This is disappointing.
         match self.state.cookies.try_borrow_mut() {
             Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
             Err(_) => {
