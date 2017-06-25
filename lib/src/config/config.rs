@@ -14,6 +14,8 @@ use http::Key;
 
 /// Structure for Rocket application configuration.
 ///
+/// # Usage
+///
 /// A `Config` structure is typically built using the [build](#method.build)
 /// method and [ConfigBuilder](/rocket/config/struct.ConfigBuilder.html)
 /// methods:
@@ -28,6 +30,13 @@ use http::Key;
 ///     .workers(12)
 ///     .unwrap();
 /// ```
+///
+/// ## General Configuration
+///
+/// For more information about Rocket's configuration, see the [`config`] module
+/// documentaiton.
+///
+/// [`config`]: /rocket/config/index.html
 #[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.

@@ -289,7 +289,7 @@ impl ConfigBuilder {
     /// assert!(config.is_ok());
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .address("?")
+    ///     .address("definitely not an address!")
     ///     .finalize();
     ///
     /// assert!(config.is_err());

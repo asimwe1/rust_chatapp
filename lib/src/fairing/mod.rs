@@ -7,17 +7,19 @@
 //! fairings to rewrite or record information about requests and responses, or
 //! to perform an action once a Rocket application has launched.
 //!
-//! To learn more about writing a fairing, see the [`Fairing` trait
-//! documentation](/rocket/fairing/trait.Fairing.html).
+//! To learn more about writing a fairing, see the [`Fairing`] trait
+//! documentation. You can also use [`AdHoc`] to create a fairing on-the-fly
+//! from a closure or function.
+//!
+//! [`AdHoc`]: /rocket/fairing/enum.AdHoc.html
 //!
 //! ## Attaching
 //!
 //! You must inform Rocket about fairings that you wish to be active by calling
 //! the [`attach`](/rocket/struct.Rocket.html#method.attach) method on the
 //! [`Rocket`](/rocket/struct.Rocket.html) instance and passing in the
-//! appropriate [`Fairing`](/rocket/fairing/trait.Fairing.html). For instance,
-//! to attach fairings named `req_fairing` and `res_fairing` to a new Rocket
-//! instance, you might write:
+//! appropriate [`Fairing`]. For instance, to attach fairings named
+//! `req_fairing` and `res_fairing` to a new Rocket instance, you might write:
 //!
 //! ```rust
 //! # use rocket::fairing::AdHoc;
@@ -29,19 +31,23 @@
 //! ```
 //!
 //! Once a fairing is attached, Rocket will execute it at the appropiate time,
-//! which varies depending on the fairing implementation. See the
-//! [`Fairing`](/rocket/fairing/trait.Fairing.html) trait documentation for more
-//! information on the dispatching of fairing methods.
+//! which varies depending on the fairing implementation. See the [`Fairing`]
+//! trait documentation for more information on the dispatching of fairing
+//! methods.
+//!
+//! [`Fairing`]: /rocket/fairing/trait.Fairing.html
 //!
 //! ## Ordering
 //!
-//! `Fairing`s are executed in the same order in which they are attached: the
-//! first attached fairing has its callbacks executed before all others. Because
-//! fairing callbacks may not be commutative, it is important to communicate to
-//! the user every consequence of a fairing. Furthermore, a `Fairing` should
-//! take care to act locally so that the actions of other `Fairings` are not
-//! jeopardized. For instance, unless it is made abundantly clear, a fairing
-//! should not rewrite every request.
+//! `Fairing`s are executed in the order in which they are attached: the first
+//! attached fairing has its callbacks executed before all others. Because
+//! fairing callbacks may not be commutative, the order in which fairings are
+//! attached may be significant. Because of this, it is important to communicate
+//! to the user every consequence of a fairing.
+//!
+//! Furthermore, a `Fairing` should take care to act locally so that the actions
+//! of other `Fairings` are not jeopardized. For instance, unless it is made
+//! abundantly clear, a fairing should not rewrite every request.
 use {Rocket, Request, Response, Data};
 
 mod fairings;
@@ -66,39 +72,33 @@ pub use self::info_kind::{Info, Kind};
 
 /// Trait implemented by fairings: Rocket's structured middleware.
 ///
-/// ## Fairing Information
+/// # Considerations
 ///
-/// Every `Fairing` must implement the
-/// [`info`](/rocket/fairing/trait.Fairing.html#tymethod.info) method, which
-/// returns an [`Info`](http://localhost:8000/rocket/fairing/struct.Info.html)
-/// structure. This structure is used by Rocket to:
+/// Fairings are a large hammer that can easily be abused and misused. If you
+/// are considering writing a `Fairing` implementation, first consider if it is
+/// apprioriate to do so. While middleware is often the best solution to some
+/// problems in other frameworks, it is often a suboptimal solution in Rocket.
+/// This is because Rocket provides richer mechanisms such as [request guards]
+/// and [data guards] that can be used to accomplish the same objective in a
+/// cleaner, more composable, and more robust manner.
 ///
-///   1. Assign a name to the `Fairing`.
+/// As a general rule of thumb, only _globally applicable actions_ should be
+/// implemented via fairings. For instance, you should _not_ use a fairing to
+/// implement authentication or authorization (preferring to use a [request
+/// guard] instead) _unless_ the authenitcation or authorization applies to the
+/// entire application. On the other hand, you _should_ use a fairing to record
+/// timing and/or usage statistics or to implement global security policies.
 ///
-///     This is the `name` field, which can be any arbitrary string. Name your
-///     fairing something illustrative. The name will be logged during the
-///     application's launch procedures.
-///
-///   2. Determine which callbacks to actually issue on the `Fairing`.
-///
-///     This is the `kind` field of type
-///     [`Kind`](/rocket/fairing/struct.Kind.html). This field is a bitset that
-///     represents the kinds of callbacks the fairing wishes to receive. Rocket
-///     will only invoke the callbacks that are flagged in this set. `Kind`
-///     structures can be `or`d together to represent any combination of kinds
-///     of callbacks. For instance, to request launch and response callbacks,
-///     return a `kind` field with the value `Kind::Launch | Kind::Response`.
-///
-/// See the [top-level documentation](/rocket/fairing/) for more general
-/// information.
+/// [request guard]: /rocket/request/trait.FromRequest.html
+/// [request guards]: /rocket/request/trait.FromRequest.html
+/// [data guards]: /rocket/data/trait.FromData.html
 ///
 /// ## Fairing Callbacks
 ///
 /// There are four kinds of fairing callbacks: attach, launch, request, and
-/// response. As mentioned above, a fairing can request any combination of these
-/// callbacks through the `kind` field of the `Info` structure returned from the
-/// `info` method. Rocket will only invoke the callbacks set in the `kind`
-/// field.
+/// response. A fairing can request any combination of these callbacks through
+/// the `kind` field of the `Info` structure returned from the `info` method.
+/// Rocket will only invoke the callbacks set in the `kind` field.
 ///
 /// The four callback kinds are as follows:
 ///
@@ -154,11 +154,37 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// # Implementing
 ///
-/// A `Fairing` implementation has one required method: `info`. A `Fairing` can
-/// also implement any of the available callbacks: `on_attach`, `on_launch`,
+/// A `Fairing` implementation has one required method: [`info`]. A `Fairing`
+/// can also implement any of the available callbacks: `on_attach`, `on_launch`,
 /// `on_request`, and `on_response`. A `Fairing` _must_ set the appropriate
 /// callback kind in the `kind` field of the returned `Info` structure from
-/// `info` for a callback to actually be issued by Rocket.
+/// [`info`] for a callback to actually be called by Rocket.
+///
+/// ## Fairing `Info`
+///
+/// Every `Fairing` must implement the [`info`] method, which returns an
+/// [`Info`](http://localhost:8000/rocket/fairing/struct.Info.html) structure.
+/// This structure is used by Rocket to:
+///
+///   1. Assign a name to the `Fairing`.
+///
+///     This is the `name` field, which can be any arbitrary string. Name your
+///     fairing something illustrative. The name will be logged during the
+///     application's launch procedures.
+///
+///   2. Determine which callbacks to actually issue on the `Fairing`.
+///
+///     This is the `kind` field of type
+///     [`Kind`](/rocket/fairing/struct.Kind.html). This field is a bitset that
+///     represents the kinds of callbacks the fairing wishes to receive. Rocket
+///     will only invoke the callbacks that are flagged in this set. `Kind`
+///     structures can be `or`d together to represent any combination of kinds
+///     of callbacks. For instance, to request launch and response callbacks,
+///     return a `kind` field with the value `Kind::Launch | Kind::Response`.
+///
+/// [`info`]: /rocket/fairing/trait.Fairing.html#tymethod.info
+///
+/// ## Restrictions
 ///
 /// A `Fairing` must be `Send + Sync + 'static`. This means that the fairing
 /// must be sendable across thread boundaries (`Send`), thread-safe (`Sync`),
@@ -166,7 +192,7 @@ pub use self::info_kind::{Info, Kind};
 /// not_ prohibit a `Fairing` from holding state: the state need simply be
 /// thread-safe and statically available or heap allocated.
 ///
-/// # Example
+/// ## Example
 ///
 /// Imagine that we want to record the number of `GET` and `POST` requests that
 /// our application has received. While we could do this with [request

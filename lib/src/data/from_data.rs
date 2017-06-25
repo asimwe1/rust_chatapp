@@ -27,17 +27,31 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     }
 }
 
-/// Trait used to derive an object from incoming request data.
+/// Trait implemented by data guards to derive a value from request body data.
 ///
-/// Types that implement this trait can be used as a target for the `data =
-/// "<param>"` route parmater, as illustrated below:
+/// # Data Guards
+///
+/// A data guard is a [request guard] that operates on a request's body data.
+/// Data guards validate, parse, and optionally convert request body data.
+/// Validation and parsing/conversion is implemented through `FromData`. In
+/// other words, every type that implements `FromData` is a data guard.
+///
+/// [request guard]: /rocket/request/trait.FromRequest.html
+///
+/// Data guards are used as the target of the `data` route attribute parameter.
+/// A handler can have at most one data guard.
+///
+/// ## Example
+///
+/// In the example below, `var` is used as the argument name for the data guard
+/// type `T`. When the `submit` route matches, Rocket will call the `FromData`
+/// implemention for the type `T`. The handler will only be called if the guard
+/// returns succesfully.
 ///
 /// ```rust,ignore
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: T) -> ... { ... }
 /// ```
-///
-/// In this example, `T` can be any type that implements `FromData`.
 ///
 /// # Outcomes
 ///
@@ -63,6 +77,52 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///   If the `Outcome` is `Forward`, the request will be forwarded to the next
 ///   matching request. This requires that no data has been read from the `Data`
 ///   parameter. Note that users can request an `Option<S>` to catch `Forward`s.
+///
+/// # Provided Implementations
+///
+/// Rocket implements `FromData` for several built-in types. Their behavior is
+/// documented here.
+///
+///   * **Data**
+///
+///     The identity implementation; simply returns `Data` directly.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Option&lt;T>** _where_ **T: FromData**
+///
+///     The type `T` is derived from the incoming data using `T`'s `FromData`
+///     implementation. If the derivation is a `Success`, the dervived value is
+///     returned in `Some`. Otherwise, a `None` is returned.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Result&lt;T, T::Error>** _where_ **T: FromData**
+///
+///     The type `T` is derived from the incoming data using `T`'s `FromData`
+///     implementation. If derivation is a `Success`, the value is returned in
+///     `Ok`. If the derivation is a `Failure`, the error value is returned in
+///     `Err`. If the derivation is a `Forward`, the request is forwarded.
+///
+///   * **String**
+///
+///     Reads the entire request body into a `String`. If reading fails, returns
+///     a `Failure` with the corresponding `io::Error`.
+///
+///     **WARNING:** Do **not** use this implementation for anything _but_
+///     debugging. This is because the implementation reads the entire body into
+///     memory; since the user controls the size of the body, this is an obvious
+///     vector for a denial of service attack.
+///
+///   * **Vec&lt;u8>**
+///
+///     Reads the entire request body into a `Vec<u8>`. If reading fails,
+///     returns a `Failure` with the corresponding `io::Error`.
+///
+///     **WARNING:** Do **not** use this implementation for anything _but_
+///     debugging. This is because the implementation reads the entire body into
+///     memory; since the user controls the size of the body, this is an obvious
+///     vector for a denial of service attack.
 ///
 /// # Example
 ///
@@ -149,14 +209,15 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// # fn main() {  }
 /// ```
 pub trait FromData: Sized {
-    /// The associated error to be returned when parsing fails.
+    /// The associated error to be returned when the guard fails.
     type Error;
 
-    /// Parses an instance of `Self` from the incoming request body data.
+    /// Validates, parses, and converts an instance of `Self` from the incoming
+    /// request body data.
     ///
-    /// If the parse is successful, an outcome of `Success` is returned. If the
-    /// data does not correspond to the type of `Self`, `Forward` is returned.
-    /// If parsing fails, `Failure` is returned.
+    /// If validation and parsing succeeds, an outcome of `Success` is returned.
+    /// If the data is not appropriate given the type of `Self`, `Forward` is
+    /// returned. If parsing fails, `Failure` is returned.
     fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error>;
 }
 
@@ -194,7 +255,6 @@ impl<T: FromData> FromData for Option<T> {
 impl FromData for String {
     type Error = io::Error;
 
-    // FIXME: Doc.
     fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
         let mut string = String::new();
         match data.open().read_to_string(&mut string) {
@@ -204,11 +264,9 @@ impl FromData for String {
     }
 }
 
-// FIXME Implement this.
 impl FromData for Vec<u8> {
     type Error = io::Error;
 
-    // FIXME: Doc.
     fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
         let mut bytes = Vec::new();
         match data.open().read_to_end(&mut bytes) {

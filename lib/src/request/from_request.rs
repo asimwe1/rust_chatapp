@@ -30,26 +30,37 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     }
 }
 
-/// Trait used to derive an object from incoming request metadata.
+/// Trait implemented by request guards to derive a value from incoming
+/// requests.
 ///
-/// An arbitrary number of types that implement this trait can appear as
-/// parameters in a route handler, as illustrated below:
+/// # Request Guards
+///
+/// A request guard is a type that represents an arbitrary validation policy.
+/// The validation policy is implemented through `FromRequest`. In other words,
+/// every type that implements `FromRequest` is a request guard.
+///
+/// Request guards appear as inputs to handlers. An arbitrary number of request
+/// guards can appear as arguments in a route handler. Rocket will automatically
+/// invoke the `FromRequest` implementation for request guards before calling
+/// the handler. Rocket only dispatches requests to a handler when all of its
+/// guards pass.
+///
+/// ## Example
+///
+/// The following dummy handler makes use of three request guards, `A`, `B`, and
+/// `C`. An input type can be identified as a request guard if it is not named
+/// in the route attribute. This is why, for instance, `param` is not a request
+/// guard.
 ///
 /// ```rust,ignore
-/// #[get("/")]
-/// fn index(a: A, b: B, c: C) -> ... { ... }
+/// #[get("/<param>")]
+/// fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
 /// ```
 ///
-/// In this example, `A`, `B`, and `C` can be any types that implements
-/// `FromRequest`. There can be any number of `FromRequest` types in the
-/// function signature. Note that unlike every other derived object in Rocket,
-/// `FromRequest` parameter names do not need to be declared in the route
-/// attribute.
-///
-/// Derivation of `FromRequest` arguments is always attemped in left-to-right
-/// declaration order. In the example above, for instance, the order will be `a`
-/// followed by `b` followed by `c`. If a deriviation fails, the following
-/// aren't attempted.
+/// Request guards always fire in left-to-right declaration order. In the
+/// example above, for instance, the order will be `a` followed by `b` followed
+/// by `c`. Failure is short-circuiting; if one guard fails, the remaining are
+/// not attempted.
 ///
 /// # Outcomes
 ///
@@ -59,8 +70,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Success**(S)
 ///
 ///   If the `Outcome` is `Success`, then the `Success` value will be used as
-///   the value for the corresponding parameter.  As long as all other parsed
-///   types succeed, the request will be handled.
+///   the value for the corresponding parameter.  As long as all other guards
+///   succeed, the request will be handled.
 ///
 /// * **Failure**(Status, E)
 ///
