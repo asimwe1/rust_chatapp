@@ -289,7 +289,7 @@ impl ConfigBuilder {
     /// assert!(config.is_ok());
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .address("definitely not an address!")
+    ///     .address("123.123.123.123.123 whoops!")
     ///     .finalize();
     ///
     /// assert!(config.is_err());
@@ -338,7 +338,6 @@ impl ConfigBuilder {
         self.finalize().expect("ConfigBuilder::unwrap() failed")
     }
 
-    ///
     /// Returns the `Config` structure that was being built by this builder.
     ///
     /// # Panics

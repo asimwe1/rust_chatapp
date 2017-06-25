@@ -79,10 +79,24 @@ impl Deref for QMediaType {
 }
 
 // FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum AcceptParams {
     Static(&'static [QMediaType]),
     Dynamic(SmallVec<[QMediaType; 1]>)
+}
+
+impl PartialEq for AcceptParams {
+    fn eq(&self, other: &AcceptParams) -> bool {
+        #[inline(always)]
+        fn inner_types(params: &AcceptParams) -> &[QMediaType] {
+            match *params {
+                AcceptParams::Static(params) => params,
+                AcceptParams::Dynamic(ref vec) => vec,
+            }
+        }
+
+        inner_types(self) == inner_types(other)
+    }
 }
 
 /// The HTTP Accept header.

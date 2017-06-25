@@ -85,6 +85,7 @@ impl<'r> Request<'r> {
     /// use rocket::http::Method;
     ///
     /// # Request::example(Method::Get, "/uri", |request| {
+    /// request.set_method(Method::Get);
     /// assert_eq!(request.method(), Method::Get);
     /// # });
     /// ```
@@ -113,7 +114,7 @@ impl<'r> Request<'r> {
         self.method = method;
     }
 
-    /// Borrow the URI from `self`, which must be an absolute URI.
+    /// Borrow the URI from `self`, which is guaranteed to be an absolute URI.
     ///
     /// # Example
     ///
@@ -130,8 +131,8 @@ impl<'r> Request<'r> {
     }
 
     /// Set the URI in `self`. The `uri` parameter can be of any type that
-    /// implements `Into<URI>` including `&str` and `String`; it must be a valid
-    /// absolute URI.
+    /// implements `Into<URI>` including `&str` and `String`; it _must_ be a
+    /// valid, absolute URI.
     ///
     /// # Example
     ///
@@ -191,8 +192,8 @@ impl<'r> Request<'r> {
         self.remote = Some(address);
     }
 
-    /// Returns a [HeaderMap](/rocket/http/struct.HeaderMap.html) of all of the
-    /// headers in `self`.
+    /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
+    /// the headers in `self`.
     ///
     /// # Example
     ///
@@ -209,7 +210,10 @@ impl<'r> Request<'r> {
         &self.headers
     }
 
-    /// Add the `header` to `self`'s headers.
+    /// Add `header` to `self`'s headers. The type of `header` can be any type
+    /// that implements the `Into<Header>` trait. This includes common types
+    /// such as [`ContentType`](/rocket/http/struct.ContentType.html) and
+    /// [`Accept`](/rocket/http/struct.Accept.html).
     ///
     /// # Example
     ///
@@ -231,8 +235,9 @@ impl<'r> Request<'r> {
         self.headers.add(header.into());
     }
 
-    /// Replaces the value of the header with `header.name` with `header.value`.
-    /// If no such header existed, `header` is added.
+    /// Replaces the value of the header with name `header.name` with
+    /// `header.value`. If no such header exists, `header` is added as a header
+    /// to `self`.
     ///
     /// # Example
     ///
@@ -258,8 +263,9 @@ impl<'r> Request<'r> {
 
     /// Returns a wrapped borrow to the cookies in `self`.
     ///
-    /// Note that `Cookies` implements internal mutability, so this method
-    /// allows you to get _and_ set cookies in `self`.
+    /// [`Cookies`](/rocket/http/enum.Cookies.html) implements internal
+    /// mutability, so this method allows you to get _and_ add/remove cookies in
+    /// `self`.
     ///
     /// # Example
     ///
@@ -299,18 +305,14 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # use rocket::Request;
     /// # use rocket::http::Method;
-    /// # Request::example(Method::Get, "/uri", |mut request| {
-    /// assert_eq!(request.content_type(), None);
-    /// # });
-    /// ```
-    ///
-    /// ```rust
-    /// # use rocket::Request;
-    /// # use rocket::http::Method;
     /// use rocket::http::ContentType;
     ///
     /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.add_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
+    ///
+    /// // The header is cached; it cannot be replaced after first access.
+    /// request.replace_header(ContentType::HTML);
     /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
     /// # });
     /// ```
@@ -321,6 +323,27 @@ impl<'r> Request<'r> {
         }).as_ref()
     }
 
+    /// Returns the Accept header of `self`. If the header is not present,
+    /// returns `None`. The Accept header is cached after the first call to this
+    /// function. As a result, subsequent calls will always return the same
+    /// value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::Accept;
+    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// request.add_header(Accept::JSON);
+    /// assert_eq!(request.accept(), Some(&Accept::JSON));
+    ///
+    /// // The header is cached; it cannot be replaced after first access.
+    /// request.replace_header(Accept::HTML);
+    /// assert_eq!(request.accept(), Some(&Accept::JSON));
+    /// # });
+    /// ```
     #[inline(always)]
     pub fn accept(&self) -> Option<&Accept> {
         self.state.accept.get_or_set(|| {
@@ -328,6 +351,33 @@ impl<'r> Request<'r> {
         }).as_ref()
     }
 
+    /// Returns the media type "format" of the request.
+    ///
+    /// The "format" of a request is either the Content-Type, if the request
+    /// methods indicates support for a payload, or the preferred media type in
+    /// the Accept header otherwise. If the method indicates no payload and no
+    /// Accept header is specified, a media type of `Any` is returned.
+    ///
+    /// The media type returned from this method is used to match against the
+    /// `format` route attribute.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// use rocket::http::{Method, Accept, ContentType, MediaType};
+    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// request.add_header(ContentType::JSON);
+    /// request.add_header(Accept::HTML);
+    ///
+    /// request.set_method(Method::Get);
+    /// assert_eq!(request.format(), Some(&MediaType::HTML));
+    ///
+    /// request.set_method(Method::Post);
+    /// assert_eq!(request.format(), Some(&MediaType::JSON));
+    /// # });
+    /// ```
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
         if self.method.supports_payload() {
@@ -342,16 +392,62 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Get the limits.
+    /// Returns the configured application receive limits.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// let json_limit = request.limits().get("json");
+    /// # });
+    /// ```
     pub fn limits(&self) -> &'r Limits {
         &self.state.config.limits
     }
 
-    /// Get the current route, if any.
+    /// Get the presently matched route, if any.
     ///
-    /// No route will be avaiable before routing. So not during request fairing.
+    /// This method returns `Some` any time a handler or its guards are being
+    /// invoked. This method returns `None` _before_ routing has commenced; this
+    /// includes during request fairing callbacks.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// let route = request.route();
+    /// # });
+    /// ```
     pub fn route(&self) -> Option<&'r Route> {
         self.state.route.get()
+    }
+
+    /// Invokes the request guard implemention for `T`, returning its outcome.
+    ///
+    /// # Example
+    ///
+    /// Invoke the `JSON<T>` request guard.
+    ///
+    /// ```rust,ignore
+    /// use rocket_contrib::JSON;
+    ///
+    /// let outcome = request.guard::<JSON<T>>();
+    /// ```
+    ///
+    /// Retrieve managed state inside of a guard implementation:
+    ///
+    /// ```rust,ignore
+    /// use rocket::State;
+    ///
+    /// let pool = request.guard::<State<Pool>>()?;
+    /// ```
+    #[inline(always)]
+    pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
+        T::from_request(self)
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
@@ -460,12 +556,6 @@ impl<'r> Request<'r> {
     #[inline]
     pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
         self.state.cookies = RefCell::new(jar);
-    }
-
-    /// Try to derive some guarded value from `self`.
-    #[inline(always)]
-    pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
-        T::from_request(self)
     }
 
     /// Get the managed state T, if it exists. For internal use only!

@@ -561,7 +561,7 @@ impl<'r> ResponseBuilder<'r> {
     }
 }
 
-/// An HTTP/Rocket response, returned by `Responder`s.
+/// An response, as returned by `Responder`s.
 #[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,
