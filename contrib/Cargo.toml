@@ -36,3 +36,6 @@ rmp-serde = { version = "^0.13", optional = true }
 handlebars = { version = "^0.27", optional = true }
 glob = { version = "^0.2", optional = true }
 tera = { version = "^0.10", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
