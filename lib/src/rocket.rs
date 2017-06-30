@@ -638,12 +638,12 @@ impl Rocket {
     ///
     /// # Error
     ///
-    /// If there is a problem starting the application, a
-    /// [LaunchError](/rocket/struct.LaunchError.html) is returned. Note
-    /// that a value of type `LaunchError` panics if dropped without first being
-    /// inspected. See the [LaunchError
-    /// documentation](/rocket/struct.LaunchError.html) for more
-    /// information.
+    /// If there is a problem starting the application, a [`LaunchError`] is
+    /// returned. Note that a value of type `LaunchError` panics if dropped
+    /// without first being inspected. See the [`LaunchError`] documentation for
+    /// more information.
+    ///
+    /// [`LaunchError`]: /rocket/error/struct.LaunchError.html
     ///
     /// # Example
     ///
