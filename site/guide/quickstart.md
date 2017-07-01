@@ -12,10 +12,12 @@ Rocket repository and run the included examples in the `examples/` directory.
 For instance, the following set of commands runs the `hello_world` example:
 
 ```sh
-git clone https://github.com/SergioBenitez/rocket
-cd rocket/examples/hello_world
+git clone https://github.com/SergioBenitez/Rocket
+cd Rocket
+git checkout v0.2.8
+cd examples/hello_world
 cargo run
 ```
 
-There are numerous examples. They can all be run with `cargo run`.
-
+There are numerous examples in the `examples/` directory. They can all be run
+with `cargo run`.
