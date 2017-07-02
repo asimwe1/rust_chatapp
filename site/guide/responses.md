@@ -40,7 +40,7 @@ return a type of `status::Accepted<String>`:
 ```rust
 #[get("/")]
 fn accept() -> status::Accepted<String> {
-    status::Accepted(Some("I accept!".to_string()))
+    status::Accepted("I accept!".to_string())
 }
 ```
 

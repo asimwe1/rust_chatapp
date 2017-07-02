@@ -307,8 +307,8 @@ simple as possible via the
 
 ```rust
 #[post("/upload", format = "text/plain", data = "<data>")]
-fn upload(data: Data) -> io::Result<Plain<String>> {
-    data.stream_to_file("/tmp/upload.txt").map(|n| Plain(n.to_string()))
+fn upload(data: Data) -> io::Result<String> {
+    data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())
 }
 ```
 
