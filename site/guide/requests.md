@@ -258,11 +258,11 @@ header will match.
 ## Request Guards
 
 Request guards are one of Rocket's most powerful instruments. As the name might
-imply, a request guard protects a handler from being called erroneously, based
-on information contained in an incoming request. More specifically, a request
-guard is a type that represents an arbitrary validation policy. The validation
-policy is implemented through the [`FromRequest`] trait. Every type that
-implements `FromRequest` is a request guard.
+imply, a request guard protects a handler from being called erroneously based on
+information contained in an incoming request. More specifically, a request guard
+is a type that represents an arbitrary validation policy. The validation policy
+is implemented through the [`FromRequest`] trait. Every type that implements
+`FromRequest` is a request guard.
 
 Request guards appear as inputs to handlers. An arbitrary number of request
 guards can appear as arguments in a route handler. Rocket will automatically
@@ -292,8 +292,8 @@ documentation.
 
 Sometimes we need data associated with a request that isn't a direct data input.
 Rocket makes retrieving and validating such information easy through request
-guards. As example, consider the built-in request guard, [`Cookies`]. Since
-`Cookies` is a request guard, an argument of that type can simply be added to a
+guards. As an example, consider the built-in [`Cookies`] request guard. Because
+`Cookies` is a request guard, an argument of its type can simply be added to a
 handler:
 
 ```rust
@@ -306,9 +306,10 @@ fn index(cookies: Cookies) -> Option<String> {
 }
 ```
 
-The [cookies example] on GitHub illustrates further use of the `Cookies` type to
-get and set cookies, while the [`Cookies`] documentation contains full usage
-information.
+This results in the incoming request's cookies being accessible from the
+handler. The [cookies example] on GitHub illustrates further use of the
+`Cookies` type to get and set cookies, while the [`Cookies`] documentation
+contains full usage information.
 
 [cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/cookies
 
@@ -316,8 +317,8 @@ information.
 
 You can implement `FromRequest` for your own types. For instance, to protect a
 `sensitive` route from running unless an `ApiKey` is present in the request
-headers, you might create an `ApiKey` type that implements `FromRequest` and use
-it as a request guard:
+headers, you might create an `ApiKey` type that implements `FromRequest` and
+then use it as a request guard:
 
 ```rust
 #[get("/sensitive")]
@@ -330,6 +331,55 @@ any handler with an `AdminUser` or `ApiKey` type in its argument list is assured
 to only be invoked if the appropriate conditions are met. Request guards
 centralize policies, resulting in a simpler, safer, and more secure
 applications.
+
+### Forwarding Guards
+
+Request guards and forwarding are a powerful combination for enforcing policies.
+To illustrate, we consider how a simple authorization system might be
+implemented using these mechanisms.
+
+We start with two request guards:
+
+  * `User`: A regular, authenticated user.
+
+    The `FromRequest` implementation for `User` checks that a cookie identifies
+    a user and returns a `User` value if so. If no user can be authenticated,
+    the guard forwards.
+
+  * `AdminUser`: A user authenticated as an administrator.
+
+    The `FromRequest` implementation for `AdminUser` checks that a cookie
+    identifies an _administrative_ user and returns an `AdminUser` value if so.
+    If no user can be authenticated, the guard forwards.
+
+We now use these two guards in combination with forwarding to implement the
+following three routes to some administrative panel at `/admin`:
+
+```rust
+#[get("/admin")]
+fn admin_panel(admin: AdminUser) -> &'static str {
+    "Hello, administrator. This is the admin panel!"
+}
+
+#[get("/admin", rank = 2)]
+fn admin_panel_user(admin: User) -> &'static str {
+    "Sorry, you must be an administrator to access this page."
+}
+
+#[get("/admin", rank = 3)]
+fn admin_panel_redirect() -> Redirect {
+    Redirect::to("/login")
+}
+```
+
+The three routes above encode authentication _and_ authorization. The
+`admin_panel` route only succeeds if an administrator is logged in. Only then is
+the admin panel displayed. If the user is not an admin, the `AdminUser` route
+will forward. Since the `admin_panel_user` route is ranked next highest, it is
+tried next. This route succeeds if there is _any_ user signed in, and an
+authorization failure message is displayed. Finally, if a user isn't signed in,
+the `admin_panel_redirect` route is tried. Since this route has no guards, it
+always succeeds. The user is redirected to a log in page.
 
 ## Body Data
 
@@ -384,11 +434,57 @@ fn new(task: Option<Form<Task>>) -> String { ... }
 
 #### Lenient Parsing
 
-FIXME: Write this.
+Rocket's `FromForm` parsing is _strict_ by default. In other words, A `Form<T>`
+will parse successfully from an incoming form only if the form contains the
+exact set of fields in `T`. Said another way, a `Form<T>` will error on missing
+and/or extra fields. For instance, if an incoming form contains the fields "a",
+"b", and "c" while `T` only contains "a" and "c", the form _will not_ parse as
+`Form<T>`.
+
+Rocket allows you to opt-out of this behavior via the [`LenientForm`] data type.
+A `LenientForm<T>` will parse successfully from an incoming form as long as the
+form contains a superset of the fields in `T`. Said another way, a
+`LenientForm<T>` automatically discards extra fields without error. For
+instance, if an incoming form contains the fields "a", "b", and "c" while `T`
+only contains "a" and "c", the form _will_ parse as `LenientForm<T>`.
+
+You can use a `LenientForm` anywhere you'd use a `Form`. Its generic parameter
+is also required to implement `FromForm`. For instance, we can simply replace
+`Form` with `LenientForm` above to get lenient parsing:
+
+```rust
+#[derive(FromForm)]
+struct Task { .. }
+
+#[post("/todo", data = "<task>")]
+fn new(task: LenientForm<Task>) { .. }
+```
+
+[`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
 
 #### Field Renaming
 
-FIXME: Write this.
+By default, Rocket matches the name of an incoming form field to the name of a
+structure field. While this behavior is typical, it may also be desired to use
+different names for form fields and struct fields while still parsing as
+expected. You can ask Rocket to look for a different form field for a given
+structure field by using the `#[form(field = "name")]` field annotation.
+
+As an example, say that you're writing an application that receives data from an
+external service. The external service `POST`s a form with a field named `type`.
+Since `type` is a reserved keyword in Rust, it cannot be used as the name of a
+field. To get around this, you can use field renaming as follows:
+
+```rust
+#[derive(FromForm)]
+struct External {
+    #[form(field = "type")]
+    api_type: String
+}
+```
+
+Rocket will then match the form field named `type` to the structure field named
+`api_type` automatically.
 
 #### Field Validation
 
@@ -483,7 +579,8 @@ for the full crate.
 
 Query strings are handled just like forms. A query string can be parsed into any
 structure that implements the `FromForm` trait. They are matched against by
-appending a `?` followed by a dynamic parameter `<param>` to the path.
+appending a `?` to the path followed by a static query string or a dynamic
+parameter `<param>`.
 
 For instance, say you change your mind and decide to use query strings instead
 of `POST` forms for new todo tasks in the previous forms example, reproduced
@@ -507,12 +604,31 @@ fn new(task: Task) -> String { ... }
 
 Rocket will parse the query string into the `Task` structure automatically by
 matching the structure field names to the query parameters. If the parse fails,
-the request is forwarded to the next matching route. To catch parse failures,
-you can use `Option` or `Result` as the type of the field to catch errors for.
+the request is forwarded to the next matching route. Parse failures can be
+captured on a per-field or per-form basis.
 
-See [the GitHub
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/query_params)
-for a complete illustration.
+To catch failures on a per-field basis, use a type of `Option` or `Result` for
+the given field:
+
+```rust
+#[derive(FromForm)]
+struct Task<'r> {
+    description: Result<String, &'r RawStr>,
+    complete: Option<bool>
+}
+```
+
+To catch failures on a per-form basis, change the type of the query string
+target to either `Option` or `Result`:
+
+```rust
+#[get("/todo?<task>")]
+fn new(task: Option<Task>) { ... }
+```
+
+For a concrete illustration on how to handle query parameters, see [the
+`query_params`
+example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/query_params).
 
 ## Error Catchers
 
