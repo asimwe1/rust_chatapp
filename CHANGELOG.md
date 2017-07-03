@@ -46,6 +46,8 @@ This release includes the following new features:
   * Quoted string, array, and table  based [configuration parameters] can be set
     via environment variables.
   * Log coloring is disabled when `stdout` is not a TTY.
+  * [`FromForm`] is implemented for `Option<T: FromForm>`, `Result<T: FromForm,
+    T::Error>`.
 
 [Fairings]: #FIXME
 [Native TLS support]: #FIXME

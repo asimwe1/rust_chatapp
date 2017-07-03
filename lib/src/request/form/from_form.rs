@@ -124,3 +124,21 @@ impl<'f> FromForm<'f> for &'f str {
         Ok(items.inner_str())
     }
 }
+
+impl<'f, T: FromForm<'f>> FromForm<'f> for Option<T> {
+    type Error = !;
+
+    #[inline]
+    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Option<T>, !> {
+        Ok(T::from_form(items, strict).ok())
+    }
+}
+
+impl<'f, T: FromForm<'f>> FromForm<'f> for Result<T, T::Error> {
+    type Error = !;
+
+    #[inline]
+    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Self, !> {
+        Ok(T::from_form(items, strict))
+    }
+}
