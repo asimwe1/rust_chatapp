@@ -117,9 +117,9 @@ pub trait FromForm<'f>: Sized {
 
 /// This implementation should only be used during debugging!
 impl<'f> FromForm<'f> for &'f str {
-    type Error = ();
+    type Error = !;
 
-    fn from_form(items: &mut FormItems<'f>, _: bool) -> Result<Self, Self::Error> {
+    fn from_form(items: &mut FormItems<'f>, _: bool) -> Result<Self, !> {
         items.mark_complete();
         Ok(items.inner_str())
     }
