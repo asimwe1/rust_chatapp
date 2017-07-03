@@ -11,15 +11,6 @@ use version_check::{supports_features, is_min_version, is_min_date};
 const MIN_DATE: &'static str = "2017-07-02";
 const MIN_VERSION: &'static str = "1.20.0-nightly";
 
-// Convenience macro for writing to stderr.
-macro_rules! printerr {
-    ($($arg:tt)*) => ({
-        use std::io::prelude::*;
-        write!(&mut ::std::io::stderr(), "{}\n", format_args!($($arg)*))
-            .expect("Failed to write to stderr.")
-    })
-}
-
 fn main() {
     let ok_channel = supports_features();
     let ok_version = is_min_version(MIN_VERSION);
@@ -27,7 +18,7 @@ fn main() {
     let triple = (ok_channel, ok_version, ok_date);
 
     let print_version_err = |version: &str, date: &str| {
-        printerr!("{} {}. {} {}.",
+        eprintln!("{} {}. {} {}.",
                   White.paint("Installed version is:"),
                   Yellow.paint(format!("{} ({})", version, date)),
                   White.paint("Minimum required:"),
@@ -36,11 +27,11 @@ fn main() {
 
     if let (Some(ok_channel), Some((ok_version, version)), Some((ok_date, date))) = triple {
         if !ok_channel {
-            printerr!("{} {}",
+            eprintln!("{} {}",
                       Red.paint("Error:").bold(),
                       White.paint("Rocket requires a nightly or dev version of Rust."));
             print_version_err(&*version, &*date);
-            printerr!("{}{}{}",
+            eprintln!("{}{}{}",
                       Blue.paint("See the getting started guide ("),
                       White.paint("https://rocket.rs/guide/getting-started/"),
                       Blue.paint(") for more information."));
@@ -48,10 +39,10 @@ fn main() {
         }
 
         if !ok_version || !ok_date {
-            printerr!("{} {}",
+            eprintln!("{} {}",
                       Red.paint("Error:").bold(),
                       White.paint("Rocket requires a more recent version of rustc."));
-            printerr!("{}{}{}",
+            eprintln!("{}{}{}",
                       Blue.paint("Use `"),
                       White.paint("rustup update"),
                       Blue.paint("` or your preferred method to update Rust."));
