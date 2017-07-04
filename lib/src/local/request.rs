@@ -185,7 +185,7 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline]
     pub fn cookie(self, cookie: Cookie<'static>) -> Self {
-        self.request.cookies().add(cookie);
+        self.request.cookies().add_original(cookie);
         self
     }
 
