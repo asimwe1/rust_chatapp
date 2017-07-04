@@ -125,14 +125,20 @@ impl<S, E, F> IntoOutcome<S, E, F> for Option<S> {
     type Failure = E;
     type Forward = F;
 
-    #[inline(always)]
-    fn into_outcome(self, val: E) -> Outcome<S, E, F> {
-        Failure(val)
+    #[inline]
+    fn into_outcome(self, failure: E) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Failure(failure)
+        }
     }
 
-    #[inline(always)]
-    fn or_forward(self, val: F) -> Outcome<S, E, F> {
-        Forward(val)
+    #[inline]
+    fn or_forward(self, forward: F) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Forward(forward)
+        }
     }
 }
 

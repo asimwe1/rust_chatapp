@@ -26,7 +26,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 
     #[inline]
     fn or_forward(self, _: ()) -> Outcome<S, E> {
-        Forward(())
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward(())
+        }
     }
 }
 
