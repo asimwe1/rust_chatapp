@@ -155,6 +155,30 @@ impl Responder<'static> for Reset {
     }
 }
 
+/// Sets the status of the response to 404 (Not Found).
+///
+/// The remainder of the response is delegated to the wrapped `Responder`.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::NotFound("Sorry, I couldn't find it!");
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct NotFound<R>(pub R);
+
+/// Sets the status code of the response to 404 Not Found.
+impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        Response::build_from(self.0.respond_to(req)?)
+            .status(Status::NotFound)
+            .ok()
+    }
+}
+
 /// Creates a response with the given status code and underyling responder.
 ///
 /// # Example

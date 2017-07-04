@@ -48,6 +48,8 @@ This release includes the following new features:
   * Log coloring is disabled when `stdout` is not a TTY.
   * [`FromForm`] is implemented for `Option<T: FromForm>`, `Result<T: FromForm,
     T::Error>`.
+  * The [`NotFound`] responder was added for simple **404** response
+    construction.
 
 [Fairings]: #FIXME
 [Native TLS support]: #FIXME
@@ -73,6 +75,7 @@ This release includes the following new features:
 [`Config::get_datetime()`]: https://api.rocket.rs/rocket/struct.Config.html#method.get_datetime
 [`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
 [configuration parameters]: https://api.rocket.rs/rocket/config/index.html#environment-variables
+[`NotFound`]: https://api.rocket.rs/rocket/response/status/struct.NotFound.html
 
 ## Breaking Changes
 
