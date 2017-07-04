@@ -197,7 +197,7 @@ okay and expected. We'll be using the new code soon.
 Believe it or not, the hard part is done! (_whew!_).
 
 To process the upload, we'll need a place to store the uploaded files. To
-simplify things, we'll store the uploads in a directory named `uploads/`. Create
+simplify things, we'll store the uploads in a directory named `upload/`. Create
 an `upload` directory next to the `src` directory:
 
 ```sh
