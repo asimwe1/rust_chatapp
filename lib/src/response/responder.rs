@@ -50,7 +50,7 @@ use request::Request;
 ///
 ///   * **File**
 ///
-///     Responds with a sized body containing the data in the `File`. No
+///     Responds with a streamed body containing the data in the `File`. No
 ///     `Content-Type` is set. To automatically have a `Content-Type` set based
 ///     on the file's extension, use
 ///     [`NamedFile`](/rocket/response/struct.NamedFile.html).
@@ -205,7 +205,7 @@ impl Responder<'static> for String {
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl Responder<'static> for File {
     fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
-        Response::build().sized_body(self).ok()
+        Response::build().streamed_body(self).ok()
     }
 }
 
