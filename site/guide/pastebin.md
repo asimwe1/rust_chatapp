@@ -108,7 +108,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
 fn main() {
-    rocket::ignite().mount("/", routes![index]).launch()
+    rocket::ignite().mount("/", routes![index]).launch();
 }
 ```
 
@@ -256,7 +256,7 @@ Make sure that the route is mounted at the root path:
 
 ```rust
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload]).launch()
+    rocket::ignite().mount("/", routes![index, upload]).launch();
 }
 ```
 
@@ -296,6 +296,7 @@ paste doesn't exist.
 
 ```rust
 use std::fs::File;
+use rocket::http::RawStr;
 
 #[get("/<id>")]
 fn retrieve(id: &RawStr) -> Option<File> {
@@ -304,7 +305,9 @@ fn retrieve(id: &RawStr) -> Option<File> {
 }
 ```
 
-Unfortunately, there's a problem with this code. Can you spot the issue?
+Unfortunately, there's a problem with this code. Can you spot the issue? The
+[`RawStr`](https://api.rocket.rs/rocket/http/struct.RawStr.html) type should tip
+you off!
 
 The issue is that the _user_ controls the value of `id`, and as a result, can
 coerce the service into opening files inside `upload/` that aren't meant to be
@@ -327,7 +330,7 @@ using it. We do this by implementing `FromParam` for `PasteID` in
 use rocket::request::FromParam;
 
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
-fn valid_id(id: &RawStr) -> bool {
+fn valid_id(id: &str) -> bool {
     id.chars().all(|c| {
         (c >= 'a' && c <= 'z')
             || (c >= 'A' && c <= 'Z')
@@ -338,9 +341,9 @@ fn valid_id(id: &RawStr) -> bool {
 /// Returns an instance of `PasteID` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
 impl<'a> FromParam<'a> for PasteID<'a> {
-    type Error = &'a str;
+    type Error = &'a RawStr;
 
-    fn from_param(param: &'a str) -> Result<PasteID<'a>, &'a str> {
+    fn from_param(param: &'a RawStr) -> Result<PasteID<'a>, &'a RawStr> {
         match valid_id(param) {
             true => Ok(PasteID(Cow::Borrowed(param))),
             false => Err(param)
@@ -361,7 +364,7 @@ fn retrieve(id: PasteID) -> Option<File> {
 }
 ```
 
-Note that our `valid_id` function is simple and could be improved by, for
+Note that our `valid_id` function is simplistic and could be improved by, for
 example, checking that the length of the `id` is within some known bound or
 potentially blacklisting sensitive files as needed.
 
@@ -396,11 +399,10 @@ through some of them to get a better feel for Rocket. Here are some ideas:
   * Add a new route, `GET /<id>/<lang>` that syntax highlights the paste with ID
     `<id>` for language `<lang>`. If `<lang>` is not a known language, do no
     highlighting. Possibly validate `<lang>` with `FromParam`.
-  * Use the [testing module](https://api.rocket.rs/rocket/testing/) to write
+  * Use the [`local` module](https://api.rocket.rs/rocket/local/) to write
     unit tests for your pastebin.
   * Dispatch a thread before `launch`ing Rocket in `main` that periodically
     cleans up idling old pastes in `upload/`.
 
-You can find the full source code for the completed pastebin tutorial in the
-[Rocket Github
-Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
+You can find the full source code for the [completed pastebin tutorial on
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
