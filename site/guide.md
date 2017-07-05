@@ -21,8 +21,10 @@ aspect of Rocket. The sections are:
      parsing, and validating.
    - **[Responses](responses/):** discusses generating responses.
    - **[State](state/):** how to manage state in a Rocket application.
+   - **[Fairings](fairings/):** introduction to Rocket's structure middleware.
    - **[Testing](testing/):** how to unit and integration test a Rocket
      application.
+   - **[Configuration](configuration/):** how to configure a Rocket application.
    - **[Pastebin](pastebin/):** a tutorial on how to create a pastebin with
      Rocket.
    - **[Conclusion](conclusion/):** concludes the guide and discusses next steps
