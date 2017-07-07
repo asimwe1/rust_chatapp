@@ -148,7 +148,7 @@ sendable across thread boundaries (`Send`), thread-safe (`Sync`), and have only
 prohibit a `Fairing` from holding state: the state need simply be thread-safe
 and statically available or heap allocated.
 
-## Example
+### Example
 
 Imagine that we want to record the number of `GET` and `POST` requests that our
 application has received. While we could do this with request guards and managed
