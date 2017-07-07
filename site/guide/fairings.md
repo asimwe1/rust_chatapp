@@ -1,0 +1,205 @@
+# Fairings
+
+Fairings are Rocket's approach to structured middleware. They allow for
+interposition at various points in the application and request/response
+lifecycle through callbacks issued by Rocket.
+
+## Overview
+
+A _fairing_ is any type that implements the [`Fairing`] trait. The `Fairing`
+trait is composed of methods that represent callbacks that Rocket will run at
+requested points in a program. Through these methods, fairings can rewrite or
+record information about requests and responses as well as perform actions when
+a Rocket application launches.
+
+[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
+
+### Attaching
+
+For a fairing to be active, it must first be _attached_ through the the
+[`attach`] method on a [`Rocket`] instance. For instance, to attach fairings
+named `req_fairing` and `res_fairing` to a new Rocket instance, you might write:
+
+```rust
+rocket::ignite()
+    .attach(req_fairing)
+    .attach(res_fairing)
+    .launch();
+```
+
+Once a fairing is attached, Rocket will execute its callbacks at the appropiate
+time.
+
+[`attach`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.attach
+[`Rocket`]: https://api.rocket.rs/rocket/struct.Rocket.html
+
+### Callbacks
+
+A fairing can implement any combination of the following four callbacks:
+
+  * **Attach**
+
+    An attach callback is called when a fairing is first attached via the
+    [`attach`](https://api.rocket.rs/rocket/struct.Rocket.html#method.attach)
+    method. An attach callback can arbitrarily modify the `Rocket` instance
+    being constructed and optionally abort launch.
+
+  * **Launch**
+
+    A launch callback is called immediately before the Rocket application has
+    launched. A launch callback can inspect the `Rocket` instance being
+    launched.
+
+  * **Request**
+
+    A request callback is called just after a request is received. A request
+    callback can modify the request at will and peek into the incoming data. It
+    may not, however, abort or respond directly to the request; these issues are
+    better handled via request guards or via response callbacks.
+
+  * **Response**
+
+    A response callback is called when a response is ready to be sent to the
+    client. A response callback can modify the response at will. For example, a
+    response callback can provide a default response when the user fails to
+    handle the request by checking for 404 responses.
+
+
+### Execution Order
+
+Fairings are executed in the order in which they are attached: the first
+attached fairing has its callbacks executed before all others. Because fairing
+callbacks may not be commutative, the order in which fairings are attached may
+be significant.
+
+### Ad-Hoc Fairings
+
+For simple occasions, implementing the `Fairing` trait can be cumbersome. This
+is why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
+function or clusure. 
+
+Using the `AdHoc` type is easy: simply call the `on_attach`, `on_launch`,
+`on_request`, or `on_response` constructors to create an `AdHoc` structure from
+a function or closure. Then, attach the structure to a `Rocket` instance. Rocket
+takes care of the rest.
+
+As an example, the code below creates a `Rocket` instance with two attached
+ad-hoc fairings. The first, a launch fairing, simply prints a message indicating
+that the application is about to the launch. The second, a request fairing,
+changes the method of all requests to `PUT`.
+
+```rust
+use rocket::fairing::AdHoc;
+use rocket::http::Method;
+
+rocket::ignite()
+    .attach(AdHoc::on_launch(|_| {
+        println!("Rocket is about to launch! Exciting!");
+    }))
+    .attach(AdHoc::on_request(|req, _| {
+        req.set_method(Method::Put);
+    }));
+```
+
+[`AdHoc`]: https://api.rocket.rs/rocket/fairing/enum.AdHoc.html
+
+## Considerations
+
+Fairings are a large hammer that can easily be abused and misused. If you
+are considering writing a `Fairing` implementation, first consider if it is
+appropriate to do so. While middleware is often the best solution to some
+problems in other frameworks, it is often a suboptimal solution in Rocket.
+This is because Rocket provides richer mechanisms such as [request guards]
+and [data guards] that can be used to accomplish the same objective in a
+cleaner, more composable, and more robust manner.
+
+As a general rule of thumb, only _globally applicable actions_ should be
+implemented via fairings. For instance, you should _not_ use a fairing to
+implement authentication or authorization (preferring to use a [request
+guard] instead) _unless_ the authentication or authorization applies to the
+entire application. On the other hand, you _should_ use a fairing to record
+timing and/or usage statistics or to implement global security policies.
+
+[request guard]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
+[request guards]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
+[data guards]: https://api.rocket.rs/rocket/data/trait.FromData.html
+
+## Implementing
+
+A fairing must implement the [`Fairing`] trait. A `Fairing` implementation has
+one required method: [`info`], which returns an [`Info`] structure. This
+structure is used by Rocket to assign a name to the `Fairing` and determine
+which callbacks to actually issue on the `Fairing`. A `Fairing` can also
+implement any of the available callbacks: [`on_attach`], [`on_launch`],
+[`on_request`], and [`on_response`].
+
+[`Info`]: https://api.rocket.rs/rocket/fairing/struct.Info.html
+[`info`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#tymethod.info
+[`on_attach`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_attach
+[`on_launch`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_launch
+[`on_request`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_request
+[`on_response`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_response
+
+### Restrictions
+
+A `Fairing` must be `Send + Sync + 'static`. This means that the fairing must be
+sendable across thread boundaries (`Send`), thread-safe (`Sync`), and have only
+`'static` references, if any (`'static`). Note that these bounds _do not_
+prohibit a `Fairing` from holding state: the state need simply be thread-safe
+and statically available or heap allocated.
+
+## Example
+
+Imagine that we want to record the number of `GET` and `POST` requests that our
+application has received. While we could do this with request guards and managed
+state, it would require us to annotate every `GET` and `POST` request with
+custom types, polluting handler signatures. Instead, we can create a simple
+fairing that acts globally.
+
+The `Counter` fairing below records the number of all `GET` and `POST` requests
+received. It makes these counts available at a special `'/counts'` path.
+
+```rust
+struct Counter {
+    get: AtomicUsize,
+    post: AtomicUsize,
+}
+
+impl Fairing for Counter {
+    fn info(&self) -> Info {
+        Info {
+            name: "GET/POST Counter",
+            kind: Kind::Request | Kind::Response
+        }
+    }
+
+    fn on_request(&self, request: &mut Request, _: &Data) {
+        match request.method() {
+            Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
+            Method::Post => self.post.fetch_add(1, Ordering::Relaxed),
+            _ => return
+        }
+    }
+
+    fn on_response(&self, request: &Request, response: &mut Response) {
+        // Don't change a successful user's response, ever.
+        if response.status() != Status::NotFound {
+            return
+        }
+
+        if request.method() == Method::Get && request.uri().path() == "/counts" {
+            let get_count = self.get.load(Ordering::Relaxed);
+            let post_count = self.post.load(Ordering::Relaxed);
+            let body = format!("Get: {}\nPost: {}", get_count, post_count);
+
+            response.set_status(Status::Ok);
+            response.set_header(ContentType::Plain);
+            response.set_sized_body(Cursor::new(body));
+        }
+    }
+}
+```
+
+For brevity, imports are not shown. The complete example can be found in the
+[`Fairing`
+documentation](https://api.rocket.rs/rocket/fairing/trait.Fairing.html#example).
