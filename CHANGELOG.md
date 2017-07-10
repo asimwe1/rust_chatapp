@@ -51,10 +51,10 @@ This release includes the following new features:
   * The [`NotFound`] responder was added for simple **404** response
     construction.
 
-[Fairings]: #FIXME
-[Native TLS support]: #FIXME
-[Private cookies]: #FIXME
-[can be renamed]: #FIXME
+[Fairings]: https://rocket.rs/guide/fairings/
+[Native TLS support]: https://rocket.rs/guide/configuration/#configuring-tls
+[Private cookies]: https://rocket.rs/guide/requests/#private-cookies
+[can be renamed]: https://rocket.rs/guide/requests/#field-renaming
 [`MsgPack`]: https://api.rocket.rs/rocket_contrib/struct.MsgPack.html
 [`Rocket::launch()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.launch
 [`LaunchError`]: https://api.rocket.rs/rocket/error/struct.LaunchError.html
