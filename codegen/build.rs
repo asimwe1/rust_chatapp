@@ -8,8 +8,8 @@ use yansi::Color::{Red, Yellow, Blue, White};
 use version_check::{supports_features, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
-const MIN_DATE: &'static str = "2017-06-19";
-const MIN_VERSION: &'static str = "1.19.0-nightly";
+const MIN_DATE: &'static str = "2017-07-09";
+const MIN_VERSION: &'static str = "1.20.0-nightly";
 
 fn main() {
     let ok_channel = supports_features();
