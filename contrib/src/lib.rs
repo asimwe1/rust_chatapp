@@ -1,6 +1,5 @@
 #![feature(drop_types_in_const, macro_reexport)]
 #![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
-#![cfg_attr(feature = "templates", feature(associated_consts))]
 
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs/rocket_contrib/")]

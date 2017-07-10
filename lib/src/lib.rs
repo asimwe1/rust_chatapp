@@ -1,7 +1,6 @@
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
 #![feature(drop_types_in_const)]
-#![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(lookup_host)]
 #![feature(plugin)]
