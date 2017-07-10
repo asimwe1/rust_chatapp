@@ -63,7 +63,7 @@ value:
 [development]
 address = "localhost"
 port = 8000
-workers = [number_of_cpus * 2]
+workers = [number of cpus * 2]
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -71,7 +71,7 @@ limits = { forms = 32768 }
 [staging]
 address = "0.0.0.0"
 port = 80
-workers = [number_of_cpus * 2]
+workers = [number of cpus * 2]
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -79,7 +79,7 @@ limits = { forms = 32768 }
 [production]
 address = "0.0.0.0"
 port = 80
-workers = [number_of_cpus * 2]
+workers = [number of cpus * 2]
 log = "critical"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -98,7 +98,7 @@ overrides if already present, that parameter in every environment. For example,
 given the following `Rocket.toml` file, the value of `address` will be
 `"1.2.3.4"` in every environment:
 
-```toml
+```
 [global]
 address = "1.2.3.4"
 
@@ -119,7 +119,7 @@ application, can use them as they wish. As an example, the
 accepts a value for the `template_dir` configuration parameter. The parameter
 can be set in `Rocket.toml` as follows:
 
-```toml
+```
 [development]
 template_dir = "dev_templates/"
 
@@ -179,7 +179,7 @@ parameter. The value of `tls` must be a table with two keys:
 
 The recommended way to specify these parameters is via the `global` environment:
 
-```toml
+```
 [global.tls]
 certs = "/path/to/certs.pem"
 key = "/path/to/key.pem"
@@ -187,7 +187,7 @@ key = "/path/to/key.pem"
 
 Of course, you can always specify the configuration values per environment:
 
-```toml
+```
 [development]
 tls = { certs = "/path/to/certs.pem", key = "/path/to/key.pem" }
 ```
@@ -196,7 +196,7 @@ In order for TLS support to be enabled, Rocket must be compiled with the `"tls"`
 feature. To do this, add the `"tls"` feature to the `rocket` dependency in your
 `Cargo.toml` file:
 
-```toml
+```
 [dependencies]
 rocket = { version = "0.2.8", features = ["tls"] }
 ```

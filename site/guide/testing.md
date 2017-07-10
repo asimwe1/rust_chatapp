@@ -14,27 +14,27 @@ instance. Usage is straightforward:
 
   1. Construct a `Rocket` instance that represents the application.
 
-      ```rust
-      let rocket = rocket::ignite();
-      ```
+    ```rust
+    let rocket = rocket::ignite();
+    ```
 
   2. Construct a `Client` using the `Rocket` instance.
 
-      ```rust
-      let client = Client::new(rocket).expect("valid rocket instance");
-      ```
+    ```rust
+    let client = Client::new(rocket).expect("valid rocket instance");
+    ```
 
   3. Construct requests using the `Client` instance.
 
-      ```rust
-      let req = client.get("/");
-      ```
+    ```rust
+    let req = client.get("/");
+    ```
 
-  3. Dispatch the request to retrieve the response.
+  4. Dispatch the request to retrieve the response.
 
-      ```rust
-      let response = req.dispatch();
-      ```
+    ```rust
+    let response = req.dispatch();
+    ```
 
 [`local`]: https://api.rocket.rs/rocket/local/index.html
 [`Client`]: https://api.rocket.rs/rocket/local/struct.Client.html

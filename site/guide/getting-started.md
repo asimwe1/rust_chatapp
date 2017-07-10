@@ -28,7 +28,7 @@ Rocket project by running the following command in the directory:
 rustup override set nightly
 ```
 
-### Minimum Nightly Version
+### Minimum Nightly
 
 Rocket always requires the _latest_ version of Rust nightly. If your Rocket
 application suddently stops building, ensure you're using the latest version of
@@ -86,7 +86,7 @@ run`. You should see the following:
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: [logical core count * 2]
+    => workers: [core count * 2]
     => secret key: generated
     => limits: forms = 32KiB
     => tls: disabled

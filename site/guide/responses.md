@@ -41,8 +41,7 @@ use rocket::response::status;
 
 #[post("/<id>")]
 fn new(id: usize) -> status::Accepted<String> {
-    let url = "http://example.com/resource.json";
-    status::Created(url.into(), Some(format!("id: '{}'", id)))
+    status::Accepted(Some(format!("id: '{}'", id)))
 }
 ```
 
@@ -90,13 +89,13 @@ fn just_fail() -> Failure {
 }
 ```
 
-## `std` Implementations
+## Implementations
 
 Rocket implements `Responder` for many types in Rust's standard library
 including `String`, `&str`, `File`, `Option`, and `Result`. The [`Responder`]
 documentation describes these in detail, but we briefly cover a few here.
 
-### `&str` and `String`
+### Strings
 
 The `Responder` implementations for `&str` and `String` are straight-forward:
 the string is used as a sized body, and the Content-Type of the response is set
@@ -124,7 +123,7 @@ fn handler() -> &'static str {
 }
 ```
 
-### `Option<T>` **where** `T: Responder`
+### `Option`
 
 `Option` is _wrapping_ responder: an `Option<T>` can only be returned when `T`
 implements `Responder`. If the `Option` is `Some`, the wrapped responder is used
@@ -143,7 +142,7 @@ fn files(file: PathBuf) -> Option<NamedFile> {
 }
 ```
 
-### `Result<T, E>` **where** `E: Debug`, `E: Responder`
+### `Result`
 
 `Result` is a special kind of wrapping responder: its functionality depends on
 whether the error type `E` implements `Responder`.
@@ -194,8 +193,7 @@ many of these responders in the [`response`] module. Among these are:
 
 The `Stream` type deserves special attention. When a large amount of data needs
 to be sent to the client, it is better to stream the data to the client to avoid
-consuming large amounts of memory. Rocket provides the
-[Stream](https://api.rocket.rs/rocket/response/struct.Stream.html) type, making
+consuming large amounts of memory. Rocket provides the [`Stream`] type, making
 this easy. The `Stream` type can be created from any `Read` type. For example,
 to stream from a local Unix stream, we might write:
 
@@ -266,9 +264,9 @@ example, if a file ends with `.hbs`, Handlebars is used, while if a file ends
 with `.tera`, Tera is used.
 
 For templates to be properly registered, the template fairing must be attached
-to the instance of Rocket. Fairings are explained in the next section. To attach
-the template fairing, simply call `.attach(Template::fairing())` on an instance
-of `Rocket` as follows:
+to the instance of Rocket. The [Fairings](/guide/fairings) sections of the guide
+provides more information on fairings. To attach the template fairing, simply
+call `.attach(Template::fairing())` on an instance of `Rocket` as follows:
 
 ```rust
 fn main() {

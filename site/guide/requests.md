@@ -23,8 +23,8 @@ Among other things, you can ask Rocket to automatically validate:
 
 The route attribute and function signature work in tandem to describe these
 validations. Rocket's code generation takes care of actually validating the
-proprerties. The remainder of this section describes how to ask Rocket to
-validate against all of these properties and more.
+properties. This section describes how to ask Rocket to validate against all of
+these properties and more.
 
 ## Methods
 
@@ -38,7 +38,9 @@ to the root path:
 ```
 
 The grammar for these attributes is defined formally in the
-[rocket_codegen](https://api.rocket.rs/rocket_codegen/) API docs.
+[`rocket_codegen`](https://api.rocket.rs/rocket_codegen/) API docs.
+
+### HEAD Requests
 
 Rocket handles `HEAD` requests automatically when there exists a `GET` route
 that would otherwise match. It does this by stripping the body from the
@@ -46,10 +48,10 @@ response, if there is one. You can also specialize the handling of a `HEAD`
 request by declaring a route for it; Rocket won't interfere with `HEAD` requests
 your application handles.
 
-### Reinterpreting Methods
+### Reinterpreting
 
-Because browsers only send `GET` and `POST` requests, Rocket _reinterprets_
-requests under certain conditions. If a `POST` request contains a body of
+Because browsers can only send `GET` and `POST` requests, Rocket _reinterprets_
+request methods under certain conditions. If a `POST` request contains a body of
 `Content-Type: application/x-www-form-urlencoded`, and the form's **first**
 field has the name `_method` and a valid HTTP method name as its value (such as
 `"PUT"`), that field's value is used as the method for the incoming request.
@@ -60,7 +62,7 @@ makes use of this feature to submit `PUT` and `DELETE` requests from a web form.
 ## Dynamic Segments
 
 You can declare path segments as dynamic by using angle brackets around variable
-names in a route's path. For example, if we wanted to say _Hello!_ to anything,
+names in a route's path. For example, if we want to say _Hello!_ to anything,
 not just the world, we can declare a route like so:
 
 ```rust
@@ -76,11 +78,11 @@ any request to a path with two non-empty segments, where the first segment is
 visit `/hello/John`, the application would respond with `Hello, John!`.
 
 Any number of dynamic path segments are allowed. A path segment can be of any
-type, including your own, as long as the type implements the [`FromParam`].
-Rocket implements `FromParam` for many of the standard library types, as well as
-a few special Rocket types. For the full list of supplied implementations, see
-the [`FromParam` API docs]. Here's a more complete route to illustrate varied
-usage:
+type, including your own, as long as the type implements the [`FromParam`]
+trait. Rocket implements `FromParam` for many of the standard library types, as
+well as a few special Rocket types. For the full list of supplied
+implementations, see the [`FromParam` API docs]. Here's a more complete route to
+illustrate varied usage:
 
 ```rust
 #[get("/hello/<name>/<age>/<cool>")]
@@ -124,11 +126,11 @@ example:
 fn hello(name: String, age: u8, cool: bool) -> String { ... }
 ```
 
-What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? In this case,
-Rocket _forwards_ the request to the next matching route, if there is any. This
-continues until a route doesn't forward the request or there are no remaining
-routes to try. When there are no remaining routes, a customizable **404 error**
-is returned.
+What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? When a parameter
+type mismatch occurs, Rocket _forwards_ the request to the next matching route,
+if there is any. This continues until a route doesn't forward the request or
+there are no remaining routes to try. When there are no remaining routes, a
+customizable **404 error** is returned.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
 ranking from -4 to -1, detailed in the next section, for all routes, but a
@@ -167,9 +169,9 @@ would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `Err`'s value would contain the string that failed to parse as a `usize`.
 
 By the way, if you were to omit the `rank` parameter in the `user_str` or
-`user_int` routes, Rocket would emit a warning indicating that the routes
-_collide_, or can match against similar incoming requests. The `rank` parameter
-resolves this collision.
+`user_int` routes, Rocket would emit an error and abort launch, indicating that
+the routes _collide_, or can match against similar incoming requests. The `rank`
+parameter resolves this collision.
 
 ### Default Ranking
 
@@ -181,14 +183,14 @@ of a route given its properties.
 
 | static path   | query string   | rank   | example             |
 | ------------- | -------------- | ------ | ------------------- |
-| yes           | yes            | -4     | /hello?world=true   |
-| yes           | no             | -3     | /hello              |
-| no            | yes            | -2     | /&lt;hi>?world=true |
-| no            | no             | -1     | /&lt;hi>            |
+| yes           | yes            | -4     | `/hello?world=true` |
+| yes           | no             | -3     | `/hello`            |
+| no            | yes            | -2     | `/<hi>?world=true`  |
+| no            | no             | -1     | `/<hi>`             |
 
-## Many Dynamic Segments
+## Multiple Segments
 
-You can also match against multiple segments by using `<param..>` in the route
+You can also match against multiple segments by using `<param..>` in a route
 path. The type of such parameters, known as _segments_ parameters, must
 implement [`FromSegments`]. Segments parameters must be the final component of a
 path: any text after a segments parameter will result in a compile-time error.
@@ -235,8 +237,8 @@ fn new_user(user: JSON<User>) -> T { ... }
 ```
 
 The `format` parameter in the `post` attribute declares that only incoming
-requests with `Content-Type: application/json` will match. (The `data` parameter
-is described in the next section.)
+requests with `Content-Type: application/json` will match `new_user`. (The
+`data` parameter is described in the next section.)
 
 When a route indicates a non-payload-supporting method (`GET`, `HEAD`, and
 `OPTIONS`), the `format` route parameter instructs Rocket to check against the
@@ -253,7 +255,7 @@ fn user(id: usize) -> JSON<User> { ... }
 
 The `format` parameter in the `get` attribute declares that only incoming
 requests with `application/json` as the preferred media type in the `Accept`
-header will match.
+header will match `user`.
 
 ## Request Guards
 
@@ -274,7 +276,7 @@ As an example, the following dummy handler makes use of three request guards,
 `A`, `B`, and `C`. An input can be identified as a request guard if it is not
 named in the route attribute. This is why `param` is not a request guard.
 
-```rust,ignore
+```rust
 #[get("/<param>")]
 fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
 ```
@@ -288,31 +290,6 @@ documentation.
 [`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
 [`Cookies`]: https://api.rocket.rs/rocket/http/enum.Cookies.html
 
-### Retrieving Metadata
-
-Sometimes we need data associated with a request that isn't a direct data input.
-Rocket makes retrieving and validating such information easy through request
-guards. As an example, consider the built-in [`Cookies`] request guard. Because
-`Cookies` is a request guard, an argument of its type can simply be added to a
-handler:
-
-```rust
-use rocket::http::Cookies;
-
-#[get("/")]
-fn index(cookies: Cookies) -> Option<String> {
-    cookies.get("message")
-        .map(|value| format!("Message: {}", value))
-}
-```
-
-This results in the incoming request's cookies being accessible from the
-handler. The [cookies example] on GitHub illustrates further use of the
-`Cookies` type to get and set cookies, while the [`Cookies`] documentation
-contains full usage information.
-
-[cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/cookies
-
 ### Custom Guards
 
 You can implement `FromRequest` for your own types. For instance, to protect a
@@ -325,12 +302,11 @@ then use it as a request guard:
 fn sensitive(key: ApiKey) -> &'static str { ... }
 ```
 
-You might also implement `FromRequest` for an `AdminUser` type that validates
-that the cookies in the incoming request authenticate an administrator. Then,
-any handler with an `AdminUser` or `ApiKey` type in its argument list is assured
-to only be invoked if the appropriate conditions are met. Request guards
-centralize policies, resulting in a simpler, safer, and more secure
-applications.
+You might also implement `FromRequest` for an `AdminUser` type that
+authenticates an administrator using incoming cookies. Then, any handler with an
+`AdminUser` or `ApiKey` type in its argument list is assured to only be invoked
+if the appropriate conditions are met. Request guards centralize policies,
+resulting in a simpler, safer, and more secure applications.
 
 ### Forwarding Guards
 
@@ -353,7 +329,8 @@ We start with two request guards:
     If no user can be authenticated, the guard forwards.
 
 We now use these two guards in combination with forwarding to implement the
-following three routes to some administrative panel at `/admin`:
+following three routes, each leading to an administrative control panel at
+`/admin`:
 
 ```rust
 #[get("/admin")]
@@ -362,7 +339,7 @@ fn admin_panel(admin: AdminUser) -> &'static str {
 }
 
 #[get("/admin", rank = 2)]
-fn admin_panel_user(admin: User) -> &'static str {
+fn admin_panel_user(user: User) -> &'static str {
     "Sorry, you must be an administrator to access this page."
 }
 
@@ -376,24 +353,142 @@ The three routes above encode authentication _and_ authorization. The
 `admin_panel` route only succeeds if an administrator is logged in. Only then is
 the admin panel displayed. If the user is not an admin, the `AdminUser` route
 will forward. Since the `admin_panel_user` route is ranked next highest, it is
-tried next. This route succeeds if there is _any_ user signed in, and an
+attempted next. This route succeeds if there is _any_ user signed in, and an
 authorization failure message is displayed. Finally, if a user isn't signed in,
-the `admin_panel_redirect` route is tried. Since this route has no guards, it
-always succeeds. The user is redirected to a log in page.
+the `admin_panel_redirect` route is attempted. Since this route has no guards,
+it always succeeds. The user is redirected to a log in page.
+
+## Cookies
+
+[`Cookies`] is an important, built-in request guard: it allows you to get, set,
+and remove cookies. Because `Cookies` is a request guard, an argument of its
+type can simply be added to a handler:
+
+```rust
+use rocket::http::Cookies;
+
+#[get("/")]
+fn index(cookies: Cookies) -> Option<String> {
+    cookies.get("message")
+        .map(|value| format!("Message: {}", value))
+}
+```
+
+This results in the incoming request's cookies being accessible from the
+handler. The example above retrieves a cookie named `message`. Cookies can also
+be set and removed using the `Cookies` guard. The [cookies example] on GitHub
+illustrates further use of the `Cookies` type to get and set cookies, while the
+[`Cookies`] documentation contains complete usage information.
+
+[cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/cookies
+
+### Private Cookies
+
+Cookies added via the [`Cookies::add()`] method are set _in the clear._ In other
+words, the value set is visible by the client. For sensitive data, Rocket
+provides _private_ cookies.
+
+Private cookies are just like regular cookies except that they are encrypted
+using authenticated encryption, a form of encryption which simultaneously
+provides confidentiality, integrity, and authenticity. This means that private
+cookies cannot be inspected, tampered with, or manufactured by clients. If you
+prefer, you can think of private cookies as being signed and encrypted.
+
+The API for retrieving, adding, and removing private cookies is identical except
+methods are suffixed with `_private`. These methods are: [`get_private`],
+[`add_private`], and [`remove_private`]. An example of their usage is below:
+
+```rust
+/// Retrieve the user's ID, if any.
+#[get("/user_id")]
+fn user_id(cookies: Cookies) -> Option<String> {
+   request.cookies()
+      .get_private("user_id")
+      .map(|cookie| format!("User ID: {}", cookie.value()))
+}
+
+/// Remove the `user_id` cookie.
+#[post("/logout")]
+fn logout(mut cookies: Cookies) -> Flash<Redirect> {
+    cookies.remove_private(Cookie::named("user_id"));
+    Flash::success(Redirect::to("/login"), "Successfully logged out.")
+}
+```
+
+[`Cookies::add()`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.add
+
+### Secret Key
+
+To encrypt private cookies, Rocket uses the 256-bit key specified in the
+`secret_key` configuration parameter. If one is not specified, Rocket will
+automatically generate a fresh key. Note, however, that a private cookie can
+only be decrypted with the same key with which it was encrypted. As such, it is
+important to set a `secret_key` configuration parameter when using private
+cookies so that cookies decrypt properly after an application restart. Rocket
+emits a warning if an application is run in production without a configured
+`secret_key`.
+
+Generating a string suitable for use as a `secret_key` configuration value is
+usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
+can be generated with the command `openssl rand -base64 32`.
+
+For more information on configuration, see the
+[Configuration](/guide/configuration) section of the guide.
+
+[`get_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.get_private
+[`add_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.add_private
+[`remove_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.remove_private
+
+### One-At-A-Time
+
+For safety reasons, Rocket currently requires that at most one `Cookies`
+instance be active at a time. It's uncommon to run into this restriction, but it
+can be confusing to handle if it does crop up.
+
+If this does happen, Rocket will emit messages to the console that look as
+follows:
+
+```
+=> Error: Multiple `Cookies` instances are active at once.
+=> An instance of `Cookies` must be dropped before another can be retrieved.
+=> Warning: The retrieved `Cookies` instance will be empty.
+```
+
+The messages will be emitted when a violating handler is called. The issue can
+be resolved by ensuring that two instances of `Cookies` cannot be active at once
+due to the offending handler. A common error is to have a handler that uses a
+`Cookies` request guard as well as a `Custom` request guard that retrieves
+`Cookies`, as so:
+
+```rust
+#[get("/")]
+fn bad(cookies: Cookies, custom: Custom) { .. }
+```
+
+Because the `cookies` guard will fire before the `custom` guard, the `custom`
+guard will retrieve an instance of `Cookies` when one already exists for
+`cookies`. This scenario can be fixed by simply swapping the order of the
+guards:
+
+```rust
+#[get("/")]
+fn good(custom: Custom, cookies: Cookies) { .. }
+```
 
 ## Body Data
 
 At some point, your web application will need to process body data. Data
 processing, like much of Rocket, is type directed. To indicate that a handler
 expects data, annotate it with `data = "<param>"`, where `param` is an argument
-in the handler. The argument's type must implement the
-[FromData](https://api.rocket.rs/rocket/data/trait.FromData.html) trait. It
+in the handler. The argument's type must implement the [`FromData`] trait. It
 looks like this, where `T: FromData`:
 
 ```rust
 #[post("/", data = "<input>")]
 fn new(input: T) -> String { ... }
 ```
+
+[`FromData`]: https://api.rocket.rs/rocket/data/trait.FromData.html
 
 ### Forms
 
@@ -415,22 +510,22 @@ fn new(task: Form<Task>) -> String { ... }
 ```
 
 The `Form` type implements the `FromData` trait as long as its generic parameter
-implements the
-[FromForm](https://api.rocket.rs/rocket/request/trait.FromForm.html) trait. In
-the example, we've derived the `FromForm` trait automatically for the `Task`
-structure. `FromForm` can be derived for any structure whose fields implement
-[FromFormValue](https://api.rocket.rs/rocket/request/trait.FromFormValue.html).
-If a `POST /todo` request arrives, the form data will automatically be parsed
-into the `Task` structure. If the data that arrives isn't of the correct
-Content-Type, the request is forwarded. If the data doesn't parse or is simply
-invalid, a customizable `400 - Bad Request` or `422 - Unprocessable Entity`
-error is returned. As before, a forward or failure can be caught by using the
-`Option` and `Result` types:
+implements the [`FromForm`] trait. In the example, we've derived the `FromForm`
+trait automatically for the `Task` structure. `FromForm` can be derived for any
+structure whose fields implement [`FromFormValue`]. If a `POST /todo` request
+arrives, the form data will automatically be parsed into the `Task` structure.
+If the data that arrives isn't of the correct Content-Type, the request is
+forwarded. If the data doesn't parse or is simply invalid, a customizable `400 -
+Bad Request` or `422 - Unprocessable Entity` error is returned. As before, a
+forward or failure can be caught by using the `Option` and `Result` types:
 
 ```rust
 #[post("/todo", data = "<task>")]
 fn new(task: Option<Form<Task>>) -> String { ... }
 ```
+
+[`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
+[`FromFormValue`]: https://api.rocket.rs/rocket/request/trait.FromFormValue.html
 
 #### Lenient Parsing
 
@@ -489,7 +584,7 @@ Rocket will then match the form field named `type` to the structure field named
 #### Field Validation
 
 Fields of forms can be easily validated via implementations of the
-`FromFormValue` trait. For example, if you'd like to verify that some user is
+[`FromFormValue`] trait. For example, if you'd like to verify that some user is
 over some age in a form, then you might define a new `AdultAge` type, use it as
 a field in a form structure, and implement `FromFormValue` so that it only
 validates integers over that age:
@@ -554,10 +649,10 @@ The only condition is that the generic type in `JSON` implements the
 
 ### Streaming
 
-Sometimes you just want to handle the incoming data directly. For example, you
-might want to stream the incoming data out to a file. Rocket makes this as
-simple as possible via the
-[Data](https://api.rocket.rs/rocket/data/struct.Data.html) type:
+Sometimes you just want to handle incoming data directly. For example, you might
+want to stream the incoming data out to a file. Rocket makes this as simple as
+possible via the [`Data`](https://api.rocket.rs/rocket/data/struct.Data.html)
+type:
 
 ```rust
 #[post("/upload", format = "text/plain", data = "<data>")]
@@ -567,9 +662,9 @@ fn upload(data: Data) -> io::Result<String> {
 ```
 
 The route above accepts any `POST` request to the `/upload` path with
-`Content-Type` `text/plain`  The incoming data is streamed out to
-`tmp/upload.txt` file, and the number of bytes written is returned as a plain
-text response if the upload succeeds. If the upload fails, an error response is
+`Content-Type: text/plain`  The incoming data is streamed out to
+`tmp/upload.txt`, and the number of bytes written is returned as a plain text
+response if the upload succeeds. If the upload fails, an error response is
 returned. The handler above is complete. It really is that simple! See the
 [GitHub example
 code](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/raw_upload)
@@ -638,7 +733,7 @@ Routing may fail for a variety of reasons. These include:
   * A handler returns a [`Responder`](/guide/responses/#responder) that fails.
   * No matching route was found.
 
-If any of these conditions occurs, Rocket returns an error to the client. To do
+If any of these conditions occur, Rocket returns an error to the client. To do
 so, Rocket invokes the _error catcher_ corresponding to the error's status code.
 A catcher is like a route, except it only handles errors. Catchers are declared
 via the `error` attribute, which takes a single integer corresponding to the
@@ -660,10 +755,9 @@ rocket::ignite().catch(errors![not_found])
 ```
 
 Unlike request handlers, error handlers can only take 0, 1, or 2 parameters of
-types [Request](https://api.rocket.rs/rocket/struct.Request.html) and/or
-[Error](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
-type is not particularly useful, and so it is often omitted. The
-[error catcher
+types [`Request`](https://api.rocket.rs/rocket/struct.Request.html) and/or
+[`Error`](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
+type is not particularly useful, and so it is often omitted. The [error catcher
 example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/errors) on
 GitHub illustrates their use in full.
 

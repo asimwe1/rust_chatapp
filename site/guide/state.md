@@ -69,7 +69,7 @@ You can retrieve more than one `State` type in a single route as well:
 fn state(hit_count: State<HitCount>, config: State<Config>) -> T { ... }
 ```
 
-### Within a Request Guard
+### Within Guards
 
 It can also be useful to retrieve managed state from a `FromRequest`
 implementation. To do so, simple invoke `State<T>` as a guard using the
@@ -124,7 +124,7 @@ warning: HitCount is not currently being managed by Rocket
  --> src/main.rs:2:17
   |
 2 | fn count(hit_count: State<HitCount>) -> String {
-  |          ^^^^^^^^^
+  |                           ^^^^^^^^
   |
   = note: this State request guard will always fail
 help: maybe add a call to 'manage' here?
@@ -143,9 +143,9 @@ globally, add `#![allow(unmanaged_state)]` to your crate attributes.
 You can find a complete example using the `HitCount` structure in the [state
 example on
 GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/state) and
-learn more about the [manage
+learn more about the [`manage`
 method](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) and
-[State type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
+[`State` type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
 
 ## Databases
 
@@ -175,7 +175,7 @@ detailed information on how to use Diesel, please see the [Diesel getting
 started guide](http://diesel.rs/guides/getting-started/). For this example, we
 use the following dependencies:
 
-```toml
+```
 [dependencies]
 rocket = "0.2.8"
 diesel = { version = "*", features = ["sqlite"] }
@@ -204,7 +204,7 @@ advocates for using a `DATABASE_URL` environment variable to set the database
 URL, and we use the same convention here. Excepting the long-winded types, the
 code is fairly straightforward: the `DATABASE_URL` environment variable is
 stored in the `DATABASE_URL` static, and an `r2d2::Pool` is created using the
-default configuration parameter and a Diesel `SqliteConnection`
+default configuration parameters and a Diesel `SqliteConnection`
 `ConnectionManager`.
 
 ```rust
@@ -235,7 +235,7 @@ fn main() {
 }
 ```
 
-### Connection Request Guard
+### Connection Guard
 
 The second and final step is to implement a request guard that retrieves a
 single connection from the managed connection pool. We create a new type,

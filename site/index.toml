@@ -141,9 +141,9 @@ color = 'blue'
 
 [[bottom_features]]
 title = 'Cookies'
-text = "Cookies are first-class in Rocket. View, add, or remove cookies without hassle."
+text = "View, add, or remove cookies, with or without encryption, without hassle."
 image = 'cookies-icon'
-url = '/guide/requests/#request-guards'
+url = '/guide/requests/#cookies'
 button = 'Learn More'
 color = 'purple'
 margin = -6
@@ -161,14 +161,14 @@ margin = -29
 title = 'Config Environments'
 text = "Configure your application your way for development, staging, and production."
 image = 'config-icon'
-url = '/guide/overview/#configuration'
+url = '/guide/configuration/#environment'
 button = 'Learn More'
 color = 'yellow'
 margin = -3
 
 [[bottom_features]]
-title = 'Query Params'
-text = "Handling query parameters isn’t an afterthought in Rocket."
+title = 'Query Strings'
+text = "Handling query strings and parameters is type-safe and easy in Rocket."
 image = 'query-icon'
 url = '/guide/requests/#query-strings'
 button = 'Learn More'

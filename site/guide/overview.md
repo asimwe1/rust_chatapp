@@ -40,7 +40,8 @@ lifecycle as the following sequence of steps:
 
 The remainder of this section details the _routing_ phase as well as additional
 components needed for Rocket to begin dispatching requests to request handlers.
-The sections following describe the request and response phases.
+The sections following describe the request and response phases as well as other
+components of Rocket.
 
 ## Routing
 
@@ -77,12 +78,14 @@ constructing routes.
 
 Before Rocket can dispatch requests to a route, the route needs to be _mounted_.
 Mounting a route is like namespacing it. Routes are mounted via the `mount`
-method on a `Rocket` instance which are themselves created with the
+method on a `Rocket` instance. A `Rocket` instance is typically created with the
 `rocket::ignite()` static method.
 
-The `mount` method takes **1)** a path to namespace a list of routes under, and
-**2)** a list of route handlers through the `routes!` macro. The `routes!` macro
-ties Rocket's code generation to your application.
+The `mount` method takes:
+
+   1. A path to namespace a list of routes under,
+   2. A list of route handlers through the `routes!` macro, tying Rocket's code
+      generation to your application.
 
 For instance, to mount the `world` route we declared above, we can write the
 following:
