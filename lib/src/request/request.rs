@@ -638,9 +638,11 @@ impl<'r> fmt::Display for Request<'r> {
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
-        if let Some(content_type) = self.content_type() {
-            if self.method.supports_payload() {
-                write!(f, " {}", Paint::yellow(content_type))?;
+
+        // Print the requests media type when the route specifies a format.
+        if let Some(media_type) = self.format() {
+            if !media_type.is_any() {
+                write!(f, " {}", Paint::yellow(media_type))?;
             }
         }
 
