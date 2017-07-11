@@ -234,6 +234,7 @@ In addition to new features, Rocket saw the following improvements:
   * The `workers` config parameter now defaults to `num_cpus * 2`.
   * Console logging for table-based config values is improved.
   * `PartialOrd`, `Ord`, and `Hash` are now implemented for [`State`].
+  * The format of a request is always logged when available.
 
 [`yansi`]: https://crates.io/crates/yansi
 [`Request`]: https://api.rocket.rs/rocket/struct.Request.html
