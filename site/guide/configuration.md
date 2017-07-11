@@ -1,6 +1,6 @@
 # Configuration
 
-Rocket aims to have flexible and usable configuration system. Rocket
+Rocket aims to have a flexible and usable configuration system. Rocket
 applications can be configured via a configuration file, through environment
 variables, or both. Configurations are separated into three environments:
 development, staging, and production. The working environment is selected via an

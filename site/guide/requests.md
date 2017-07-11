@@ -488,6 +488,8 @@ looks like this, where `T: FromData`:
 fn new(input: T) -> String { ... }
 ```
 
+Any type that implements [`FromData`] is also known as _data guard_.
+
 [`FromData`]: https://api.rocket.rs/rocket/data/trait.FromData.html
 
 ### Forms
