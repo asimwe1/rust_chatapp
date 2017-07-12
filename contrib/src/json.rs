@@ -111,7 +111,7 @@ impl<T: DeserializeOwned> FromData for Json<T> {
 impl<T: Serialize> Responder<'static> for Json<T> {
     fn respond_to(self, req: &Request) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {
-            content::JSON(string).respond_to(req).unwrap()
+            content::Json(string).respond_to(req).unwrap()
         }).map_err(|e| {
             error_!("JSON failed to serialize: {:?}", e);
             Status::InternalServerError
