@@ -199,7 +199,17 @@ applications.
 
   * **The `IntoValue` config trait was removed in favor of `Into<Value>`.**
 
-    There is no workaround.
+    There is no workaround. Use `Into<Value>` as necessary.
+
+  * **The `rocket_contrib::JSON` type has been renamed to
+    [`rocket_contrib::Json`].**
+
+    Use `Json` instead of `JSON`.
+
+  * **All structs in the [`content`] module use TitleCase names.**
+
+    Use `Json`, `Xml`, `Html`, and `Css` instead of `JSON`, `XML`, `HTML`, and
+    `CSS`, respectively.
 
 [`&RawStr`]: https://api.rocket.rs/rocket/http/struct.RawStr.html
 [`IntoOutcome`]: https://api.rocket.rs/rocket/outcome/trait.IntoOutcome.html
@@ -211,13 +221,15 @@ applications.
 [`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
 [`ConfigError`]: https://api.rocket.rs/rocket/config/enum.ConfigError.html
 [`ContentType::from_extension()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.from_extension
+[`rocket_contrib::Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
+[`content`]: https://api.rocket.rs/rocket/response/content/index.html
 
 ## General Improvements
 
 In addition to new features, Rocket saw the following improvements:
 
   * "Rocket" is now capatilized in the `Server` HTTP header.
-  * The generic parameter of `rocket_contrib::JSON` defaults to `json::Value`.
+  * The generic parameter of `rocket_contrib::Json` defaults to `json::Value`.
   * The trailing '...' in the launch message was removed.
   * The launch message prints regardless of the config environment.
   * For debugging, `FromData` is implemented for `Vec<u8>` and `String`.
