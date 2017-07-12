@@ -102,7 +102,7 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;
-#[cfg(feature = "tls")] extern crate hyper_rustls;
+#[cfg(feature = "tls")] extern crate hyper_sync_rustls;
 extern crate yansi;
 extern crate hyper;
 extern crate url;

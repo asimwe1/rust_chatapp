@@ -490,8 +490,8 @@ impl Config {
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use hyper_rustls::util as tls;
-        use hyper_rustls::util::Error::Io;
+        use hyper_sync_rustls::util as tls;
+        use hyper_sync_rustls::util::Error::Io;
         let pem_err = "malformed PEM file";
 
         // Load the certificates.

@@ -8,7 +8,7 @@ use std::mem;
 use yansi::Paint;
 use state::Container;
 
-#[cfg(feature = "tls")] use hyper_rustls::TlsServer;
+#[cfg(feature = "tls")] use hyper_sync_rustls::TlsServer;
 use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config, LoggedValue};
