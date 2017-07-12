@@ -147,7 +147,7 @@ struct Counter {
 }
 
 impl Fairing for Counter {
-    // This is a request and respone fairing named "GET/POST Counter".
+    // This is a request and response fairing named "GET/POST Counter".
     fn info(&self) -> Info {
         Info {
             name: "GET/POST Counter",
