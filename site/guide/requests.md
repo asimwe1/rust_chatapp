@@ -233,7 +233,7 @@ As an example, consider the following route:
 
 ```rust
 #[post("/user", format = "application/json", data = "<user>")]
-fn new_user(user: JSON<User>) -> T { ... }
+fn new_user(user: Json<User>) -> T { ... }
 ```
 
 The `format` parameter in the `post` attribute declares that only incoming
@@ -250,7 +250,7 @@ As an example, consider the following route:
 
 ```rust
 #[get("/user/<id>", format = "application/json")]
-fn user(id: usize) -> JSON<User> { ... }
+fn user(id: usize) -> Json<User> { ... }
 ```
 
 The `format` parameter in the `get` attribute declares that only incoming
@@ -630,7 +630,7 @@ examples on GitHub provide further illustrations.
 ### JSON
 
 Handling JSON data is no harder: simply use the
-[`JSON`](https://api.rocket.rs/rocket_contrib/struct.JSON.html) type:
+[`Json`](https://api.rocket.rs/rocket_contrib/struct.Json.html) type:
 
 ```rust
 #[derive(Deserialize)]
@@ -640,10 +640,10 @@ struct Task {
 }
 
 #[post("/todo", data = "<task>")]
-fn new(task: JSON<Task>) -> String { ... }
+fn new(task: Json<Task>) -> String { ... }
 ```
 
-The only condition is that the generic type in `JSON` implements the
+The only condition is that the generic type in `Json` implements the
 `Deserialize` trait from [Serde](https://github.com/serde-rs/json). See the
 [JSON example] on GitHub for a complete example.
 

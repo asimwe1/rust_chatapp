@@ -54,13 +54,13 @@ an `&'static str` to JSON, you can use the [`content::JSON`] type as follows:
 use rocket::response::content;
 
 #[get("/")]
-fn json() -> content::JSON<&'static str> {
-    content::JSON("{ 'hi': 'world' }")
+fn json() -> content::Json<&'static str> {
+    content::Json("{ 'hi': 'world' }")
 }
 ```
 
 [`Accepted`]: https://api.rocket.rs/rocket/response/status/struct.Accepted.html
-[`content::JSON`]: https://api.rocket.rs/rocket/response/content/struct.JSON.html
+[`content::JSON`]: https://api.rocket.rs/rocket/response/content/struct.Json.html
 
 ### Errors
 
@@ -210,7 +210,7 @@ fn stream() -> io::Result<Stream<UnixStream>> {
 ### JSON
 
 The [`JSON`] responder in [`rocket_contrib`] allows you to easily respond with
-well-formed JSON data: simply return a value of type `JSON<T>` where `T` is the
+well-formed JSON data: simply return a value of type `Json<T>` where `T` is the
 type of a structure to serialize into JSON. The type `T` must implement the
 [`Serialize`] trait from [`serde`], which can be automatically derived.
 
@@ -218,13 +218,13 @@ An an example, to respond with the JSON value of a `Task` structure, we might
 write:
 
 ```rust
-use rocket_contrib::JSON;
+use rocket_contrib::Json;
 
 #[derive(Serialize)]
 struct Task { ... }
 
 #[get("/todo")]
-fn todo() -> JSON<Task> { ... }
+fn todo() -> Json<Task> { ... }
 ```
 
 The `JSON` type serializes the structure into JSON, sets the Content-Type to
@@ -233,7 +233,7 @@ fails, a **500 - Internal Server Error** is returned.
 
 The [JSON example on GitHub] provides further illustration.
 
-[`JSON`]: https://api.rocket.rs/rocket_contrib/struct.JSON.html
+[`JSON`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
 [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
 [`serde`]: https://docs.serde.rs/serde/
 [JSON example on GitHub]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json

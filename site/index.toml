@@ -107,12 +107,12 @@ code = '''
   }
 
   #[put("/<id>", data = "<message>")]
-  fn update(id: ID, message: JSON<Message>) -> JSON<Value> {
+  fn update(id: ID, message: Json<Message>) -> Json<Value> {
       if DB.contains_key(&id) {
           DB.insert(id, &message.contents);
-          JSON(json!{ "status": "ok" })
+          Json(json!{ "status": "ok" })
       } else {
-          JSON(json!{ "status": "error" })
+          Json(json!{ "status": "error" })
       }
   }
 '''

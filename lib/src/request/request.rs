@@ -430,12 +430,12 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Invoke the `JSON<T>` request guard.
+    /// Invoke the `Json<T>` request guard.
     ///
     /// ```rust,ignore
-    /// use rocket_contrib::JSON;
+    /// use rocket_contrib::Json;
     ///
-    /// let outcome = request.guard::<JSON<T>>();
+    /// let outcome = request.guard::<Json<T>>();
     /// ```
     ///
     /// Retrieve managed state inside of a guard implementation:

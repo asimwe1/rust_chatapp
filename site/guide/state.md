@@ -287,9 +287,9 @@ array of some `Task` structures that are fetched from a database:
 
 ```rust
 #[get("/tasks")]
-fn get_tasks(conn: DbConn) -> QueryResult<JSON<Vec<Task>>> {
+fn get_tasks(conn: DbConn) -> QueryResult<Json<Vec<Task>>> {
     all_tasks.order(tasks::id.desc())
         .load::<Task>(&conn)
-        .map(|tasks| JSON(tasks))
+        .map(|tasks| Json(tasks))
 }
 ```
