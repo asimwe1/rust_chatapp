@@ -89,15 +89,15 @@ request handler signature.
 Request guards _protect_ the handler from running unless some set of conditions
 are met by the incoming request metadata. For instance, if you are writing an
 API that requires sensitive calls to be accompanied by an API key in the request
-header, Rocket can protect those calls via a custom `APIKey` request guard:
+header, Rocket can protect those calls via a custom `ApiKey` request guard:
 
 ```rust
 #[get("/sensitive")]
-fn sensitive(key: APIKey) -> &'static str { ... }
+fn sensitive(key: ApiKey) -> &'static str { ... }
 ```
 
-`APIKey` protects the `sensitive` handler from running incorrectly. In order for
-Rocket to call the `sensitive` handler, the `APIKey` type needs to be derived
+`ApiKey` protects the `sensitive` handler from running incorrectly. In order for
+Rocket to call the `sensitive` handler, the `ApiKey` type needs to be derived
 through a
 [FromRequest](https://api.rocket.rs/rocket/request/trait.FromRequest.html)
 implementation, which in this case, validates the API key header. Request guards
