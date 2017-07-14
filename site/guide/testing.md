@@ -179,7 +179,7 @@ mod test {
 
 The tests can be run with `cargo test`. You can find the full source code to
 [this example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/testing).
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/testing).
 
 ## Codegen Debug
 

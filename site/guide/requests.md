@@ -56,7 +56,7 @@ request methods under certain conditions. If a `POST` request contains a body of
 field has the name `_method` and a valid HTTP method name as its value (such as
 `"PUT"`), that field's value is used as the method for the incoming request.
 This allows Rocket applications to submit non-`POST` forms. The [todo
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/todo/static/index.html.tera#L47)
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/todo/static/index.html.tera#L47)
 makes use of this feature to submit `PUT` and `DELETE` requests from a web form.
 
 ## Dynamic Segments
@@ -380,7 +380,7 @@ be set and removed using the `Cookies` guard. The [cookies example] on GitHub
 illustrates further use of the `Cookies` type to get and set cookies, while the
 [`Cookies`] documentation contains complete usage information.
 
-[cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/cookies
+[cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/cookies
 
 ### Private Cookies
 
@@ -622,9 +622,9 @@ struct Person {
 }
 ```
 
-The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/forms)
+The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/forms)
 and [forms kitchen
-sink](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/form_kitchen_sink)
+sink](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/form_kitchen_sink)
 examples on GitHub provide further illustrations.
 
 ### JSON
@@ -647,7 +647,7 @@ The only condition is that the generic type in `Json` implements the
 `Deserialize` trait from [Serde](https://github.com/serde-rs/json). See the
 [JSON example] on GitHub for a complete example.
 
-[JSON example]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json
+[JSON example]: https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/json
 
 ### Streaming
 
@@ -669,7 +669,7 @@ The route above accepts any `POST` request to the `/upload` path with
 response if the upload succeeds. If the upload fails, an error response is
 returned. The handler above is complete. It really is that simple! See the
 [GitHub example
-code](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/raw_upload)
+code](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/raw_upload)
 for the full crate.
 
 ## Query Strings
@@ -725,7 +725,7 @@ fn new(task: Option<Task>) { ... }
 
 For a concrete illustration on how to handle query parameters, see [the
 `query_params`
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/query_params).
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/query_params).
 
 ## Error Catchers
 
@@ -760,7 +760,7 @@ Unlike request handlers, error handlers can only take 0, 1, or 2 parameters of
 types [`Request`](https://api.rocket.rs/rocket/struct.Request.html) and/or
 [`Error`](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
 type is not particularly useful, and so it is often omitted. The [error catcher
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/errors) on
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/errors) on
 GitHub illustrates their use in full.
 
 Rocket has a default catcher for all of the standard HTTP error codes including

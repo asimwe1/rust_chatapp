@@ -236,7 +236,7 @@ The [JSON example on GitHub] provides further illustration.
 [`JSON`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
 [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
 [`serde`]: https://docs.serde.rs/serde/
-[JSON example on GitHub]: https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json
+[JSON example on GitHub]: https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/json
 
 ### Templates
 
@@ -279,7 +279,7 @@ fn main() {
 The [`Template`] API
 documentation contains more information about templates, while the [Handlebars
 Templates example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/handlebars_templates)
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/handlebars_templates)
 is a fully composed application that makes use of Handlebars templates.
 
 [`Template`]: https://api.rocket.rs/rocket_contrib/struct.Template.html
