@@ -150,8 +150,8 @@ use request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl Responder<'static> for Person {
-///     fn respond_to(self, _: &Request) -> response::Result<'static> {
+/// impl<'r> Responder<'r> for Person {
+///     fn respond_to(self, _: &Request) -> response::Result<'r> {
 ///         Response::build()
 ///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
 ///             .raw_header("X-Person-Name", self.name)
