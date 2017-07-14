@@ -1,4 +1,4 @@
-# Version 0.3.0 (Jul XX, 2017)
+# Version 0.3.0 (Jul 14, 2017)
 
 ## New Features
 
