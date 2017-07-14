@@ -170,8 +170,18 @@ ROCKET_DICT={key="abc",val=123}
 
 ## Configuring TLS
 
-TLS (Transport Layer Security) is configured through the `tls` configuration
-parameter. The value of `tls` must be a table with two keys:
+Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
+Security). In order for TLS support to be enabled, Rocket must be compiled with
+the `"tls"` feature. To do this, add the `"tls"` feature to the `rocket`
+dependency in your `Cargo.toml` file:
+
+```
+[dependencies]
+rocket = { version = "0.2.8", features = ["tls"] }
+```
+
+TLS is configured through the `tls` configuration parameter. The value of `tls`
+must be a table with two keys:
 
   * `certs`: _[string]_ a path to a certificate chain in PEM format
   * `key`: _[string]_ a path to a private key file in PEM format for the
@@ -192,11 +202,8 @@ Of course, you can always specify the configuration values per environment:
 tls = { certs = "/path/to/certs.pem", key = "/path/to/key.pem" }
 ```
 
-In order for TLS support to be enabled, Rocket must be compiled with the `"tls"`
-feature. To do this, add the `"tls"` feature to the `rocket` dependency in your
-`Cargo.toml` file:
+Or via environment variables:
 
-```
-[dependencies]
-rocket = { version = "0.2.8", features = ["tls"] }
+```sh
+ROCKET_TLS={certs="/path/to/certs.pem",key="/path/to/key.pem"} cargo run
 ```

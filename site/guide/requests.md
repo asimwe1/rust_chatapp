@@ -411,7 +411,7 @@ fn user_id(cookies: Cookies) -> Option<String> {
 #[post("/logout")]
 fn logout(mut cookies: Cookies) -> Flash<Redirect> {
     cookies.remove_private(Cookie::named("user_id"));
-    Flash::success(Redirect::to("/login"), "Successfully logged out.")
+    Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 ```
 
