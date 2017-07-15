@@ -1,5 +1,5 @@
 [[articles]]
-title = "Rocket 0.3: Fairings, TLS, Private Cookies"
+title = "Rocket v0.3: Fairings, TLS, Private Cookies"
 slug = "2017-07-14-version-0.3"
 author = "Sergio Benitez"
 author_url = "https://sergio.bz"
@@ -8,9 +8,9 @@ snippet = """
 I'm excited to announce that the next major release of Rocket is available
 today! Rocket 0.3 is packed with new features and improvements that increase
 developer productivity, improve application security, and provide new
-opportunities for extensibility. Rocket 0.3 was developed over the course of 6
-months. During this time, more than 225 changes were committed, over 100 issues
-(primarily questions and feature requests) were closed, and over 40 pull
+opportunities for extensibility. Rocket 0.3 is the culmination of almost 6
+months of work. During this time, more than 225 changes were committed, over 100
+issues (primarily questions and feature requests) were closed, and over 40 pull
 requests were submitted. The Rocket community has proven steadfast in their
 support: a sincere thank you to everyone involved!
 """
