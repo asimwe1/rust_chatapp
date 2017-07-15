@@ -109,6 +109,31 @@ address = "localhost"
 address = "0.0.0.0"
 ```
 
+## Data Limits
+
+The `limits` parameter configures the maximum amount of data Rocket will accept
+for a given data type. The parameter is a table where each key corresponds to a
+data type and each value corresponds to the maximum size in bytes Rocket
+should accept for that type.
+
+By default, Rocket limits forms to 32KiB (32768 bytes). To increase the limit,
+simply set the `limits.forms` configuration parameter. For example, to increase
+the forms limit to 128KiB globally, we might write:
+
+```rust
+[global.limits]
+forms = 131072
+```
+
+The `limits` parameter can contain keys and values that are not endemic to
+Rocket. For instance, the [`Json`] type reads the `json` limit value to cap
+incoming JSON data. You should use the `limits` parameter for your application's
+data limits as well. Data limits can be retrieved at runtime via the
+[`Request::limits()`] method.
+
+[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
+[`Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html#incoming-data-limits
+
 ## Extras
 
 In addition to overriding default configuration parameters, a configuration file
