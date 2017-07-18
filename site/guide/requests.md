@@ -402,9 +402,8 @@ methods are suffixed with `_private`. These methods are: [`get_private`],
 /// Retrieve the user's ID, if any.
 #[get("/user_id")]
 fn user_id(cookies: Cookies) -> Option<String> {
-   request.cookies()
-      .get_private("user_id")
-      .map(|cookie| format!("User ID: {}", cookie.value()))
+    cookies.get_private("user_id")
+        .map(|cookie| format!("User ID: {}", cookie.value()))
 }
 
 /// Remove the `user_id` cookie.
