@@ -22,13 +22,14 @@ impl Engine for Tera {
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = tera.add_template_files(tera_templates) {
             error!("Failed to initialize Tera templating.");
-            for error in e.iter().skip(1) {
-                info_!("{}.", error);
+            for error in e.iter() {
+                info_!("{}", error);
             }
-            return None
-        }
 
-        Some(tera)
+            None
+        } else {
+            Some(tera)
+        }
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {
