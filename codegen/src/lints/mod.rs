@@ -37,13 +37,15 @@ struct InstanceInfo {
 enum Receiver {
     Instance(DefId, Span),
     Call(NodeId, Span),
+    Relative(Span),
 }
 
 impl Receiver {
     /// Returns the span associated with the receiver.
     pub fn span(&self) -> Span {
+        use self::Receiver::*;
         match *self {
-            Receiver::Instance(_, sp) | Receiver::Call(_, sp) => sp
+            Instance(_, sp) | Call(_, sp) | Relative(sp) => sp
         }
     }
 }
@@ -152,8 +154,11 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
                         .and_then(|id| lint.instance_vars.get(&id))
                         .map(|recvr| recvr.clone())
                 }
+                ExprPath(QPath::TypeRelative(_, _)) => {
+                    Some(Receiver::Relative(rexpr.span))
+                }
                 ExprCall(ref c, ..) => Some(Receiver::Call(c.id, rexpr.span)),
-                _ => unreachable!()
+                _ => panic!("Unexpected node: {:?}", rexpr.node)
             }
         };
 
