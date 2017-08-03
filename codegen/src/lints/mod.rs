@@ -144,9 +144,9 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
     // the receiver in the type table we've constructed. If it's there, we use
     // it, if not, we use the call as the receiver.
     fn check_expr(&mut self, cx: &LateContext<'a, 'tcx>, expr: &'tcx Expr) {
-        /// Fetches the top-level `Receiver` instance given that a method call
-        /// was made to the receiver `rexpr`. Top-level here means "the
-        /// original". We search the `instance_vars` table to retrieve it.
+        // Fetches the top-level `Receiver` instance given that a method call
+        // was made to the receiver `rexpr`. Top-level here means "the
+        // original". We search the `instance_vars` table to retrieve it.
         let instance_for = |lint: &mut RocketLint, rexpr: &Expr| -> Option<Receiver> {
             match rexpr.node {
                 ExprPath(QPath::Resolved(_, ref p)) => {

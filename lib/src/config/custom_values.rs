@@ -84,7 +84,7 @@ pub struct Limits {
 
 impl Default for Limits {
     fn default() -> Limits {
-        /// Default limit for forms is 32KiB.
+        // Default limit for forms is 32KiB.
         Limits { forms: 32 * 1024, extra: Vec::new() }
     }
 }
