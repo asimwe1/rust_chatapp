@@ -182,7 +182,7 @@ pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
     let sp = inner_item.span.shorten_upto(name.len() + 2);
     if !is_valid_field_name(&name) {
         ecx.struct_span_err(sp, "invalid form field name")
-            .help("field names be visible ASCII characters without '&', '=', or '?'")
+            .help("field names must be visible ASCII without '&', '=', or '?'")
             .emit();
     }
 
