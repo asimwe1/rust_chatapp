@@ -105,7 +105,7 @@ impl Limits {
         Limits::default()
     }
 
-    /// Adds or replaces a limit in `self`, consuming `self` anf returning a new
+    /// Adds or replaces a limit in `self`, consuming `self` and returning a new
     /// `Limits` structure with the added or replaced limit.
     ///
     /// # Example
