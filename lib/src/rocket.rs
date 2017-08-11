@@ -138,7 +138,7 @@ impl Rocket {
                 hyp_res.headers_mut().set(header::ContentLength(0));
                 hyp_res.start()?.end()
             }
-            Some(Body::Sized(mut body, size)) => {
+            Some(Body::Sized(body, size)) => {
                 hyp_res.headers_mut().set(header::ContentLength(size));
                 let mut stream = hyp_res.start()?;
                 io::copy(body, &mut stream)?;
