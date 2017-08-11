@@ -1,3 +1,26 @@
+# Version 0.3.1 (Aug 11, 2017)
+
+## Core
+
+  * Added support for ASCII colors on modern Windows consoles.
+  * Form field renames can now include _any_ valid characters, not just idents.
+
+## Codegen
+
+  * Ignored named route parameters are now allowed (`_ident`).
+  * Fixed issue where certain paths would cause a lint `assert!` to fail
+    ([#367](https://github.com/SergioBenitez/Rocket/issues/367)).
+  * Lints were updated for `2017-08-10` nightly.
+  * Minimum required `rustc` is `1.21.0-nightly (2017-08-10)`.
+
+## Contrib
+
+  * Tera errors that were previously skipped internally are now emitted.
+
+## Documentation
+
+  * Typos were fixed across the board.
+
 # Version 0.3.0 (Jul 14, 2017)
 
 ## New Features
