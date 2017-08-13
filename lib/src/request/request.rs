@@ -430,12 +430,10 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Invoke the `Json<T>` request guard.
+    /// Assuming a `User` request guard exists, invoke it:
     ///
     /// ```rust,ignore
-    /// use rocket_contrib::Json;
-    ///
-    /// let outcome = request.guard::<Json<T>>();
+    /// let outcome = request.guard::<User>();
     /// ```
     ///
     /// Retrieve managed state inside of a guard implementation:
