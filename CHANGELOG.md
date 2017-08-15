@@ -1,3 +1,14 @@
+# Version 0.3.2 (Aug 15, 2017)
+
+## Core
+
+  * Added conversion methods from and to `Box<UncasedStr>`.
+
+## Codegen
+
+  * Lints were removed due to compiler instability. Lints will likely return as
+    a separate `rocket_lints` crate.
+
 # Version 0.3.1 (Aug 11, 2017)
 
 ## Core
