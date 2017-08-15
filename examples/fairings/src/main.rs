@@ -1,6 +1,5 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
-#![allow(unmanaged_state)]
 
 extern crate rocket;
 

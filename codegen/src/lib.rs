@@ -1,10 +1,9 @@
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
-//! custom derives, custom attributes, procedural macros, and lints. The
-//! documentation here is purely technical. The code generation facilities are
-//! documented thoroughly in the [Rocket programming
-//! guide](https://rocket.rs/guide).
+//! custom derives, custom attributes, and procedural macros. The documentation
+//! here is purely technical. The code generation facilities are documented
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
 //!
 //! ## Custom Attributes
 //!
@@ -126,19 +125,6 @@
 //! PATH := a path, as defined by Rust
 //! </pre>
 //!
-//! ## Lints
-//!
-//! This crate implements the following lints:
-//!
-//!   * **unmounted_route**: defaults to _warn_
-//!
-//!     emits a warning when a declared route is not mounted
-//!
-//!   * **unmanaged_state**: defaults to _warn_
-//!
-//!     emits a warning when a `State<T>` request guest is used in a mounted
-//!     route without managing a value for `T`
-//!
 //! # Debugging Codegen
 //!
 //! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate logs
@@ -158,7 +144,7 @@
 #![allow(deprecated)]
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate rustc;
+extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
 extern crate syntax_pos;
@@ -169,7 +155,6 @@ extern crate rocket;
 mod parser;
 mod macros;
 mod decorators;
-mod lints;
 
 use std::env;
 use rustc_plugin::Registry;
@@ -205,12 +190,6 @@ macro_rules! register_derives {
     )
 }
 
-macro_rules! register_lints {
-    ($registry:expr, $($item:ident),+) => ($(
-        $registry.register_late_lint_pass(Box::new(lints::$item::default()));
-    )+)
-}
-
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
@@ -237,6 +216,4 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "patch" => patch_decorator,
         "options" => options_decorator
     );
-
-    register_lints!(reg, RocketLint);
 }

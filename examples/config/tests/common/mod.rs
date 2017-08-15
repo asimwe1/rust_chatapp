@@ -1,5 +1,3 @@
-#![allow(unmanaged_state)]
-
 use rocket::{self, State};
 use rocket::fairing::AdHoc;
 use rocket::config::{self, Config, Environment, LoggingLevel};
