@@ -12,6 +12,7 @@ use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
+use syntax::symbol::InternedString;
 use syntax::ptr::P;
 
 use rocket::http::{Method, MediaType};
@@ -46,7 +47,7 @@ trait RouteGenerateExt {
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
     fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
-    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>);
+    fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>);
 }
 
 impl RouteGenerateExt for RouteParams {
@@ -223,14 +224,15 @@ impl RouteGenerateExt for RouteParams {
         sep_by_tok(ecx, &args, token::Comma)
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>) {
+    fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>) {
+        let name = self.annotated_fn.ident().name.as_str();
         let path = &self.uri.node.as_str();
         let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
         let media_type = option_as_expr(ecx, &media_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
 
-        (path, method, media_type, rank)
+        (name, path, method, media_type, rank)
     }
 }
 
@@ -272,12 +274,13 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     // Generate and emit the static route info that uses the just generated
     // function as its handler. A proper Rocket route will be created from this.
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
-    let (path, method, media_type, rank) = route.explode(ecx);
+    let (name, path, method, media_type, rank) = route.explode(ecx);
     let static_route_info_item =  quote_item!(ecx,
         /// Rocket code generated static route information structure.
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {
+                name: $name,
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,

@@ -409,7 +409,9 @@ impl Rocket {
 
         for (name, value) in config.extras() {
             info_!("{} {}: {}",
-                   Paint::yellow("[extra]"), name, Paint::white(LoggedValue(value)));
+                   Paint::yellow("[extra]"),
+                   Paint::blue(name),
+                   Paint::white(LoggedValue(value)));
         }
 
         Rocket {
@@ -475,7 +477,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Paint::purple("Mounting"), base);
+        info!("🛰  {} '{}':", Paint::purple("Mounting"), Paint::blue(base));
 
         if base.contains('<') {
             error_!("Bad mount point: '{}'.", base);
@@ -622,8 +624,10 @@ impl Rocket {
     }
 
     pub(crate) fn prelaunch_check(&self) -> Option<LaunchError> {
-        if self.router.has_collisions() {
-            Some(LaunchError::from(LaunchErrorKind::Collision))
+        let collisions = self.router.collisions();
+        if !collisions.is_empty() {
+            let owned = collisions.iter().map(|&(a, b)| (a.clone(), b.clone()));
+            Some(LaunchError::from(LaunchErrorKind::Collision(owned.collect())))
         } else if self.fairings.had_failure() {
             Some(LaunchError::from(LaunchErrorKind::FailedFairing))
         } else {

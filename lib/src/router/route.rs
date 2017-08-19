@@ -10,6 +10,8 @@ use http::uri::URI;
 
 /// A route: a method, its handler, path, rank, and format/media type.
 pub struct Route {
+    /// The name of this route, if one was given.
+    pub name: Option<&'static str>,
     /// The method this route matches against.
     pub method: Method,
     /// The function that should be called when the route matches.
@@ -80,6 +82,7 @@ impl Route {
     {
         let uri = URI::from(path.as_ref().to_string());
         Route {
+            name: None,
             method: m,
             handler: handler,
             rank: default_rank(&uri),
@@ -110,6 +113,7 @@ impl Route {
         where S: AsRef<str>
     {
         Route {
+            name: None,
             method: m,
             handler: handler,
             base: URI::from("/"),
@@ -220,6 +224,7 @@ impl Route {
 impl Clone for Route {
     fn clone(&self) -> Route {
         Route {
+            name: self.name,
             method: self.method,
             handler: self.handler,
             rank: self.rank,
@@ -242,6 +247,11 @@ impl fmt::Display for Route {
             write!(f, " {}", Yellow.paint(format))?;
         }
 
+        if let Some(name) = self.name {
+            write!(f, " {}{}{}",
+                   Cyan.paint("("), Purple.paint(name), Cyan.paint(")"))?;
+        }
+
         Ok(())
     }
 }
@@ -257,6 +267,7 @@ impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
         route.format = info.format.clone();
+        route.name = Some(info.name);
         if let Some(rank) = info.rank {
             route.rank = rank;
         }

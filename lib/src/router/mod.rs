@@ -44,20 +44,26 @@ impl Router {
         matches
     }
 
-    pub fn has_collisions(&self) -> bool {
-        let mut result = false;
+    pub fn collisions(&self) -> Vec<(&Route, &Route)> {
+        let mut result = vec![];
         for routes in self.routes.values() {
             for (i, a_route) in routes.iter().enumerate() {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
-                        result = true;
-                        error!("{} and {} collide!", a_route, b_route);
+                        result.push((a_route, b_route));
                     }
                 }
             }
         }
 
         result
+    }
+
+
+    // This is slow. Don't expose this publicly; only for tests.
+    #[cfg(test)]
+    fn has_collisions(&self) -> bool {
+        !self.collisions().is_empty()
     }
 
     #[inline]

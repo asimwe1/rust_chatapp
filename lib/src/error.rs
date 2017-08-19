@@ -3,7 +3,10 @@
 use std::{io, fmt};
 use std::sync::atomic::{Ordering, AtomicBool};
 
+use yansi::Paint;
+
 use http::hyper;
+use router::Route;
 
 /// [unstable] Error type for Rocket. Likely to change.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -31,7 +34,7 @@ pub enum Error {
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     Io(io::Error),
-    Collision,
+    Collision(Vec<(Route, Route)>),
     FailedFairing,
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
@@ -156,7 +159,7 @@ impl fmt::Display for LaunchErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
-            LaunchErrorKind::Collision => write!(f, "route collisions detected"),
+            LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairing => write!(f, "a launch fairing failed"),
             LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
@@ -185,7 +188,7 @@ impl ::std::error::Error for LaunchError {
         self.mark_handled();
         match *self.kind() {
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
-            LaunchErrorKind::Collision => "route collisions were detected",
+            LaunchErrorKind::Collision(_) => "route collisions were detected",
             LaunchErrorKind::FailedFairing => "a launch fairing reported an error",
             LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
         }
@@ -203,8 +206,13 @@ impl Drop for LaunchError {
                 error!("Rocket failed to launch due to an I/O error.");
                 panic!("{}", e);
             }
-            LaunchErrorKind::Collision => {
-                error!("Rocket failed to launch due to routing collisions.");
+            LaunchErrorKind::Collision(ref collisions) => {
+                error!("Rocket failed to launch due to the following routing collisions:");
+                for &(ref a, ref b) in collisions {
+                    info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
+                }
+
+                info_!("Note: Collisions can usually be resolved by ranking routes.");
                 panic!("route collisions detected");
             }
             LaunchErrorKind::FailedFairing => {
