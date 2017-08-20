@@ -39,18 +39,7 @@ fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
     })
 }
 
-trait RouteGenerateExt {
-    fn gen_form(&self, &ExtCtxt, Option<&Spanned<Ident>>, P<Expr>) -> Option<Stmt>;
-    fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>);
-
-    fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
-    fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
-    fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
-    fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
-    fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>);
-}
-
-impl RouteGenerateExt for RouteParams {
+impl RouteParams {
     fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>) {
         let fn_span = self.annotated_fn.span();
         let msg = format!("'{}' is declared as an argument...", arg.node);
