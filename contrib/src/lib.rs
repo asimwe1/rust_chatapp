@@ -54,7 +54,7 @@ extern crate serde_json;
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{Json, SerdeError, Value};
+pub use json::{Json, SerdeError, JsonValue};
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]

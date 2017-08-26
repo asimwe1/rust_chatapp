@@ -12,7 +12,6 @@ use serde::de::DeserializeOwned;
 
 use serde_json;
 
-pub use serde_json::Value;
 pub use serde_json::error::Error as SerdeError;
 
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
@@ -67,7 +66,7 @@ pub use serde_json::error::Error as SerdeError;
 /// json = 5242880
 /// ```
 #[derive(Debug)]
-pub struct Json<T = Value>(pub T);
+pub struct Json<T>(pub T);
 
 impl<T> Json<T> {
     /// Consumes the JSON wrapper and returns the wrapped item.
@@ -135,6 +134,88 @@ impl<T> DerefMut for Json<T> {
     }
 }
 
+/// An arbitrary JSON value.
+///
+/// This structure wraps `serde`'s [`Value`] type. Importantly, unlike `Value`,
+/// this type implements [`Responder`], allowing a value of this type to be
+/// returned directly from a handler.
+///
+/// [`Value`]: https://docs.rs/serde_json/1.0.2/serde_json/value/enum.Value.html
+/// [`Responder`]: /rocket/response/trait.Responder.html
+///
+/// # `Responder`
+///
+/// The `Responder` implementation for `JsonValue` serializes the represented
+/// value into a JSON string and sets the string as the body of a fixed-sized
+/// response with a `Content-Type` of `application/json`.
+///
+/// # Usage
+///
+/// A value of this type is constructed via the
+/// [`json!`](/rocket_contrib/macro.json.html) macro. The macro and this type
+/// are typically used to construct JSON values in an ad-hoc fashion during
+/// request handling. This looks something like:
+///
+/// ```rust,ignore
+/// use rocket_contrib::JsonValue;
+///
+/// #[get("/item")]
+/// fn get_item() -> JsonValue {
+///     json!({
+///         "id": 83,
+///         "values": [1, 2, 3, 4]
+///     })
+/// }
+/// ```
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct JsonValue(pub serde_json::Value);
+
+impl JsonValue {
+    #[inline(always)]
+    fn into_inner(self) -> serde_json::Value {
+        self.0
+    }
+}
+
+impl Deref for JsonValue {
+    type Target = serde_json::Value;
+
+    #[inline(always)]
+    fn deref<'a>(&'a self) -> &'a Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for JsonValue {
+    #[inline(always)]
+    fn deref_mut<'a>(&'a mut self) -> &'a mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Into<serde_json::Value> for JsonValue {
+    #[inline(always)]
+    fn into(self) -> serde_json::Value {
+        self.into_inner()
+    }
+}
+
+impl From<serde_json::Value> for JsonValue {
+    #[inline(always)]
+    fn from(value: serde_json::Value) -> JsonValue {
+        JsonValue(value)
+    }
+}
+
+/// Serializes the value into JSON. Returns a response with Content-Type JSON
+/// and a fixed-size body with the serialized value.
+impl<'a> Responder<'a> for JsonValue {
+    #[inline]
+    fn respond_to(self, req: &Request) -> response::Result<'a> {
+        content::Json(self.0.to_string()).respond_to(req)
+    }
+}
+
 /// A macro to create ad-hoc JSON serializable values using JSON syntax.
 ///
 /// # Usage
@@ -146,24 +227,25 @@ impl<T> DerefMut for Json<T> {
 /// #[macro_use] extern crate rocket_contrib;
 /// ```
 ///
-/// The return type of a macro invocation is
-/// [`Value`](/rocket_contrib/enum.Value.html). This is the default type for the
-/// type parameter of [`Json`](/rocket_contrib/struct.Json.html) and as such,
-/// you can return `Json` without specifying the type using a `json!` value for
-/// `Json`. A value created with this macro can be returned from a handler as
-/// follows:
+/// The return type of a `json!` invocation is
+/// [`JsonValue`](/rocket_contrib/struct.JsonValue.html). A value created with
+/// this macro can be returned from a handler as follows:
 ///
 /// ```rust,ignore
-/// use rocket_contrib::Json;
+/// use rocket_contrib::JsonValue;
 ///
 /// #[get("/json")]
-/// fn get_json() -> Json {
-///     Json(json!({
+/// fn get_json() -> JsonValue {
+///     json!({
 ///         "key": "value",
 ///         "array": [1, 2, 3, 4]
-///     }))
+///     })
 /// }
 /// ```
+///
+/// The `Responder` implementation for `JsonValue` serializes the value into a
+/// JSON string and sets it as the body of the response with a `Content-Type` of
+/// `application/json`.
 ///
 /// # Examples
 ///
@@ -236,6 +318,6 @@ impl<T> DerefMut for Json<T> {
 #[macro_export]
 macro_rules! json {
     ($($json:tt)+) => {
-        json_internal!($($json)+)
+        $crate::JsonValue(json_internal!($($json)+))
     };
 }

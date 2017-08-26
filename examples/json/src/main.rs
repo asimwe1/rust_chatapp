@@ -8,7 +8,7 @@ extern crate serde_json;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::{Json, Value};
+use rocket_contrib::{Json, JsonValue};
 use rocket::State;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -27,25 +27,25 @@ struct Message {
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "application/json", data = "<message>")]
-fn new(id: ID, message: Json<Message>, map: State<MessageMap>) -> Json<Value> {
+fn new(id: ID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
     let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
-        Json(json!({
+        json!({
             "status": "error",
             "reason": "ID exists. Try put."
-        }))
+        })
     } else {
         hashmap.insert(id, message.0.contents);
-        Json(json!({ "status": "ok" }))
+        json!({ "status": "ok" })
     }
 }
 
 #[put("/<id>", format = "application/json", data = "<message>")]
-fn update(id: ID, message: Json<Message>, map: State<MessageMap>) -> Option<Json<Value>> {
+fn update(id: ID, message: Json<Message>, map: State<MessageMap>) -> Option<JsonValue> {
     let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
-        Some(Json(json!({ "status": "ok" })))
+        Some(json!({ "status": "ok" }))
     } else {
         None
     }
@@ -63,11 +63,11 @@ fn get(id: ID, map: State<MessageMap>) -> Option<Json<Message>> {
 }
 
 #[error(404)]
-fn not_found() -> Json<Value> {
-    Json(json!({
+fn not_found() -> JsonValue {
+    json!({
         "status": "error",
         "reason": "Resource was not found."
-    }))
+    })
 }
 
 fn rocket() -> rocket::Rocket {
