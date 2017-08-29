@@ -137,7 +137,7 @@ use request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #

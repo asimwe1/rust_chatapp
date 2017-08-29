@@ -67,7 +67,7 @@
 //! consider the following complete "Hello, world!" application, with testing.
 //!
 //! ```rust
-//! #![feature(plugin)]
+//! #![feature(plugin, decl_macro)]
 //! #![plugin(rocket_codegen)]
 //!
 //! extern crate rocket;

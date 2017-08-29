@@ -6,7 +6,7 @@ use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
 use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
-use super::{Function, ParamIter};
+use super::Function;
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
 use rocket::http::{Method, MediaType};
@@ -33,12 +33,13 @@ impl RouteParams {
     /// Parses the route attribute from the given decorator context. If the
     /// parse is not successful, this function exits early with the appropriate
     /// error message to the user.
-    pub fn from(ecx: &mut ExtCtxt,
-                sp: Span,
-                known_method: Option<Spanned<Method>>,
-                meta_item: &MetaItem,
-                annotated: &Annotatable)
-                -> RouteParams {
+    pub fn from(
+        ecx: &mut ExtCtxt,
+        sp: Span,
+        known_method: Option<Spanned<Method>>,
+        meta_item: &MetaItem,
+        annotated: &Annotatable
+    ) -> RouteParams {
         let function = Function::from(annotated).unwrap_or_else(|item_sp| {
             ecx.span_err(sp, "this attribute can only be used on functions...");
             ecx.span_fatal(item_sp, "...but was applied to the item above.");
@@ -124,12 +125,6 @@ impl RouteParams {
             rank: rank,
             annotated_fn: function,
         }
-    }
-
-    pub fn path_params<'s, 'a, 'c: 'a>(&'s self,
-                                   ecx: &'a ExtCtxt<'c>)
-                                    -> ParamIter<'s, 'a, 'c> {
-        ParamIter::new(ecx, self.uri.node.path(), self.uri.span.trim(1))
     }
 }
 

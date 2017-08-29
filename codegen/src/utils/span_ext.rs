@@ -1,4 +1,4 @@
-use syntax::codemap::{Span, BytePos};
+use syntax::codemap::{Span, Spanned, BytePos};
 
 pub trait SpanExt {
     /// Trim the span on the left and right by `length`.
@@ -15,6 +15,12 @@ pub trait SpanExt {
 
     // Trim from the left so that the span is `length` in size.
     fn shorten_upto(self, length: usize) -> Span;
+
+    // Wrap `T` into a `Spanned<T>` with `self` as the span.
+    fn wrap<T>(self, node: T) -> Spanned<T>;
+
+    /// Expand the span on the left by `left` and right by `right`.
+    fn expand(self, left: usize, right: usize) -> Span;
 }
 
 impl SpanExt for Span {
@@ -41,6 +47,16 @@ impl SpanExt for Span {
     fn trim(mut self, length: u32) -> Span {
         self.lo = self.lo + BytePos(length);
         self.hi = self.hi - BytePos(length);
+        self
+    }
+
+    fn wrap<T>(self, node: T) -> Spanned<T> {
+        Spanned { node: node, span: self }
+    }
+
+    fn expand(mut self, left: usize, right: usize) -> Span {
+        self.lo = self.lo + BytePos(left as u32);
+        self.hi = self.lo + BytePos(right as u32);
         self
     }
 }

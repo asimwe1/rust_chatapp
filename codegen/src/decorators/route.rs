@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 use std::fmt::Display;
 
-use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX};
+use ::{ROUTE_STRUCT_PREFIX, ROUTE_FN_PREFIX, PARAM_PREFIX, URI_INFO_MACRO_PREFIX};
 use ::{ROUTE_ATTR, ROUTE_INFO_ATTR};
 use parser::{Param, RouteParams};
 use utils::*;
 
-use syntax::codemap::{Span, Spanned};
+use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
+use syntax::ast::{Arg, Ident, Item, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
@@ -43,7 +43,8 @@ impl RouteParams {
     fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>) {
         let (fn_span, fn_name) = (self.annotated_fn.span(), self.annotated_fn.ident());
         ecx.struct_span_err(arg.span, &format!("unused dynamic parameter: `{}`", arg.node))
-            .span_note(fn_span, &format!("expected argument named `{}` in `{}`", arg.node, fn_name))
+            .span_note(fn_span, &format!("expected argument named `{}` in `{}` handler",
+                                         arg.node, fn_name))
             .emit();
     }
 
@@ -127,10 +128,12 @@ impl RouteParams {
     // an error/debug message if parsing a parameter fails.
     fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt> {
         let mut fn_param_statements = vec![];
+        let params = Param::parse_many(ecx, self.uri.node.path(), self.uri.span.trim(1))
+            .unwrap_or_else(|mut diag| { diag.emit(); vec![] });
 
         // Generate a statement for every declared paramter in the path.
         let mut declared_set = HashSet::new();
-        for (i, param) in self.path_params(ecx).enumerate() {
+        for (i, param) in params.iter().enumerate() {
             declared_set.insert(param.ident().name);
             let ty = match self.annotated_fn.find_input(&param.ident().name) {
                 Some(arg) => strip_ty_lifetimes(arg.ty.clone()),
@@ -142,7 +145,7 @@ impl RouteParams {
 
             // Note: the `None` case shouldn't happen if a route is matched.
             let ident = param.ident().prepend(PARAM_PREFIX);
-            let expr = match param {
+            let expr = match *param {
                 Param::Single(_) => quote_expr!(ecx, match __req.get_param_str($i) {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
                     None => return ::rocket::Outcome::Forward(__data)
@@ -213,6 +216,49 @@ impl RouteParams {
         sep_by_tok(ecx, &args, token::Comma)
     }
 
+    fn generate_uri_macro(&self, ecx: &ExtCtxt) -> P<Item> {
+        let macro_args = parse_as_tokens(ecx, "$($token:tt)*");
+        let macro_exp = parse_as_tokens(ecx, "$($token)*");
+        let macro_name = self.annotated_fn.ident().prepend(URI_INFO_MACRO_PREFIX);
+
+        // What we return if we find an inconsistency throughout.
+        let dummy = quote_item!(ecx, pub macro $macro_name($macro_args) { }).unwrap();
+
+        // Hacky check to see if the user's URI was valid.
+        if self.uri.span == dummy_spanned(()).span {
+            return dummy
+        }
+
+        // Extract the route uri path and paramters from the uri.
+        let route_path = self.uri.node.to_string();
+        let params = match Param::parse_many(ecx, &route_path, self.uri.span.trim(1)) {
+            Ok(params) => params,
+            Err(mut diag) => {
+                diag.cancel();
+                return dummy;
+            }
+        };
+
+        // Generate the list of arguments for the URI.
+        let mut fn_uri_args = vec![];
+        for param in &params {
+            if let Some(arg) = self.annotated_fn.find_input(&param.ident().name) {
+                let (pat, ty) = (&arg.pat, &arg.ty);
+                fn_uri_args.push(quote_tokens!(ecx, $pat: $ty))
+            } else {
+                return dummy;
+            }
+        }
+
+        // Generate the call to the internal URI macro with all the info.
+        let args = sep_by_tok(ecx, &fn_uri_args, token::Comma);
+        quote_item!(ecx,
+            pub macro $macro_name($macro_args) {
+                rocket_internal_uri!($route_path, ($args), $macro_exp)
+            }
+        ).expect("consistent uri macro item")
+    }
+
     fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>) {
         let name = self.annotated_fn.ident().name.as_str();
         let path = &self.uri.node.as_str();
@@ -242,6 +288,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let query_statement = route.generate_query_statement(ecx);
     let data_statement = route.generate_data_statement(ecx);
     let fn_arguments = route.generate_fn_arguments(ecx);
+    let uri_macro = route.generate_uri_macro(ecx);
 
     // Generate and emit the wrapping function with the Rocket handler signature.
     let user_fn_name = route.annotated_fn.ident();
@@ -287,6 +334,9 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let attr_name = Ident::from_str(ROUTE_ATTR);
     let route_attr = quote_attr!(ecx, #[$attr_name($struct_name)]);
     attach_and_emit(&mut output, route_attr, annotated);
+
+    // Emit the per-route URI macro.
+    emit_item(&mut output, uri_macro);
 
     output
 }

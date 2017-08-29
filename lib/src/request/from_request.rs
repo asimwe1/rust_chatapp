@@ -167,7 +167,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// `senstive` handler.
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #

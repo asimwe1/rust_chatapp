@@ -20,7 +20,7 @@ use http::RawStr;
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #[get("/<id>")]
@@ -56,7 +56,7 @@ use http::RawStr;
 /// parameter as follows:
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::http::RawStr;
@@ -163,7 +163,7 @@ use http::RawStr;
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::FromParam;

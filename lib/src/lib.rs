@@ -2,7 +2,7 @@
 #![feature(conservative_impl_trait)]
 #![feature(drop_types_in_const)]
 #![feature(const_fn)]
-#![feature(plugin)]
+#![feature(plugin, decl_macro)]
 #![feature(never_type)]
 #![feature(try_trait)]
 
@@ -55,7 +55,7 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(plugin)]
+//! #![feature(plugin, decl_macro)]
 //! # #![allow(unused_attributes)]
 //! #![plugin(rocket_codegen)]
 //!
@@ -66,7 +66,7 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(plugin)]
+//! #![feature(plugin, decl_macro)]
 //! #![plugin(rocket_codegen)]
 //!
 //! extern crate rocket;

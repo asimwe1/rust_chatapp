@@ -14,7 +14,7 @@ use request::FormItems;
 /// validation.
 ///
 /// ```rust
-/// #![feature(plugin, custom_derive)]
+/// #![feature(plugin, decl_macro, custom_derive)]
 /// #![plugin(rocket_codegen)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 ///
@@ -34,7 +34,7 @@ use request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(plugin, custom_derive)]
+/// # #![feature(plugin, decl_macro, custom_derive)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;

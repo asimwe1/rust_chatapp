@@ -35,7 +35,7 @@ use yansi::Color::*;
 /// declared using the `error` decorator, as follows:
 ///
 /// ```rust
-/// #![feature(plugin)]
+/// #![feature(plugin, decl_macro)]
 /// #![plugin(rocket_codegen)]
 ///
 /// extern crate rocket;

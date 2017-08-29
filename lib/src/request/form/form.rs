@@ -49,7 +49,7 @@ use request::form::{FromForm, FormItems};
 /// The simplest data structure with a reference into form data looks like this:
 ///
 /// ```rust
-/// # #![feature(plugin, custom_derive)]
+/// # #![feature(plugin, decl_macro, custom_derive)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -65,7 +65,7 @@ use request::form::{FromForm, FormItems};
 /// a string. A handler for this type can be written as:
 ///
 /// ```rust
-/// # #![feature(plugin, custom_derive)]
+/// # #![feature(plugin, decl_macro, custom_derive)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -91,7 +91,7 @@ use request::form::{FromForm, FormItems};
 /// The owned analog of the `UserInput` type above is:
 ///
 /// ```rust
-/// # #![feature(plugin, custom_derive)]
+/// # #![feature(plugin, decl_macro, custom_derive)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -105,7 +105,7 @@ use request::form::{FromForm, FormItems};
 /// The handler is written similarly:
 ///
 /// ```rust
-/// # #![feature(plugin, custom_derive)]
+/// # #![feature(plugin, decl_macro, custom_derive)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -170,7 +170,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, custom_derive)]
+    /// # #![feature(plugin, decl_macro, custom_derive)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::request::Form;
@@ -198,7 +198,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, custom_derive)]
+    /// # #![feature(plugin, decl_macro, custom_derive)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::request::Form;
@@ -269,7 +269,7 @@ impl<'f, T: FromForm<'f> + 'static> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, custom_derive)]
+    /// # #![feature(plugin, decl_macro, custom_derive)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::request::Form;

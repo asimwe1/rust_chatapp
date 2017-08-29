@@ -148,6 +148,7 @@ extern crate syntax;
 extern crate syntax_ext;
 extern crate rustc_plugin;
 extern crate rocket;
+extern crate ordermap;
 
 #[macro_use] mod utils;
 mod parser;
@@ -166,6 +167,7 @@ const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
 const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &'static str = "rocket_route_fn_";
 const CATCH_FN_PREFIX: &'static str = "rocket_catch_fn_";
+const URI_INFO_MACRO_PREFIX: &'static str = "rocket_uri_for_";
 
 const ROUTE_ATTR: &'static str = "rocket_route";
 const ROUTE_INFO_ATTR: &'static str = "rocket_route_info";
@@ -188,6 +190,12 @@ macro_rules! register_derives {
     )
 }
 
+macro_rules! register_macros {
+    ($reg:expr, $($n:expr => $f:ident),+) => (
+        $($reg.register_macro($n, macros::$f);)+
+    )
+}
+
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
@@ -196,8 +204,12 @@ pub fn plugin_registrar(reg: &mut Registry) {
         ::rocket::logger::init(::rocket::config::LoggingLevel::Debug);
     }
 
-    reg.register_macro("routes", macros::routes);
-    reg.register_macro("errors", macros::errors);
+    register_macros!(reg,
+        "routes" => routes,
+        "errors" => errors,
+        "uri" => uri,
+        "rocket_internal_uri" => uri_internal
+    );
 
     register_derives!(reg,
         "derive_FromForm" => from_form_derive

@@ -156,7 +156,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// ```rust
 /// # #![allow(unused_attributes)]
 /// # #![allow(unused_variables)]
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #

@@ -448,7 +448,7 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(plugin)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// #
@@ -514,7 +514,7 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(plugin)]
+    /// #![feature(plugin, decl_macro)]
     /// #![plugin(rocket_codegen)]
     ///
     /// extern crate rocket;
@@ -573,7 +573,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::State;
@@ -609,7 +609,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::Rocket;
@@ -711,7 +711,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::Rocket;
@@ -748,7 +748,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
     /// # extern crate rocket;
     /// use rocket::Rocket;

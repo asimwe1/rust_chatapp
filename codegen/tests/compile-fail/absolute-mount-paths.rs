@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 #[get("a")] //~ ERROR absolute

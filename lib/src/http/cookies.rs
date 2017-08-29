@@ -35,7 +35,7 @@ use http::Header;
 /// a handler to retrieve the value of a "message" cookie.
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// use rocket::http::Cookies;
@@ -56,7 +56,7 @@ use http::Header;
 /// [private cookie]: /rocket/http/enum.Cookies.html#private-cookies
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #

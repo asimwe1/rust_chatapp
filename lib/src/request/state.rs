@@ -21,7 +21,7 @@ use http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// use rocket::State;

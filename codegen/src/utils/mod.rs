@@ -70,23 +70,11 @@ pub fn attach_and_emit(out: &mut Vec<Annotatable>, attr: Attribute, to: Annotata
     }
 }
 
-macro_rules! quote_enum {
-    ($ecx:expr, $var:expr => $(::$root:ident)+
-     { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
-        use syntax::codemap::DUMMY_SP;
-        use syntax::ast::Ident;
-        use $(::$root)+::*;
-        let root_idents = vec![$(Ident::from_str(stringify!($root))),+];
-        match $var {
-            $($variant => {
-                let variant = Ident::from_str(stringify!($variant));
-                let mut idents = root_idents.clone();
-                idents.push(variant);
-                $ecx.path_global(DUMMY_SP, idents)
-            })+
-            $($extra => $result),*
-        }
-    })
+pub fn parse_as_tokens(ecx: &ExtCtxt, string: &str) -> Vec<TokenTree> {
+    use syntax::parse::parse_stream_from_source_str as parse_stream;
+
+    let stream = parse_stream("<_>".into(), string.into(), ecx.parse_sess, None);
+    stream.into_trees().collect()
 }
 
 pub struct TyLifetimeRemover;
@@ -139,4 +127,46 @@ pub fn is_valid_ident<S: AsRef<str>>(s: S) -> bool {
     }
 
     true
+}
+
+macro_rules! quote_enum {
+    ($ecx:expr, $var:expr => $(::$root:ident)+
+     { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
+        use syntax::codemap::DUMMY_SP;
+        use syntax::ast::Ident;
+        use $(::$root)+::*;
+        let root_idents = vec![$(Ident::from_str(stringify!($root))),+];
+        match $var {
+            $($variant => {
+                let variant = Ident::from_str(stringify!($variant));
+                let mut idents = root_idents.clone();
+                idents.push(variant);
+                $ecx.path_global(DUMMY_SP, idents)
+            })+
+            $($extra => $result),*
+        }
+    })
+}
+
+macro_rules! try_parse {
+    ($sp:expr, $parse:expr) => (
+        match $parse {
+            Ok(v) => v,
+            Err(mut e) => { e.emit(); return DummyResult::expr($sp); }
+        }
+    )
+}
+
+macro_rules! p {
+    ("parameter", $num:expr) => (
+        if $num == 1 { "parameter" } else { "parameters" }
+    );
+
+    ($num:expr, "was") => (
+        if $num == 1 { "1 was".into() } else { format!("{} were", $num) }
+    );
+
+    ($num:expr, "parameter") => (
+        if $num == 1 { "1 parameter".into() } else { format!("{} parameters", $num) }
+    )
 }

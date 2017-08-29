@@ -46,7 +46,7 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 /// message on both the request and response sides.
 ///
 /// ```rust
-/// # #![feature(plugin)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// #
 /// # extern crate rocket;

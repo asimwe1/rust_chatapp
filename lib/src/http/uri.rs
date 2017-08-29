@@ -1,10 +1,12 @@
 //! Borrowed and owned string types for absolute URIs.
 
-use std::convert::From;
 use std::fmt;
+use std::convert::From;
 use std::borrow::Cow;
 use std::str::Utf8Error;
 use std::sync::atomic::{AtomicIsize, Ordering};
+
+use http::RawStr;
 
 use url;
 
@@ -343,6 +345,45 @@ impl<'a> fmt::Display for URI<'a> {
         }
 
         Ok(())
+    }
+}
+
+pub trait UriDisplay {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
+}
+
+impl<T: fmt::Display> UriDisplay for T {
+    #[inline(always)]
+    default fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        <Self as fmt::Display>::fmt(self, f)
+    }
+}
+
+impl<'a> fmt::Display for &'a UriDisplay {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+impl<'a> UriDisplay for &'a RawStr {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", URI::percent_encode((*self).as_str()))
+    }
+}
+
+impl<'a> UriDisplay for &'a str {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", URI::percent_encode(self))
+    }
+}
+
+impl<'a> UriDisplay for String {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", URI::percent_encode(self.as_str()))
     }
 }
 
