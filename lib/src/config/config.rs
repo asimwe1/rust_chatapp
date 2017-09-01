@@ -497,14 +497,14 @@ impl Config {
         // Load the certificates.
         let certs = tls::load_certs(certs_path)
             .map_err(|e| match e {
-                Io(e) => ConfigError::Io(e, "tls"),
+                Io(e) => ConfigError::Io(e, "tls.certs"),
                 _ => self.bad_type("tls", pem_err, "a valid certificates file")
             })?;
 
         // And now the private key.
         let key = tls::load_private_key(key_path)
             .map_err(|e| match e {
-                Io(e) => ConfigError::Io(e, "tls"),
+                Io(e) => ConfigError::Io(e, "tls.key"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")
             })?;
 

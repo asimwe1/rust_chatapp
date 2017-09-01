@@ -59,7 +59,7 @@ impl ConfigError {
             NotFound => error!("config file was not found"),
             IoError => error!("failed reading the config file: IO error"),
             Io(ref error, param) => {
-                error_!("I/O error while setting '{}':", White.paint(param));
+                error!("I/O error while setting {}:", White.paint(param));
                 info_!("{}", error);
             }
             BadFilePath(ref path, reason) => {
@@ -77,7 +77,7 @@ impl ConfigError {
                 info_!("valid environments are: {}", White.paint(valid_envs));
             }
             BadType(ref name, expected, actual, ref filename) => {
-                error!("'{}' key could not be parsed", name);
+                error!("{} key could not be parsed", White.paint(name));
                 info_!("in {:?}", White.paint(filename));
                 info_!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
