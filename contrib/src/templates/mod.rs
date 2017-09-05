@@ -21,6 +21,7 @@ use rocket::request::Request;
 use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
+use rocket::config::ConfigError;
 
 const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
@@ -158,10 +159,12 @@ impl Template {
     /// ```
     pub fn fairing() -> impl Fairing {
         AdHoc::on_attach(|rocket| {
-            let mut template_root = rocket.config().root().join(DEFAULT_TEMPLATE_DIR);
+            let mut template_root = rocket.config()
+                .root_relative(DEFAULT_TEMPLATE_DIR);
+
             match rocket.config().get_str("template_dir") {
-                Ok(dir) => template_root = rocket.config().root().join(dir),
-                Err(ref e) if !e.is_not_found() => {
+                Ok(dir) => template_root = rocket.config().root_relative(dir),
+                Err(e@ConfigError::NotFound) => {
                     e.pretty_print();
                     warn_!("Using default directory '{:?}'", template_root);
                 }

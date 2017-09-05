@@ -313,7 +313,12 @@ impl Config {
     /// # }
     /// ```
     pub fn set_root<P: AsRef<Path>>(&mut self, path: P) {
-        self.config_path = path.as_ref().join("Rocket.custom.toml")
+        let new_path = match self.config_path.file_name() {
+            Some(file) => path.as_ref().join(file),
+            None => path.as_ref().join("Rocket.custom.toml")
+        };
+
+        self.config_path = new_path
     }
 
     /// Sets the address of `self` to `address`.
@@ -495,14 +500,14 @@ impl Config {
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
-        let certs = tls::load_certs(certs_path)
+        let certs = tls::load_certs(self.root_relative(certs_path))
             .map_err(|e| match e {
                 Io(e) => ConfigError::Io(e, "tls.certs"),
                 _ => self.bad_type("tls", pem_err, "a valid certificates file")
             })?;
 
         // And now the private key.
-        let key = tls::load_private_key(key_path)
+        let key = tls::load_private_key(self.root_relative(key_path))
             .map_err(|e| match e {
                 Io(e) => ConfigError::Io(e, "tls.key"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")
@@ -785,6 +790,35 @@ impl Config {
         match self.config_path.parent() {
             Some(parent) => parent,
             None => panic!("root(): path {:?} has no parent", self.config_path)
+        }
+    }
+
+    /// If `path` is a relative path, `path` is appended to the [`root`] at
+    /// which the configuration file for `self` is stored and the new path is
+    /// returned. If `path` is absolute, `path` is returned unaltered.
+    ///
+    /// [`root`]: /rocket/struct.Config.html#method.root
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::env::current_dir;
+    /// use std::path::Path;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::new(Environment::Staging)
+    ///     .expect("can retrieve current directory");
+    ///
+    /// assert_eq!(config.root(), current_dir().unwrap());
+    /// assert_eq!(config.root_relative("abc"), config.root().join("abc"));
+    /// assert_eq!(config.root_relative("/abc"), Path::new("/abc"));
+    /// ```
+    pub fn root_relative<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        let path = path.as_ref();
+        if path.is_absolute() {
+            path.into()
+        } else {
+            self.root().join(path)
         }
     }
 }
