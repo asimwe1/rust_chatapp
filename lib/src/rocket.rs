@@ -393,7 +393,7 @@ impl Rocket {
             logger::try_init(config.log_level, false);
         }
 
-        info!("🔧  Configured for {}.", config.environment);
+        info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
         info_!("address: {}", Paint::white(&config.address));
         info_!("port: {}", Paint::white(&config.port));
         info_!("log: {}", Paint::white(config.log_level));
@@ -485,7 +485,10 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Paint::purple("Mounting"), Paint::blue(base));
+        info!("{}{} '{}':",
+              Paint::masked("🛰  "),
+              Paint::purple("Mounting"),
+              Paint::blue(base));
 
         if base.contains('<') {
             error_!("Bad mount point: '{}'.", base);
@@ -687,7 +690,8 @@ impl Rocket {
             self.fairings.handle_launch(&self);
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
-            launch_info!("🚀 {} {}{}",
+            launch_info!("{}{} {}{}",
+                         Paint::masked("🚀  "),
                          Paint::white("Rocket has launched from"),
                          Paint::white(proto).bold(),
                          Paint::white(&full_addr).bold());

@@ -96,7 +96,7 @@ impl Fairings {
                    Paint::white(names.join(", ")));
         }
 
-        info!("📡  {}:", Paint::purple("Fairings"));
+        info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
         info_if_nonempty("launch", &self.launch);
         info_if_nonempty("request", &self.request);
         info_if_nonempty("response", &self.response);
