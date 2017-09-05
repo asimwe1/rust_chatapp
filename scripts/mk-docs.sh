@@ -20,6 +20,7 @@ function mk_doc() {
 
 # We need to clean-up beforehand so we don't get all of the dependencies.
 cargo clean
+cargo update
 
 mk_doc $LIB_DIR
 mk_doc $CODEGEN_DIR
