@@ -84,21 +84,23 @@ impl Fairings {
     pub fn pretty_print_counts(&self) {
         use yansi::Paint;
 
-        if self.all_fairings.is_empty() {
-            return
-        }
-
         fn info_if_nonempty(kind: &str, fairings: &[&Fairing]) {
-            let names: Vec<&str> = fairings.iter().map(|f| f.info().name).collect();
-            info_!("{} {}: {}",
-                   Paint::white(fairings.len()),
-                   kind,
-                   Paint::white(names.join(", ")));
+            if !fairings.is_empty() {
+                let num = fairings.len();
+                let names = fairings.iter()
+                    .map(|f| f.info().name)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                info_!("{} {}: {}", Paint::white(num), kind, Paint::white(names));
+            }
         }
 
-        info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
-        info_if_nonempty("launch", &self.launch);
-        info_if_nonempty("request", &self.request);
-        info_if_nonempty("response", &self.response);
+        if !self.all_fairings.is_empty() {
+            info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
+            info_if_nonempty("launch", &self.launch);
+            info_if_nonempty("request", &self.request);
+            info_if_nonempty("response", &self.response);
+        }
     }
 }
