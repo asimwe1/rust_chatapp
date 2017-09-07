@@ -344,7 +344,7 @@ impl Config {
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into();
-        if (address.as_ref(), 0u16).to_socket_addrs().is_err() {
+        if (&*address, 0u16).to_socket_addrs().is_err() {
             return Err(self.bad_type("address", "string", "a valid hostname or IP"));
         }
 
