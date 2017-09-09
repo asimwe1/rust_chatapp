@@ -187,8 +187,7 @@ pub mod defaults {
                 handle_401,
             402, "Payment Required", "The request could not be processed due to lack of
                 payment.", handle_402,
-            403, "Forbidden", "The request was forbidden by the server.
-                Check authentication.", handle_403,
+            403, "Forbidden", "The server refused to authorize the request.", handle_403,
             404, "Not Found", "The requested resource could not be found.", handle_404,
             405, "Method Not Allowed", "The request method is not supported for the
                 requested resource.", handle_405,
