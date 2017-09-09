@@ -99,9 +99,8 @@ impl Catcher {
     }
 
     #[inline(always)]
-    pub(crate) fn handle<'r>(&self, err: Error, req: &'r Request)
-            -> response::Result<'r> {
-        (self.handler)(err, req)
+    pub(crate) fn handle<'r>(&self, e: Error, r: &'r Request) -> response::Result<'r> {
+        (self.handler)(e, r)
     }
 
     #[inline(always)]
