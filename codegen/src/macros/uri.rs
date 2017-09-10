@@ -61,10 +61,9 @@ fn extract_exprs<'a>(
             Err(diag)
         }
         Validation::Named(missing, extra, dup) => {
-            let ps = p!("parameter", internal.fn_args.len());
-            let e = &format!("invalid {} for `{}` route uri", ps, route_name);
+            let e = &format!("invalid parameters for `{}` route uri", route_name);
             let mut diag = ecx.struct_span_err(internal.uri_params.args_span(), e);
-            diag.note(&format!("expected {}: {}", ps, internal.fn_args_str()));
+            diag.note(&format!("uri parameters are: {}", internal.fn_args_str()));
 
             fn join<S: Display, T: Iterator<Item = S>>(iter: T) -> (&'static str, String) {
                 let items: Vec<_> = iter.map(|i| format!("`{}`", i)).collect();
@@ -107,6 +106,7 @@ pub fn uri_internal(
     // Generate the statements to typecheck each parameter. First, the mount.
     let mut argument_stmts = vec![];
     let mut format_assign_tokens = vec![];
+    let mut fmt_string = internal.uri.node.replace('<', "{").replace('>', "}");
     if let Some(mount_point) = internal.uri_params.mount_point {
         // TODO: Should all expressions, not just string literals, be allowed?
         // let as_ref = ecx.expr_method_call(span, expr, Ident::from_str("as_ref"), v![]);
@@ -120,8 +120,7 @@ pub fn uri_internal(
         ));
 
         format_assign_tokens.push(quote_tokens!(ecx, mount = mount,));
-    } else {
-        format_assign_tokens.push(quote_tokens!(ecx, mount = "/",));
+        fmt_string = "{mount}".to_string() + &fmt_string;
     }
 
     // Now the user's parameters.
@@ -136,10 +135,8 @@ pub fn uri_internal(
         ));
     }
 
-    let user_path = internal.uri.node.replace('<', "{").replace('>', "}");
-    let route_uri = "{mount}".to_string() + &user_path;
     MacEager::expr(quote_expr!(ecx, {
         $argument_stmts
-        ::rocket::http::uri::URI::from(format!($route_uri, $format_assign_tokens))
+        ::rocket::http::uri::URI::from(format!($fmt_string, $format_assign_tokens))
     }))
 }
