@@ -490,9 +490,9 @@ impl Rocket {
               Paint::purple("Mounting"),
               Paint::blue(base));
 
-        if base.contains('<') {
+        if base.contains('<') || !base.starts_with('/') {
             error_!("Bad mount point: '{}'.", base);
-            error_!("Mount points must be static paths!");
+            error_!("Mount points must be absolute URIs with static paths!");
             panic!("Bad mount point.")
         }
 
