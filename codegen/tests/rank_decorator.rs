@@ -12,5 +12,5 @@ fn get2() -> &'static str { "hi" }
 #[get("/", rank = 3)]
 fn get3() -> &'static str { "hi" }
 
-fn main() {
-}
+#[test]
+fn main() { }

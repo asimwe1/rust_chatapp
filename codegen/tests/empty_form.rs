@@ -8,6 +8,7 @@ use rocket::request::{FromForm, FormItems};
 #[derive(PartialEq, Debug, FromForm)]
 struct Form {  }
 
+#[test]
 fn main() {
     // Same number of arguments: simple case.
     let task = Form::from_form(&mut FormItems::from(""), true);

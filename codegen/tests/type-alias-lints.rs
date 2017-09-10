@@ -16,6 +16,7 @@ fn index(state: MyState) {  }
 #[get("/a")]
 fn another(state: MyVecState<usize>) {  }
 
+#[test]
 fn main() {
     rocket::ignite()
         .manage(10usize)

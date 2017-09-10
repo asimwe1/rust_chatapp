@@ -1,5 +1,6 @@
 #![feature(plugin, decl_macro, custom_derive)]
 #![plugin(rocket_codegen)]
+#![allow(dead_code, unused_variables)]
 
 extern crate rocket;
 
@@ -21,6 +22,7 @@ fn get<'r>(name: &RawStr,
     "hi"
 }
 
+#[test]
 fn main() {
     let _ = routes![get];
 }

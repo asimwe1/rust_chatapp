@@ -16,4 +16,5 @@ fn get2(a: String, b: Result<PathBuf, SegmentError>) -> String {
     format!("{}/{}", a, b.unwrap().to_string_lossy())
 }
 
+#[test]
 fn main() {  }

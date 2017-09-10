@@ -15,6 +15,7 @@ fn rocket() -> Rocket {
         .manage(100u32)
 }
 
+#[test]
 fn main() {
     if false {
         rocket().launch();

@@ -24,4 +24,5 @@ extern crate rocket;
 #[options("/")] fn options() {  }
 #[route(OPTIONS, "/")] fn options_r() {  }
 
+#[test]
 fn main() { }

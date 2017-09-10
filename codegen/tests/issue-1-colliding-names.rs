@@ -8,7 +8,7 @@ fn todo(todo: String) -> String {
     todo
 }
 
+#[test]
 fn main() {
     let _ = routes![todo];
 }
-

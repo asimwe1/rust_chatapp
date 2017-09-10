@@ -1,10 +1,8 @@
 #![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
-#![allow(dead_code)]
+#![allow(dead_code, unused_variables)]
 
 extern crate rocket;
-
-use rocket::State;
 
 #[get("/one")]
 fn one() {  }
@@ -18,6 +16,7 @@ fn three() {  }
 #[get("/four")]
 fn four() {  }
 
+#[test]
 fn main() {
     let instance = rocket::ignite()
         .mount("/", routes![one]);

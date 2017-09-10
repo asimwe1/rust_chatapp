@@ -3,8 +3,7 @@
 
 extern crate rocket;
 
-use rocket::request::{FromForm, FromFormValue, FormItems};
-use rocket::http::RawStr;
+use rocket::request::{FromForm, FormItems};
 
 #[derive(Debug, PartialEq, FromForm)]
 struct Form {
@@ -35,6 +34,7 @@ fn parse_strict<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
     parse(string, true)
 }
 
+#[test]
 fn main() {
     let form_string = &[
         "single=100", "camelCase=helloThere", "TitleCase=HiHi", "type=-2",

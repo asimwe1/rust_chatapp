@@ -8,6 +8,8 @@ fn run_mode(mode: &'static str) {
 
     config.mode = cfg_mode;
     config.src_base = PathBuf::from(format!("tests/{}", mode));
+    // config.link_deps();
+
     let flags = [
         "-L crate=../target/debug/",
         "-L dependency=../target/debug/deps/",
@@ -20,5 +22,4 @@ fn run_mode(mode: &'static str) {
 #[test]
 fn compile_test() {
     run_mode("compile-fail");
-    run_mode("run-pass");
 }

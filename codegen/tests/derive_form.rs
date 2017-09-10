@@ -88,6 +88,7 @@ fn lenient<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
     parse(string, false)
 }
 
+#[test]
 fn main() {
     // Same number of arguments: simple case.
     let task: Option<TodoTask> = strict("description=Hello&completed=on");
