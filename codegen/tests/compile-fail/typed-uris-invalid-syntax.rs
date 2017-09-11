@@ -12,8 +12,10 @@ fn main() {
     uri!(simple: "Hello", id = 100); //~ ERROR cannot be mixed
     uri!(simple,); //~ ERROR expected one of `::`, `:`, or `<eof>`
     uri!(simple:); //~ ERROR expected argument list
-    uri!("mount"); //~ ERROR expected `,`, found `<eof>`
-    uri!("mount",); //~ ERROR expected identifier
+    uri!("/mount"); //~ ERROR expected `,`, found `<eof>`
+    uri!("/mount",); //~ ERROR expected identifier
+    uri!("mount", simple); //~ ERROR invalid mount point
+    uri!("/mount/<id>", simple); //~ ERROR invalid mount point
     uri!(); //~ ERROR cannot be empty
     uri!(simple: id = ); //~ ERROR expected argument list
         //~^ ERROR expected expression

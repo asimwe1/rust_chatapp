@@ -78,6 +78,12 @@ impl UriParams {
             Some((symbol, _, _)) => {
                 let string = symbol.as_str();
                 let span = parser.prev_span;
+                if string.contains('<') || !string.starts_with('/') {
+                    let mut diag = ecx.struct_span_err(span, "invalid mount point");
+                    diag.help("mount points must be static, absolute URIs: `/example`");
+                    return Err(diag);
+                }
+
                 parser.expect(&Token::Comma)?;
                 Some(span.wrap(string))
             }
