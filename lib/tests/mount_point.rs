@@ -8,5 +8,5 @@ fn bad_dynamic_mount() {
 
 #[test]
 fn good_static_mount() {
-    rocket::ignite().mount("abcdefghijkl_mno", vec![]);
+    rocket::ignite().mount("/abcdefghijkl_mno", vec![]);
 }

@@ -492,7 +492,7 @@ impl Rocket {
 
         if base.contains('<') || !base.starts_with('/') {
             error_!("Bad mount point: '{}'.", base);
-            error_!("Mount points must be absolute URIs with static paths!");
+            error_!("Mount points must be static, absolute URIs: `/example`");
             panic!("Bad mount point.")
         }
 
