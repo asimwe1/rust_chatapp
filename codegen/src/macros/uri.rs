@@ -25,14 +25,14 @@ pub fn uri(
 ) -> Box<MacResult + 'static> {
     // Generate the path to the internal macro.
     let mut parser = ecx.new_parser_from_tts(args);
-    let (_, mut macro_path) = try_parse!(sp, UriParams::parse_prelude(&mut parser));
-    prefix_path(URI_INFO_MACRO_PREFIX, &mut macro_path);
+    let (_, mut path) = try_parse!(sp, UriParams::parse_prelude(ecx, &mut parser));
+    prefix_path(URI_INFO_MACRO_PREFIX, &mut path);
 
     // It's incredibly important we use `sp` as the Span for the generated code
     // so that errors from the `internal` call show up on the user's code.
     let expr = parser.mk_mac_expr(sp,
         ast::Mac_ {
-            path: macro_path,
+            path: path,
             tts: args.to_vec().into_iter().collect::<TokenStream>().into(),
         },
         ::syntax::util::ThinVec::new(),

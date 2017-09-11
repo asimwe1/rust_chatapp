@@ -65,8 +65,14 @@ impl Arg {
 impl UriParams {
     // Parses the mount point, if any, and route identifier.
     pub fn parse_prelude<'a>(
+        ecx: &'a ExtCtxt,
         parser: &mut Parser<'a>
     ) -> PResult<'a, (Option<Spanned<InternedString>>, Path)> {
+        if parser.token == Token::Eof {
+            return Err(ecx.struct_span_err(ecx.call_site(),
+                "call to `uri!` cannot be empty"));
+        }
+
         // Parse the mount point and suffixing ',', if any.
         let mount_point = match parser.parse_optional_str() {
             Some((symbol, _, _)) => {
@@ -91,9 +97,12 @@ impl UriParams {
         }
     }
 
-    pub fn parse<'a>( ecx: &'a ExtCtxt, parser: &mut Parser<'a>,) -> PResult<'a, UriParams> {
+    pub fn parse<'a>(
+        ecx: &'a ExtCtxt,
+        parser: &mut Parser<'a>
+    ) -> PResult<'a, UriParams> {
         // Parse the mount point and suffixing ',', if any.
-        let (mount_point, route_path) = Self::parse_prelude(parser)?;
+        let (mount_point, route_path) = Self::parse_prelude(ecx, parser)?;
 
         // If there are no arguments, finish early.
         if !parser.eat(&Token::Colon) {
