@@ -1,7 +1,7 @@
 use std::str::FromStr;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::path::PathBuf;
 use std::fmt::Debug;
+use std::borrow::Cow;
 
 use http::uri::{URI, Segments, SegmentError};
 use http::RawStr;
@@ -214,22 +214,34 @@ impl<'a> FromParam<'a> for String {
     }
 }
 
+impl<'a> FromParam<'a> for Cow<'a, str> {
+    type Error = &'a RawStr;
+
+    #[inline(always)]
+    fn from_param(param: &'a RawStr) -> Result<Cow<'a, str>, Self::Error> {
+        param.percent_decode().map_err(|_| param)
+    }
+}
+
 macro_rules! impl_with_fromstr {
-    ($($T:ident),+) => ($(
+    ($($T:ty),+) => ($(
         impl<'a> FromParam<'a> for $T {
             type Error = &'a RawStr;
 
             #[inline(always)]
             fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
-                $T::from_str(param.as_str()).map_err(|_| param)
+                <$T as FromStr>::from_str(param.as_str()).map_err(|_| param)
             }
         }
     )+)
 }
 
-impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
-       bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
-       SocketAddr);
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+
+impl_with_fromstr! {
+    i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+}
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
     type Error = !;
