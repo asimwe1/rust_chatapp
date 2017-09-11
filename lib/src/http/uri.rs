@@ -352,17 +352,10 @@ pub trait UriDisplay {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
-impl<T: fmt::Display> UriDisplay for T {
-    #[inline(always)]
-    default fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        <Self as fmt::Display>::fmt(self, f)
-    }
-}
-
 impl<'a> fmt::Display for &'a UriDisplay {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (**self).fmt(f)
+        UriDisplay::fmt(*self, f)
     }
 }
 
@@ -380,12 +373,50 @@ impl<'a> UriDisplay for &'a str {
     }
 }
 
-impl<'a> UriDisplay for String {
+impl<'a> UriDisplay for Cow<'a, str> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", URI::percent_encode(self))
+    }
+}
+
+impl UriDisplay for String {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", URI::percent_encode(self.as_str()))
     }
 }
+
+macro_rules! impl_with_display {
+    ($($T:ty),+) => {$(
+        impl UriDisplay for $T  {
+            #[inline(always)]
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                fmt::Display::fmt(self, f)
+            }
+        }
+    )+}
+}
+
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+impl_with_display! {
+    i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
+    IpAddr, Ipv4Addr, Ipv6Addr
+}
+
+macro_rules! impl_for_ref {
+    ($($T:ty),+) => {$(
+        impl<'a, T: UriDisplay + ?Sized> UriDisplay for $T {
+            #[inline(always)]
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                UriDisplay::fmt(*self, f)
+            }
+        }
+    )+}
+}
+
+impl_for_ref!(&'a mut T, &'a T);
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///

@@ -18,7 +18,7 @@ impl<'a> FromParam<'a> for S {
 fn simple(id: i32) -> &'static str { "" }
 
 #[post("/<id>/<name>")]
-    //~^ ERROR the trait bound `S: std::fmt::Display` is not satisfied
+    //~^ ERROR the trait bound `S: rocket::http::uri::UriDisplay` is not satisfied
 fn not_uri_display(id: i32, name: S) -> &'static str { "" }
 
 #[post("/<id>/<name>")]
