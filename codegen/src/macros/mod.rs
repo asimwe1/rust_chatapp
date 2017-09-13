@@ -67,6 +67,6 @@ pub fn routes(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
 pub fn catchers(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
         -> Box<MacResult + 'static> {
     prefixing_vec_macro(CATCH_STRUCT_PREFIX, |ecx, path| {
-        quote_expr!(ecx, rocket::Catcher::from(&$path))
+        quote_expr!(ecx, ::rocket::Catcher::from(&$path))
     }, ecx, sp, args)
 }
