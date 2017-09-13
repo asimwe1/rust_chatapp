@@ -23,7 +23,7 @@ use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header};
 use http::hyper::{self, header};
-use http::uri::URI;
+use http::uri::Uri;
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
@@ -57,7 +57,7 @@ impl hyper::Handler for Rocket {
             Ok(req) => req,
             Err(e) => {
                 error!("Bad incoming request: {}", e);
-                let dummy = Request::new(self, Method::Get, URI::new("<unknown>"));
+                let dummy = Request::new(self, Method::Get, Uri::new("<unknown>"));
                 let r = self.handle_error(Status::InternalServerError, &dummy);
                 return self.issue_response(r, res);
             }
@@ -497,7 +497,7 @@ impl Rocket {
         }
 
         for mut route in routes {
-            let uri = URI::new(format!("{}/{}", base, route.uri));
+            let uri = Uri::new(format!("{}/{}", base, route.uri));
 
             route.set_base(base);
             route.set_uri(uri.to_string());

@@ -1,6 +1,6 @@
 use super::Route;
 
-use http::uri::URI;
+use http::uri::Uri;
 use http::MediaType;
 use request::Request;
 
@@ -53,8 +53,8 @@ impl<'a> Collider<str> for &'a str {
 }
 
 // This _only_ checks the `path` component of the URI.
-impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
-    fn collides_with(&self, other: &URI<'b>) -> bool {
+impl<'a, 'b> Collider<Uri<'b>> for Uri<'a> {
+    fn collides_with(&self, other: &Uri<'b>) -> bool {
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
                 return true;
@@ -138,7 +138,7 @@ mod tests {
     use handler::Outcome;
     use router::route::Route;
     use http::{Method, MediaType, ContentType, Accept};
-    use http::uri::URI;
+    use http::uri::Uri;
     use http::Method::*;
 
     type SimpleRoute = (Method, &'static str);
@@ -158,7 +158,7 @@ mod tests {
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        URI::new(a).collides_with(&URI::new(b))
+        Uri::new(a).collides_with(&Uri::new(b))
     }
 
     #[test]

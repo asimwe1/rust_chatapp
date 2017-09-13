@@ -11,7 +11,7 @@ use super::{FromParam, FromSegments, FromRequest, Outcome};
 use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
-use http::uri::{URI, Segments};
+use http::uri::{Uri, Segments};
 use error::Error;
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
@@ -38,7 +38,7 @@ struct RequestState<'r> {
 #[derive(Clone)]
 pub struct Request<'r> {
     method: Method,
-    uri: URI<'r>,
+    uri: Uri<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     state: RequestState<'r>
@@ -46,10 +46,10 @@ pub struct Request<'r> {
 
 impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`. The `uri`
-    /// parameter can be of any type that implements `Into<URI>` including
+    /// parameter can be of any type that implements `Into<Uri>` including
     /// `&str` and `String`; it must be a valid absolute URI.
     #[inline(always)]
-    pub(crate) fn new<'s: 'r, U: Into<URI<'s>>>(rocket: &'r Rocket,
+    pub(crate) fn new<'s: 'r, U: Into<Uri<'s>>>(rocket: &'r Rocket,
                                                 method: Method,
                                                 uri: U) -> Request<'r> {
         Request {
@@ -126,12 +126,12 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn uri(&self) -> &URI {
+    pub fn uri(&self) -> &Uri {
         &self.uri
     }
 
     /// Set the URI in `self`. The `uri` parameter can be of any type that
-    /// implements `Into<URI>` including `&str` and `String`; it _must_ be a
+    /// implements `Into<Uri>` including `&str` and `String`; it _must_ be a
     /// valid, absolute URI.
     ///
     /// # Example
@@ -145,7 +145,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
+    pub fn set_uri<'u: 'r, U: Into<Uri<'u>>>(&mut self, uri: U) {
         self.uri = uri.into();
         *self.state.params.borrow_mut() = Vec::new();
     }

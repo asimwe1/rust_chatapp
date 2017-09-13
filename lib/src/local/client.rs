@@ -1,7 +1,7 @@
 use {Rocket, Request};
 use local::LocalRequest;
 use http::Method;
-use http::uri::URI;
+use http::uri::Uri;
 use error::LaunchError;
 
 /// A structure to construct requests for local dispatching.
@@ -99,7 +99,7 @@ impl Client {
     /// let req = client.get("/hello");
     /// ```
     #[inline(always)]
-    pub fn get<'c, 'u: 'c, U: Into<URI<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn get<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Get, uri)
     }
 
@@ -120,7 +120,7 @@ impl Client {
     /// let req = client.put("/hello");
     /// ```
     #[inline(always)]
-    pub fn put<'c, 'u: 'c, U: Into<URI<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn put<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Put, uri)
     }
 
@@ -145,7 +145,7 @@ impl Client {
     ///     .header(ContentType::Form);
     /// ```
     #[inline(always)]
-    pub fn post<'c, 'u: 'c, U: Into<URI<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn post<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Post, uri)
     }
 
@@ -167,7 +167,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn delete<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<URI<'u>>
+        where U: Into<Uri<'u>>
     {
         self.req(Method::Delete, uri)
     }
@@ -190,7 +190,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn options<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<URI<'u>>
+        where U: Into<Uri<'u>>
     {
         self.req(Method::Options, uri)
     }
@@ -213,7 +213,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn head<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<URI<'u>>
+        where U: Into<Uri<'u>>
     {
         self.req(Method::Head, uri)
     }
@@ -236,7 +236,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn patch<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<URI<'u>>
+        where U: Into<Uri<'u>>
     {
         self.req(Method::Patch, uri)
     }
@@ -260,7 +260,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
-        where U: Into<URI<'u>>
+        where U: Into<Uri<'u>>
     {
         let request = Request::new(&self.rocket, method, uri);
         LocalRequest::new(&self.rocket, request)

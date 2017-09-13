@@ -2,7 +2,7 @@ use syntax::ast::*;
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::ext::base::ExtCtxt;
 
-use rocket::http::uri::URI;
+use rocket::http::uri::Uri;
 use super::route::param_to_ident;
 use utils::{span, SpanExt, is_valid_ident};
 
@@ -11,7 +11,7 @@ use utils::{span, SpanExt, is_valid_ident};
 // stripped out at runtime. So, to avoid any confusion, we issue an error at
 // compile-time for empty segments. At the moment, this disallows trailing
 // slashes as well, since then the last segment is empty.
-fn valid_path(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
+fn valid_path(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
     let cleaned = uri.to_string();
     if !uri.as_str().starts_with('/') {
         ecx.struct_span_err(sp, "route paths must be absolute")
@@ -28,7 +28,7 @@ fn valid_path(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
     false
 }
 
-fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
+fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
     let mut validated = true;
     let mut segments_span = None;
     for segment in uri.segments() {
@@ -81,7 +81,7 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
             }
 
             validated = false;
-        } else if URI::percent_encode(segment) != segment {
+        } else if Uri::percent_encode(segment) != segment {
             if segment.contains("<") || segment.contains(">") {
                 ecx.struct_span_err(span, "malformed parameter")
                     .help("parameters must be of the form '<param>'")
@@ -100,8 +100,8 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
 pub fn validate_uri(ecx: &ExtCtxt,
                     string: &str,
                     sp: Span)
-                    -> (Spanned<URI<'static>>, Option<Spanned<Ident>>) {
-    let uri = URI::from(string.to_string());
+                    -> (Spanned<Uri<'static>>, Option<Spanned<Ident>>) {
+    let uri = Uri::from(string.to_string());
     let query_param = string.find('?')
         .map(|i| span(&string[(i + 1)..], sp.trim_left(i + 1)))
         .and_then(|spanned_q_param| param_to_ident(ecx, spanned_q_param));
@@ -109,6 +109,6 @@ pub fn validate_uri(ecx: &ExtCtxt,
     if valid_segments(ecx, &uri, sp) && valid_path(ecx, &uri, sp) {
         (span(uri, sp), query_param)
     } else {
-        (dummy_spanned(URI::new("")), query_param)
+        (dummy_spanned(Uri::new("")), query_param)
     }
 }

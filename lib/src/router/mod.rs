@@ -78,7 +78,7 @@ mod test {
     use config::Config;
     use http::Method;
     use http::Method::*;
-    use http::uri::URI;
+    use http::uri::Uri;
     use request::Request;
     use data::Data;
     use handler::Outcome;
@@ -166,7 +166,7 @@ mod test {
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::development().unwrap(), true);
-        let request = Request::new(&rocket, method, URI::new(uri));
+        let request = Request::new(&rocket, method, Uri::new(uri));
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -177,7 +177,7 @@ mod test {
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::development().unwrap(), true);
-        let request = Request::new(&rocket, method, URI::new(uri));
+        let request = Request::new(&rocket, method, Uri::new(uri));
         router.route(&request)
     }
 
@@ -404,7 +404,7 @@ mod test {
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
         println!("Testing: {} (expect: {:?})", path, expected);
         route(router, Get, path).map_or(false, |route| {
-            let params = route.get_param_indexes(&URI::new(path));
+            let params = route.get_param_indexes(&Uri::new(path));
             if params.len() != expected.len() {
                 return false;
             }

@@ -7,7 +7,7 @@ extern crate rocket;
 use std::fmt;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{URI, UriDisplay};
+use rocket::http::uri::{Uri, UriDisplay};
 use rocket::request::Form;
 
 #[derive(FromForm)]
@@ -71,7 +71,7 @@ fn complex<'r>(
 ) -> &'static str { "" }
 
 macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
-    $(assert_eq!($uri, URI::from($expected));)+
+    $(assert_eq!($uri, Uri::from($expected));)+
 }
 
 #[test]

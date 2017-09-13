@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::fmt::Debug;
 use std::borrow::Cow;
 
-use http::uri::{URI, Segments, SegmentError};
+use http::uri::{Uri, Segments, SegmentError};
 use http::RawStr;
 
 /// Trait to convert a dynamic path segment string to a concrete value.
@@ -325,7 +325,7 @@ impl<'a> FromSegments<'a> for PathBuf {
     fn from_segments(segments: Segments<'a>) -> Result<PathBuf, SegmentError> {
         let mut buf = PathBuf::new();
         for segment in segments {
-            let decoded = URI::percent_decode(segment.as_bytes())
+            let decoded = Uri::percent_decode(segment.as_bytes())
                 .map_err(|e| SegmentError::Utf8(e))?;
 
             if decoded == ".." {

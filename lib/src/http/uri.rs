@@ -19,7 +19,7 @@ const EMPTY: isize = -1;
 // TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
 /// Borrowed string type for absolute URIs.
 #[derive(Debug)]
-pub struct URI<'a> {
+pub struct Uri<'a> {
     uri: Cow<'a, str>,
     path: Index,
     query: Option<Index>,
@@ -28,10 +28,10 @@ pub struct URI<'a> {
     segment_count: AtomicIsize,
 }
 
-impl<'a> URI<'a> {
+impl<'a> Uri<'a> {
     /// Constructs a new URI from a given string. The URI is assumed to be an
     /// absolute, well formed URI.
-    pub fn new<T: Into<Cow<'a, str>>>(uri: T) -> URI<'a> {
+    pub fn new<T: Into<Cow<'a, str>>>(uri: T) -> Uri<'a> {
         let uri = uri.into();
         let qmark = uri.find('?');
         let hmark = uri.find('#');
@@ -44,7 +44,7 @@ impl<'a> URI<'a> {
             (None, None) => ((0, end), None, None),
         };
 
-        URI {
+        Uri {
             uri: uri,
             path: path,
             query: query,
@@ -64,18 +64,18 @@ impl<'a> URI<'a> {
     /// A valid URI with only non-empty segments:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c");
+    /// let uri = Uri::new("/a/b/c");
     /// assert_eq!(uri.segment_count(), 3);
     /// ```
     ///
     /// A URI with empty segments:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b//c/d///e");
+    /// let uri = Uri::new("/a/b//c/d///e");
     /// assert_eq!(uri.segment_count(), 5);
     /// ```
     #[inline(always)]
@@ -101,9 +101,9 @@ impl<'a> URI<'a> {
     /// A valid URI with only non-empty segments:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c?a=true#done");
+    /// let uri = Uri::new("/a/b/c?a=true#done");
     /// for (i, segment) in uri.segments().enumerate() {
     ///     match i {
     ///         0 => assert_eq!(segment, "a"),
@@ -117,9 +117,9 @@ impl<'a> URI<'a> {
     /// A URI with empty segments:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("///a//b///c////d?#");
+    /// let uri = Uri::new("///a//b///c////d?#");
     /// for (i, segment) in uri.segments().enumerate() {
     ///     match i {
     ///         0 => assert_eq!(segment, "a"),
@@ -142,18 +142,18 @@ impl<'a> URI<'a> {
     /// A URI with only a path:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c");
+    /// let uri = Uri::new("/a/b/c");
     /// assert_eq!(uri.path(), "/a/b/c");
     /// ```
     ///
     /// A URI with other components:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c?name=bob#done");
+    /// let uri = Uri::new("/a/b/c?name=bob#done");
     /// assert_eq!(uri.path(), "/a/b/c");
     /// ```
     #[inline(always)]
@@ -170,18 +170,18 @@ impl<'a> URI<'a> {
     /// A URI with a query part:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c?alphabet=true");
+    /// let uri = Uri::new("/a/b/c?alphabet=true");
     /// assert_eq!(uri.query(), Some("alphabet=true"));
     /// ```
     ///
     /// A URI without the query part:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b/c");
+    /// let uri = Uri::new("/a/b/c");
     /// assert_eq!(uri.query(), None);
     /// ```
     #[inline(always)]
@@ -197,18 +197,18 @@ impl<'a> URI<'a> {
     /// A URI with a fragment part:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a?alphabet=true#end");
+    /// let uri = Uri::new("/a?alphabet=true#end");
     /// assert_eq!(uri.fragment(), Some("end"));
     /// ```
     ///
     /// A URI without the fragment part:
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a?query=true");
+    /// let uri = Uri::new("/a?query=true");
     /// assert_eq!(uri.fragment(), None);
     /// ```
     #[inline(always)]
@@ -222,10 +222,10 @@ impl<'a> URI<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/Hello%2C%20world%21");
-    /// let decoded_path = URI::percent_decode(uri.path().as_bytes()).expect("decoded");
+    /// let uri = Uri::new("/Hello%2C%20world%21");
+    /// let decoded_path = Uri::percent_decode(uri.path().as_bytes()).expect("decoded");
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
     pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
@@ -240,10 +240,10 @@ impl<'a> URI<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/Hello%2C%20world%21");
-    /// let decoded_path = URI::percent_decode_lossy(uri.path().as_bytes());
+    /// let uri = Uri::new("/Hello%2C%20world%21");
+    /// let decoded_path = Uri::percent_decode_lossy(uri.path().as_bytes());
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
     pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
@@ -258,9 +258,9 @@ impl<'a> URI<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let encoded = URI::percent_encode("hello?a=<b>hi</b>");
+    /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
     /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
     pub fn percent_encode(string: &str) -> Cow<str> {
@@ -276,9 +276,9 @@ impl<'a> URI<'a> {
     /// ### Example
     ///
     /// ```rust
-    /// use rocket::http::uri::URI;
+    /// use rocket::http::uri::Uri;
     ///
-    /// let uri = URI::new("/a/b///c/d/e//f?name=Mike#end");
+    /// let uri = Uri::new("/a/b///c/d/e//f?name=Mike#end");
     /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
     /// ```
     #[inline(always)]
@@ -287,10 +287,10 @@ impl<'a> URI<'a> {
     }
 }
 
-impl<'a> Clone for URI<'a> {
+impl<'a> Clone for Uri<'a> {
     #[inline(always)]
-    fn clone(&self) -> URI<'a> {
-        URI {
+    fn clone(&self) -> Uri<'a> {
+        Uri {
             uri: self.uri.clone(),
             path: self.path,
             query: self.query,
@@ -300,32 +300,32 @@ impl<'a> Clone for URI<'a> {
     }
 }
 
-impl<'a, 'b> PartialEq<URI<'b>> for URI<'a> {
+impl<'a, 'b> PartialEq<Uri<'b>> for Uri<'a> {
     #[inline]
-    fn eq(&self, other: &URI<'b>) -> bool {
+    fn eq(&self, other: &Uri<'b>) -> bool {
         self.path() == other.path() &&
             self.query() == other.query() &&
             self.fragment() == other.fragment()
     }
 }
 
-impl<'a> Eq for URI<'a> {}
+impl<'a> Eq for Uri<'a> {}
 
-impl<'a> From<&'a str> for URI<'a> {
+impl<'a> From<&'a str> for Uri<'a> {
     #[inline(always)]
-    fn from(uri: &'a str) -> URI<'a> {
-        URI::new(uri)
+    fn from(uri: &'a str) -> Uri<'a> {
+        Uri::new(uri)
     }
 }
 
-impl From<String> for URI<'static> {
+impl From<String> for Uri<'static> {
     #[inline(always)]
-    fn from(uri: String) -> URI<'static> {
-        URI::new(uri)
+    fn from(uri: String) -> Uri<'static> {
+        Uri::new(uri)
     }
 }
 
-impl<'a> fmt::Display for URI<'a> {
+impl<'a> fmt::Display for Uri<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.
         if self.segment_count() == 0 {
@@ -427,9 +427,9 @@ impl<'a> fmt::Display for URI<'a> {
 /// When manually implementing `UriDisplay` for your types, you should defer to
 /// existing implementations of `UriDisplay` as much as possible. In the example
 /// below, for instance, `Name`'s implementation defers to `String`'s
-/// implementation. To percent-encode a string, use [`URI::percent_encode()`].
+/// implementation. To percent-encode a string, use [`Uri::percent_encode()`].
 ///
-/// [`URI::percent_encode()`]: https://api.rocket.rs/rocket/http/uri/struct.URI.html#method.percent_encode
+/// [`Uri::percent_encode()`]: https://api.rocket.rs/rocket/http/uri/struct.Uri.html#method.percent_encode
 ///
 /// ## Example
 ///
@@ -586,7 +586,7 @@ impl<'a> fmt::Display for &'a UriDisplay {
 impl<'a> UriDisplay for &'a RawStr {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", URI::percent_encode((*self).as_str()))
+        write!(f, "{}", Uri::percent_encode((*self).as_str()))
     }
 }
 
@@ -594,7 +594,7 @@ impl<'a> UriDisplay for &'a RawStr {
 impl<'a> UriDisplay for &'a str {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", URI::percent_encode(self))
+        write!(f, "{}", Uri::percent_encode(self))
     }
 }
 
@@ -602,7 +602,7 @@ impl<'a> UriDisplay for &'a str {
 impl<'a> UriDisplay for Cow<'a, str> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", URI::percent_encode(self))
+        write!(f, "{}", Uri::percent_encode(self))
     }
 }
 
@@ -610,7 +610,7 @@ impl<'a> UriDisplay for Cow<'a, str> {
 impl UriDisplay for String {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", URI::percent_encode(self.as_str()))
+        write!(f, "{}", Uri::percent_encode(self.as_str()))
     }
 }
 
@@ -652,9 +652,9 @@ impl_for_ref!(&'a mut T, &'a T);
 /// ### Examples
 ///
 /// ```rust
-/// use rocket::http::uri::URI;
+/// use rocket::http::uri::Uri;
 ///
-/// let uri = URI::new("/a/////b/c////////d");
+/// let uri = Uri::new("/a/////b/c////////d");
 /// let segments = uri.segments();
 /// for (i, segment) in segments.enumerate() {
 ///     match i {
@@ -716,15 +716,15 @@ pub enum SegmentError {
 
 #[cfg(test)]
 mod tests {
-    use super::URI;
+    use super::Uri;
 
     fn seg_count(path: &str, expected: usize) -> bool {
-        let actual = URI::new(path).segment_count();
+        let actual = Uri::new(path).segment_count();
         if actual != expected {
             trace_!("Count mismatch: expected {}, got {}.", expected, actual);
             trace_!("{}", if actual != expected { "lifetime" } else { "buf" });
             trace_!("Segments (for {}):", path);
-            for (i, segment) in URI::new(path).segments().enumerate() {
+            for (i, segment) in Uri::new(path).segments().enumerate() {
                 trace_!("{}: {}", i, segment);
             }
         }
@@ -733,7 +733,7 @@ mod tests {
     }
 
     fn eq_segments(path: &str, expected: &[&str]) -> bool {
-        let uri = URI::new(path);
+        let uri = Uri::new(path);
         let actual: Vec<&str> = uri.segments().collect();
         actual == expected
     }
@@ -741,7 +741,7 @@ mod tests {
     #[test]
     fn send_and_sync() {
         fn assert<T: Send + Sync>() {};
-        assert::<URI>();
+        assert::<Uri>();
     }
 
     #[test]
@@ -830,12 +830,12 @@ mod tests {
     }
 
     fn test_query(uri: &str, query: Option<&str>) {
-        let uri = URI::new(uri);
+        let uri = Uri::new(uri);
         assert_eq!(uri.query(), query);
     }
 
     fn test_fragment(uri: &str, fragment: Option<&str>) {
-        let uri = URI::new(uri);
+        let uri = Uri::new(uri);
         assert_eq!(uri.fragment(), fragment);
     }
 
@@ -877,7 +877,7 @@ mod tests {
 
     #[test]
     fn to_string() {
-        let uri_to_string = |string| URI::new(string).to_string();
+        let uri_to_string = |string| Uri::new(string).to_string();
 
         assert_eq!(uri_to_string("/"), "/".to_string());
         assert_eq!(uri_to_string("//"), "/".to_string());

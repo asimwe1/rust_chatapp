@@ -137,6 +137,6 @@ pub fn uri_internal(
 
     MacEager::expr(quote_expr!(ecx, {
         $argument_stmts
-        ::rocket::http::uri::URI::from(format!($fmt_string, $format_assign_tokens))
+        ::rocket::http::uri::Uri::from(format!($fmt_string, $format_assign_tokens))
     }))
 }
