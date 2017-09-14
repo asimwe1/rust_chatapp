@@ -3,19 +3,21 @@ mod arg_ext;
 mod parser_ext;
 mod ident_ext;
 mod span_ext;
+mod expr_ext;
 
 pub use self::arg_ext::ArgExt;
 pub use self::meta_item_ext::MetaItemExt;
 pub use self::parser_ext::ParserExt;
 pub use self::ident_ext::IdentExt;
 pub use self::span_ext::SpanExt;
+pub use self::expr_ext::ExprExt;
 
 use std::convert::AsRef;
 
 use syntax;
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Item, Expr};
+use syntax::ast::{Item, Ident, Expr};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::codemap::{Span, Spanned, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
@@ -127,6 +129,10 @@ pub fn is_valid_ident<S: AsRef<str>>(s: S) -> bool {
     }
 
     true
+}
+
+pub fn split_idents(path: &str) -> Vec<Ident> {
+    path.split("::").map(|segment| Ident::from_str(segment)).collect()
 }
 
 macro_rules! quote_enum {

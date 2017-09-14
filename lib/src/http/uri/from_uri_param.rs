@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use http::RawStr;
 use http::uri::UriDisplay;
 
-trait FromUriParam<T>: UriDisplay {
+pub trait FromUriParam<T>: UriDisplay {
     type Target: UriDisplay;
     fn from_uri_param(param: T) -> Self::Target;
 }

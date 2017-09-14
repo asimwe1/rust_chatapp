@@ -18,7 +18,6 @@ impl<'a> FromParam<'a> for S {
 fn simple(id: i32) -> &'static str { "" }
 
 #[post("/<id>/<name>")]
-    //~^ ERROR the trait bound `S: rocket::http::uri::UriDisplay` is not satisfied
 fn not_uri_display(id: i32, name: S) -> &'static str { "" }
 
 #[post("/<id>/<name>")]
@@ -26,10 +25,11 @@ fn not_uri_display_but_unused(id: i32, name: S) -> &'static str { "" }
 
 fn main() {
     uri!(simple: id = "hi");
-        //~^ ERROR the trait bound `i32: std::convert::From<&str>` is not satisfied
+        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<&str>` is not satisfied
     uri!(simple: "hello");
-        //~^ ERROR the trait bound `i32: std::convert::From<&str>` is not satisfied
+        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<&str>` is not satisfied
     uri!(simple: id = 239239i64);
-        //~^ ERROR the trait bound `i32: std::convert::From<i64>` is not satisfied
+        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<i64>` is not satisfied
     uri!(not_uri_display: 10, S);
+        //~^ ERROR trait bound `S: rocket::http::uri::FromUriParam<_>` is not satisfied
 }

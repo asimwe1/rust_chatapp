@@ -8,7 +8,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Uri, UriDisplay};
+use rocket::http::uri::{Uri, UriDisplay, FromUriParam};
 use rocket::request::Form;
 
 #[derive(FromForm)]
@@ -26,8 +26,9 @@ impl<'a> UriDisplay for User<'a> {
     }
 }
 
-impl<'a, 'b> From<(&'a str, &'b str)> for User<'a> {
-    fn from((name, nickname): (&'a str, &'b str)) -> User<'a> {
+impl<'a, 'b> FromUriParam<(&'a str, &'b str)> for User<'a> {
+    type Target = User<'a>;
+    fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
         User { name: name.into(), nickname: nickname.to_string() }
     }
 }
@@ -99,18 +100,16 @@ fn check_simple_unnamed() {
         uri!(simple2_flipped: 100, "hello".to_string()) => "/100/hello",
     }
 
-    // Ensure that `.into()` is called.
+    // Ensure that `.from_uri_param()` is called.
     assert_uri_eq! {
-        uri!(simple2: 100i8, "hello") => "/100/hello",
-        uri!(simple2: 100i16, "hi") => "/100/hi",
         uri!(simple2: 100, "hello") => "/100/hello",
         uri!(simple2_flipped: 1349, "hey") => "/1349/hey",
     }
 
     // Ensure that the `UriDisplay` trait is being used.
     assert_uri_eq! {
-        uri!(simple2: 100i8, "hello there") => "/100/hello%20there",
-        uri!(simple2_flipped: 100i8, "hello there") => "/100/hello%20there",
+        uri!(simple2: 100, "hello there") => "/100/hello%20there",
+        uri!(simple2_flipped: 100, "hello there") => "/100/hello%20there",
     }
 }
 
@@ -128,24 +127,22 @@ fn check_simple_named() {
         uri!(simple2_flipped: name = "hello".to_string(), id = 100) => "/100/hello",
     }
 
-    // Ensure that `.into()` is called.
+    // Ensure that `.from_uri_param()` is called.
     assert_uri_eq! {
-        uri!(simple2: id = 100i8, name = "hello") => "/100/hello",
-        uri!(simple2: id = 100i16, name = "hi") => "/100/hi",
+        uri!(simple2: id = 100, name = "hello") => "/100/hello",
+        uri!(simple2: id = 100, name = "hi") => "/100/hi",
         uri!(simple2: id = 1349, name = "hey") => "/1349/hey",
-        uri!(simple2: name = "hello", id = 100i8) => "/100/hello",
-        uri!(simple2: name = "hi", id = 100i16) => "/100/hi",
-        uri!(simple2: name = "hey", id = 1349) => "/1349/hey",
+        uri!(simple2: name = "hello", id = 100) => "/100/hello",
+        uri!(simple2: name = "hi", id = 100) => "/100/hi",
         uri!(simple2_flipped: id = 1349, name = "hey") => "/1349/hey",
-        uri!(simple2_flipped: name = "hello", id = 100i8) => "/100/hello",
     }
 
     // Ensure that the `UriDisplay` trait is being used.
     assert_uri_eq! {
-        uri!(simple2: id = 100i8, name = "hello there") => "/100/hello%20there",
-        uri!(simple2: name = "hello there", id = 100i8) => "/100/hello%20there",
-        uri!(simple2_flipped: id = 100i8, name = "hello there") => "/100/hello%20there",
-        uri!(simple2_flipped: name = "hello there", id = 100i8) => "/100/hello%20there",
+        uri!(simple2: id = 100, name = "hello there") => "/100/hello%20there",
+        uri!(simple2: name = "hello there", id = 100) => "/100/hello%20there",
+        uri!(simple2_flipped: id = 100, name = "hello there") => "/100/hello%20there",
+        uri!(simple2_flipped: name = "hello there", id = 100) => "/100/hello%20there",
     }
 }
 
@@ -190,12 +187,22 @@ fn check_with_segments() {
         uri!("/c", segments: PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
         uri!("/c", segments: path = PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
         uri!(segments: PathBuf::from("one/ tw?o/")) => "/a/one/%20tw%3Fo/",
-        uri!(param_and_segments: 10usize, PathBuf::from("a/b")) => "/a/10/then/a/b",
-        uri!(param_and_segments: id = 10usize, path = PathBuf::from("a/b"))
+        uri!(param_and_segments: 10, PathBuf::from("a/b")) => "/a/10/then/a/b",
+        uri!(param_and_segments: id = 10, path = PathBuf::from("a/b"))
             => "/a/10/then/a/b",
-        uri!(guarded_segments: 10usize, PathBuf::from("a/b")) => "/a/10/then/a/b",
-        uri!(guarded_segments: id = 10usize, path = PathBuf::from("a/b"))
+        uri!(guarded_segments: 10, PathBuf::from("a/b")) => "/a/10/then/a/b",
+        uri!(guarded_segments: id = 10, path = PathBuf::from("a/b"))
             => "/a/10/then/a/b",
+    }
+
+    // Now check the `from_uri_param()` conversions for `PathBuf`.
+    assert_uri_eq! {
+        uri!(segments: "one/two/three") => "/a/one/two/three",
+        uri!("/oh", segments: path = "one/two/three") => "/oh/a/one/two/three",
+        uri!(segments: "one/ tw?o/") => "/a/one/%20tw%3Fo/",
+        uri!(param_and_segments: id = 10, path = "a/b") => "/a/10/then/a/b",
+        uri!(guarded_segments: 10, "a/b") => "/a/10/then/a/b",
+        uri!(guarded_segments: id = 10, path = "a/b") => "/a/10/then/a/b",
     }
 }
 
@@ -205,11 +212,13 @@ fn check_complex() {
         uri!(complex: "no idea", ("A B C", "a c")) => "/no%20idea?name=A+B+C&nickname=a+c",
         uri!(complex: "Bob", User { name: "Robert".into(), nickname: "Bob".into() })
             => "/Bob?name=Robert&nickname=Bob",
+        uri!(complex: "Bob", &User { name: "Robert".into(), nickname: "Bob".into() })
+            => "/Bob?name=Robert&nickname=Bob",
         uri!(complex: "no idea", User { name: "Robert Mike".into(), nickname: "Bob".into() })
             => "/no%20idea?name=Robert+Mike&nickname=Bob",
         uri!("/some/path", complex: "no idea", ("A B C", "a c"))
             => "/some/path/no%20idea?name=A+B+C&nickname=a+c",
-        uri!(complex: name = "Bob", query = User { name: "Robert".into(), nickname: "Bob".into() })
+        uri!(complex: name = "Bob", query = &User { name: "Robert".into(), nickname: "Bob".into() })
             => "/Bob?name=Robert&nickname=Bob",
         uri!(complex: query = User { name: "Robert".into(), nickname: "Bob".into() }, name = "Bob")
             => "/Bob?name=Robert&nickname=Bob",
@@ -219,6 +228,50 @@ fn check_complex() {
             => "/no%20idea?name=A+B+C&nickname=a+c",
         uri!("/hey", complex: name = "no idea", query = ("A B C", "a c"))
             => "/hey/no%20idea?name=A+B+C&nickname=a+c",
+    }
+
+    // Ensure variables are correctly processed.
+    let user = User { name: "Robert".into(), nickname: "Bob".into() };
+    assert_uri_eq! {
+        uri!(complex: "complex", &user) => "/complex?name=Robert&nickname=Bob",
+        uri!(complex: "complex", user) => "/complex?name=Robert&nickname=Bob",
+    }
+}
+
+#[test]
+fn check_location_promotion() {
+    struct S1(String);
+    struct S2 { name: String };
+
+    let s1 = S1("Bob".into());
+    let s2 = S2 { name: "Bob".into() };
+
+    assert_uri_eq! {
+        uri!(simple2: 1, &S1("A".into()).0) => "/1/A",
+        uri!(simple2: 1, S1("A".into()).0) => "/1/A",
+        uri!(simple2: 1, &S2 { name: "A".into() }.name) => "/1/A",
+        uri!(simple2: 1, S2 { name: "A".into() }.name) => "/1/A",
+        uri!(simple2: 1, &s1.0) => "/1/Bob",
+        uri!(simple2: 1, &s2.name) => "/1/Bob",
+        uri!(simple2: 2, &s1.0) => "/2/Bob",
+        uri!(simple2: 2, &s2.name) => "/2/Bob",
+        uri!(simple2: 2, s1.0) => "/2/Bob",
+        uri!(simple2: 2, s2.name) => "/2/Bob",
+    }
+
+    let mut s1 = S1("Bob".into());
+    let mut s2 = S2 { name: "Bob".into() };
+    assert_uri_eq! {
+        uri!(simple2: 1, &mut S1("A".into()).0) => "/1/A",
+        uri!(simple2: 1, S1("A".into()).0) => "/1/A",
+        uri!(simple2: 1, &mut S2 { name: "A".into() }.name) => "/1/A",
+        uri!(simple2: 1, S2 { name: "A".into() }.name) => "/1/A",
+        uri!(simple2: 1, &mut s1.0) => "/1/Bob",
+        uri!(simple2: 1, &mut s2.name) => "/1/Bob",
+        uri!(simple2: 2, &mut s1.0) => "/2/Bob",
+        uri!(simple2: 2, &mut s2.name) => "/2/Bob",
+        uri!(simple2: 2, s1.0) => "/2/Bob",
+        uri!(simple2: 2, s2.name) => "/2/Bob",
     }
 }
 
@@ -243,7 +296,7 @@ mod typed_uris {
             uri!(simple: id = 100) => "/typed_uris/100",
             uri!(::simple: id = 100) => "/100",
             uri!("/mount", ::simple: id = 100) => "/mount/100",
-            uri!(::simple2: id = 100i8, name = "hello") => "/100/hello",
+            uri!(::simple2: id = 100, name = "hello") => "/100/hello",
         }
     }
 

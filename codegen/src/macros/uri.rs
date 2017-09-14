@@ -4,6 +4,7 @@ use std::fmt::Display;
 
 use URI_INFO_MACRO_PREFIX;
 use super::prefix_path;
+use utils::{SpanExt, IdentExt, split_idents, ExprExt};
 
 use parser::{UriParams, InternalUriParams, Validation};
 
@@ -108,8 +109,7 @@ pub fn uri_internal(
     let mut format_assign_tokens = vec![];
     let mut fmt_string = internal.uri_fmt_string();
     if let Some(mount_point) = internal.uri_params.mount_point {
-        // TODO: Should all expressions, not just string literals, be allowed?
-        // let as_ref = ecx.expr_method_call(span, expr, Ident::from_str("as_ref"), v![]);
+        // generating: let mount: &str = $mount_string;
         let mount_string = mount_point.node;
         argument_stmts.push(ecx.stmt_let_typed(
             mount_point.span,
@@ -119,20 +119,53 @@ pub fn uri_internal(
             quote_expr!(ecx, $mount_string),
         ));
 
-        format_assign_tokens.push(quote_tokens!(ecx, mount = mount,));
+        // generating: format string arg for `mount`
+        let mut tokens = quote_tokens!(ecx, mount = mount,);
+        tokens.iter_mut().for_each(|tree| tree.set_span(mount_point.span));
+        format_assign_tokens.push(tokens);
+
+        // Ensure the `format!` string contains the `{mount}` parameter.
         fmt_string = "{mount}".to_string() + &fmt_string;
     }
 
     // Now the user's parameters.
+    // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
     for (i, &(ident, ref ty)) in internal.fn_args.iter().enumerate() {
-        let (span, expr) = (exprs[i].span, exprs[i].clone());
-        let into = ecx.expr_method_call(span, expr, Ident::from_str("into"), vec![]);
-        let stmt = ecx.stmt_let_typed(span, false, ident.node, ty.clone(), into);
+        let (span, mut expr) = (exprs[i].span, exprs[i].clone());
 
+        // path for call: <T as FromUriParam<_>>::from_uri_param
+        let idents = split_idents("rocket::http::uri::FromUriParam");
+        let generics = vec![ecx.ty(span, ast::TyKind::Infer)];
+        let trait_path = ecx.path_all(span, true, idents, vec![], generics, vec![]);
+        let method = span.wrap(Ident::from_str("from_uri_param"));
+        let (qself, path) = ecx.qpath(ty.clone(), trait_path, method);
+
+        // replace &expr with [let tmp = expr; &tmp] so that borrows of
+        // temporary expressions live at least as long as the call to
+        // `from_uri_param`. Otherwise, exprs like &S { .. } won't compile.
+        let cloned_expr = expr.clone().unwrap();
+        if let ast::ExprKind::AddrOf(_, inner) = cloned_expr.node {
+            // Only reassign temporary expressions, not locations.
+            if !inner.is_location() {
+                let tmp_ident = ident.node.append("_tmp");
+                let tmp_stmt = ecx.stmt_let(span, false, tmp_ident, inner);
+                argument_stmts.push(tmp_stmt);
+                expr = ecx.expr_ident(span, tmp_ident);
+            }
+        }
+
+        // generating: let $ident = path($expr);
+        let path_expr = ecx.expr_qpath(span, qself, path);
+        let call = ecx.expr_call(span, path_expr, vec![expr]);
+        let stmt = ecx.stmt_let(span, false, ident.node, call);
+        debug!("Emitting URI typecheck statement: {:?}", stmt);
         argument_stmts.push(stmt);
-        format_assign_tokens.push(quote_tokens!(ecx,
-            $ident = &$ident as &::rocket::http::uri::UriDisplay,
-        ));
+
+        // generating: arg assignment tokens for format string
+        let uri_display = quote_path!(ecx, ::rocket::http::uri::UriDisplay);
+        let mut tokens = quote_tokens!(ecx, $ident = &$ident as &$uri_display,);
+        tokens.iter_mut().for_each(|tree| tree.set_span(span));
+        format_assign_tokens.push(tokens);
     }
 
     MacEager::expr(quote_expr!(ecx, {
