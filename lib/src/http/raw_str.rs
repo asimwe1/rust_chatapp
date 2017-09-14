@@ -6,8 +6,6 @@ use std::ascii::AsciiExt;
 use std::str::Utf8Error;
 use std::fmt;
 
-use url;
-
 use http::uncased::UncasedStr;
 
 /// A reference to a string inside of a raw HTTP message.
@@ -98,7 +96,7 @@ impl RawStr {
     /// ```
     #[inline(always)]
     pub fn percent_decode(&self) -> Result<Cow<str>, Utf8Error> {
-        url::percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
+        ::percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
     }
 
     /// Returns a percent-decoded version of the string. Any invalid UTF-8
@@ -133,7 +131,7 @@ impl RawStr {
     /// ```
     #[inline(always)]
     pub fn percent_decode_lossy(&self) -> Cow<str> {
-        url::percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
+        ::percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
     }
 
     /// Returns a URL-decoded version of the string. This is identical to

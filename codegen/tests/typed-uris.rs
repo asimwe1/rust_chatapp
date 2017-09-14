@@ -5,6 +5,7 @@
 extern crate rocket;
 
 use std::fmt;
+use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
 use rocket::http::uri::{Uri, UriDisplay};
@@ -69,6 +70,15 @@ fn complex<'r>(
     user: Form<'r, User<'r>>,
     cookies: Cookies
 ) -> &'static str { "" }
+
+#[post("/a/<path..>")]
+fn segments(path: PathBuf) -> &'static str { "" }
+
+#[post("/a/<id>/then/<path..>")]
+fn param_and_segments(path: PathBuf, id: usize) -> &'static str { "" }
+
+#[post("/a/<id>/then/<path..>")]
+fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) -> &'static str { "" }
 
 macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
     $(assert_eq!($uri, Uri::from($expected));)+
@@ -169,6 +179,23 @@ fn check_guards_ignored() {
         uri!(guard_1: id = 100) => "/100",
         uri!(guard_2: name = "boo", id = 2938) => "/2938/boo",
         uri!(guard_3: name = "Bob", id = 340) => "/a/340/hi/Bob/hey",
+    }
+}
+
+#[test]
+fn check_with_segments() {
+    assert_uri_eq! {
+        uri!(segments: PathBuf::from("one/two/three")) => "/a/one/two/three",
+        uri!(segments: path = PathBuf::from("one/two/three")) => "/a/one/two/three",
+        uri!("/c", segments: PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
+        uri!("/c", segments: path = PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
+        uri!(segments: PathBuf::from("one/ tw?o/")) => "/a/one/%20tw%3Fo/",
+        uri!(param_and_segments: 10usize, PathBuf::from("a/b")) => "/a/10/then/a/b",
+        uri!(param_and_segments: id = 10usize, path = PathBuf::from("a/b"))
+            => "/a/10/then/a/b",
+        uri!(guarded_segments: 10usize, PathBuf::from("a/b")) => "/a/10/then/a/b",
+        uri!(guarded_segments: id = 10usize, path = PathBuf::from("a/b"))
+            => "/a/10/then/a/b",
     }
 }
 

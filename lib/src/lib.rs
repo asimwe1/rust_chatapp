@@ -102,9 +102,9 @@
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;
 #[cfg(feature = "tls")] extern crate hyper_sync_rustls;
+#[macro_use] extern crate percent_encoding;
 extern crate yansi;
 extern crate hyper;
-extern crate url;
 extern crate toml;
 extern crate num_cpus;
 extern crate state;

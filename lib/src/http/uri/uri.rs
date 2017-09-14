@@ -1,14 +1,8 @@
-//! Borrowed and owned string types for absolute URIs.
-
 use std::fmt;
 use std::convert::From;
 use std::borrow::Cow;
 use std::str::Utf8Error;
 use std::sync::atomic::{AtomicIsize, Ordering};
-
-use http::RawStr;
-
-use url;
 
 /// Index (start, end) into a string, to prevent borrowing.
 type Index = (usize, usize);
@@ -229,7 +223,7 @@ impl<'a> Uri<'a> {
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
     pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
-        let decoder = url::percent_encoding::percent_decode(string);
+        let decoder = ::percent_encoding::percent_decode(string);
         decoder.decode_utf8()
     }
 
@@ -247,7 +241,7 @@ impl<'a> Uri<'a> {
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
     pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
-        let decoder = url::percent_encoding::percent_decode(string);
+        let decoder = ::percent_encoding::percent_decode(string);
         decoder.decode_utf8_lossy()
     }
 
@@ -264,8 +258,8 @@ impl<'a> Uri<'a> {
     /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
     pub fn percent_encode(string: &str) -> Cow<str> {
-        let set = url::percent_encoding::PATH_SEGMENT_ENCODE_SET;
-        url::percent_encoding::utf8_percent_encode(string, set).into()
+        let set = ::percent_encoding::PATH_SEGMENT_ENCODE_SET;
+        ::percent_encoding::utf8_percent_encode(string, set).into()
     }
 
     /// Returns the inner string of this URI.
@@ -347,305 +341,6 @@ impl<'a> fmt::Display for Uri<'a> {
         Ok(())
     }
 }
-
-/// Trait implemented by types that can be displayed as part of a URI.
-///
-/// Types implementing this trait can be displayed in a URI-safe manner. Unlike
-/// `Display`, the string written by a `UriDisplay` implementation must be
-/// URI-safe. In practice, this means that the string must either be
-/// percent-encoded or consist only of characters that are alphanumeric, "-",
-/// ".", "_", or "~" - the "unreserved" characters.
-///
-/// # Code Generation
-///
-/// When the `uri!` macro is used to generate a URI for a route, the types for
-/// the route's URI parameters must implement `UriDisplay`. The `UriDisplay`
-/// implementation for these types is used when generating the URI.
-///
-/// To illustrate `UriDisplay`'s role in code generation for `uri!`, consider
-/// the following fictional route and struct definition:
-///
-/// ```rust,ignore
-/// struct Value { .. };
-///
-/// #[get("/item/<id>/<value>")]
-/// fn get_item(id: i32, value: Value) -> T { .. }
-/// ```
-///
-/// A URI for this route can be generated as follows:
-///
-/// ```rust,ignore
-/// // With unnamed parameters.
-/// uri!(get_item: 100, Value { .. });
-///
-/// // With named parameters.
-/// uri!(get_item: id = 100, value = Value { .. });
-/// ```
-///
-/// After verifying parameters and their types, Rocket will generate code
-/// similar to the following:
-///
-/// ```rust,ignore
-/// format!("/item/{id}/{value}",
-///     id = &100 as &UriDisplay,
-///     value = &Value { .. } as &UriDisplay);
-/// ```
-///
-/// For this expression  to typecheck, both `i32` and `Value` must implement
-/// `UriDisplay`. As can be seen, the implementation will be used to display the
-/// value in a URI-safe manner.
-///
-/// [`uri!`]: /rocket_codegen/#procedural-macros
-///
-/// # Provided Implementations
-///
-/// Rocket implements `UriDisplay` for several built-in types. Their behavior is
-/// documented here.
-///
-///   * **i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
-///     IpAddr, Ipv4Addr, Ipv6Addr**
-///
-///     The implementation of `UriDisplay` for these types is identical to the
-///     `Display` implementation.
-///
-///   * **[`&RawStr`](/rocket/http/struct.RawStr.html), String, &str, Cow<str>**
-///
-///     The string is percent encoded.
-///
-///   * **&T, &mut T** _where_ **T: UriDisplay**
-///
-///     Uses the implementation of `UriDisplay` for `T`.
-///
-/// # Implementing
-///
-/// Implementing `UriDisplay` is similar to implementing `Display` with the
-/// caveat that extra care must be taken to ensure that the written string is
-/// URI-safe. As mentioned before, in practice, this means that the string must
-/// either be percent-encoded or consist only of characters that are
-/// alphanumeric, "-", ".", "_", or "~".
-///
-/// When manually implementing `UriDisplay` for your types, you should defer to
-/// existing implementations of `UriDisplay` as much as possible. In the example
-/// below, for instance, `Name`'s implementation defers to `String`'s
-/// implementation. To percent-encode a string, use [`Uri::percent_encode()`].
-///
-/// [`Uri::percent_encode()`]: https://api.rocket.rs/rocket/http/uri/struct.Uri.html#method.percent_encode
-///
-/// ## Example
-///
-/// The following snippet consists of a `Name` type that implements both
-/// `FromParam` and `UriDisplay`. The `FromParam` implementation allows `Name`
-/// to be used as the target type of a dynamic parameter, while the `UriDisplay`
-/// implementation allows URIs to be generated for routes with `Name` as a
-/// dynamic parameter type.
-///
-/// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
-/// # fn main() {  }
-/// use rocket::http::RawStr;
-/// use rocket::request::FromParam;
-///
-/// struct Name(String);
-///
-/// impl<'r> FromParam<'r> for Name {
-///     type Error = &'r RawStr;
-///
-///     /// Validates parameters that contain no spaces.
-///     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-///         let decoded = param.percent_decode().map_err(|_| param)?;
-///         match decoded.contains(' ') {
-///             false => Ok(Name(decoded.into_owned())),
-///             true => Err(param),
-///         }
-///     }
-/// }
-///
-/// use std::fmt;
-/// use rocket::http::uri::UriDisplay;
-/// use rocket::response::Redirect;
-///
-/// impl UriDisplay for Name {
-///     /// Delegates to the `UriDisplay` implementation for `String` to ensure
-///     /// that the written string is URI-safe. In this case, the string will
-///     /// be percent encoded.
-///     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-///         UriDisplay::fmt(&self.0, f)
-///     }
-/// }
-///
-/// #[get("/name/<name>")]
-/// fn redirector(name: Name) -> Redirect {
-///     Redirect::to(uri!(real: name).as_str())
-/// }
-///
-/// #[get("/<name>")]
-/// fn real(name: Name) -> String {
-///     format!("Hello, {}!", name.0)
-/// }
-/// ```
-
-// FIXME: Put this more narrative-like text in the guide. Fix it up beforehand.
-//
-// Now we have the following routes. The first route accepts a URI parameter of
-// type `Name` and redirects to the second route:
-//
-// ```rust
-// # #![feature(plugin, decl_macro)]
-// # #![plugin(rocket_codegen)]
-// # extern crate rocket;
-// # use rocket::request::FromParam;
-// # use rocket::http::RawStr;
-// # struct Name(String);
-// # impl Name {
-// #     fn new(name: String) -> Option<Name> {
-// #       if !name.contains(' ') { Some(name) } else { None }
-// #     }
-// # }
-// # impl<'r> FromParam<'r> for Name {
-// #     type Error = &'r RawStr;
-// #     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-// #         Name::new(param.percent_decode().into_owned()).ok_or(param)
-// #     }
-// # }
-// use rocket::response::Redirect;
-//
-// #[get("/name/<name>")]
-// fn redirector(name: Name) -> Redirect {
-//     Redirect::to(&format!("/{}", name.0))
-// }
-//
-// #[get("/<name>")]
-// fn real(name: Name) -> String {
-//     format!("Hello, {}!", name.0)
-// }
-// ```
-//
-// The redirection in the `redirector` route creates a URI that should lead to
-// the `real` route. But it does this in an ad-hoc manner. What happens if the
-// `real` route changes? At best, the redirection will fail and the user will
-// receive a 404.
-//
-// To prevent this kind of issue the `uri!` macro can be used, passing in the
-// `name` received from the route. When the `Name` type is used along with the
-// `uri!` macro, the `UriDisplay` trait must be implemented. Both of these
-// steps are done in the example below:
-//
-// ```rust
-// # #![feature(plugin, decl_macro)]
-// # #![plugin(rocket_codegen)]
-// # extern crate rocket;
-// # use rocket::request::FromParam;
-// # use rocket::http::RawStr;
-// # struct Name(String);
-// # impl Name {
-// #     fn new(name: String) -> Option<Name> {
-// #       if !name.contains(' ') { Some(name) } else { None }
-// #     }
-// # }
-// # impl<'r> FromParam<'r> for Name {
-// #     type Error = &'r RawStr;
-// #     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-// #         Name::new(param.percent_decode().into_owned()).ok_or(param)
-// #     }
-// # }
-// use std::fmt;
-// use rocket::http::uri::UriDisplay;
-// use rocket::response::Redirect;
-//
-// impl UriDisplay for Name {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         UriDisplay::fmt(&self.0, f)
-//     }
-// }
-//
-// #[get("/name/<name>")]
-// fn redirector(name: Name) -> Redirect {
-//     Redirect::to(uri!(real: name).as_str())
-// }
-//
-// #[get("/<name>")]
-// fn real(name: Name) -> String {
-//     format!("Hello, {}!", name.0)
-// }
-// ```
-pub trait UriDisplay {
-    /// Formats `self` in a URI-safe manner using the given formatter.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
-}
-
-impl<'a> fmt::Display for &'a UriDisplay {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        UriDisplay::fmt(*self, f)
-    }
-}
-
-/// Percent-encodes the raw string.
-impl<'a> UriDisplay for &'a RawStr {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode((*self).as_str()))
-    }
-}
-
-/// Percent-encodes the raw string.
-impl<'a> UriDisplay for &'a str {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self))
-    }
-}
-
-/// Percent-encodes the raw string.
-impl<'a> UriDisplay for Cow<'a, str> {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self))
-    }
-}
-
-/// Percent-encodes the raw string.
-impl UriDisplay for String {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self.as_str()))
-    }
-}
-
-macro_rules! impl_with_display {
-    ($($T:ty),+) => {$(
-        /// This implementation is identical to the `Display` implementation.
-        impl UriDisplay for $T  {
-            #[inline(always)]
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                fmt::Display::fmt(self, f)
-            }
-        }
-    )+}
-}
-
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-
-impl_with_display! {
-    i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
-    IpAddr, Ipv4Addr, Ipv6Addr
-}
-
-macro_rules! impl_for_ref {
-    ($($T:ty),+) => {$(
-        /// Uses the implementation of `UriDisplay` for `T`.
-        impl<'a, T: UriDisplay + ?Sized> UriDisplay for $T {
-            #[inline(always)]
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                UriDisplay::fmt(*self, f)
-            }
-        }
-    )+}
-}
-
-impl_for_ref!(&'a mut T, &'a T);
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///

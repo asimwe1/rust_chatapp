@@ -106,7 +106,7 @@ pub fn uri_internal(
     // Generate the statements to typecheck each parameter. First, the mount.
     let mut argument_stmts = vec![];
     let mut format_assign_tokens = vec![];
-    let mut fmt_string = internal.uri.node.replace('<', "{").replace('>', "}");
+    let mut fmt_string = internal.uri_fmt_string();
     if let Some(mount_point) = internal.uri_params.mount_point {
         // TODO: Should all expressions, not just string literals, be allowed?
         // let as_ref = ecx.expr_method_call(span, expr, Ident::from_str("as_ref"), v![]);
