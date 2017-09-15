@@ -138,7 +138,7 @@ We typically call `launch` from the `main` function. Our complete _Hello,
 world!_ application thus looks like:
 
 ```rust
-#![feature(plugin)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
@@ -153,10 +153,11 @@ fn main() {
 }
 ```
 
-Note that we've added the `#![feature(plugin)]` and `#![plugin(rocket_codegen)]`
-lines to tell Rust that we'll be using Rocket's code generation plugin. We've
-also imported the `rocket` crate into our namespace via `extern crate rocket`.
-Finally, we call the `launch` method in the `main` function.
+Note that we've added the `#![feature(plugin, decl_macro)]` and
+`#![plugin(rocket_codegen)]` lines to tell Rust that we'll be using Rocket's
+code generation plugin. We've also imported the `rocket` crate into our
+namespace via `extern crate rocket`. Finally, we call the `launch` method in the
+`main` function.
 
 Running the application, the console shows:
 

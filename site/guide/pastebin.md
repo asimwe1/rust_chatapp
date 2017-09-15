@@ -51,7 +51,7 @@ And finally, create a skeleton Rocket application to work off of in
 `src/main.rs`:
 
 ```rust
-#![feature(plugin)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
