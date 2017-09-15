@@ -1,13 +1,13 @@
 use request::Request;
 use response::{Response, Responder};
-use http::hyper::header;
+use http::uri::Uri;
 use http::Status;
 
 /// An empty redirect response to a given URL.
 ///
 /// This type simplifies returning a redirect response to the client.
 #[derive(Debug)]
-pub struct Redirect(Status, String);
+pub struct Redirect(Status, Uri<'static>);
 
 impl Redirect {
     /// Construct a temporary "see other" (303) redirect response. This is the
@@ -23,8 +23,8 @@ impl Redirect {
     /// # #[allow(unused_variables)]
     /// let redirect = Redirect::to("/other_url");
     /// ```
-    pub fn to(uri: &str) -> Redirect {
-        Redirect(Status::SeeOther, String::from(uri))
+    pub fn to<U: Into<Uri<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::SeeOther, uri.into())
     }
 
     /// Construct a "temporary" (307) redirect response. This response instructs
@@ -41,8 +41,8 @@ impl Redirect {
     /// # #[allow(unused_variables)]
     /// let redirect = Redirect::temporary("/other_url");
     /// ```
-    pub fn temporary(uri: &str) -> Redirect {
-        Redirect(Status::TemporaryRedirect, String::from(uri))
+    pub fn temporary<U: Into<Uri<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::TemporaryRedirect, uri.into())
     }
 
     /// Construct a "permanent" (308) redirect response. This redirect must only
@@ -60,8 +60,8 @@ impl Redirect {
     /// # #[allow(unused_variables)]
     /// let redirect = Redirect::permanent("/other_url");
     /// ```
-    pub fn permanent(uri: &str) -> Redirect {
-        Redirect(Status::PermanentRedirect, String::from(uri))
+    pub fn permanent<U: Into<Uri<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::PermanentRedirect, uri.into())
     }
 
     /// Construct a temporary "found" (302) redirect response. This response
@@ -79,8 +79,8 @@ impl Redirect {
     /// # #[allow(unused_variables)]
     /// let redirect = Redirect::found("/other_url");
     /// ```
-    pub fn found(uri: &str) -> Redirect {
-        Redirect(Status::Found, String::from(uri))
+    pub fn found<U: Into<Uri<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::Found, uri.into())
     }
 
     /// Construct a permanent "moved" (301) redirect response. This response
@@ -96,8 +96,8 @@ impl Redirect {
     /// # #[allow(unused_variables)]
     /// let redirect = Redirect::moved("/other_url");
     /// ```
-    pub fn moved(uri: &str) -> Redirect {
-        Redirect(Status::MovedPermanently, String::from(uri))
+    pub fn moved<U: Into<Uri<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::MovedPermanently, uri.into())
     }
 }
 
@@ -108,7 +108,7 @@ impl Responder<'static> for Redirect {
     fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         Response::build()
             .status(self.0)
-            .header(header::Location(self.1))
+            .raw_header("Location", self.1.to_string())
             .ok()
     }
 }

@@ -144,7 +144,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///
 /// #[get("/name/<name>")]
 /// fn redirector(name: Name) -> Redirect {
-///     Redirect::to(uri!(real: name).as_str())
+///     Redirect::to(uri!(real: name))
 /// }
 ///
 /// #[get("/<name>")]

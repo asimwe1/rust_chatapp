@@ -9,7 +9,7 @@ use rocket::response::Redirect;
 
 #[get("/")]
 fn root() -> Redirect {
-    Redirect::to("/login")
+    Redirect::to(uri!(login))
 }
 
 #[get("/login")]
