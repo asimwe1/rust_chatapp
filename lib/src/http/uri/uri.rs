@@ -312,6 +312,13 @@ impl<'a> From<&'a str> for Uri<'a> {
     }
 }
 
+impl<'a> From<Cow<'a, str>> for Uri<'a> {
+    #[inline(always)]
+    fn from(uri: Cow<'a, str>) -> Uri<'a> {
+        Uri::new(uri)
+    }
+}
+
 impl From<String> for Uri<'static> {
     #[inline(always)]
     fn from(uri: String) -> Uri<'static> {
