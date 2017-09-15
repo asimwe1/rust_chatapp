@@ -116,14 +116,90 @@
 //!
 //!   * **routes**
 //!   * **errors**
+//!   * **uri**
 //!
-//! The syntax for both of these is defined as:
+//! The syntax for `routes!` and `errors!` is defined as:
 //!
 //! <pre>
-//! macro := PATH (',' macro)*
+//! macro := PATH (',' PATH)*
 //!
 //! PATH := a path, as defined by Rust
 //! </pre>
+//!
+//! ### Typed URIs: `uri!`
+//!
+//! The `uri!` macro creates a type-safe URI given a route and values for the
+//! route's URI parameters.
+//!
+//! For example, for the following route:
+//!
+//! ```rust,ignore
+//! #[get("/person/<name>/<age>")]
+//! fn person(name: String, age: u8) -> String {
+//!     format!("Hello {}! You're {} years old.", name, age)
+//! }
+//! ```
+//!
+//! A URI can be created as follows:
+//!
+//! ```rust,ignore
+//! // with unnamed parameters
+//! let mike = uri!(person: "Mike", 28);
+//!
+//! // with named parameters
+//! let mike = uri!(person: name = "Mike", age = 28);
+//! let mike = uri!(person: age = 28, name = "Mike");
+//!
+//! // with a specific mount-point
+//! let mike = uri!("/api", person: name = "Mike", age = 28);
+//! ```
+//!
+//! #### Grammar
+//!
+//! The grammar for the `uri!` macro is as follows:
+//!
+//! <pre>
+//! uri := (mount ',')? PATH (':' params)?
+//!
+//! mount = STRING
+//! params := unnamed | named
+//! unnamed := EXPR (',' EXPR)*
+//! named := IDENT = EXPR (',' named)?
+//!
+//! EXPR := a valid Rust expression (examples: `foo()`, `12`, `"hey"`)
+//! IDENT := a valid Rust identifier (examples: `name`, `age`)
+//! STRING := an uncooked string literal, as defined by Rust (example: `"hi"`)
+//! PATH := a path, as defined by Rust (examples: `route`, `my_mod::route`)
+//! </pre>
+//!
+//! #### Semantics
+//!
+//! The `uri!` macro returns a `Uri` structure with the URI of the supplied
+//! route with the given values. A `uri!` invocation only succeeds if the type
+//! of every value in the invocation matches the type declared for the parameter
+//! in the given route.
+//!
+//! The [`FromUriParam`] trait is used to typecheck and perform a conversion for
+//! each value. If a `FromUriParam<S>` implementation exists for a type `T`,
+//! then a value of type `S` can be used in `uri!` macro for a route URI
+//! parameter declared with a type of `T`. For example, the following
+//! implementation, provided by Rocket, allows an `&str` to be used in a `uri!`
+//! invocation for route URI parameters declared as `String`:
+//!
+//! ```
+//! impl<'a> FromUriParam<&'a str> for String
+//! ```
+//!
+//! Each value passed into `uri!` is rendered in its appropriate place in the
+//! URI using the [`UriDisplay`] implementation for the value's type. The
+//! `UriDisplay` implementation ensures that the rendered value is URI-safe.
+//!
+//! If a mount-point is provided, the mount-point is prepended to the route's
+//! URI.
+//!
+//! [`Uri`]: /rocket/http/uri/struct.URI.html
+//! [`FromUriParam`]: /rocket/http/uri/trait.FromUriParam.html
+//! [`UriDisplay`]: /rocket/http/uri/trait.UriDisplay.html
 //!
 //! # Debugging Codegen
 //!
