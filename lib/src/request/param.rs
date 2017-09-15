@@ -94,6 +94,12 @@ use http::RawStr;
 ///     decoded string is returned. Otherwise, an `Err` with the original path
 ///     segment is returned.
 ///
+///   * **Cow<str>**
+///
+///     Percent decodes the path segment, allocating only when necessary. If the
+///     decode is successful, the decoded string is returned. Otherwise, an
+///     `Err` with the original path segment is returned.
+///
 ///   * **Option&lt;T>** _where_ **T: FromParam**
 ///
 ///     _This implementation always returns successfully._
