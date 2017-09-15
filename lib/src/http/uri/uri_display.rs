@@ -7,13 +7,15 @@ use http::uri::Uri;
 
 use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
-define_encode_set! {
+mod priv_encode_set {
     /// This encode set is used for strings where '/' characters are known to be
     /// safe; all other special path segment characters are encoded.
-    pub PATH_ENCODE_SET = [DEFAULT_ENCODE_SET] | {'%'}
+    define_encode_set! { pub PATH_ENCODE_SET = [super::DEFAULT_ENCODE_SET] | {'%'} }
 }
 
-/// Trait implemented by types that can be displayed as part of a URI.
+use self::priv_encode_set::PATH_ENCODE_SET;
+
+/// Trait implemented by types that can be displayed as part of a URI in `uri!`.
 ///
 /// Types implementing this trait can be displayed in a URI-safe manner. Unlike
 /// `Display`, the string written by a `UriDisplay` implementation must be
@@ -60,7 +62,7 @@ define_encode_set! {
 /// `UriDisplay`. As can be seen, the implementation will be used to display the
 /// value in a URI-safe manner.
 ///
-/// [`uri!`]: /rocket_codegen/#procedural-macros
+/// [`uri!`]: /rocket_codegen/#typed-uris-uri
 ///
 /// # Provided Implementations
 ///
