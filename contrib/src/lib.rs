@@ -1,4 +1,4 @@
-#![feature(drop_types_in_const, macro_reexport)]
+#![feature(macro_reexport)]
 #![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
 
 // TODO: Version URLs.

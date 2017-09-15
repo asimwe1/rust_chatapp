@@ -1,6 +1,5 @@
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
-#![feature(drop_types_in_const)]
 #![feature(const_fn)]
 #![feature(plugin, decl_macro)]
 #![feature(never_type)]
