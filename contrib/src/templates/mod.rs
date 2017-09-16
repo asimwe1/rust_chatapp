@@ -158,9 +158,35 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        AdHoc::on_attach(|rocket| {
-            let mut template_root = rocket.config()
-                .root_relative(DEFAULT_TEMPLATE_DIR);
+        Template::custom(|_| {})
+    }
+
+    /// Returns a fairing that intializes and maintains templating state.
+    ///
+    /// This method allows you to configure the template context via the
+    /// closure.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rocket;
+    /// extern crate rocket_contrib;
+    ///
+    /// use rocket_contrib::Template;
+    ///
+    /// fn main() {
+    ///     rocket::ignite()
+    ///         // ...
+    ///         .attach(Template::custom(|engines| {
+    ///             // engines.handlebars.register_helper ...
+    ///         }))
+    ///         // ...
+    ///     # ;
+    /// }
+    /// ```
+    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
+        AdHoc::on_attach(move |rocket| {
+            let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
 
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
@@ -172,7 +198,10 @@ impl Template {
             };
 
             match Context::initialize(template_root) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                Some(mut ctxt) => {
+                    f(&mut ctxt.engines);
+                    Ok(rocket.manage(ctxt))
+                }
                 None => Err(rocket)
             }
         })
