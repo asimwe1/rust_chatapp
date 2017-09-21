@@ -1,5 +1,3 @@
-extern crate syntax_pos;
-
 use std::fmt::Display;
 
 use URI_INFO_MACRO_PREFIX;
@@ -15,9 +13,6 @@ use syntax::ast::{self, Ident};
 use syntax::parse::PResult;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
-
-/// FIXME: Implement `MultiSpan::From<Vec<Span>>`.
-use self::syntax_pos::MultiSpan as MS;
 
 pub fn uri(
     ecx: &mut ExtCtxt,
@@ -73,14 +68,14 @@ fn extract_exprs<'a>(
 
             if !extra.is_empty() {
                 let (ps, msg) = join(extra.iter().map(|id| id.node));
-                let sp: Vec<_> = extra.iter().map(|ident| ident.span).collect();
-                diag.span_help(MS::from_spans(sp), &format!("unknown {}: {}", ps, msg));
+                let spans: Vec<_> = extra.iter().map(|ident| ident.span).collect();
+                diag.span_help(spans, &format!("unknown {}: {}", ps, msg));
             }
 
             if !dup.is_empty() {
                 let (ps, msg) = join(dup.iter().map(|id| id.node));
-                let sp: Vec<_> = dup.iter().map(|ident| ident.span).collect();
-                diag.span_help(MS::from_spans(sp), &format!("duplicate {}: {}", ps, msg));
+                let spans: Vec<_> = dup.iter().map(|ident| ident.span).collect();
+                diag.span_help(spans, &format!("duplicate {}: {}", ps, msg));
             }
 
             if !missing.is_empty() {
