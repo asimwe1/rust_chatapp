@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::io;
+use std::io::{self, BufReader};
 use std::ops::{Deref, DerefMut};
 
 use request::Request;
@@ -90,7 +90,7 @@ impl Responder<'static> for NamedFile {
             }
         }
 
-        response.set_streamed_body(self.take_file());
+        response.set_streamed_body(BufReader::new(self.take_file()));
         Ok(response)
     }
 }
