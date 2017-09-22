@@ -3,7 +3,7 @@ use std::io::{Cursor, BufReader};
 use std::fmt;
 
 use http::{Status, ContentType};
-use response::Response;
+use response::{self, Response};
 use request::Request;
 
 /// Trait implemented by types that generate responses for clients.
@@ -44,9 +44,16 @@ use request::Request;
 ///
 ///   * **String**
 ///
-///     Sets the `Content-Type`t to `text/plain`. The string is used as the body
+///     Sets the `Content-Type` to `text/plain`. The string is used as the body
 ///     of the response, which is fixed size and not streamed. To stream a
 ///     string, use `Stream::from(Cursor::new(string))`.
+///
+///   * **Vec<u8>**
+///
+///     Sets the `Content-Type` to `application/octet-stream`. The vector's data
+///     is used as the body of the response, which is fixed size and not
+///     streamed. To stream a vector of bytes, use
+///     `Stream::from(Cursor::new(vec))`.
 ///
 ///   * **File**
 ///
@@ -197,6 +204,17 @@ impl<'r> Responder<'r> for String {
     fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build()
             .header(ContentType::Plain)
+            .sized_body(Cursor::new(self))
+            .ok()
+    }
+}
+
+/// Returns a response with Content-Type `application/octet-stream` and a
+/// fixed-size body containing the data in `self`. Always returns `Ok`.
+impl<'r> Responder<'r> for Vec<u8> {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
+        Response::build()
+            .header(ContentType::Binary)
             .sized_body(Cursor::new(self))
             .ok()
     }
