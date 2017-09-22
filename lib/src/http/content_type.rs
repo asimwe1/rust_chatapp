@@ -84,16 +84,19 @@ impl ContentType {
     /// extensions is not recognized, then this method returns `None`. The
     /// currently recognized extensions are txt, html, htm, xml, csv, js, css,
     /// json, png, gif, bmp, jpeg, jpg, webp, svg, pdf, ttf, otf, woff, and
-    /// woff2.
+    /// woff2. Extensions are matched case-insensitively.
     ///
     /// # Example
     ///
-    /// A recognized content type:
+    /// Recognized content types:
     ///
     /// ```rust
     /// use rocket::http::ContentType;
     ///
     /// let xml = ContentType::from_extension("xml");
+    /// assert_eq!(xml, Some(ContentType::XML));
+    ///
+    /// let xml = ContentType::from_extension("XML");
     /// assert_eq!(xml, Some(ContentType::XML));
     /// ```
     ///

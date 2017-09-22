@@ -144,16 +144,19 @@ macro_rules! from_extension {
         /// extensions are recognized. If an extensions is not recognized,
         /// `None` is returned. The currently recognized extensions are
         $(#[doc=$ext]#[doc=","])*
-        /// and is likely to grow.
+        /// and is likely to grow. Extensions are matched case-insensitively.
         ///
         /// # Example
         ///
-        /// A recognized media type:
+        /// Recognized media types:
         ///
         /// ```rust
         /// use rocket::http::MediaType;
         ///
         /// let xml = MediaType::from_extension("xml");
+        /// assert_eq!(xml, Some(MediaType::XML));
+        ///
+        /// let xml = MediaType::from_extension("XML");
         /// assert_eq!(xml, Some(MediaType::XML));
         /// ```
         ///

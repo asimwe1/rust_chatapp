@@ -83,10 +83,8 @@ impl Responder<'static> for NamedFile {
     fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         let mut response = Response::new();
         if let Some(ext) = self.path().extension() {
-            // TODO: Use Cow for lowercase.
-            let ext_string = ext.to_string_lossy().to_lowercase();
-            if let Some(content_type) = ContentType::from_extension(&ext_string) {
-                response.set_header(content_type);
+            if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
+                response.set_header(ct);
             }
         }
 
