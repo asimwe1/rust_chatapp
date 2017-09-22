@@ -25,11 +25,7 @@ fn not_uri_display_but_unused(id: i32, name: S) -> &'static str { "" }
 
 fn main() {
     uri!(simple: id = "hi");
-        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<&str>` is not satisfied
     uri!(simple: "hello");
-        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<&str>` is not satisfied
     uri!(simple: id = 239239i64);
-        //~^ ERROR trait bound `i32: rocket::http::uri::FromUriParam<i64>` is not satisfied
     uri!(not_uri_display: 10, S);
-        //~^ ERROR trait bound `S: rocket::http::uri::FromUriParam<_>` is not satisfied
 }

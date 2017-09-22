@@ -164,22 +164,24 @@ pub fn param_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>>
 }
 
 fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
+    let valid_methods = "valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`";
+    let default_method = dummy_spanned(Method::Get);
+
     if let Some(word) = meta_item.word() {
         if let Ok(method) = Method::from_str(&word.name().as_str()) {
             if is_valid_method(method) {
                 return span(method, word.span());
             }
-        } else {
-            let msg = format!("'{}' is not a valid HTTP method.", word.name());
-            ecx.span_err(word.span(), &msg);
         }
+
+        let msg = format!("'{}' is not a valid method", word.name());
+        ecx.struct_span_err(word.span, &msg).help(valid_methods).emit();
+        return default_method;
     }
 
-    // Fallthrough. Return default method.
-    ecx.struct_span_err(meta_item.span, "expected a valid HTTP method")
-        .help("valid methods are: GET, PUT, POST, DELETE, PATCH")
-        .emit();
-
+    // Fallthrough. Emit a generic error message and return default method.
+    let msg = "expected a valid HTTP method identifier";
+    ecx.struct_span_err(meta_item.span, msg).help(valid_methods).emit();
     dummy_spanned(Method::Get)
 }
 

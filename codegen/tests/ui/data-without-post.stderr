@@ -1,0 +1,10 @@
+error: `data` route parameters can only be used with payload supporting methods
+ --> $DIR/data-without-post.rs:6:12
+  |
+6 | #[get("/", data = "<something>")]
+  |            ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: 'GET' does not support payloads
+
+error: aborting due to previous error
+
