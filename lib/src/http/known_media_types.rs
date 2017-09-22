@@ -1,6 +1,7 @@
 macro_rules! known_media_types {
     ($cont:ident) => ($cont! {
         Any (is_any): "any media type", "*", "*",
+        Binary (is_binary): "binary data", "application", "octet-stream",
         HTML (is_html): "HTML", "text", "html" ; "charset" => "utf-8",
         Plain (is_plain): "plain text", "text", "plain" ; "charset" => "utf-8",
         JSON (is_json): "JSON", "application", "json",
