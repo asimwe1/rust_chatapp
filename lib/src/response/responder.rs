@@ -184,13 +184,13 @@ pub trait Responder<'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond_to(self, request: &Request) -> Result<Response<'r>, Status>;
+    fn respond_to(self, request: &Request) -> response::Result<'r>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r str {
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -201,7 +201,7 @@ impl<'r> Responder<'r> for &'r str {
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for String {
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -222,14 +222,14 @@ impl<'r> Responder<'r> for Vec<u8> {
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
         Response::build().streamed_body(BufReader::new(self)).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
 impl<'r> Responder<'r> for () {
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
         Ok(Response::new())
     }
 }
@@ -237,7 +237,7 @@ impl<'r> Responder<'r> for () {
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
         self.map_or_else(|| {
             warn_!("Response was `None`.");
             Err(Status::NotFound)
@@ -249,7 +249,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 /// an error message with the `Err` value returns an `Err` of
 /// `Status::InternalServerError`.
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
-    default fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    default fn respond_to(self, req: &Request) -> response::Result<'r> {
         self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
             error_!("Response was `Err`: {:?}.", e);
             Err(Status::InternalServerError)
@@ -260,7 +260,7 @@ impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
 impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
