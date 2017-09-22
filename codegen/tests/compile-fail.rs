@@ -1,14 +1,12 @@
 extern crate compiletest_rs as compiletest;
 
 use std::path::PathBuf;
+use compiletest::common::Mode;
 
-fn run_mode(mode: &'static str) {
+fn run_mode(mode: Mode) {
     let mut config = compiletest::Config::default();
-    let cfg_mode = mode.parse().expect("Invalid mode");
-
-    config.mode = cfg_mode;
+    config.mode = mode;
     config.src_base = PathBuf::from(format!("tests/{}", mode));
-    // config.link_deps();
 
     let flags = [
         "-L crate=../target/debug/",
@@ -21,5 +19,5 @@ fn run_mode(mode: &'static str) {
 
 #[test]
 fn compile_test() {
-    run_mode("compile-fail");
+    run_mode(Mode::CompileFail);
 }
