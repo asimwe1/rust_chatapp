@@ -17,7 +17,7 @@
 //!   * **head**
 //!   * **patch**
 //!   * **options**
-//!   * **error**
+//!   * **catch**
 //!
 //! The grammar for all _route_ attributes, including **route**, **get**,
 //! **put**, **post**, **delete**, **head**, **patch**, and **options** is
@@ -53,15 +53,15 @@
 //!
 //!     #[get("/hello")]
 //!
-//! The syntax for the **error** attribute is:
+//! The syntax for the **catch** attribute is:
 //!
 //! <pre>
-//! error := INTEGER
+//! catch := INTEGER
 //! </pre>
 //!
-//! A use of the `error` attribute looks like:
+//! A use of the `catch` attribute looks like:
 //!
-//!     #[error(404)]
+//!     #[catch(404)]
 //!
 //! ## Custom Derives
 //!
@@ -115,10 +115,10 @@
 //! This crate implements the following procedural macros:
 //!
 //!   * **routes**
-//!   * **errors**
+//!   * **catchers**
 //!   * **uri**
 //!
-//! The syntax for `routes!` and `errors!` is defined as:
+//! The syntax for `routes!` and `catchers!` is defined as:
 //!
 //! <pre>
 //! macro := PATH (',' PATH)*
@@ -283,7 +283,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 
     register_macros!(reg,
         "routes" => routes,
-        "errors" => errors,
+        "catchers" => catchers,
         "uri" => uri,
         "rocket_internal_uri" => uri_internal
     );
@@ -293,7 +293,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     );
 
     register_decorators!(reg,
-        "error" => error_decorator,
+        "catch" => catch_decorator,
         "route" => route_decorator,
         "get" => get_decorator,
         "put" => put_decorator,
