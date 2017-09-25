@@ -10,6 +10,12 @@ use outcome;
 /// Type alias for the `Outcome` of a `Handler`.
 pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 
+/// The type of a request handler.
+pub type Handler = for<'r> fn(&'r Request, Data) -> Outcome<'r>;
+
+/// The type of an error handler.
+pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> response::Result<'r>;
+
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
@@ -78,9 +84,3 @@ impl<'r> Outcome<'r> {
         outcome::Outcome::Forward(data)
     }
 }
-
-/// The type of a request handler.
-pub type Handler = for<'r> fn(&'r Request, Data) -> Outcome<'r>;
-
-/// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> response::Result<'r>;
