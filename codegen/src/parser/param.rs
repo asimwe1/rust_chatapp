@@ -43,7 +43,7 @@ impl Param {
             };
 
             // Calculate the parameter's ident and span.
-            let param_span = span.expand(start, end + 1);
+            let param_span = span.trim_left(start).shorten_to(end + 1);
             let full_param = &string[(start + 1)..end];
             let (is_many, param) = if full_param.ends_with("..") {
                 (true, &full_param[..(full_param.len() - 2)])

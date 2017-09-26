@@ -18,9 +18,6 @@ pub trait SpanExt {
 
     // Wrap `T` into a `Spanned<T>` with `self` as the span.
     fn wrap<T>(self, node: T) -> Spanned<T>;
-
-    /// Expand the span on the left by `left` and right by `right`.
-    fn expand(self, left: usize, right: usize) -> Span;
 }
 
 impl SpanExt for Span {
@@ -47,10 +44,5 @@ impl SpanExt for Span {
 
     fn wrap<T>(self, node: T) -> Spanned<T> {
         Spanned { node: node, span: self }
-    }
-
-    fn expand(self, left: usize, right: usize) -> Span {
-        self.with_lo(self.lo() + BytePos(left as u32))
-            .with_hi(self.lo() + BytePos(right as u32))
     }
 }
