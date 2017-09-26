@@ -1,3 +1,30 @@
+# Version 0.3.3 (Sep 25, 2017)
+
+## Core
+
+  * `Config`'s `Debug` implementation now respects formatting options.
+  * `Cow<str>` now implements `FromParam`.
+  * `Vec<u8>` now implements `Responder`.
+  * Added a `Binary` media type for `application/octet-stream`.
+  * Empty fairing collections are no longer logged.
+  * Emojis are no longer emitted to non-terminals.
+  * Minimum required `rustc` is `1.22.0-nightly 2017-09-13`.
+
+## Codegen
+
+  * Improved "missing argument in handler" compile-time error message.
+  * Codegen was updated for `2017-09-25` nightly.
+  * Minimum required `rustc` is `1.22.0-nightly 2017-09-25`.
+
+## Docs
+
+  * Fixed typos in site overview: ~~by~~ be, ~~`Reponder`~~ `Responder`.
+  * Markdown indenting was adjusted for CommonMark.
+
+## Infrastructure
+
+  * Shell scripts handle paths with spaces.
+
 # Version 0.3.2 (Aug 15, 2017)
 
 ## Core
