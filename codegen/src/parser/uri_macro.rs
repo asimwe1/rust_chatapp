@@ -137,7 +137,7 @@ impl UriParams {
         })?;
 
         // Set the end of the args_span to be the end of the args.
-        args_span.hi = parser.prev_span.hi;
+        args_span = args_span.with_hi(parser.prev_span.hi());
 
         // A 'colon' was used but there are no arguments.
         if arguments.is_empty() {
