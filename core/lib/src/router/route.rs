@@ -17,7 +17,7 @@ pub struct Route {
     /// The method this route matches against.
     pub method: Method,
     /// The function that should be called when the route matches.
-    pub handler: Handler,
+    pub handler: Box<Handler>,
     /// The base mount point of this `Route`.
     pub base: Origin<'static>,
     /// The uri (in Rocket's route format) that should be matched against. This
@@ -83,8 +83,8 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI.
-    pub fn new<S>(method: Method, path: S, handler: Handler) -> Route
-        where S: AsRef<str>
+    pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
+        where S: AsRef<str>, H: Handler + 'static
     {
         let path = path.as_ref();
         let origin = Origin::parse_route(path)
@@ -115,8 +115,8 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI.
-    pub fn ranked<S>(rank: isize, method: Method, path: S, handler: Handler) -> Route
-        where S: AsRef<str>
+    pub fn ranked<S, H>(rank: isize, method: Method, path: S, handler: H) -> Route
+        where S: AsRef<str>, H: Handler + 'static
     {
         let uri = Origin::parse_route(path.as_ref())
             .expect("invalid URI used as route path in `Route::ranked()`")
@@ -126,7 +126,8 @@ impl Route {
             name: None,
             format: None,
             base: Origin::dummy(),
-            method, handler, rank, uri
+            handler: Box::new(handler),
+            method, rank, uri
         }
     }
 

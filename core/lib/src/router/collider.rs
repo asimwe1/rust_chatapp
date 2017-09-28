@@ -119,18 +119,12 @@ mod tests {
     use rocket::Rocket;
     use config::Config;
     use request::Request;
-    use data::Data;
-    use handler::Outcome;
-    use router::route::Route;
+    use router::{dummy_handler, route::Route};
     use http::{Method, MediaType, ContentType, Accept};
     use http::uri::Origin;
     use http::Method::*;
 
     type SimpleRoute = (Method, &'static str);
-
-    fn dummy_handler(req: &Request, _: Data) -> Outcome<'static> {
-        Outcome::from(req, "hi")
-    }
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
         let route_a = Route::new(a.0, a.1.to_string(), dummy_handler);

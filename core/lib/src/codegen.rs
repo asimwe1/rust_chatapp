@@ -1,12 +1,15 @@
-use handler::{Handler, ErrorHandler};
+use {Request, Data};
+use handler::{Outcome, ErrorHandler};
 use http::{Method, MediaType};
+
+pub type StaticHandler = for<'r> fn(&'r Request, Data) -> Outcome<'r>;
 
 pub struct StaticRouteInfo {
     pub name: &'static str,
     pub method: Method,
     pub path: &'static str,
     pub format: Option<MediaType>,
-    pub handler: Handler,
+    pub handler: StaticHandler,
     pub rank: Option<isize>,
 }
 

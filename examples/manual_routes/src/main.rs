@@ -6,18 +6,19 @@ mod tests;
 use std::io;
 use std::fs::File;
 
-use rocket::{Request, Route, Data, Catcher, Error};
+use rocket::{Request, Handler, Route, Data, Catcher, Error};
 use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder};
 use rocket::response::status::Custom;
 use rocket::handler::Outcome;
+use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
 
-fn forward(_req: &Request, data: Data) -> Outcome<'static> {
+fn forward<'r>(_req: &'r Request, data: Data) -> Outcome<'r> {
     Outcome::forward(data)
 }
 
-fn hi(req: &Request, _: Data) -> Outcome<'static> {
+fn hi<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     Outcome::from(req, "Hello!")
 }
 
@@ -26,7 +27,7 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
     Outcome::from(req, param.map(|r| r.as_str()).unwrap_or("unnamed"))
 }
 
-fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
+fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     let param = req.uri()
         .path()
         .split_at(6)
@@ -55,13 +56,31 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     }
 }
 
-fn get_upload(req: &Request, _: Data) -> Outcome<'static> {
+fn get_upload<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     Outcome::from(req, File::open("/tmp/upload.txt").ok())
 }
 
 fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
     let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
     res.respond_to(req)
+}
+
+#[derive(Clone)]
+struct CustomHandler {
+    data: &'static str
+}
+
+impl CustomHandler {
+    fn new(data: &'static str) -> Vec<Route> {
+        vec![Route::new(Get, "/<id>", Self { data })]
+    }
+}
+
+impl Handler for CustomHandler {
+    fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+        let id = req.get_param::<&RawStr>(0).ok().or_forward(data)?;
+        Outcome::from(req, format!("{} - {}", self.data, id))
+    }
 }
 
 fn rocket() -> rocket::Rocket {
@@ -80,6 +99,7 @@ fn rocket() -> rocket::Rocket {
         .mount("/upload", vec![get_upload, post_upload])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
+        .mount("/custom", CustomHandler::new("some data here"))
         .catch(vec![not_found_catcher])
 }
 

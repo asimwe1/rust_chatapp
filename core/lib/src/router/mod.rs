@@ -3,14 +3,19 @@ mod route;
 
 use std::collections::hash_map::HashMap;
 
-use self::collider::Collider;
 pub use self::route::Route;
+use self::collider::Collider;
 
 use request::Request;
 use http::Method;
 
 // type Selector = (Method, usize);
 type Selector = Method;
+
+// A handler to use when one is needed temporarily.
+crate fn dummy_handler<'r>(r: &'r ::Request, _: ::Data) -> ::handler::Outcome<'r> {
+    ::Outcome::from(r, ())
+}
 
 #[derive(Default)]
 pub struct Router {
@@ -42,36 +47,57 @@ impl Router {
         matches
     }
 
-    pub fn collisions(&self) -> Vec<(&Route, &Route)> {
-        let mut result = vec![];
-        for routes in self.routes.values() {
-            for (i, a_route) in routes.iter().enumerate() {
-                for b_route in routes.iter().skip(i + 1) {
-                    if a_route.collides_with(b_route) {
-                        result.push((a_route, b_route));
+    crate fn collisions(mut self) -> Result<Router, Vec<(Route, Route)>> {
+        let mut collisions = vec![];
+        for routes in self.routes.values_mut() {
+            for i in 0..routes.len() {
+                let (left, right) = routes.split_at_mut(i);
+                for a_route in left.iter_mut() {
+                    for b_route in right.iter_mut() {
+                        if a_route.collides_with(b_route) {
+                            let dummy_a = Route::new(Method::Get, "/", dummy_handler);
+                            let a = ::std::mem::replace(a_route, dummy_a);
+                            let dummy_b = Route::new(Method::Get, "/", dummy_handler);
+                            let b = ::std::mem::replace(b_route, dummy_b);
+                            collisions.push((a, b));
+                        }
                     }
                 }
             }
         }
 
-        result
-    }
-
-    // This is slow. Don't expose this publicly; only for tests.
-    #[cfg(test)]
-    fn has_collisions(&self) -> bool {
-        !self.collisions().is_empty()
+        if collisions.is_empty() {
+            Ok(self)
+        } else {
+            Err(collisions)
+        }
     }
 
     #[inline]
     pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
         self.routes.values().flat_map(|v| v.iter())
     }
+
+    // This is slow. Don't expose this publicly; only for tests.
+    #[cfg(test)]
+    fn has_collisions(&self) -> bool {
+        for routes in self.routes.values() {
+            for (i, a_route) in routes.iter().enumerate() {
+                for b_route in routes.iter().skip(i + 1) {
+                    if a_route.collides_with(b_route) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{Router, Route};
+    use super::{Router, Route, dummy_handler};
 
     use rocket::Rocket;
     use config::Config;
@@ -79,12 +105,6 @@ mod test {
     use http::Method::*;
     use http::uri::Origin;
     use request::Request;
-    use data::Data;
-    use handler::Outcome;
-
-    fn dummy_handler(req: &Request, _: Data) -> Outcome<'static> {
-        Outcome::from(req, "hi")
-    }
 
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();

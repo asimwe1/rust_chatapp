@@ -63,16 +63,12 @@ impl Client {
     /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
     /// set to `None`.
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
-        if let Some(err) = rocket.prelaunch_check() {
-            return Err(err);
-        }
-
         let cookies = match tracked {
             true => Some(RefCell::new(CookieJar::new())),
             false => None
         };
 
-        Ok(Client { rocket, cookies })
+        Ok(Client { rocket: rocket.prelaunch_check()?, cookies })
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
