@@ -549,6 +549,8 @@ mod tests {
         test_query("/////", None);
         test_query("//a///", None);
         test_query("/a/b/c#a?123", None);
+        test_query("/#", None);
+        test_query("/#?", None);
     }
 
     #[test]
@@ -567,8 +569,10 @@ mod tests {
     fn fragment_exists() {
         test_fragment("/test#abc", Some("abc"));
         test_fragment("/#abc", Some("abc"));
+        test_fragment("/#ab?c", Some("ab?c"));
         test_fragment("/a/b/c?123#a", Some("a"));
         test_fragment("/a/b/c#a?123", Some("a?123"));
+        test_fragment("/a/b/c?123#a?b", Some("a?b"));
         test_fragment("/#a", Some("a"));
     }
 
