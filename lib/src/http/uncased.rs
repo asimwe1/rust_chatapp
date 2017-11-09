@@ -8,7 +8,6 @@ use std::ops::Deref;
 use std::borrow::{Cow, Borrow};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::ascii::AsciiExt;
 use std::fmt;
 
 /// A reference to an uncased (case-preserving) ASCII string. This is typically

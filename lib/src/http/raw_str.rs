@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
 use std::convert::AsRef;
 use std::cmp::Ordering;
-use std::ascii::AsciiExt;
 use std::str::Utf8Error;
 use std::fmt;
 
@@ -325,30 +324,6 @@ impl ToString for RawStr {
     #[inline(always)]
     fn to_string(&self) -> String {
         String::from(self.as_str())
-    }
-}
-
-impl AsciiExt for RawStr {
-    type Owned = String;
-
-    #[inline(always)]
-    fn is_ascii(&self) -> bool { (self as &str).is_ascii() }
-
-    #[inline(always)]
-    fn to_ascii_uppercase(&self) -> String { (self as &str).to_ascii_uppercase() }
-
-    #[inline(always)]
-    fn to_ascii_lowercase(&self) -> String { (self as &str).to_ascii_lowercase() }
-
-    #[inline(always)]
-    fn make_ascii_uppercase(&mut self) { (self as &mut str).make_ascii_uppercase() }
-
-    #[inline(always)]
-    fn make_ascii_lowercase(&mut self) { (self as &mut str).make_ascii_lowercase() }
-
-    #[inline(always)]
-    fn eq_ignore_ascii_case(&self, o: &RawStr) -> bool {
-        (self as &str).eq_ignore_ascii_case(o as &str)
     }
 }
 
