@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket_contrib;
@@ -8,6 +8,8 @@ extern crate serde_json;
 
 #[cfg(test)] mod tests;
 
+use std::collections::HashMap;
+
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
@@ -15,7 +17,7 @@ use rocket_contrib::Template;
 #[derive(Serialize)]
 struct TemplateContext {
     name: String,
-    items: Vec<String>
+    items: Vec<&'static str>
 }
 
 #[get("/")]
@@ -25,17 +27,13 @@ fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 fn get(name: String) -> Template {
-    let context = TemplateContext {
-        name: name,
-        items: vec!["One".to_owned(), "Two".to_owned(), "Three".to_owned()]
-    };
-
+    let context = TemplateContext { name, items: vec!["One", "Two", "Three"] };
     Template::render("index", &context)
 }
 
-#[error(404)]
+#[catch(404)]
 fn not_found(req: &Request) -> Template {
-    let mut map = std::collections::HashMap::new();
+    let mut map = HashMap::new();
     map.insert("path", req.uri().as_str());
     Template::render("error/404", &map)
 }
@@ -44,7 +42,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::fairing())
-        .catch(errors![not_found])
+        .catch(catchers![not_found])
 }
 
 fn main() {

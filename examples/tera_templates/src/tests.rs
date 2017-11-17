@@ -1,4 +1,3 @@
-use rocket;
 use super::rocket;
 use rocket::local::{Client, LocalResponse};
 use rocket::http::Method::*;
@@ -24,21 +23,6 @@ fn test_root() {
 
             let location: Vec<_> = response.headers().get("Location").collect();
             assert_eq!(location, vec!["/hello/Unknown"]);
-
-        let req = MockRequest::new(*method, "/");
-        run_test!(req, |mut response: Response| {
-            assert_eq!(response.status(), Status::SeeOther);
-            assert!(response.body().is_none());
-
-            let location_headers: Vec<_> = response.headers().get("Location").collect();
-            assert_eq!(location_headers, vec!["/hello/Unknown"]);
-
-        dispatch!(*method, "/", |mut response: Response| {
-            assert_eq!(response.status(), Status::SeeOther);
-            assert!(response.body().is_none());
-
-            let location: Vec<_> = response.headers().get("Location").collect();
-            assert_eq!(location, vec!["/hello/Unknown"]);
         });
     }
 
@@ -51,15 +35,6 @@ fn test_root() {
 
             assert_eq!(response.status(), Status::NotFound);
             assert_eq!(response.body_string(), Some(expected));
-
-        let req = MockRequest::new(*method, "/");
-        run_test!(req, |mut response: Response| {
-            let mut map = ::std::collections::HashMap::new();
-            map.insert("path", "/");
-            let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
-
-            assert_eq!(response.status(), Status::NotFound);
-            assert_eq!(response.body_string(), Some(expected_body));
         });
     }
 }
@@ -69,13 +44,12 @@ fn test_name() {
     // Check that the /hello/<name> route works.
     dispatch!(Get, "/hello/Jack", |mut response: LocalResponse| {
         let context = super::TemplateContext {
-            name: "Jack".to_string(),
-            items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
+            name: "Jack".into(),
+            items: vec!["One", "Two", "Three"]
         };
 
         let expected = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        let expected = Template::render("index", &context).to_string();
         assert_eq!(response.body_string(), Some(expected));
     });
 }
@@ -89,12 +63,6 @@ fn test_404() {
 
         let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
-
-    dispatch!(Get, "/hello/", |mut response: Response| {
-        let mut map = ::std::collections::HashMap::new();
-        map.insert("path", "/hello/");
-
-        let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
-        assert_eq!(response.status(), Status::NotFound);
+        assert_eq!(response.body_string(), Some(expected));
     });
 }
