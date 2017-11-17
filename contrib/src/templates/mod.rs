@@ -164,11 +164,11 @@ impl Template {
 
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
-                Err(e@ConfigError::NotFound) => {
+                Err(ConfigError::NotFound) => { /* ignore missing configs */ }
+                Err(e) => {
                     e.pretty_print();
-                    warn_!("Using default directory '{:?}'", template_root);
+                    warn_!("Using default templates directory '{:?}'", template_root);
                 }
-                Err(_) => {  }
             };
 
             match Context::initialize(template_root) {
