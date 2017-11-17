@@ -44,8 +44,8 @@ fn test_name() {
     // Check that the /hello/<name> route works.
     dispatch!(Get, "/hello/Jack", |mut response: LocalResponse| {
         let context = super::TemplateContext {
-            name: "Jack".to_string(),
-            items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
+            name: "Jack".into(),
+            items: vec!["One".into(), "Two".into(), "Three".into()]
         };
 
         let expected = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
