@@ -58,7 +58,8 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
     };
 
     // The error type in the derived implementation.
-    let error_type = ty::Ty::Literal(ty::Path::new(vec!["rocket", "Error"]));
+    let error_type = ty::Ty::Literal(ty::Path::new_(vec!["rocket", "Error"],
+                                                    None, vec![], ty::PathKind::Global));
 
     let trait_def = TraitDef {
         is_unsafe: false,
@@ -69,12 +70,12 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         // match is made with something of that type, and since we always emit
         // an `Err` match, we'll get this lint warning.
         attributes: vec![quote_attr!(ecx, #[allow(unreachable_code, unreachable_patterns)])],
-        path: ty::Path {
-            path: vec!["rocket", "request", "FromForm"],
-            lifetime: lifetime_var,
-            params: vec![],
-            global: true,
-        },
+        path: ty::Path::new_(
+            vec!["rocket", "request", "FromForm"],
+            lifetime_var,
+            vec![],
+            ty::PathKind::Global,
+        ),
         additional_bounds: Vec::new(),
         generics: trait_generics,
         methods: vec![
@@ -84,30 +85,25 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                 explicit_self: None,
                 args: vec![
                     ty::Ptr(
-                        Box::new(ty::Literal(ty::Path {
-                            path: vec!["rocket", "request", "FormItems"],
-                            lifetime: lifetime_var,
-                            params: vec![],
-                            global: true
-                        })),
+                        Box::new(ty::Literal(ty::Path::new_(
+                            vec!["rocket", "request", "FormItems"],
+                            lifetime_var,
+                            vec![],
+                            ty::PathKind::Global,
+                        ))),
                         ty::Borrowed(None, Mutability::Mutable)
                     ),
-                    ty::Literal(ty::Path {
-                        path: vec!["bool"],
-                        lifetime: None,
-                        params: vec![],
-                        global: false,
-                    })
+                    ty::Literal(ty::Path::new_local("bool")),
                 ],
-                ret_ty: ty::Literal(ty::Path {
-                    path: vec!["std", "result", "Result"],
-                    lifetime: None,
-                    params: vec![
+                ret_ty: ty::Literal(ty::Path::new_(
+                    vec!["result", "Result"],
+                    None,
+                    vec![
                         Box::new(ty::Ty::Self_),
                         Box::new(error_type.clone())
                     ],
-                    global: true,
-                }),
+                    ty::PathKind::Std,
+                )),
                 attributes: vec![],
                 is_unsafe: false,
                 combine_substructure: c_s(Box::new(from_form_substructure)),
