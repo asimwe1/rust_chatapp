@@ -18,6 +18,7 @@ use std::fmt;
 ///
 /// let ascii_ref: &UncasedStr = "Hello, world!".into();
 /// ```
+#[repr(C)]
 #[derive(Debug)]
 pub struct UncasedStr(str);
 
