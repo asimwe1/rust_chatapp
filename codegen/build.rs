@@ -8,7 +8,7 @@ use yansi::Color::{Red, Yellow, Blue, White};
 use version_check::{supports_features, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket's codegen.
-const MIN_DATE: &'static str = "2017-12-14";
+const MIN_DATE: &'static str = "2017-12-17";
 const MIN_VERSION: &'static str = "1.24.0-nightly";
 
 fn main() {

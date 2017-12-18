@@ -315,7 +315,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         Ok($self_ident { $result_fields })
     });
 
-    stmts.extend(final_block.unwrap().stmts);
+    stmts.extend(final_block.into_inner().stmts);
 
     debug!("Form statements:");
     for stmt in &stmts {

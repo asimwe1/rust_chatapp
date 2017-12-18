@@ -45,7 +45,7 @@ where F: FnMut(&ExtCtxt, Path) -> P<Expr>
 
             // Now put them all in one vector and return the thing.
             let path_list = sep_by_tok(ecx, &path_exprs, Token::Comma);
-            let output = quote_expr!(ecx, vec![$path_list]).unwrap();
+            let output = quote_expr!(ecx, vec![$path_list]).into_inner();
             MacEager::expr(P(output))
         }
         Err(mut e) => {
