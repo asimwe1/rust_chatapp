@@ -255,7 +255,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     default fn respond_to(self, req: &Request) -> response::Result<'r> {
         self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
-            error_!("Response was `Err`: {:?}.", e);
+            error_!("Response was a non-`Responder` `Err`: {:?}.", e);
             Err(Status::InternalServerError)
         })
     }
