@@ -4,9 +4,8 @@ use std::io;
 use std::ops::{Deref, DerefMut};
 
 use request::Request;
-use response::{Response, Responder};
-use http::{Status, ContentType};
-use response::Body;
+use response::{self, Responder};
+use http::ContentType;
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.
@@ -80,18 +79,13 @@ impl NamedFile {
 /// [ContentType::from_extension](/rocket/http/struct.ContentType.html#method.from_extension)
 /// for more information. If you would like to stream a file with a different
 /// Content-Type than that implied by its extension, use a `File` directly.
-impl Responder<'static> for NamedFile {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
-        let mut response = Response::new();
-        if let Some(ext) = self.path().extension() {
+impl<'r> Responder<'r> for NamedFile {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        let mut response = self.1.respond_to(req)?;
+        if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
                 response.set_header(ct);
             }
-        }
-
-        match self.0.metadata() {
-            Ok(meta) => response.set_raw_body(Body::Sized(self.take_file(), meta.len())),
-            Err(_) => response.set_streamed_body(self.take_file())
         }
 
         Ok(response)
