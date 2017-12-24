@@ -342,6 +342,61 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Converts from `Outcome<S, E, F>` to `Result<S, T>` for a given `T`.
+    ///
+    /// Returns `Ok` with the `Success` value if this is a `Success`, otherwise
+    /// returns an `Err` with the provided value. `self` is consumed, and all
+    /// other values are discarded.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    /// assert_eq!(x.success_or(false), Ok(10));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Failure("Hi! I'm an error.");
+    /// assert_eq!(x.success_or(false), Err(false));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Forward(25);
+    /// assert_eq!(x.success_or("whoops"), Err("whoops"));
+    /// ```
+    #[inline]
+    pub fn success_or<T>(self, value: T) -> Result<S, T> {
+        match self {
+            Success(val) => Ok(val),
+            _ => Err(value)
+        }
+    }
+
+    /// Converts from `Outcome<S, E, F>` to `Result<S, T>` for a given `T`
+    /// produced from a supplied function or closure.
+    ///
+    /// Returns `Ok` with the `Success` value if this is a `Success`, otherwise
+    /// returns an `Err` with the result of calling `f`. `self` is consumed, and
+    /// all other values are discarded.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    /// assert_eq!(x.success_or_else(|| false), Ok(10));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Failure("Hi! I'm an error.");
+    /// assert_eq!(x.success_or_else(|| false), Err(false));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Forward(25);
+    /// assert_eq!(x.success_or_else(|| "whoops"), Err("whoops"));
+    /// ```
+    #[inline]
+    pub fn success_or_else<T, V: FnOnce() -> T>(self, f: V) -> Result<S, T> {
+        match self {
+            Success(val) => Ok(val),
+            _ => Err(f())
+        }
+    }
+
     /// Converts from `Outcome<S, E, F>` to `Outcome<&S, &E, &F>`.
     ///
     /// ```rust
