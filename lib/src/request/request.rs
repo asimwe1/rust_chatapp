@@ -20,7 +20,7 @@ use http::hyper;
 #[derive(Clone)]
 struct RequestState<'r> {
     config: &'r Config,
-    state: &'r Container,
+    managed: &'r Container,
     params: RefCell<Vec<(usize, usize)>>,
     route: Cell<Option<&'r Route>>,
     cookies: RefCell<CookieJar>,
@@ -59,7 +59,7 @@ impl<'r> Request<'r> {
             remote: None,
             state: RequestState {
                 config: &rocket.config,
-                state: &rocket.state,
+                managed: &rocket.state,
                 route: Cell::new(None),
                 params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
@@ -559,7 +559,7 @@ impl<'r> Request<'r> {
     /// Get the managed state T, if it exists. For internal use only!
     #[inline(always)]
     pub(crate) fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
-        self.state.state.try_get()
+        self.state.managed.try_get()
     }
 
     /// Convert from Hyper types into a Rocket Request.
