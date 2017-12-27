@@ -604,6 +604,26 @@ impl Rocket {
         self
     }
 
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by this instance of Rocket. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// let rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>(), Some(&MyState("hello!")));
+    ///
+    /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
+    /// assert_eq!(client.rocket().state::<MyState>(), Some(&MyState("hello!")));
+    /// ```
+    #[inline(always)]
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.state.try_get()
+    }
+
     /// Attaches a fairing to this instance of Rocket.
     ///
     /// # Example
