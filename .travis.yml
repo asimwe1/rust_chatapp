@@ -3,5 +3,9 @@ sudo: required # so we get a VM with higher specs
 dist: trusty # so we get a VM with higher specs
 cache: cargo
 rust:
+  - nightly-2017-12-21
   - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
 script: ./scripts/test.sh
