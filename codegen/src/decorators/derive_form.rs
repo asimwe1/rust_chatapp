@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData, Ident};
-use syntax::ast::StructField;
+use syntax::ast::{StructField, GenericParam};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
@@ -21,34 +21,39 @@ static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
 static PRIVATE_LIFETIME: &'static str = "'rocket";
 
-fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
-        -> Option<String> {
+fn struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, sp: Span) -> Option<String> {
     match *item {
         Annotatable::Item(ref item) => match item.node {
             ItemKind::Struct(_, ref generics) => {
-                match generics.lifetimes.len() {
-                    0 => None,
-                    1 => {
-                        let lifetime = generics.lifetimes[0].lifetime;
-                        Some(lifetime.ident.to_string())
-                    }
-                    _ => {
-                        ecx.span_err(item.span, "cannot have more than one \
-                            lifetime parameter when deriving `FromForm`.");
-                        None
-                    }
+                let mut lifetimes = generics.params.iter()
+                    .filter_map(|p| match *p {
+                        GenericParam::Lifetime(ref def) => Some(def),
+                        _ => None
+                    });
+
+                let lifetime = lifetimes.next().map(|d| d.lifetime.ident.to_string());
+                if lifetimes.next().is_some() {
+                    ecx.span_err(generics.span, "cannot have more than one \
+                        lifetime parameter when deriving `FromForm`.");
                 }
+
+                lifetime
             },
-            _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
+            _ => ecx.span_fatal(sp, ONLY_STRUCTS_ERR)
         },
-        _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
+        _ => ecx.span_fatal(sp, ONLY_STRUCTS_ERR)
     }
 }
 
 // TODO: Use proper logging to emit the error messages.
-pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
-          annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
-    let struct_lifetime = get_struct_lifetime(ecx, annotated, span);
+pub fn from_form_derive(
+    ecx: &mut ExtCtxt,
+    span: Span,
+    meta_item: &MetaItem,
+    annotated: &Annotatable,
+    push: &mut FnMut(Annotatable)
+) {
+    let struct_lifetime = struct_lifetime(ecx, annotated, span);
     let (lifetime_var, trait_generics) = match struct_lifetime {
         Some(ref lifetime) => (Some(lifetime.as_str()), ty::LifetimeBounds::empty()),
         None => (Some(PRIVATE_LIFETIME), ty::LifetimeBounds {
@@ -324,4 +329,5 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     cx.expr_block(cx.block(trait_span, stmts))
 }
+
 
