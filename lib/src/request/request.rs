@@ -154,6 +154,15 @@ impl<'r> Request<'r> {
     /// request if the address is known. If the address is not known, `None` is
     /// returned.
     ///
+    /// Because it is common for proxies to forward connections for clients, the
+    /// remote address may contain information about the proxy instead of the
+    /// client. For this reason, proxies typically set the "X-Real-IP" header
+    /// with the client's true IP. To extract this IP from the request, use the
+    /// [`real_ip()`] or [`client_ip()`] methods.
+    ///
+    /// [`real_ip()`]: #method.real_ip
+    /// [`client_ip()`]: #method.client_ip
+    ///
     /// # Example
     ///
     /// ```rust
@@ -192,11 +201,10 @@ impl<'r> Request<'r> {
         self.remote = Some(address);
     }
 
-    /// Returns the ip address "X-Real-IP" header if found.
+    /// Returns the IP address in the "X-Real-IP" header of the request if such
+    /// a header exists and contains a valid IP address.
     ///
     /// # Example
-    ///
-    /// Get the value of the ip out of the "X-Real-IP" header.
     ///
     /// ```rust
     /// # use rocket::Request;
@@ -205,11 +213,9 @@ impl<'r> Request<'r> {
     ///
     /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
-    /// let ip = request.real_ip().expect("X-Real-IP not set");
-    /// assert_eq!(ip, "8.8.8.8".parse::<Ipv4Addr>().unwrap());
+    /// assert_eq!(request.real_ip(), Some("8.8.8.8".parse().unwrap()));
     /// # });
     /// ```
-    #[inline(always)]
     pub fn real_ip(&self) -> Option<IpAddr> {
         self.headers()
             .get_one("X-Real-IP")
@@ -218,6 +224,38 @@ impl<'r> Request<'r> {
                     .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
                     .ok()
             })
+    }
+
+    /// Attempts to return the client's IP address by first inspecting the
+    /// "X-Real-IP" header and then using the remote connection's IP address.
+    ///
+    /// If the "X-Real-IP" header exists and contains a valid IP address, that
+    /// address is returned. Otherwise, if the address of the remote connection
+    /// is known, that address is returned. Otherwise, `None` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::{Header, Method};
+    /// # use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// // starting without an "X-Real-IP" header or remote addresss
+    /// assert!(request.client_ip().is_none());
+    ///
+    /// // add a remote address; this is done by Rocket automatically
+    /// request.set_remote("127.0.0.1:8000".parse().unwrap());
+    /// assert_eq!(request.client_ip(), Some("127.0.0.1".parse().unwrap()));
+    ///
+    /// // now with an X-Real-IP header
+    /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
+    /// assert_eq!(request.client_ip(), Some("8.8.8.8".parse().unwrap()));
+    /// # });
+    /// ```
+    #[inline]
+    pub fn client_ip(&self) -> Option<IpAddr> {
+        self.real_ip().or_else(|| self.remote().map(|r| r.ip()))
     }
 
     /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
