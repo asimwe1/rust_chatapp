@@ -14,9 +14,9 @@ use self::serde_json::{Value, to_value};
 use self::glob::glob;
 
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use rocket::State;
+use rocket::{Rocket, State};
 use rocket::request::Request;
 use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
@@ -187,7 +187,6 @@ impl Template {
     pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
         AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
-
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
                 Err(ConfigError::NotFound) => { /* ignore missing configs */ }
@@ -230,40 +229,55 @@ impl Template {
         Template { name: name.into(), value: to_value(context).ok() }
     }
 
-    /// Render the template named `name` located at the path `root` with the
-    /// context `context` into a `String`. This method is _very slow_ and should
-    /// **not** be used in any running Rocket application. This method should
-    /// only be used during testing to validate `Template` responses. For other
-    /// uses, use [`render`](#method.render) instead.
+    /// Render the template named `name` with the context `context` into a
+    /// `String`. This method should **not** be used in any running Rocket
+    /// application. This method should only be used during testing to
+    /// validate `Template` responses. For other uses, use
+    /// [`render`](#method.render) instead.
     ///
     /// The `context` can be of any type that implements `Serialize`. This is
-    /// typically a `HashMap` or a custom `struct`. The path `root` can be
-    /// relative, in which case it is relative to the current working directory,
-    /// or absolute.
+    /// typically a `HashMap` or a custom `struct`.
     ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
+    /// `None` is also returned if a `Template` fairing has not been attached.
     ///
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
+    /// # extern crate rocket_contrib;
     /// use std::collections::HashMap;
+    ///
     /// use rocket_contrib::Template;
+    /// use rocket::local::Client;
     ///
-    /// // Create a `context`. Here, just an empty `HashMap`.
-    /// let mut context = HashMap::new();
+    /// fn main() {
+    ///     let rocket = rocket::ignite().attach(Template::fairing());
+    ///     let client = Client::new(rocket).expect("valid rocket");
     ///
-    /// # context.insert("test", "test");
-    /// # #[allow(unused_variables)]
-    /// let template = Template::show("templates/", "index", context);
+    ///     // Create a `context`. Here, just an empty `HashMap`.
+    ///     let mut context = HashMap::new();
+    ///
+    ///     # context.insert("test", "test");
+    ///     # #[allow(unused_variables)]
+    ///     let template = Template::show(client.rocket(), "index", context);
+    /// }
+    /// ```
     #[inline]
-    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
-        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
+        where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let root = root.as_ref().to_path_buf();
-        Context::initialize(root).and_then(|ctxt| {
-            Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
-        })
+        let ctxt = match rocket.state::<Context>() {
+            Some(ctxt) => ctxt,
+            None => {
+                warn!("Uninitialized template context: missing fairing.");
+                info!("To use templates, you must attach `Template::fairing()`.");
+                info!("See the `Template` documentation for more information.");
+                return None;
+            }
+        };
+        Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
     }
 
     #[inline(always)]

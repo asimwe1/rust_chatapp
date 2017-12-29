@@ -40,23 +40,18 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
+fn echo_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
+    if let Some(p0) = h.param(0) {
+        rc.writer.write(p0.value().render().into_bytes().as_ref())?;
+    };
+    Ok(())
+}
+
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::custom(|engines| {
-            engines.handlebars.register_helper(
-                "echo", Box::new(|h: &Helper,
-                                  _: &Handlebars,
-                                  rc: &mut RenderContext| -> Result<(), RenderError> {
-                                      if let Some(p0) = h.param(0) {
-                                          rc.writer.write(p0.value()
-                                                          .render()
-                                                          .into_bytes()
-                                                          .as_ref())?;
-                                      }
-                                      Ok(())
-                                  }));
-
+            engines.handlebars.register_helper("echo", Box::new(echo_helper));
         }))
         .catch(catchers![not_found])
 }
