@@ -9,8 +9,8 @@ extern crate rocket;
 
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket_contrib::Template;
-use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
+use rocket_contrib::{Template, handlebars};
+use handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -27,7 +27,7 @@ fn index() -> Redirect {
 fn get(name: String) -> Template {
     let context = TemplateContext {
         name: name,
-        items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
+        items: vec!["One".into(), "Two".into(), "Three".into()],
     };
 
     Template::render("index", &context)
@@ -40,20 +40,23 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
-fn echo_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
-    if let Some(p0) = h.param(0) {
-        rc.writer.write(p0.value().render().into_bytes().as_ref())?;
-    };
+type HelperResult = Result<(), RenderError>;
+
+fn wow_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> HelperResult {
+    if let Some(param) = h.param(0) {
+        write!(rc.writer, "<b><i>{}</i></b>", param.value().render())?;
+    }
+
     Ok(())
 }
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
-        .attach(Template::custom(|engines| {
-            engines.handlebars.register_helper("echo", Box::new(echo_helper));
-        }))
         .catch(catchers![not_found])
+        .attach(Template::custom(|engines| {
+            engines.handlebars.register_helper("wow", Box::new(wow_helper));
+        }))
 }
 
 fn main() {
