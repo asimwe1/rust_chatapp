@@ -263,6 +263,11 @@ engine used to render a template depends on the template file's extension. For
 example, if a file ends with `.hbs`, Handlebars is used, while if a file ends
 with `.tera`, Tera is used.
 
+When your application is compiled in `debug` mode (without the `--release` flag
+passed to `cargo`), templates are automatically reloaded when they are modified.
+This means that you don't need to rebuild your application to observe template
+changes: simply refresh! In release builds, reloading is disabled.
+
 For templates to be properly registered, the template fairing must be attached
 to the instance of Rocket. The [Fairings](/guide/fairings) sections of the guide
 provides more information on fairings. To attach the template fairing, simply

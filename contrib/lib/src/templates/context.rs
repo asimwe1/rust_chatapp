@@ -11,11 +11,14 @@ pub struct Context {
     pub root: PathBuf,
     /// Mapping from template name to its information.
     pub templates: HashMap<String, TemplateInfo>,
-    /// Mapping from template name to its information.
-    pub engines: Engines
+    /// Loaded template engines
+    pub engines: Engines,
 }
 
 impl Context {
+    /// Load all of the templates at `root`, initialize them using the relevant
+    /// template engine, and store all of the initialized state in a `Context`
+    /// structure, which is returned if all goes well.
     pub fn initialize(root: PathBuf) -> Option<Context> {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
@@ -45,9 +48,8 @@ impl Context {
             }
         }
 
-        Engines::init(&templates).map(|engines| {
-            Context { root, templates, engines }
-        })
+        Engines::init(&templates)
+            .map(|engines| Context { root, templates, engines } )
     }
 }
 
