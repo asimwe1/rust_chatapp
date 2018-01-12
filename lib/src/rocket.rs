@@ -631,7 +631,8 @@ impl Rocket {
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
         self = fairings.attach(Box::new(fairing), self);
 
-        // Make sure we keep the fairings around!
+        // Make sure we keep all fairings around: the old and newly added ones!
+        fairings.append(self.fairings);
         self.fairings = fairings;
         self
     }
