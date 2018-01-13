@@ -1,3 +1,10 @@
+# Version 0.3.5 (Dec 18, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-12-17` nightly.
+  * Minimum required `rustc` is `1.24.0-nightly 2017-12-17`.
+
 # Version 0.3.4 (Dec 14, 2017)
 
 ## Core
