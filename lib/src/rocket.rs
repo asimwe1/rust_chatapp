@@ -227,7 +227,7 @@ impl Rocket {
                 let request: &'r mut Request<'s> =
                     unsafe { (&mut *(request as *const _ as *mut _)) };
 
-                // There was no matching route.
+                // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
                     request.set_method(Method::Get);
@@ -240,6 +240,11 @@ impl Rocket {
             }
             Outcome::Failure(status) => self.handle_error(status, request),
         };
+
+        // Strip the body if this is a `HEAD` request.
+        if request.method() == Method::Head {
+            response.strip_body();
+        }
 
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
