@@ -84,8 +84,13 @@ impl Environment {
     /// Returns a `BadEnv` `ConfigError` if `ROCKET_ENV` contains an invalid
     /// environment name.
     pub fn active() -> Result<Environment, ConfigError> {
-        let env_str = env::var(CONFIG_ENV).unwrap_or(Development.to_string());
-        env_str.parse().map_err(|_| ConfigError::BadEnv(env_str))
+        match env::var(CONFIG_ENV) {
+            Ok(s) => s.parse().map_err(|_| ConfigError::BadEnv(s)),
+            #[cfg(debug_assertions)]
+            _ => Ok(Development),
+            #[cfg(not(debug_assertions))]
+            _ => Ok(Production),
+        }
     }
 
     /// Returns a string with a comma-seperated list of valid environments.
