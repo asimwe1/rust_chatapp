@@ -375,22 +375,22 @@ impl Rocket {
             logger::try_init(config.log_level, false);
         }
 
-        info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
-        info_!("address: {}", Paint::white(&config.address));
-        info_!("port: {}", Paint::white(&config.port));
-        info_!("log: {}", Paint::white(config.log_level));
-        info_!("workers: {}", Paint::white(config.workers));
-        info_!("secret key: {}", Paint::white(&config.secret_key));
-        info_!("limits: {}", Paint::white(&config.limits));
+        launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
+        launch_info_!("address: {}", Paint::white(&config.address));
+        launch_info_!("port: {}", Paint::white(&config.port));
+        launch_info_!("log: {}", Paint::white(config.log_level));
+        launch_info_!("workers: {}", Paint::white(config.workers));
+        launch_info_!("secret key: {}", Paint::white(&config.secret_key));
+        launch_info_!("limits: {}", Paint::white(&config.limits));
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            info_!("tls: {}", Paint::white("enabled"));
+            launch_info_!("tls: {}", Paint::white("enabled"));
         } else if tls_configured {
             error_!("tls: {}", Paint::white("disabled"));
             error_!("tls is configured, but the tls feature is disabled");
         } else {
-            info_!("tls: {}", Paint::white("disabled"));
+            launch_info_!("tls: {}", Paint::white("disabled"));
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
@@ -398,10 +398,10 @@ impl Rocket {
         }
 
         for (name, value) in config.extras() {
-            info_!("{} {}: {}",
-                   Paint::yellow("[extra]"),
-                   Paint::blue(name),
-                   Paint::white(LoggedValue(value)));
+            launch_info_!("{} {}: {}",
+                          Paint::yellow("[extra]"),
+                          Paint::blue(name),
+                          Paint::white(LoggedValue(value)));
         }
 
         Rocket {

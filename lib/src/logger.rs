@@ -11,7 +11,7 @@ struct RocketLogger(LoggingLevel);
 /// Defines the different levels for log messages.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum LoggingLevel {
-    /// Only shows errors and warning.
+    /// Only shows errors, warnings, and launch information.
     Critical,
     /// Shows everything except debug and trace information.
     Normal,
@@ -58,20 +58,11 @@ impl fmt::Display for LoggingLevel {
 }
 
 #[doc(hidden)] #[macro_export]
-macro_rules! log_ {
-    ($name:ident: $format:expr) => { log_!($name: $format,) };
-    ($name:ident: $format:expr, $($args:expr),*) => {
-        $name!(target: "_", $format, $($args),*);
-    };
-}
-
+macro_rules! log_ { ($name:ident: $($args:tt)*) => { $name!(target: "_", $($args)*) }; }
 #[doc(hidden)] #[macro_export]
-macro_rules! launch_info {
-    ($format:expr, $($args:expr),*) => {
-        error!(target: "launch", $format, $($args),*)
-    }
-}
-
+macro_rules! launch_info { ($($args:tt)*) => { error!(target: "launch", $($args)*) } }
+#[doc(hidden)] #[macro_export]
+macro_rules! launch_info_ { ($($args:tt)*) => { error!(target: "launch_", $($args)*) } }
 #[doc(hidden)] #[macro_export]
 macro_rules! error_ { ($($args:expr),+) => { log_!(error: $($args),+); }; }
 #[doc(hidden)] #[macro_export]
@@ -98,20 +89,20 @@ impl Log for RocketLogger {
         // We use the `launch_info` macro to "fake" a high priority info
         // message. We want to print the message unless the user uses a custom
         // drain, so we set it's status to critical, but reset it here to info.
-        let level = match record.target() {
-            "launch" => Info,
-            _ => record.level()
+        let (configged_level, level) = match record.target() {
+            "launch" | "launch_" => (LoggingLevel::Normal, LogLevel::Info),
+            _ => (self.0, record.level())
         };
 
         // Don't print Hyper or Rustls messages unless debug is enabled.
         let from_hyper = record.location().module_path().starts_with("hyper::");
         let from_rustls = record.location().module_path().starts_with("rustls::");
-        if self.0 != LoggingLevel::Debug && (from_hyper || from_rustls) {
+        if configged_level != LoggingLevel::Debug && (from_hyper || from_rustls) {
             return;
         }
 
-        // In Rocket, we abuse target with value "_" to indicate indentation.
-        if record.target() == "_" && self.0 != LoggingLevel::Critical {
+        // In Rocket, we abuse targets with value "_" to indicate indentation.
+        if record.target().ends_with('_') && configged_level != LoggingLevel::Critical {
             print!("    {} ", Paint::white("=>"));
         }
 
