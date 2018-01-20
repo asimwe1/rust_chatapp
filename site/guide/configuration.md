@@ -15,8 +15,9 @@ _configuration environment_. There are three such environments:
    * `staging` (short: `stage`)
    * `production` (short: `prod`)
 
-Without any action, Rocket applications run in the `development` environment.
-The environment can be changed via the `ROCKET_ENV` environment variable. For
+Without any action, Rocket applications run in the `development` environment for
+debug builds and the `production` environment for non-debug builds. The
+environment can be changed via the `ROCKET_ENV` environment variable. For
 example, to launch an application in the `staging` environment, we can run:
 
 ```sh
