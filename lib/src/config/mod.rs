@@ -543,9 +543,11 @@ mod test {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
 
-        // First, without an environment. Should get development defaults.
+        // First, without an environment. Should get development defaults on
+        // debug builds and productions defaults on non-debug builds.
         env::remove_var(CONFIG_ENV);
-        check_config!(active_default(), default_config(Development));
+        #[cfg(debug_assertions)] check_config!(active_default(), default_config(Development));
+        #[cfg(not(debug_assertions))] check_config!(active_default(), default_config(Production));
 
         // Now with an explicit dev environment.
         for env in &["development", "dev"] {
