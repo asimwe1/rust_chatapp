@@ -11,7 +11,6 @@ source "${SCRIPT_DIR}/config.sh"
 
 function mk_doc() {
   local dir=$1
-  local flag=$2
   pushd "${dir}" > /dev/null 2>&1
     echo ":: Documenting '${dir}'..."
     cargo doc --no-deps --all-features

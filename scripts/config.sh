@@ -8,9 +8,9 @@ function relative() {
   if [ -d "${full_path}" ]; then
     # Try to use readlink as a fallback to readpath for cross-platform compat.
     if command -v realpath >/dev/null 2>&1; then
-      echo $(realpath "${full_path}")
+      realpath "${full_path}"
     elif ! (readlink -f 2>&1 | grep illegal > /dev/null); then
-      echo $(readlink -f "${full_path}")
+      readlink -f "${full_path}"
     else
       echo "Rocket's scripts require 'realpath' or 'readlink -f' support." >&2
       echo "Install realpath or GNU readlink via your package manager." >&2
@@ -31,10 +31,11 @@ CONTRIB_DIR=$(relative "contrib") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
 if [ "${1}" = "-p" ]; then
-  echo $SCRIPT_DIR
-  echo $EXAMPLES_DIR
-  echo $LIB_DIR
-  echo $CODEGEN_DIR
-  echo $CONTRIB_DIR
-  echo $DOC_DIR
+  echo "${ROOT_DIR}"
+  echo "${SCRIPT_DIR}"
+  echo "${EXAMPLES_DIR}"
+  echo "${LIB_DIR}"
+  echo "${CODEGEN_DIR}"
+  echo "${CONTRIB_DIR}"
+  echo "${DOC_DIR}"
 fi
