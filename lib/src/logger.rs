@@ -149,8 +149,9 @@ pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
     }
 }
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 
+static PUSHED: AtomicBool = AtomicBool::new(false);
 static LAST_LOG_FILTER: AtomicUsize = AtomicUsize::new(filter_to_usize(log::LevelFilter::Off));
 
 const fn filter_to_usize(filter: log::LevelFilter) -> usize {
@@ -163,11 +164,14 @@ fn usize_to_filter(num: usize) -> log::LevelFilter {
 
 pub(crate) fn push_max_level(level: LoggingLevel) {
     LAST_LOG_FILTER.store(filter_to_usize(log::max_level()), Ordering::Release);
+    PUSHED.store(true, Ordering::Release);
     log::set_max_level(level.max_log_level().to_level_filter());
 }
 
 pub(crate) fn pop_max_level() {
-    log::set_max_level(usize_to_filter(LAST_LOG_FILTER.load(Ordering::Acquire)));
+    if PUSHED.load(Ordering::Acquire) {
+        log::set_max_level(usize_to_filter(LAST_LOG_FILTER.load(Ordering::Acquire)));
+    }
 }
 
 #[doc(hidden)]
