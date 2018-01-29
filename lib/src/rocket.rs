@@ -372,7 +372,9 @@ impl Rocket {
     #[inline]
     fn configured(config: Config, log: bool) -> Rocket {
         if log {
+            // Initialize logger. Temporary weaken log level for launch info.
             logger::try_init(config.log_level, false);
+            logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
         launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
@@ -678,6 +680,9 @@ impl Rocket {
                          Paint::white("Rocket has launched from"),
                          Paint::white(proto).bold(),
                          Paint::white(&full_addr).bold());
+
+            // Restore the log level back to what it originally was.
+            logger::pop_max_level();
 
             let threads = self.config.workers as usize;
             if let Err(e) = server.handle_threads(self, threads) {

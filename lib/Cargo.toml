@@ -19,7 +19,7 @@ tls = ["rustls", "hyper-sync-rustls"]
 
 [dependencies]
 yansi = { version = "0.3.3", features = ["nightly"] }
-log = "0.3"
+log = "0.4"
 percent-encoding = "1"
 toml = "0.4.2"
 num_cpus = "1.0"
