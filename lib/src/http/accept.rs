@@ -147,7 +147,7 @@ pub struct Accept(AcceptParams);
 
 macro_rules! accept_constructor {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
-        $s:expr $(; $k:expr => $v:expr)*),+) => {
+        $s:expr $(; $k:expr => $v:expr)*,)+) => {
         $(
             #[doc="An `Accept` header with the single media type for <b>"]
             #[doc=$str] #[doc="</b>: <i>"]

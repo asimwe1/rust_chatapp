@@ -44,7 +44,7 @@ pub struct ContentType(pub MediaType);
 
 macro_rules! content_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
-        $s:expr $(; $k:expr => $v:expr)*),+) => {
+        $s:expr $(; $k:expr => $v:expr)*,)+) => {
         $(
             #[doc="Content-Type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
             #[doc=$t] #[doc="/"] #[doc=$s]

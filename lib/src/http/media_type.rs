@@ -105,7 +105,7 @@ macro_rules! media_str {
 
 macro_rules! media_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
-        $s:expr $(; $k:expr => $v:expr)*),+) => {
+        $s:expr $(; $k:expr => $v:expr)*,)+) => {
         $(
             #[doc="Media type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
             #[doc=$t] #[doc="/"] #[doc=$s]
@@ -139,7 +139,7 @@ macro_rules! media_types {
 }
 
 macro_rules! from_extension {
-    ($($ext:expr => $name:ident),*) => (
+    ($($ext:expr => $name:ident,)*) => (
         /// Returns the Media-Type associated with the extension `ext`. Not all
         /// extensions are recognized. If an extensions is not recognized,
         /// `None` is returned. The currently recognized extensions are
