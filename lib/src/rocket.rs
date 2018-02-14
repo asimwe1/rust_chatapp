@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::str::from_utf8_unchecked;
+use std::str::from_utf8;
 use std::cmp::min;
 use std::io::{self, Write};
 use std::mem;
@@ -176,16 +176,14 @@ impl Rocket {
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
         if is_form && req.method() == Method::Post && data_len >= min_len {
-            // We're only using this for comparison and throwing it away
-            // afterwards, so it doesn't matter if we have invalid UTF8.
-            let form =
-                unsafe { from_utf8_unchecked(&data.peek()[..min(data_len, max_len)]) };
+            if let Ok(form) = from_utf8(&data.peek()[..min(data_len, max_len)]) {
+                let method: Option<Result<Method, _>> = FormItems::from(form)
+                    .filter(|&(key, _)| key.as_str() == "_method")
+                    .map(|(_, value)| value.parse())
+                    .next();
 
-            if let Some((key, value)) = FormItems::from(form).next() {
-                if key == "_method" {
-                    if let Ok(method) = value.parse() {
-                        req.set_method(method);
-                    }
+                if let Some(Ok(method)) = method {
+                    req.set_method(method);
                 }
             }
         }

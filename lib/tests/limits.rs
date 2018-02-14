@@ -59,7 +59,7 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
     #[test]

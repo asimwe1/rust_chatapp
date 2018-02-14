@@ -55,14 +55,15 @@ fn check_bad_form(form_str: &str, status: Status) {
 
 #[test]
 fn test_bad_form_abnromal_inputs() {
-    check_bad_form("&", Status::BadRequest);
-    check_bad_form("=", Status::BadRequest);
     check_bad_form("&&&===&", Status::BadRequest);
+    check_bad_form("&&&=hi==&", Status::BadRequest);
 }
 
 #[test]
 fn test_bad_form_missing_fields() {
-    let bad_inputs: [&str; 6] = [
+    let bad_inputs: [&str; 8] = [
+        "&",
+        "=",
         "username=Sergio",
         "password=pass",
         "age=30",
