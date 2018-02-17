@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use config::Value;
 
 pub fn parse_simple_toml_value(string: &str) -> Result<Value, &'static str>  {
+    let string = string.trim();
     if string.is_empty() {
         return Err("value is empty")
     }

@@ -10,6 +10,7 @@ msgpack = 1048576 # this is an extra used by the msgpack contrib module
 address = "localhost"
 port = 8000
 workers = 1
+keep_alive = 5
 log = "normal"
 hi = "Hello!" # this is an unused extra; maybe application specific?
 is_extra = true # this is an unused extra; maybe application specific?
@@ -17,8 +18,9 @@ is_extra = true # this is an unused extra; maybe application specific?
 [staging]
 address = "0.0.0.0"
 port = 8000
-log = "normal"
 workers = 8
+keep_alive = 5
+log = "normal"
 # don't use this key! generate your own and keep it private!
 secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
 
@@ -26,6 +28,7 @@ secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
 address = "0.0.0.0"
 port = 8000
 workers = 12
+keep_alive = 5
 log = "critical"
 # don't use this key! generate your own and keep it private!
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="

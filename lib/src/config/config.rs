@@ -47,6 +47,8 @@ pub struct Config {
     pub port: u16,
     /// The number of workers to run concurrently.
     pub workers: u16,
+    /// Keep-alive timeout in seconds or None if disabled.
+    pub keep_alive: Option<u32>,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
@@ -63,7 +65,7 @@ pub struct Config {
 
 macro_rules! config_from_raw {
     ($config:expr, $name:expr, $value:expr,
-        $($key:ident => ($type:ident, $set:ident, $map:expr)),+ | _ => $rest:expr) => (
+        $($key:ident => ($type:ident, $set:ident, $map:expr),)+ | _ => $rest:expr) => (
         match $name {
             $(stringify!($key) => {
                 super::custom_values::$type($config, $name, $value)
@@ -213,6 +215,7 @@ impl Config {
                     address: "localhost".to_string(),
                     port: 8000,
                     workers: default_workers,
+                    keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
                     tls: None,
@@ -227,6 +230,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 8000,
                     workers: default_workers,
+                    keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
                     tls: None,
@@ -241,6 +245,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 8000,
                     workers: default_workers,
+                    keep_alive: Some(5),
                     log_level: LoggingLevel::Critical,
                     secret_key: key,
                     tls: None,
@@ -275,6 +280,7 @@ impl Config {
     ///   * **address**: String
     ///   * **port**: Integer (16-bit unsigned)
     ///   * **workers**: Integer (16-bit unsigned)
+    ///   * **keep_alive**: Integer or Boolean (false) or String ('none')
     ///   * **log**: String
     ///   * **secret_key**: String (192-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
@@ -284,10 +290,11 @@ impl Config {
             address => (str, set_address, id),
             port => (u16, set_port, ok),
             workers => (u16, set_workers, ok),
-            secret_key => (str, set_secret_key, id),
+            keep_alive => (u32_option, set_keep_alive, ok),
             log => (log_level, set_log_level, ok),
+            secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
-            limits => (limits, set_limits, ok)
+            limits => (limits, set_limits, ok),
             | _ => {
                 self.extras.insert(name.into(), val.clone());
                 Ok(())
@@ -388,6 +395,31 @@ impl Config {
     #[inline]
     pub fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
+    }
+
+    /// Set the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// keep-alive is disabled.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    ///
+    /// // Set keep-alive timeout to 10 seconds.
+    /// config.set_keep_alive(10);
+    ///
+    /// // Disable keep-alive.
+    /// config.set_keep_alive(None);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    pub fn set_keep_alive<T: Into<Option<u32>>>(&mut self, timeout: T) {
+        self.keep_alive = timeout.into();
     }
 
     /// Sets the `secret_key` in `self` to `key` which must be a 192-bit base64
@@ -853,6 +885,7 @@ impl fmt::Debug for Config {
         s.field("address", &self.address);
         s.field("port", &self.port);
         s.field("workers", &self.workers);
+        s.field("keep_alive", &self.keep_alive);
         s.field("log_level", &self.log_level);
 
         for (key, value) in self.extras() {
@@ -870,6 +903,7 @@ impl PartialEq for Config {
             && self.port == other.port
             && self.workers == other.workers
             && self.log_level == other.log_level
+            && self.keep_alive == other.keep_alive
             && self.environment == other.environment
             && self.extras == other.extras
     }

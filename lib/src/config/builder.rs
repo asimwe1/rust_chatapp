@@ -14,6 +14,8 @@ pub struct ConfigBuilder {
     pub port: u16,
     /// The number of workers to run in parallel.
     pub workers: u16,
+    /// Keep-alive timeout in seconds or None if disabled.
+    pub keep_alive: Option<u32>,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
@@ -63,6 +65,7 @@ impl ConfigBuilder {
             address: config.address,
             port: config.port,
             workers: config.workers,
+            keep_alive: config.keep_alive,
             log_level: config.log_level,
             secret_key: None,
             tls: None,
@@ -125,6 +128,32 @@ impl ConfigBuilder {
     #[inline]
     pub fn workers(mut self, workers: u16) -> Self {
         self.workers = workers;
+        self
+    }
+
+    /// Set the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// keep-alive is disabled.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .keep_alive(10)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.keep_alive, Some(10));
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .keep_alive(None)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.keep_alive, None);
+    /// ```
+    #[inline]
+    pub fn keep_alive<T: Into<Option<u32>>>(mut self, timeout: T) -> Self {
+        self.keep_alive = timeout.into();
         self
     }
 
@@ -283,6 +312,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .port(700)
     ///     .workers(12)
+    ///     .keep_alive(None)
     ///     .finalize();
     ///
     /// assert!(config.is_ok());
@@ -298,6 +328,7 @@ impl ConfigBuilder {
         config.set_address(self.address)?;
         config.set_port(self.port);
         config.set_workers(self.workers);
+        config.set_keep_alive(self.keep_alive);
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_root(self.root);

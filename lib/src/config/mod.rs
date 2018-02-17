@@ -38,6 +38,9 @@
 //!     * examples: `"8000"`, `"80"`, `"4242"`
 //!   * **workers**: _[integer]_ the number of concurrent workers to use
 //!     * examples: `12`, `1`, `4`
+//!   * **keep_alive**: _[integer, 'false', or 'none']_ timeout, in seconds, for
+//!     HTTP keep-alive. disabled on 'false' or 'none'
+//!     * examples: `5`, `60`, `false`, `"none"`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
 //!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
@@ -72,6 +75,7 @@
 //! address = "localhost"
 //! port = 8000
 //! workers = [number_of_cpus * 2]
+//! keep_alive = 5
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -80,6 +84,7 @@
 //! address = "0.0.0.0"
 //! port = 8000
 //! workers = [number_of_cpus * 2]
+//! keep_alive = 5
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -88,6 +93,7 @@
 //! address = "0.0.0.0"
 //! port = 8000
 //! workers = [number_of_cpus * 2]
+//! keep_alive = 5
 //! log = "critical"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -601,6 +607,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
+            keep_alive = false
             secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
@@ -612,6 +619,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
+            .keep_alive(None)
             .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
@@ -883,6 +891,82 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             workers = 105836
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    #[test]
+    fn test_good_keep_alives() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::set_var(CONFIG_ENV, "stage");
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = 10
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(10)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = 0
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(0)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = 348
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(348)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = false
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(None)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = "none"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(None)
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          keep_alive = "None"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).keep_alive(None)
+                      });
+    }
+
+    #[test]
+    fn test_bad_keep_alives() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::remove_var(CONFIG_ENV);
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            keep_alive = true
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            keep_alive = -10
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            keep_alive = "Some(10)"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            keep_alive = 4294967296
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 

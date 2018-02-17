@@ -2,12 +2,15 @@ use std::collections::HashMap;
 use std::str::from_utf8;
 use std::cmp::min;
 use std::io::{self, Write};
+use std::time::Duration;
 use std::mem;
 
 use yansi::Paint;
 use state::Container;
 
-#[cfg(feature = "tls")] use hyper_sync_rustls::TlsServer;
+#[cfg(feature = "tls")]
+use hyper_sync_rustls::TlsServer;
+
 use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config, LoggedValue};
@@ -383,6 +386,11 @@ impl Rocket {
         launch_info_!("secret key: {}", Paint::white(&config.secret_key));
         launch_info_!("limits: {}", Paint::white(&config.limits));
 
+        match config.keep_alive {
+            Some(v) => launch_info_!("keep-alive: {}", Paint::white(format!("{}s", v))),
+            None => launch_info_!("keep-alive: {}", Paint::white("disabled")),
+        }
+
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
             launch_info_!("tls: {}", Paint::white("enabled"));
@@ -668,6 +676,10 @@ impl Rocket {
                 Ok(server_addr) => self.config.port = server_addr.port(),
                 Err(e) => return LaunchError::from(e),
             }
+
+            // Set the keep-alive.
+            let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
+            server.keep_alive(timeout);
 
             // Run the launch fairings.
             self.fairings.handle_launch(&self);
