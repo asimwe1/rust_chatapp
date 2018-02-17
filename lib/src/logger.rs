@@ -152,14 +152,29 @@ pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 
 static PUSHED: AtomicBool = AtomicBool::new(false);
-static LAST_LOG_FILTER: AtomicUsize = AtomicUsize::new(filter_to_usize(log::LevelFilter::Off));
+static LAST_LOG_FILTER: AtomicUsize = AtomicUsize::new(0);
 
-const fn filter_to_usize(filter: log::LevelFilter) -> usize {
-    filter as usize
+fn filter_to_usize(filter: log::LevelFilter) -> usize {
+    match filter {
+        log::LevelFilter::Off => 0,
+        log::LevelFilter::Error => 1,
+        log::LevelFilter::Warn => 2,
+        log::LevelFilter::Info => 3,
+        log::LevelFilter::Debug => 4,
+        log::LevelFilter::Trace => 5,
+    }
 }
 
 fn usize_to_filter(num: usize) -> log::LevelFilter {
-    unsafe { ::std::mem::transmute(num) }
+    match num {
+        0 => log::LevelFilter::Off,
+        1 => log::LevelFilter::Error,
+        2 => log::LevelFilter::Warn,
+        3 => log::LevelFilter::Info,
+        4 => log::LevelFilter::Debug,
+        5 => log::LevelFilter::Trace,
+        _ => unreachable!("max num is 5 in filter_to_usize")
+    }
 }
 
 pub(crate) fn push_max_level(level: LoggingLevel) {
