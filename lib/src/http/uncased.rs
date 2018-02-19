@@ -338,9 +338,7 @@ impl<'s> Hash for Uncased<'s> {
 /// s2.to_lower()`, but does it in a much faster way.
 #[inline(always)]
 pub fn uncased_eq<S1: AsRef<str>, S2: AsRef<str>>(s1: S1, s2: S2) -> bool {
-    let ascii_ref_1: &UncasedStr = s1.as_ref().into();
-    let ascii_ref_2: &UncasedStr = s2.as_ref().into();
-    ascii_ref_1 == ascii_ref_2
+    UncasedStr::new(s1.as_ref()) == UncasedStr::new(s2.as_ref())
 }
 
 #[cfg(test)]
