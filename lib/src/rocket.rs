@@ -616,7 +616,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        // Attach the fairings, which requires us to move `self`.
+        // Attach (and run attach) fairings, which requires us to move `self`.
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
         self = fairings.attach(Box::new(fairing), self);
 
@@ -631,8 +631,8 @@ impl Rocket {
         if !collisions.is_empty() {
             let owned = collisions.iter().map(|&(a, b)| (a.clone(), b.clone()));
             Some(LaunchError::from(LaunchErrorKind::Collision(owned.collect())))
-        } else if self.fairings.had_failure() {
-            Some(LaunchError::from(LaunchErrorKind::FailedFairing))
+        } else if let Some(failures) = self.fairings.failures() {
+            Some(LaunchError::from(LaunchErrorKind::FailedFairings(failures.to_vec())))
         } else {
             None
         }
