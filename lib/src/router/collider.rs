@@ -12,43 +12,36 @@ pub trait Collider<T: ?Sized = Self> {
 }
 
 #[inline(always)]
-fn index_match_until(break_c: char,
-                     a: &str,
-                     b: &str,
-                     dir: bool) -> Option<(isize, isize)> {
-    let (a_len, b_len) = (a.len() as isize, b.len() as isize);
-    let (mut i, mut j, delta) = if dir {
-        (0, 0, 1)
-    } else {
-        (a_len - 1, b_len - 1, -1)
-    };
-
-    let break_b = break_c as u8;
-    while i >= 0 && j >= 0 && i < a_len && j < b_len {
-        let (c1, c2) = (a.as_bytes()[i as usize], b.as_bytes()[j as usize]);
-        if c1 == break_b || c2 == break_b {
-            break;
-        } else if c1 != c2 {
-            return None;
-        } else {
-            i += delta;
-            j += delta;
+fn do_match_iter_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
+    where A: Iterator<Item = u8>, B: Iterator<Item = u8>
+{
+    loop {
+        match (a.next(), b.next()) {
+            (None, Some(_)) => return false,
+            (Some(_), None) => return false,
+            (None, None) => return true,
+            (Some(c1), Some(c2)) if c1 == break_c || c2 == break_c => return true,
+            (Some(c1), Some(c2)) if c1 != c2 => return false,
+            (Some(_), Some(_)) => continue
         }
     }
-
-    Some((i, j))
 }
 
 #[inline(always)]
-fn do_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
-    index_match_until(break_c, a, b, dir).is_some()
+fn do_match_until(break_c: u8, a: &str, b: &str, dir: bool) -> bool {
+    let (a_iter, b_iter) = (a.as_bytes().iter().cloned(), b.as_bytes().iter().cloned());
+    if dir {
+        do_match_iter_until(break_c, a_iter, b_iter)
+    } else {
+        do_match_iter_until(break_c, a_iter.rev(), b_iter.rev())
+    }
 }
 
 impl<'a> Collider<str> for &'a str {
     #[inline(always)]
     fn collides_with(&self, other: &str) -> bool {
         let (a, b) = (self, other);
-        do_match_until('<', a, b, true) && do_match_until('>', a, b, false)
+        do_match_until(b'<', a, b, true) && do_match_until(b'>', a, b, false)
     }
 }
 
@@ -201,7 +194,7 @@ mod tests {
         assert!(unranked_collide("/<name>bob", "/<name>b"));
         assert!(unranked_collide("/a<b>c", "/abc"));
         assert!(unranked_collide("/a<b>c", "/azooc"));
-        assert!(unranked_collide("/a<b>", "/a"));
+        assert!(unranked_collide("/a<b>", "/ab"));
         assert!(unranked_collide("/<b>", "/a"));
         assert!(unranked_collide("/<a>/<b>", "/a/b<c>"));
         assert!(unranked_collide("/<a>/bc<b>", "/a/b<c>"));
@@ -226,6 +219,7 @@ mod tests {
 
     #[test]
     fn non_collisions() {
+        assert!(!unranked_collide("/<a>", "/"));
         assert!(!unranked_collide("/a", "/b"));
         assert!(!unranked_collide("/a/b", "/a"));
         assert!(!unranked_collide("/a/b", "/a/c"));
@@ -242,6 +236,10 @@ mod tests {
         assert!(!unranked_collide("/hi/<a..>", "/hi"));
         assert!(!unranked_collide("/hi/<a..>", "/hi/"));
         assert!(!unranked_collide("/<a..>", "//////"));
+        assert!(!unranked_collide("/t", "/test"));
+        assert!(!unranked_collide("/a", "/aa"));
+        assert!(!unranked_collide("/a", "/aaa"));
+        assert!(!unranked_collide("/", "/a"));
     }
 
     #[test]
@@ -304,6 +302,10 @@ mod tests {
         assert!(!s_s_collide("/<a..>", "/"));
         assert!(!s_s_collide("/hi/<a..>", "/hi/"));
         assert!(!s_s_collide("/a/hi/<a..>", "/a/hi/"));
+        assert!(!s_s_collide("/t", "/test"));
+        assert!(!s_s_collide("/a", "/aa"));
+        assert!(!s_s_collide("/a", "/aaa"));
+        assert!(!s_s_collide("/", "/a"));
     }
 
     fn mt_mt_collide(mt1: &str, mt2: &str) -> bool {
