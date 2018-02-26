@@ -1,7 +1,7 @@
 use std::borrow::{Borrow, Cow};
 use std::fmt;
 
-use ordermap::OrderMap;
+use indexmap::IndexMap;
 
 use http::uncased::{Uncased, UncasedStr};
 
@@ -117,7 +117,7 @@ impl<'h> fmt::Display for Header<'h> {
 /// returns values for headers of names "AbC", "ABC", "abc", and so on.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
-    headers: OrderMap<Uncased<'h>, Vec<Cow<'h, str>>>
+    headers: IndexMap<Uncased<'h>, Vec<Cow<'h, str>>>
 }
 
 impl<'h> HeaderMap<'h> {
@@ -132,7 +132,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn new() -> HeaderMap<'h> {
-        HeaderMap { headers: OrderMap::new() }
+        HeaderMap { headers: IndexMap::new() }
     }
 
     /// Returns true if `self` contains a header with the name `name`.

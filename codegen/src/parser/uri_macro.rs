@@ -11,7 +11,7 @@ use syntax::parse::parser::{Parser, PathStyle};
 use syntax::print::pprust::ty_to_string;
 use syntax::ptr::P;
 
-use ordermap::OrderMap;
+use indexmap::IndexMap;
 
 #[derive(Debug)]
 enum Arg {
@@ -224,7 +224,7 @@ impl InternalUriParams {
             None => unnamed(&vec![]),
             Some(Spanned { node: Args::Unnamed(ref args), .. }) => unnamed(args),
             Some(Spanned { node: Args::Named(ref args), .. }) => {
-                let mut params: OrderMap<Name, Option<P<Expr>>> = self.fn_args.iter()
+                let mut params: IndexMap<Name, Option<P<Expr>>> = self.fn_args.iter()
                     .map(|&(ident, _)| (ident.node.name, None))
                     .collect();
 

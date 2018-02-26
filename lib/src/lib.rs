@@ -112,7 +112,7 @@ extern crate time;
 extern crate memchr;
 extern crate base64;
 extern crate smallvec;
-extern crate ordermap;
+extern crate indexmap;
 extern crate isatty;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
