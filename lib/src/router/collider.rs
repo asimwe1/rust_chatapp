@@ -12,7 +12,7 @@ pub trait Collider<T: ?Sized = Self> {
 }
 
 #[inline(always)]
-fn do_match_iter_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
+fn iters_match_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
     where A: Iterator<Item = u8>, B: Iterator<Item = u8>
 {
     loop {
@@ -27,21 +27,13 @@ fn do_match_iter_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
     }
 }
 
-#[inline(always)]
-fn do_match_until(break_c: u8, a: &str, b: &str, dir: bool) -> bool {
-    let (a_iter, b_iter) = (a.as_bytes().iter().cloned(), b.as_bytes().iter().cloned());
-    if dir {
-        do_match_iter_until(break_c, a_iter, b_iter)
-    } else {
-        do_match_iter_until(break_c, a_iter.rev(), b_iter.rev())
-    }
-}
-
 impl<'a> Collider<str> for &'a str {
     #[inline(always)]
     fn collides_with(&self, other: &str) -> bool {
-        let (a, b) = (self, other);
-        do_match_until(b'<', a, b, true) && do_match_until(b'>', a, b, false)
+        let a_iter = self.as_bytes().iter().cloned();
+        let b_iter = other.as_bytes().iter().cloned();
+        iters_match_until(b'<', a_iter.clone(), b_iter.clone())
+            && iters_match_until(b'>', a_iter.rev(), b_iter.rev())
     }
 }
 
