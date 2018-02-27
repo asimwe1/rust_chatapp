@@ -120,7 +120,7 @@ By default, Rocket limits forms to 32KiB (32768 bytes). To increase the limit,
 simply set the `limits.forms` configuration parameter. For example, to increase
 the forms limit to 128KiB globally, we might write:
 
-```rust
+```toml
 [global.limits]
 forms = 131072
 ```
@@ -144,7 +144,7 @@ application, can use them as they wish. As an example, the
 accepts a value for the `template_dir` configuration parameter. The parameter
 can be set in `Rocket.toml` as follows:
 
-```
+```toml
 [development]
 template_dir = "dev_templates/"
 
@@ -161,6 +161,50 @@ to extra configuration parameters when launching:
 🔧  Configured for development.
     => ...
     => [extra] template_dir: "dev_templates/"
+```
+
+To retrieve a custom, extra configuration parameter in your application, we
+recommend using an [ad-hoc attach fairing] in combination with [managed state].
+For example, if your application makes use of a custom `assets_dir` parameter:
+
+[ad-hoc attach fairing]: /guide/fairings/#ad-hoc-fairings
+[managed state]: /guide/state/#managed-state
+
+```toml
+[development]
+assets_dir = "dev_assets/"
+
+[production]
+assets_dir = "prod_assets/"
+```
+
+The following code will:
+
+  1. Read the configuration parameter in an ad-hoc `attach` fairing.
+  2. Store the parsed parameter in an `AssertsDir` structure in managed state.
+  3. Retrieve the parameter in an `assets` route via the `State` guard.
+
+```rust
+struct AssetsDir(String);
+
+#[get("/<asset..>")]
+fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
+    NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
+}
+
+fn main() {
+    rocket::ignite()
+        .mount("/", routes![assets])
+        .attach(AdHoc::on_attach(|rocket| {
+            let assets_dir = rocket.config()
+                .get_str("assets_dir")
+                .unwrap_or("assets/")
+                .to_string();
+
+            Ok(rocket.manage(AssetsDir(assets_dir)))
+        }))
+        .launch();
+}
 ```
 
 ## Environment Variables
