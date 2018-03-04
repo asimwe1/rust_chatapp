@@ -8,7 +8,7 @@ use rocket::State;
 
 type MyState<'r> = State<'r, usize>;
 
-type MyVecState<'r, T: 'r> = State<'r, Vec<T>>;
+type MyVecState<'r, T> = State<'r, Vec<T>>;
 
 #[get("/")]
 fn index(state: MyState) {  }
