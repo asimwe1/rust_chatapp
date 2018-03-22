@@ -23,6 +23,7 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     })
 }
 
+// FIXME: I think we also want the attributes here.
 fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
     ct.map(|ct| {
         let (top, sub) = (ct.top().as_str(), ct.sub().as_str());

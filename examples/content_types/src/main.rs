@@ -19,8 +19,9 @@ struct Person {
 
 // In a `GET` request and all other non-payload supporting request types, the
 // preferred media type in the Accept header is matched against the `format` in
-// the route attribute.
-#[get("/<name>/<age>", format = "application/json")]
+// the route attribute. Note: if this was a real application, we'd use
+// `rocket_contrib`'s built-in JSON support and return a `JsonValue` instead.
+#[get("/<name>/<age>", format = "json")]
 fn get_hello(name: String, age: u8) -> content::Json<String> {
     // In a real application, we'd use the JSON contrib type.
     let person = Person { name: name, age: age, };
@@ -29,7 +30,7 @@ fn get_hello(name: String, age: u8) -> content::Json<String> {
 
 // In a `POST` request and all other payload supporting request types, the
 // content type is matched against the `format` in the route attribute.
-#[post("/<age>", format = "text/plain", data = "<name>")]
+#[post("/<age>", format = "plain", data = "<name>")]
 fn post_hello(age: u8, name: String) -> content::Json<String> {
     let person = Person { name: name, age: age, };
     content::Json(serde_json::to_string(&person).unwrap())

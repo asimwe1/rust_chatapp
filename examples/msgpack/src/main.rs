@@ -15,7 +15,7 @@ struct Message {
     contents: String
 }
 
-#[get("/<id>", format = "application/msgpack")]
+#[get("/<id>", format = "msgpack")]
 fn get(id: usize) -> MsgPack<Message> {
     MsgPack(Message {
         id: id,
@@ -23,7 +23,7 @@ fn get(id: usize) -> MsgPack<Message> {
     })
 }
 
-#[post("/", data = "<data>", format = "application/msgpack")]
+#[post("/", data = "<data>", format = "msgpack")]
 fn create(data: MsgPack<Message>) -> Result<String, ()> {
     Ok(data.into_inner().contents)
 }

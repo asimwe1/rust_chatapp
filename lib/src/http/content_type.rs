@@ -45,15 +45,119 @@ pub struct ContentType(pub MediaType);
 macro_rules! content_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*,)+) => {
-        $(
-            #[doc="Content-Type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
-            #[doc=$t] #[doc="/"] #[doc=$s]
-            $(#[doc="; "] #[doc=$k] #[doc=" = "] #[doc=$v])*
-            #[doc="</i>"]
+    $(
+        docify!([
+            Content Type for @{"**"}! @{$str}! @{"**"}!: @{"`"} @{$t}! @[/]! @{$s}!
+            $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
+        ];
             #[allow(non_upper_case_globals)]
             pub const $name: ContentType = ContentType(MediaType::$name);
-         )+
-    };
+        );
+    )+
+}}
+
+macro_rules! from_extension {
+    ($($ext:expr => $name:ident,)*) => (
+    docify!([
+        Returns the @[Content-Type] associated with the extension @code{ext}.
+        Not all extensions are recognized. If an extensions is not recognized,
+        @code{None} is returned. The currently recognized extensions are:
+
+        @nl
+        $(* @{$ext} - @{"`ContentType::"}! @[$name]! @{"`"} @nl)*
+        @nl
+
+        This list is likely to grow. Extensions are matched
+        @[case-insensitively.]
+    ];
+        /// # Example
+        ///
+        /// Recognized content types:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let xml = ContentType::from_extension("xml");
+        /// assert_eq!(xml, Some(ContentType::XML));
+        ///
+        /// let xml = ContentType::from_extension("XML");
+        /// assert_eq!(xml, Some(ContentType::XML));
+        /// ```
+        ///
+        /// An unrecognized content type:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let foo = ContentType::from_extension("foo");
+        /// assert!(foo.is_none());
+        /// ```
+        #[inline]
+        pub fn from_extension(ext: &str) -> Option<ContentType> {
+            MediaType::from_extension(ext).map(ContentType)
+        }
+    );)
+}
+
+macro_rules! parse_flexible {
+    ($($short:expr => $name:ident,)*) => (
+    docify!([
+        Flexibly parses @code{name} into a @code{ContentType}. The parse is
+        @[_flexible_] because, in addition to stricly correct content types, it
+        recognizes the following shorthands:
+
+        @nl
+        $(* $short - @{"`ContentType::"}! @[$name]! @{"`"} @nl)*
+        @nl
+    ];
+        /// For regular parsing, use the
+        /// [`ContentType::from_str()`](#impl-FromStr) method.
+        ///
+        /// # Example
+        ///
+        /// Using a shorthand:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let html = ContentType::parse_flexible("html");
+        /// assert_eq!(html, Some(ContentType::HTML));
+        ///
+        /// let json = ContentType::parse_flexible("json");
+        /// assert_eq!(json, Some(ContentType::JSON));
+        /// ```
+        ///
+        /// Using the full content-type:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let html = ContentType::parse_flexible("text/html; charset=utf-8");
+        /// assert_eq!(html, Some(ContentType::HTML));
+        ///
+        /// let json = ContentType::parse_flexible("application/json");
+        /// assert_eq!(json, Some(ContentType::JSON));
+        ///
+        /// let custom = ContentType::parse_flexible("application/x+custom");
+        /// assert_eq!(custom, Some(ContentType::new("application", "x+custom")));
+        /// ```
+        ///
+        /// An unrecognized content-type:
+        ///
+        /// ```rust
+        /// use rocket::http::ContentType;
+        ///
+        /// let foo = ContentType::parse_flexible("foo");
+        /// assert_eq!(foo, None);
+        ///
+        /// let bar = ContentType::parse_flexible("foo/bar/baz");
+        /// assert_eq!(bar, None);
+        /// ```
+        #[inline]
+        pub fn parse_flexible(name: &str) -> Option<ContentType> {
+            MediaType::parse_flexible(name).map(ContentType)
+        }
+    );)
 }
 
 impl ContentType {
@@ -79,39 +183,9 @@ impl ContentType {
         ContentType(MediaType::new(top, sub))
     }
 
-    /// Returns the Content-Type associated with the extension `ext` if the
-    /// extension is recognized. Not all extensions are recognized. If an
-    /// extensions is not recognized, then this method returns `None`. The
-    /// currently recognized extensions are txt, html, htm, xml, csv, js, css,
-    /// json, png, gif, bmp, jpeg, jpg, webp, svg, pdf, ttf, otf, woff, and
-    /// woff2. Extensions are matched case-insensitively.
-    ///
-    /// # Example
-    ///
-    /// Recognized content types:
-    ///
-    /// ```rust
-    /// use rocket::http::ContentType;
-    ///
-    /// let xml = ContentType::from_extension("xml");
-    /// assert_eq!(xml, Some(ContentType::XML));
-    ///
-    /// let xml = ContentType::from_extension("XML");
-    /// assert_eq!(xml, Some(ContentType::XML));
-    /// ```
-    ///
-    /// An unrecognized content type:
-    ///
-    /// ```rust
-    /// use rocket::http::ContentType;
-    ///
-    /// let foo = ContentType::from_extension("foo");
-    /// assert!(foo.is_none());
-    /// ```
-    #[inline]
-    pub fn from_extension(ext: &str) -> Option<ContentType> {
-        MediaType::from_extension(ext).map(ContentType)
-    }
+    known_shorthands!(parse_flexible);
+
+    known_extensions!(from_extension);
 
     /// Creates a new `ContentType` with top-level type `top`, subtype `sub`,
     /// and parameters `ps`. This should _only_ be used to construct uncommon or

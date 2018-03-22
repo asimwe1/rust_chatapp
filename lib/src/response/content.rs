@@ -90,4 +90,3 @@ ctrs! {
     Css: CSS, "CSS", "text/css",
     JavaScript: JavaScript, "JavaScript", "application/javascript"
 }
-

@@ -106,11 +106,11 @@ macro_rules! media_str {
 macro_rules! media_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*,)+) => {
-        $(
-            #[doc="Media type for <b>"] #[doc=$str] #[doc="</b>: <i>"]
-            #[doc=$t] #[doc="/"] #[doc=$s]
-            $(#[doc="; "] #[doc=$k] #[doc=" = "] #[doc=$v])*
-            #[doc="</i>"]
+    $(
+        docify!([
+            Media Type for @{"**"}! @{$str}! @{"**"}!: @{"`"} @{$t}! @[/]! @{$s}!
+            $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
+        ];
             #[allow(non_upper_case_globals)]
             pub const $name: MediaType = MediaType {
                 source: Source::Known(concat!($t, "/", $s, $("; ", $k, "=", $v),*)),
@@ -118,34 +118,48 @@ macro_rules! media_types {
                 sub: media_str!($s),
                 params: MediaParams::Static(&[$((media_str!($k), media_str!($v))),*])
             };
+        );
+    )+
 
-            #[doc="Returns `true` if `self` is the media type for <b>"]
-            #[doc=$str]
-            #[doc="</b>, "]
-            /// without considering parameters.
+    /// Returns `true` if this MediaType is known to Rocket. In other words,
+    /// returns `true` if there is an associated constant for `self`.
+    pub fn is_known(&self) -> bool {
+        if let Source::Known(_) = self.source {
+            return true;
+        }
+
+        $(if self.$check() { return true })+
+        false
+    }
+
+    $(
+        docify!([
+            Returns @code{true} if the @[top-level] and sublevel types of
+            @code{self} are the same as those of @{"`MediaType::"}! $name
+            @{"`"}!.
+        ];
             #[inline(always)]
             pub fn $check(&self) -> bool {
                 *self == MediaType::$name
             }
-         )+
-
-        /// Returns `true` if this MediaType is known to Rocket, that is,
-        /// there is an associated constant for `self`.
-        pub fn is_known(&self) -> bool {
-            $(if self.$check() { return true })+
-            false
-        }
-    };
-}
+        );
+    )+
+}}
 
 macro_rules! from_extension {
     ($($ext:expr => $name:ident,)*) => (
-        /// Returns the Media-Type associated with the extension `ext`. Not all
-        /// extensions are recognized. If an extensions is not recognized,
-        /// `None` is returned. The currently recognized extensions are
-        $(#[doc=$ext]#[doc=","])*
-        /// and is likely to grow. Extensions are matched case-insensitively.
-        ///
+    docify!([
+        Returns the @[Media-Type] associated with the extension @code{ext}. Not
+        all extensions are recognized. If an extensions is not recognized,
+        @code{None} is returned. The currently recognized extensions are:
+
+        @nl
+        $(* @{$ext} - @{"`MediaType::"}! @[$name]! @{"`"} @nl)*
+        @nl
+
+        This list is likely to grow. Extensions are matched
+        @[case-insensitively.]
+    ];
         /// # Example
         ///
         /// Recognized media types:
@@ -174,7 +188,70 @@ macro_rules! from_extension {
                 _ => None
             }
         }
-    )
+    );)
+}
+
+macro_rules! parse_flexible {
+    ($($short:expr => $name:ident,)*) => (
+    docify!([
+        Flexibly parses @code{name} into a @code{MediaType}. The parse is
+        @[_flexible_] because, in addition to stricly correct media types, it
+        recognizes the following shorthands:
+
+        @nl
+        $(* $short - @{"`MediaType::"}! @[$name]! @{"`"} @nl)*
+        @nl
+    ];
+        /// For regular parsing, use the
+        /// [`MediaType::from_str()`](#impl-FromStr) method.
+        ///
+        /// # Example
+        ///
+        /// Using a shorthand:
+        ///
+        /// ```rust
+        /// use rocket::http::MediaType;
+        ///
+        /// let html = MediaType::parse_flexible("html");
+        /// assert_eq!(html, Some(MediaType::HTML));
+        ///
+        /// let json = MediaType::parse_flexible("json");
+        /// assert_eq!(json, Some(MediaType::JSON));
+        /// ```
+        ///
+        /// Using the full media type:
+        ///
+        /// ```rust
+        /// use rocket::http::MediaType;
+        ///
+        /// let html = MediaType::parse_flexible("text/html; charset=utf-8");
+        /// assert_eq!(html, Some(MediaType::HTML));
+        ///
+        /// let json = MediaType::parse_flexible("application/json");
+        /// assert_eq!(json, Some(MediaType::JSON));
+        ///
+        /// let custom = MediaType::parse_flexible("application/x+custom");
+        /// assert_eq!(custom, Some(MediaType::new("application", "x+custom")));
+        /// ```
+        ///
+        /// An unrecognized media type:
+        ///
+        /// ```rust
+        /// use rocket::http::MediaType;
+        ///
+        /// let foo = MediaType::parse_flexible("foo");
+        /// assert_eq!(foo, None);
+        ///
+        /// let bar = MediaType::parse_flexible("foo/bar/baz");
+        /// assert_eq!(bar, None);
+        /// ```
+        pub fn parse_flexible(name: &str) -> Option<MediaType> {
+            match name {
+                $(x if uncased_eq(x, $short) => Some(MediaType::$name)),*,
+                _ => MediaType::from_str(name).ok(),
+            }
+        }
+    );)
 }
 
 impl MediaType {
@@ -240,7 +317,6 @@ impl MediaType {
             IndexedStr::Concrete(val.into())
         ));
 
-
         MediaType {
             source: Source::None,
             top: IndexedStr::Concrete(top.into()),
@@ -248,6 +324,8 @@ impl MediaType {
             params: MediaParams::Dynamic(params)
         }
     }
+
+    known_shorthands!(parse_flexible);
 
     known_extensions!(from_extension);
 

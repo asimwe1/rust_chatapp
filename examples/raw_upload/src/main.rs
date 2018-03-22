@@ -8,7 +8,7 @@ extern crate rocket;
 use std::io;
 use rocket::Data;
 
-#[post("/upload", format = "text/plain", data = "<data>")]
+#[post("/upload", format = "plain", data = "<data>")]
 fn upload(data: Data) -> io::Result<String> {
     data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())
 }

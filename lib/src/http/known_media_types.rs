@@ -5,7 +5,7 @@ macro_rules! known_media_types {
         HTML (is_html): "HTML", "text", "html" ; "charset" => "utf-8",
         Plain (is_plain): "plain text", "text", "plain" ; "charset" => "utf-8",
         JSON (is_json): "JSON", "application", "json",
-        MsgPack (is_msgpack): "MessagePack", "application", "msgpack",
+        MsgPack (is_msgpack): "MsgPack", "application", "msgpack",
         Form (is_form): "forms", "application", "x-www-form-urlencoded",
         JavaScript (is_javascript): "JavaScript", "application", "javascript",
         CSS (is_css): "CSS", "text", "css" ; "charset" => "utf-8",
@@ -49,5 +49,21 @@ macro_rules! known_extensions {
         "otf" => OTF,
         "woff" => WOFF,
         "woff2" => WOFF2,
+    })
+}
+
+macro_rules! known_shorthands {
+    ($cont:ident) => ($cont! {
+        "any" => Any,
+        "binary" => Binary,
+        "html" => HTML,
+        "plain" => Plain,
+        "json" => JSON,
+        "msgpack" => MsgPack,
+        "form" => Form,
+        "js" => JavaScript,
+        "css" => CSS,
+        "multipart" => FormData,
+        "xml" => XML,
     })
 }
