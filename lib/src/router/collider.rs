@@ -68,11 +68,11 @@ impl Collider for MediaType  {
 
 // This implementation is used at initialization to check if two user routes
 // collide before launching. Format collisions works like this:
-//   * If route specifies format, it only gets requests for that format.
-//   * If route doesn't specify format, it gets requests for any format.
+//   * If route specifies a format, it only gets requests for that format.
+//   * If route doesn't specify a format, it gets requests for any format.
 // Query collisions work like this:
-//   * If route specifies qeury, it only gets request that have queries.
-//   * If route doesn't specify qeury, requests with and without queries match.
+//   * If routes specify a query, they only gets request that have queries.
+//   * If routes don't specify a query, requests with and without queries match.
 // As a result, as long as everything else collides, whether a route has a query
 // or not is irrelevant: it will collide.
 impl Collider for Route {
