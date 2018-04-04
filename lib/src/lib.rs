@@ -1,8 +1,6 @@
 #![feature(specialization)]
-#![feature(conservative_impl_trait)]
 #![feature(const_fn)]
 #![feature(plugin, decl_macro)]
-#![feature(never_type)]
 #![feature(try_trait)]
 #![recursion_limit="256"]
 
