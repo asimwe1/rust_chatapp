@@ -1,3 +1,33 @@
+# Version 0.3.7 (Apr 03, 2018)
+
+## Core
+
+  * Fixed a bug where incoming request URIs would match routes with the same
+    path prefix and suffix and ignore the rest.
+  * Added known media types for WASM, WEBM, OGG, and WAV.
+  * Fixed fragment URI parsing.
+
+## Codegen
+
+  * Codegen was updated for `2018-04-03` nightly.
+  * Minimum required `rustc` is `1.27.0-nightly 2018-04-03`.
+
+## Contrib
+
+  * JSON data is read eagerly, improving deserialization performance.
+
+## Docs
+
+  * Database example and docs were updated for Diesel 1.1.
+  * Removed outdated README performance section.
+  * Fixed various typos in rustdocs and guide.
+
+## Infrastructure
+
+  * Removed gates for stabilized features: `iterator_for_each`, `i128_type`,
+    `conservative_impl_trait`, `never_type`.
+  * Travis now tests in both debug and release mode.
+
 # Version 0.3.6 (Jan 12, 2018)
 
 ## Core
