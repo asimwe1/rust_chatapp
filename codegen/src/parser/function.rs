@@ -8,18 +8,14 @@ pub struct Function(Spanned<(Ident, FnDecl)>);
 
 impl Function {
     pub fn from(annotated: &Annotatable) -> Result<Function, Span> {
-        let inner = match *annotated {
-            Annotatable::Item(ref item) => match item.node {
-                ItemKind::Fn(ref decl, ..) => {
-                    span((item.ident, decl.clone().into_inner()), item.span)
-                }
-                _ => return Err(item.span)
-            },
-            Annotatable::TraitItem(ref item) => return Err(item.span),
-            Annotatable::ImplItem(ref item) => return Err(item.span),
-        };
+        if let Annotatable::Item(ref item) = *annotated {
+            if let ItemKind::Fn(ref decl, ..) = item.node {
+                let inner = (item.ident, decl.clone().into_inner());
+                return Ok(Function(span(inner, item.span)));
+            }
+        }
 
-        Ok(Function(inner))
+        Err(annotated.span())
     }
 
     pub fn ident(&self) -> &Ident {
@@ -38,4 +34,3 @@ impl Function {
         self.decl().inputs.iter().find(|arg| arg.named(name))
     }
 }
-
