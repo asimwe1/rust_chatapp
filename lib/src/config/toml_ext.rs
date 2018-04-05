@@ -13,22 +13,19 @@ pub fn is_whitespace(byte: char) -> bool {
 }
 
 #[inline(always)]
-pub fn is_number_token(byte: char) -> bool {
+fn is_not_separator(byte: char) -> bool {
     match byte {
-        '0'...'9' | '.' | '-' => true,
-        _ => false
+        ',' | '{' | '}' | '[' | ']' => false,
+        _ => true
     }
 }
 
-// FIXME: Silence warning for `digits.parse`.
-#[parser]
-fn number<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
-    let digits = take_some_while(is_number_token);
-    if let Ok(int) = digits.parse::<i64>() {
-        Value::Integer(int)
-    } else {
-        let v = from!(digits.parse::<f64>());
-        Value::Float(v)
+// FIXME: Be more permissive here?
+#[inline(always)]
+fn is_ident_char(byte: char) -> bool {
+    match byte {
+        '0'...'9' | 'A'...'Z' | 'a'...'z' | '_' | '-' => true,
+        _ => false
     }
 }
 
@@ -38,13 +35,9 @@ fn array<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
     Value::Array(array)
 }
 
-// FIXME: Be more permissive here?
 #[parser]
 fn key<'a>(input: &mut &'a str) -> ParseResult<&'a str, String> {
-    take_some_while(|c| match c {
-        '0'...'9' | 'A'...'Z' | 'a'...'z' | '_' | '-' => true,
-        _ => false
-    }).to_string()
+    take_some_while(is_ident_char).to_string()
 }
 
 #[parser]
@@ -70,9 +63,18 @@ fn value<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
         eat_slice("false") => Value::Boolean(false),
         peek('{') => table(),
         peek('[') => array(),
-        peek_if(is_number_token) => number(),
         peek('"') => Value::String(delimited('"', |_| true, '"').to_string()),
-        _ => Value::String(take_some_while(|c| c != ',' && c != '}' && c != ']').to_string())
+        _ => {
+            let value_str = take_some_while(is_not_separator);
+            // FIXME: Silence warning from pear.
+            if let Ok(int) = value_str.parse::<i64>() {
+                Value::Integer(int)
+            } else if let Ok(float) = value_str.parse::<f64>() {
+                Value::Float(float)
+            } else {
+                Value::String(value_str.into())
+            }
+        }
     };
 
     skip_while(is_whitespace);
@@ -80,7 +82,9 @@ fn value<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
 }
 
 pub fn parse_simple_toml_value(mut input: &str) -> Result<Value, String> {
-    let result: Result<Value, ParseError<&str>> = parse!(&mut input, (value(), eof()).0).into();
+    let result: Result<Value, ParseError<&str>> =
+        parse!(&mut input, (value(), eof()).0).into();
+
     result.map_err(|e| e.to_string())
 }
 
