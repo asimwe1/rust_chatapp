@@ -378,7 +378,7 @@ impl RocketConfig {
             let key = key[ENV_VAR_PREFIX.len()..].to_lowercase();
             let toml_val = match parse_simple_toml_value(&val) {
                 Ok(val) => val,
-                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e.into()))
+                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e))
             };
 
             for env in &Environment::all() {
