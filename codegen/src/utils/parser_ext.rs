@@ -1,11 +1,8 @@
-use super::SpanExt;
-
 use syntax::parse::parser::{PathStyle, Parser};
 use syntax::parse::PResult;
 use syntax::ast::{self, Path, StrStyle, Ident};
 use syntax::parse::token::Token::{Eof, Comma};
 use syntax::parse::common::SeqSep;
-use syntax::codemap::Spanned;
 use syntax::symbol::Symbol;
 
 pub trait ParserExt<'a> {
@@ -16,7 +13,7 @@ pub trait ParserExt<'a> {
     fn parse_str_lit(&mut self) -> PResult<'a, (Symbol, StrStyle)>;
 
     // Like `parse_ident` but also looks for an `ident` in a `Pat`.
-    fn parse_ident_inc_pat(&mut self) -> PResult<'a, Spanned<Ident>>;
+    fn parse_ident_inc_pat(&mut self) -> PResult<'a, Ident>;
 }
 
 impl<'a> ParserExt<'a> for Parser<'a> {
@@ -43,9 +40,8 @@ impl<'a> ParserExt<'a> for Parser<'a> {
             })
     }
 
-    fn parse_ident_inc_pat(&mut self) -> PResult<'a, Spanned<Ident>> {
+    fn parse_ident_inc_pat(&mut self) -> PResult<'a, Ident> {
         self.parse_ident()
-            .map(|ident| self.prev_span.wrap(ident))
             .or_else(|mut e| {
                 let pat = self.parse_pat().map_err(|i| { e.cancel(); i })?;
                 let ident = match pat.node {

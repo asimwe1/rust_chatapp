@@ -22,7 +22,7 @@ struct TemplateContext {
 
 #[get("/")]
 fn index() -> Redirect {
-    Redirect::to("/hello/Unknown")
+    Redirect::to(uri!(get: name = "Unknown"))
 }
 
 #[get("/hello/<name>")]

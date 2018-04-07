@@ -5,7 +5,7 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
-use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
+use utils::{MetaItemExt, SpanExt, span, is_valid_ident};
 use super::Function;
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
@@ -169,13 +169,13 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
         `HEAD`, `PATCH`, `OPTIONS`";
 
     if let Some(word) = meta_item.word() {
-        if let Ok(method) = Method::from_str(&word.name().as_str()) {
+        if let Ok(method) = Method::from_str(&word.ident.name.as_str()) {
             if is_valid_method(method) {
                 return span(method, word.span());
             }
         }
 
-        let msg = format!("'{}' is not a valid method", word.name());
+        let msg = format!("'{}' is not a valid method", word.ident);
         ecx.struct_span_err(word.span, &msg).help(valid_methods).emit();
         return default_method;
     }

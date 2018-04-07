@@ -39,21 +39,21 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 fn login(mut cookies: Cookies, login: Form<Login>) -> Flash<Redirect> {
     if login.get().username == "Sergio" && login.get().password == "password" {
         cookies.add_private(Cookie::new("user_id", 1.to_string()));
-        Flash::success(Redirect::to("/"), "Successfully logged in.")
+        Flash::success(Redirect::to(uri!(index)), "Successfully logged in.")
     } else {
-        Flash::error(Redirect::to("/login"), "Invalid username/password.")
+        Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password.")
     }
 }
 
 #[post("/logout")]
 fn logout(mut cookies: Cookies) -> Flash<Redirect> {
     cookies.remove_private(Cookie::named("user_id"));
-    Flash::success(Redirect::to("/login"), "Successfully logged out.")
+    Flash::success(Redirect::to(uri!(login_page)), "Successfully logged out.")
 }
 
 #[get("/login")]
 fn login_user(_user: User) -> Redirect {
-    Redirect::to("/")
+    Redirect::to(uri!(index))
 }
 
 #[get("/login", rank = 2)]
@@ -75,7 +75,7 @@ fn user_index(user: User) -> Template {
 
 #[get("/", rank = 2)]
 fn index() -> Redirect {
-    Redirect::to("/login")
+    Redirect::to(uri!(login_page))
 }
 
 fn rocket() -> rocket::Rocket {

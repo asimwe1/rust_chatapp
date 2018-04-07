@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use syntax::ast::Ident;
+use syntax::symbol::Symbol;
 
 pub trait IdentExt {
     fn prepend<T: Display>(&self, other: T) -> Ident;
@@ -9,11 +10,11 @@ pub trait IdentExt {
 impl IdentExt for Ident {
     fn prepend<T: Display>(&self, other: T) -> Ident {
         let new_ident = format!("{}{}", other, self.name);
-        Ident::from_str(new_ident.as_str())
+        Ident::new(Symbol::intern(&new_ident), self.span)
     }
 
     fn append<T: Display>(&self, other: T) -> Ident {
         let new_ident = format!("{}{}", self.name, other);
-        Ident::from_str(new_ident.as_str())
+        Ident::new(Symbol::intern(&new_ident), self.span)
     }
 }

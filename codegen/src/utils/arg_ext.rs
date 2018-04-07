@@ -15,7 +15,7 @@ pub trait ArgExt {
 impl ArgExt for Arg {
     fn ident(&self) -> Option<&Ident> {
         match self.pat.node {
-            PatKind::Ident(_, ref ident, _) => Some(&ident.node),
+            PatKind::Ident(_, ref ident, _) => Some(&ident),
             _ => None,
         }
     }

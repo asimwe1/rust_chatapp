@@ -10,7 +10,7 @@ pub trait MetaItemExt {
 impl MetaItemExt for NestedMetaItem {
     fn name_value(&self) -> Option<(&Symbol, &Lit)> {
         self.meta_item().and_then(|mi| match mi.node {
-            MetaItemKind::NameValue(ref l) => Some((&mi.name, l)),
+            MetaItemKind::NameValue(ref l) => Some((&mi.ident.name, l)),
             _ => None,
         })
     }

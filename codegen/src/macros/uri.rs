@@ -1,18 +1,18 @@
 use std::fmt::Display;
 
-use URI_INFO_MACRO_PREFIX;
-use super::prefix_path;
-use utils::{SpanExt, IdentExt, split_idents, ExprExt};
-
-use parser::{UriParams, InternalUriParams, Validation};
-
 use syntax::codemap::Span;
 use syntax::ext::base::{DummyResult, ExtCtxt, MacEager, MacResult};
 use syntax::tokenstream::{TokenStream, TokenTree};
 use syntax::ast::{self, Ident};
+use syntax::symbol::Symbol;
 use syntax::parse::PResult;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
+
+use URI_INFO_MACRO_PREFIX;
+use super::prefix_path;
+use utils::{IdentExt, split_idents, ExprExt};
+use parser::{UriParams, InternalUriParams, Validation};
 
 pub fn uri(
     ecx: &mut ExtCtxt,
@@ -125,14 +125,15 @@ pub fn uri_internal(
 
     // Now the user's parameters.
     // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
-    for (i, &(ident, ref ty)) in internal.fn_args.iter().enumerate() {
+    for (i, &(mut ident, ref ty)) in internal.fn_args.iter().enumerate() {
         let (span, mut expr) = (exprs[i].span, exprs[i].clone());
+        ident.span = span;
 
         // path for call: <T as FromUriParam<_>>::from_uri_param
         let idents = split_idents("rocket::http::uri::FromUriParam");
         let generics = vec![ecx.ty(span, ast::TyKind::Infer)];
         let trait_path = ecx.path_all(span, true, idents, vec![], generics, vec![]);
-        let method = span.wrap(Ident::from_str("from_uri_param"));
+        let method = Ident::new(Symbol::intern("from_uri_param"), span);
         let (qself, path) = ecx.qpath(ty.clone(), trait_path, method);
 
         // replace &expr with [let tmp = expr; &tmp] so that borrows of
@@ -142,7 +143,7 @@ pub fn uri_internal(
         if let ast::ExprKind::AddrOf(_, inner) = cloned_expr.node {
             // Only reassign temporary expressions, not locations.
             if !inner.is_location() {
-                let tmp_ident = ident.node.append("_tmp");
+                let tmp_ident = ident.append("_tmp");
                 let tmp_stmt = ecx.stmt_let(span, false, tmp_ident, inner);
                 argument_stmts.push(tmp_stmt);
                 expr = ecx.expr_ident(span, tmp_ident);
@@ -152,7 +153,7 @@ pub fn uri_internal(
         // generating: let $ident = path($expr);
         let path_expr = ecx.expr_qpath(span, qself, path);
         let call = ecx.expr_call(span, path_expr, vec![expr]);
-        let stmt = ecx.stmt_let(span, false, ident.node, call);
+        let stmt = ecx.stmt_let(span, false, ident, call);
         debug!("Emitting URI typecheck statement: {:?}", stmt);
         argument_stmts.push(stmt);
 
@@ -163,8 +164,11 @@ pub fn uri_internal(
         format_assign_tokens.push(tokens);
     }
 
-    MacEager::expr(quote_expr!(ecx, {
+    let expr = quote_expr!(ecx, {
         $argument_stmts
         ::rocket::http::uri::Uri::from(format!($fmt_string, $format_assign_tokens))
-    }))
+    });
+
+    debug!("Emitting URI expression: {:?}", expr);
+    MacEager::expr(expr)
 }

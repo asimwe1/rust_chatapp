@@ -35,7 +35,7 @@ pub struct UriParams {
 #[derive(Debug)]
 pub struct InternalUriParams {
     pub uri: Spanned<String>,
-    pub fn_args: Vec<(Spanned<ast::Ident>, P<ast::Ty>)>,
+    pub fn_args: Vec<(ast::Ident, P<ast::Ty>)>,
     pub uri_params: UriParams,
 }
 
@@ -208,7 +208,7 @@ impl InternalUriParams {
 
     pub fn fn_args_str(&self) -> String {
         self.fn_args.iter()
-            .map(|&(ident, ref ty)| format!("{}: {}", ident.node, ty_to_string(&ty)))
+            .map(|&(ident, ref ty)| format!("{}: {}", ident.name, ty_to_string(&ty)))
             .collect::<Vec<_>>()
             .join(", ")
     }
@@ -225,7 +225,7 @@ impl InternalUriParams {
             Some(Spanned { node: Args::Unnamed(ref args), .. }) => unnamed(args),
             Some(Spanned { node: Args::Named(ref args), .. }) => {
                 let mut params: IndexMap<Name, Option<P<Expr>>> = self.fn_args.iter()
-                    .map(|&(ident, _)| (ident.node.name, None))
+                    .map(|&(ident, _)| (ident.name, None))
                     .collect();
 
                 let (mut extra, mut dup) = (vec![], vec![]);
