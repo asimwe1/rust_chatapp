@@ -1,3 +1,10 @@
+# Version 0.3.8 (Apr 07, 2018)
+
+## Codegen
+
+  * Codegen was updated for `2018-04-06` nightly.
+  * Minimum required `rustc` is `1.27.0-nightly 2018-04-06`.
+
 # Version 0.3.7 (Apr 03, 2018)
 
 ## Core
