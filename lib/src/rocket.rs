@@ -193,7 +193,7 @@ impl Rocket {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
@@ -201,13 +201,13 @@ impl Rocket {
     ) -> Response<'r> {
         info!("{}:", request);
 
-        // Do a bit of preprocessing before routing; run the attached fairings.
+        // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
 
         // Run the request fairings.
         self.fairings.handle_request(request, &data);
 
-        // Check if the request is a `HEAD` request.
+        // Remember if the request is a `HEAD` request for later body stripping.
         let was_head_request = request.method() == Method::Head;
 
         // Route the request and run the user's handlers.
@@ -226,13 +226,13 @@ impl Rocket {
         response
     }
 
+    /// Route the request and process the outcome to eventually get a response.
     fn route_and_process<'s, 'r>(
         &'s self,
         request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
-        // Route the request to get a response.
-        let response = match self.route(request, data) {
+        match self.route(request, data) {
             Outcome::Success(mut response) => {
                 // A user's route responded! Set the cookies.
                 for cookie in request.cookies().delta() {
@@ -242,7 +242,6 @@ impl Rocket {
                 response
             }
             Outcome::Forward(data) => {
-
                 // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
@@ -251,13 +250,12 @@ impl Rocket {
                     request._set_method(Method::Get);
                     self.route_and_process(request, data)
                 } else {
+                    // No match was found and it can't be autohandled. 404.
                     self.handle_error(Status::NotFound, request)
                 }
             }
-            Outcome::Failure(status) => self.handle_error(status, request),
-        };
-
-        response
+            Outcome::Failure(status) => self.handle_error(status, request)
+        }
     }
 
     /// Tries to find a `Responder` for a given `request`. It does this by

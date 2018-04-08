@@ -49,9 +49,11 @@ impl<'r> Request<'r> {
     /// parameter can be of any type that implements `Into<Uri>` including
     /// `&str` and `String`; it must be a valid absolute URI.
     #[inline(always)]
-    pub(crate) fn new<'s: 'r, U: Into<Uri<'s>>>(rocket: &'r Rocket,
-                                                method: Method,
-                                                uri: U) -> Request<'r> {
+    pub(crate) fn new<'s: 'r, U: Into<Uri<'s>>>(
+        rocket: &'r Rocket,
+        method: Method,
+        uri: U
+    ) -> Request<'r> {
         Request {
             method: Cell::new(method),
             uri: uri.into(),
@@ -111,7 +113,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_method(&mut self, method: Method) {
-        self.method.set(method);
+        self._set_method(method);
     }
 
     /// Borrow the URI from `self`, which is guaranteed to be an absolute URI.
@@ -616,7 +618,7 @@ impl<'r> Request<'r> {
         *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
-    /// Set the method of `self`, even if self is a shared reference
+    /// Set the method of `self`, even when `self` is a shared reference.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
         self.method.set(method);

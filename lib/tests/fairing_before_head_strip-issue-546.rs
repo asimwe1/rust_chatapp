@@ -3,10 +3,10 @@
 
 extern crate rocket;
 
-const RESPONSE_STRING: &'static str = "{'test': 'dont strip before fairing' }";
+const RESPONSE_STRING: &'static str = "This is the body. Hello, world!";
 
 #[head("/")]
-fn index() -> &'static str {
+fn head() -> &'static str {
     RESPONSE_STRING
 }
 
@@ -15,6 +15,8 @@ fn auto() -> &'static str {
     RESPONSE_STRING
 }
 
+// Test that response fairings see the response body for all `HEAD` requests,
+// whether they are auto-handled or not.
 mod fairing_before_head_strip {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -25,35 +27,39 @@ mod fairing_before_head_strip {
     use rocket::http::Status;
     use rocket::State;
 
-    #[derive(Default)]
-    struct Counter {
-        get: AtomicUsize,
-    }
-
     #[test]
-    fn not_empty_before_fairing() {
+    fn not_auto_handled() {
         let rocket = rocket::ignite()
-            .mount("/", routes![index])
+            .mount("/", routes![head])
+            .attach(AdHoc::on_request(|req, _| {
+                assert_eq!(req.method(), Method::Head);
+            }))
             .attach(AdHoc::on_response(|req, res| {
                 assert_eq!(req.method(), Method::Head);
                 assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
             }));
 
         let client = Client::new(rocket).unwrap();
-        let response = client.head("/").dispatch();
+        let mut response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
+        assert!(response.body().is_none());
     }
 
     #[test]
-    fn not_empty_before_fairing_autohandeled() {
+    fn auto_handled() {
+        #[derive(Default)]
+        struct Counter(AtomicUsize);
+
         let counter = Counter::default();
         let rocket = rocket::ignite()
             .mount("/", routes![auto])
             .manage(counter)
             .attach(AdHoc::on_request(|req, _| {
-                 let c = req.guard::<State<Counter>>().unwrap();
+                assert_eq!(req.method(), Method::Head);
 
-                 assert_eq!(c.get.fetch_add(1, Ordering::Release), 0);
+                // This should be called exactly once.
+                let c = req.guard::<State<Counter>>().unwrap();
+                assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
             }))
             .attach(AdHoc::on_response(|req, res| {
                 assert_eq!(req.method(), Method::Get);
@@ -61,7 +67,8 @@ mod fairing_before_head_strip {
             }));
 
         let client = Client::new(rocket).unwrap();
-        let response = client.head("/").dispatch();
+        let mut response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
+        assert!(response.body().is_none());
     }
 }
