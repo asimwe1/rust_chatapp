@@ -637,9 +637,9 @@ impl Rocket {
         let collisions = self.router.collisions();
         if !collisions.is_empty() {
             let owned = collisions.iter().map(|&(a, b)| (a.clone(), b.clone()));
-            Some(LaunchError::from(LaunchErrorKind::Collision(owned.collect())))
+            Some(LaunchError::new(LaunchErrorKind::Collision(owned.collect())))
         } else if let Some(failures) = self.fairings.failures() {
-            Some(LaunchError::from(LaunchErrorKind::FailedFairings(failures.to_vec())))
+            Some(LaunchError::new(LaunchErrorKind::FailedFairings(failures.to_vec())))
         } else {
             None
         }
@@ -676,7 +676,7 @@ impl Rocket {
         serve!(self, &full_addr, |server, proto| {
             let mut server = match server {
                 Ok(server) => server,
-                Err(e) => return LaunchError::from(LaunchErrorKind::Bind(e)),
+                Err(e) => return LaunchError::new(LaunchErrorKind::Bind(e)),
             };
 
             // Determine the address and port we actually binded to.

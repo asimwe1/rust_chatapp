@@ -98,7 +98,7 @@ pub struct LaunchError {
 
 impl LaunchError {
     #[inline(always)]
-    fn new(kind: LaunchErrorKind) -> LaunchError {
+    pub(crate) fn new(kind: LaunchErrorKind) -> LaunchError {
         LaunchError { handled: AtomicBool::new(false), kind: kind }
     }
 
@@ -131,13 +131,6 @@ impl LaunchError {
     }
 }
 
-impl From<LaunchErrorKind> for LaunchError {
-    #[inline]
-    fn from(kind: LaunchErrorKind) -> LaunchError {
-        LaunchError::new(kind)
-    }
-}
-
 impl From<hyper::Error> for LaunchError {
     #[inline]
     fn from(error: hyper::Error) -> LaunchError {
@@ -159,7 +152,7 @@ impl fmt::Display for LaunchErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            LaunchErrorKind::Bind(ref e) => write!(f, "failed to bind to given address: {}", e),
+            LaunchErrorKind::Bind(ref e) => write!(f, "binding failed: {}", e),
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
@@ -189,7 +182,7 @@ impl ::std::error::Error for LaunchError {
     fn description(&self) -> &str {
         self.mark_handled();
         match *self.kind() {
-            LaunchErrorKind::Bind(_) => "Failed to bind to given address",
+            LaunchErrorKind::Bind(_) => "failed to bind to given address/port",
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
             LaunchErrorKind::Collision(_) => "route collisions were detected",
             LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
@@ -206,7 +199,7 @@ impl Drop for LaunchError {
 
         match *self.kind() {
             LaunchErrorKind::Bind(ref e) => {
-                error!("Rocket failed to launch due to binding issues.");
+                error!("Rocket failed to bind network socket to given address/port.");
                 panic!("{}", e);
             }
             LaunchErrorKind::Io(ref e) => {
