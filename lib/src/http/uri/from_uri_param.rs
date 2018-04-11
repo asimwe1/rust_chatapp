@@ -32,13 +32,19 @@ use http::uri::UriDisplay;
 ///
 /// # Implementing
 ///
-/// Because Rocket provides a blanket implementation for all types, this trait
-/// typically does not need to be implemented. This trait should only be
-/// implemented when you'd like to allow a type different from the route's
-/// declared type to be used in its place in a `uri!` invocation. This is
-/// typically only warranted for owned-value types with corresponding reference
-/// types: `String` and `&str`, for instance. In this case, it's desireable to
-/// allow an `&str` to be used in place of a `String`.
+/// Rocket provides a blanket implementation for all types that implement
+/// [`UriDisplay`]. As such, this trait typically does not need to be implemented.
+/// Instead, implement [`UriDisplay`].
+///
+/// This trait should only be implemented when you'd like to allow a type
+/// different from the route's declared type to be used in its place in a `uri!`
+/// invocation. For instance, if the route has a type of `T` and you'd like to
+/// use a type of `S` in a `uri!` invocation, you'd implement `FromUriParam<T>
+/// for S`.
+///
+/// This is typically only warranted for owned-value types with
+/// corresponding reference types: `String` and `&str`, for instance. In this
+/// case, it's desireable to allow an `&str` to be used in place of a `String`.
 ///
 /// When implementing `FromUriParam`, be aware that Rocket will use the
 /// [`UriDisplay`] implementation of `Target`, _not_ of the source type.

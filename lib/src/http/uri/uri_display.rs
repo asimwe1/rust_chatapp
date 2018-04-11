@@ -165,7 +165,7 @@ impl<'a> fmt::Display for &'a UriDisplay {
 }
 
 /// Percent-encodes the raw string.
-impl<'a> UriDisplay for &'a RawStr {
+impl UriDisplay for RawStr {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", Uri::percent_encode((*self).as_str()))
@@ -173,7 +173,7 @@ impl<'a> UriDisplay for &'a RawStr {
 }
 
 /// Percent-encodes the raw string.
-impl<'a> UriDisplay for &'a str {
+impl UriDisplay for str {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", Uri::percent_encode(self))
@@ -207,7 +207,7 @@ impl UriDisplay for PathBuf {
 }
 
 /// Percent-encodes each segment in the path.
-impl<'a> UriDisplay for &'a Path {
+impl UriDisplay for Path {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let string = self.to_string_lossy();
