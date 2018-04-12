@@ -131,9 +131,9 @@ fn check_semantically_invalid_forms() {
     form_vals[1] = "NaN";
     assert_invalid_form(&client, &mut form_vals);
 
-    form_vals[2] = "A";
+    form_vals[2] = "A?";
     assert_invalid_form(&client, &mut form_vals);
-    form_vals[2] = "B";
+    form_vals[2] = " B";
     assert_invalid_form(&client, &mut form_vals);
     form_vals[2] = "d";
     assert_invalid_form(&client, &mut form_vals);
@@ -143,7 +143,7 @@ fn check_semantically_invalid_forms() {
     assert_invalid_form(&client, &mut form_vals);
 
     // password and textarea are always valid, so we skip them
-    form_vals[5] = "A";
+    form_vals[5] = "A.";
     assert_invalid_form(&client, &mut form_vals);
     form_vals[5] = "b ";
     assert_invalid_form(&client, &mut form_vals);

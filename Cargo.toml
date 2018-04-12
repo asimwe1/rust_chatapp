@@ -5,6 +5,7 @@ codegen-units = 4
 members = [
   "lib/",
   "codegen/",
+  "codegen_next/",
   "contrib/",
   "examples/cookies",
   "examples/errors",

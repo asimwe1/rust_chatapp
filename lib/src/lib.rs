@@ -96,6 +96,9 @@
 //! module documentation](/rocket/local) and the [testing chapter of the
 //! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
 
+#[allow(unused_imports)] #[macro_use] extern crate rocket_codegen_next;
+#[doc(hidden)] pub use rocket_codegen_next::*;
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;

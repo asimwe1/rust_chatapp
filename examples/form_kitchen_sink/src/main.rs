@@ -1,35 +1,20 @@
 #![feature(plugin, decl_macro, custom_derive)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use std::io;
 
-use rocket::request::{Form, FromFormValue};
+use rocket::request::Form;
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
 
 #[cfg(test)] mod tests;
 
 // TODO: Make deriving `FromForm` for this enum possible.
-#[derive(Debug)]
+#[derive(Debug, FromFormValue)]
 enum FormOption {
     A, B, C
-}
-
-impl<'v> FromFormValue<'v> for FormOption {
-    type Error = &'v RawStr;
-
-    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
-        let variant = match v.as_str() {
-            "a" => FormOption::A,
-            "b" => FormOption::B,
-            "c" => FormOption::C,
-            _ => return Err(v)
-        };
-
-        Ok(variant)
-    }
 }
 
 #[derive(Debug, FromForm)]

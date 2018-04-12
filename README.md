@@ -13,7 +13,7 @@ expressibility, and speed. Here's an example of a complete Rocket application:
 #![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[get("/<name>/<age>")]
 fn hello(name: String, age: u8) -> String {
