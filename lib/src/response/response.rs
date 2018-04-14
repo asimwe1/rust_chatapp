@@ -2,7 +2,7 @@ use std::{io, fmt, str};
 use std::borrow::Cow;
 
 use response::Responder;
-use http::{Header, HeaderMap, Status, ContentType};
+use http::{Header, HeaderMap, Status, ContentType, Cookie};
 
 /// The default size, in bytes, of a chunk for streamed responses.
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -694,6 +694,30 @@ impl<'r> Response<'r> {
     #[inline(always)]
     pub fn set_raw_status(&mut self, code: u16, reason: &'static str) {
         self.status = Some(Status::new(code, reason));
+    }
+
+    /// Returns a vector of the cookies set in `self` as identified by the
+    /// `Set-Cookie` header. Malformed cookies are skipped.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Response;
+    /// use rocket::http::Cookie;
+    ///
+    /// let mut response = Response::new();
+    /// response.set_header(Cookie::new("hello", "world!"));
+    /// assert_eq!(response.cookies(), vec![Cookie::new("hello", "world!")]);
+    /// ```
+    pub fn cookies(&self) -> Vec<Cookie> {
+        let mut cookies = vec![];
+        for header in self.headers().get("Set-Cookie") {
+            if let Ok(cookie) = Cookie::parse_encoded(header) {
+                cookies.push(cookie);
+            }
+        }
+
+        cookies
     }
 
     /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of

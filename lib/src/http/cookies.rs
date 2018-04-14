@@ -358,6 +358,12 @@ impl<'a> fmt::Debug for Cookies<'a> {
     }
 }
 
+impl<'c> From<Cookie<'c>> for Header<'static> {
+    fn from(cookie: Cookie) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
 impl<'a, 'c> From<&'a Cookie<'c>> for Header<'static> {
     fn from(cookie: &Cookie) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
