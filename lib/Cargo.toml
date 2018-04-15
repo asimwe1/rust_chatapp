@@ -43,7 +43,7 @@ optional = true
 
 [dependencies.cookie]
 git = "https://github.com/alexcrichton/cookie-rs"
-rev = "8579b4b"
+rev = "0365a18"
 features = ["percent-encode", "secure"]
 
 [dev-dependencies]

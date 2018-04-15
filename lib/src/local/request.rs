@@ -4,7 +4,8 @@ use std::mem::transmute;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 
-use {Rocket, Request, Response, Data};
+use {Request, Response, Data};
+use local::Client;
 use http::{Header, Cookie};
 
 /// A structure representing a local request as created by [`Client`].
@@ -68,7 +69,7 @@ use http::{Header, Cookie};
 /// [`mut_dispatch`]: #method.mut_dispatch
 /// [`cloned_dispatch`]: #method.cloned_dispatch
 pub struct LocalRequest<'c> {
-    rocket: &'c Rocket,
+    client: &'c Client,
     ptr: *mut Request<'c>,
     request: Rc<Request<'c>>,
     data: Vec<u8>
@@ -76,10 +77,10 @@ pub struct LocalRequest<'c> {
 
 impl<'c> LocalRequest<'c> {
     #[inline(always)]
-    pub(crate) fn new(rocket: &'c Rocket, request: Request<'c>) -> LocalRequest<'c> {
-        let mut req = Rc::new(request);
-        let ptr = Rc::get_mut(&mut req).unwrap() as *mut Request;
-        LocalRequest { rocket: rocket, ptr: ptr, request: req, data: vec![] }
+    pub(crate) fn new(client: &'c Client, request: Request<'c>) -> LocalRequest<'c> {
+        let mut request = Rc::new(request);
+        let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request;
+        LocalRequest { client, ptr, request, data: vec![] }
     }
 
     /// Retrieves the inner `Request` as seen by Rocket.
@@ -184,8 +185,32 @@ impl<'c> LocalRequest<'c> {
     ///     .cookie(Cookie::new("user_id", "12"));
     /// ```
     #[inline]
-    pub fn cookie(self, cookie: Cookie<'static>) -> Self {
-        self.request.cookies().add_original(cookie);
+    pub fn cookie<'a>(self, cookie: Cookie<'a>) -> Self {
+        self.request.cookies().add_original(cookie.into_owned());
+        self
+    }
+
+    /// Add all of the cookies in `cookies` to this request.
+    ///
+    /// # Examples
+    ///
+    /// Add `user_id` cookie:
+    ///
+    /// ```rust
+    /// use rocket::local::Client;
+    /// use rocket::http::Cookie;
+    ///
+    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// let cookies = vec![Cookie::new("a", "b"), Cookie::new("c", "d")];
+    /// # #[allow(unused_variables)]
+    /// let req = client.get("/").cookies(cookies);
+    /// ```
+    #[inline]
+    pub fn cookies<'a>(self, cookies: Vec<Cookie<'a>>) -> Self {
+        for cookie in cookies {
+            self.request.cookies().add_original(cookie.into_owned());
+        }
+
         self
     }
 
@@ -273,7 +298,8 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     pub fn dispatch(mut self) -> LocalResponse<'c> {
         let req = unsafe { transmute(self.request()) };
-        let response = self.rocket.dispatch(req, Data::local(self.data));
+        let response = self.client.rocket().dispatch(req, Data::local(self.data));
+        self.client.update_cookies(&response);
 
         LocalResponse {
             _request: self.request,
@@ -300,7 +326,7 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     pub fn cloned_dispatch(&self) -> LocalResponse<'c> {
         let cloned = (*self.request).clone();
-        let mut req = LocalRequest::new(self.rocket, cloned);
+        let mut req = LocalRequest::new(self.client, cloned);
         req.data = self.data.clone();
         req.dispatch()
     }
@@ -336,7 +362,8 @@ impl<'c> LocalRequest<'c> {
     pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
         let data = ::std::mem::replace(&mut self.data, vec![]);
         let req = unsafe { transmute(self.request()) };
-        let response = self.rocket.dispatch(req, Data::local(data));
+        let response = self.client.rocket().dispatch(req, Data::local(data));
+        self.client.update_cookies(&response);
 
         LocalResponse {
             _request: self.request.clone(),
