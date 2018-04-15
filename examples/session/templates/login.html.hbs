@@ -7,10 +7,11 @@
    </head>
    <body>
       <h1>Rocket Session: Please Login</h1>
+
+     <p>Please login to continue.</p>
+
       {{#if flash}}
-         <p>{{ flash }}</p>
-      {{else}}
-         <p>Please login to continue.</p>
+         <p>Error: {{ flash }}</p>
       {{/if}}
 
       <form action="/login" method="post" accept-charset="utf-8">

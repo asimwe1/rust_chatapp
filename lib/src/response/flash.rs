@@ -6,6 +6,7 @@ use outcome::IntoOutcome;
 use response::{Response, Responder};
 use request::{self, Request, FromRequest};
 use http::{Status, Cookie};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
 const FLASH_COOKIE_NAME: &'static str = "_flash";
@@ -87,8 +88,25 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 pub struct Flash<R> {
     name: String,
     message: String,
-    responder: R,
+    consumed: AtomicBool,
+    inner: R,
 }
+
+/// Type alias to retrieve [`Flash`](/rocket/response/struct.Flash.html)
+/// messages from a request.
+///
+/// # Flash Cookie
+///
+/// A `FlashMessage` holds the parsed contents of the flash cookie. As long as
+/// there is a flash cookie present (set by the `Flash` `Responder`), a
+/// `FlashMessage` reuqest guard will succeed.
+///
+/// The flash cookie is cleared if either the [`name()`] or [`msg()`] method is
+/// called. If neither method is called, the flash cookie is not cleared.
+///
+/// [`name()`]: /rocket/response.struct.Flash.html#method.name
+/// [`msg()`]: /rocket/response.struct.Flash.html#method.msg
+pub type FlashMessage<'a, 'r> = ::response::Flash<&'a Request<'r>>;
 
 impl<'r, R: Responder<'r>> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
@@ -109,7 +127,8 @@ impl<'r, R: Responder<'r>> Flash<R> {
         Flash {
             name: name.as_ref().to_string(),
             message: msg.as_ref().to_string(),
-            responder: res,
+            consumed: AtomicBool::default(),
+            inner: res,
         }
     }
 
@@ -183,45 +202,56 @@ impl<'r, R: Responder<'r>> Flash<R> {
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
     fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
-        let cookie = self.cookie();
-        Response::build_from(self.responder.respond_to(req)?)
-            .header_adjoin(&cookie)
-            .ok()
+        req.cookies().add(self.cookie());
+        self.inner.respond_to(req)
     }
 }
 
-impl Flash<()> {
-    /// Constructs a new message with the given name and message.
-    fn named(name: &str, msg: &str) -> Flash<()> {
+impl<'a, 'r> Flash<&'a Request<'r>> {
+    /// Constructs a new message with the given name and message for the given
+    /// request.
+    fn named(name: &str, msg: &str, request: &'a Request<'r>) -> Flash<&'a Request<'r>> {
         Flash {
             name: name.to_string(),
             message: msg.to_string(),
-            responder: (),
+            consumed: AtomicBool::new(false),
+            inner: request,
+        }
+    }
+
+    // Clears the request cookie if it hasn't already been cleared.
+    fn clear_cookie_if_needed(&self) {
+        // Remove the cookie if it hasn't already been removed.
+        if !self.consumed.swap(true, Ordering::Relaxed) {
+            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
+            self.inner.cookies().remove(cookie);
         }
     }
 
     /// Returns the `name` of this message.
     pub fn name(&self) -> &str {
-        self.name.as_str()
+        self.clear_cookie_if_needed();
+        &self.name
     }
 
     /// Returns the `msg` contents of this message.
     pub fn msg(&self) -> &str {
-        self.message.as_str()
+        self.clear_cookie_if_needed();
+        &self.message
     }
 }
 
-/// Retrieves a flash message from a flash cookie and deletes the flash cookie.
-/// If there is no flash cookie, an empty `Err` is returned.
+/// Retrieves a flash message from a flash cookie. If there is no flash cookie,
+/// or if the flash cookie is malformed, an empty `Err` is returned.
 ///
 /// The suggested use is through an `Option` and the `FlashMessage` type alias
 /// in `request`: `Option<FlashMessage>`.
-impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
+impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
-        let r = request.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+        request.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);
 
             // Parse the flash message.
@@ -233,15 +263,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
 
             let name_len: usize = len_str.parse().map_err(|_| ())?;
             let (name, msg) = (&rest[..name_len], &rest[name_len..]);
-            Ok(Flash::named(name, msg))
-        });
-
-        // If we found a flash cookie, delete it from the jar.
-        if r.is_ok() {
-            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
-            request.cookies().remove(cookie);
-        }
-
-        r.into_outcome(Status::BadRequest)
+            Ok(Flash::named(name, msg, request))
+        }).into_outcome(Status::BadRequest)
     }
 }

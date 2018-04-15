@@ -21,11 +21,12 @@
 
 mod responder;
 mod redirect;
-mod flash;
 mod named_file;
 mod stream;
 mod response;
 mod failure;
+
+pub(crate) mod flash;
 
 pub mod content;
 pub mod status;
