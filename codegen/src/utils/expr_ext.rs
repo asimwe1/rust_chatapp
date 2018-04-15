@@ -11,7 +11,6 @@ impl ExprExt for Expr {
             Path(..) => true,
             Cast(ref expr, _) => expr.is_location(),
             Field(ref expr, _) => expr.is_location(),
-            TupField(ref expr, _) => expr.is_location(),
             Index(ref expr, _) => expr.is_location(),
             _ => false
         }
