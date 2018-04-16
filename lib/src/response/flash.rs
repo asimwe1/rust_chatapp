@@ -210,12 +210,12 @@ impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
 impl<'a, 'r> Flash<&'a Request<'r>> {
     /// Constructs a new message with the given name and message for the given
     /// request.
-    fn named(name: &str, msg: &str, request: &'a Request<'r>) -> Flash<&'a Request<'r>> {
+    fn named(name: &str, msg: &str, req: &'a Request<'r>) -> Flash<&'a Request<'r>> {
         Flash {
             name: name.to_string(),
             message: msg.to_string(),
             consumed: AtomicBool::new(false),
-            inner: request,
+            inner: req,
         }
     }
 
@@ -249,21 +249,22 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
 impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
-        request.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);
 
             // Parse the flash message.
             let content = cookie.value();
-            let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
+            let (len_str, kv) = match content.find(|c: char| !c.is_digit(10)) {
                 Some(i) => (&content[..i], &content[i..]),
                 None => (content, ""),
             };
 
-            let name_len: usize = len_str.parse().map_err(|_| ())?;
-            let (name, msg) = (&rest[..name_len], &rest[name_len..]);
-            Ok(Flash::named(name, msg, request))
+            match len_str.parse::<usize>() {
+                Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
+                _ => Err(())
+            }
         }).into_outcome(Status::BadRequest)
     }
 }
