@@ -155,9 +155,10 @@ impl Client {
     pub(crate) fn update_cookies(&self, response: &Response) {
         if let Some(ref jar) = self.cookies {
             let mut jar = jar.borrow_mut();
+            let current_time = ::time::now();
             for cookie in response.cookies() {
                 if let Some(expires) = cookie.expires() {
-                    if expires <= ::time::now() {
+                    if expires <= current_time {
                         jar.force_remove(cookie);
                         continue;
                     }
