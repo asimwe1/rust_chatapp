@@ -1,3 +1,6 @@
+use std::sync::Mutex;
+use std::boxed::FnBox;
+
 use {Rocket, Request, Response, Data};
 use fairing::{Fairing, Kind, Info};
 
@@ -35,10 +38,10 @@ use fairing::{Fairing, Kind, Info};
 pub enum AdHoc {
     /// An ad-hoc **attach** fairing. Called when the fairing is attached.
     #[doc(hidden)]
-    Attach(Box<Fn(Rocket) -> Result<Rocket, Rocket> + Send + Sync + 'static>),
+    Attach(Mutex<Option<Box<FnBox(Rocket) -> Result<Rocket, Rocket> + Send + 'static>>>),
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
     #[doc(hidden)]
-    Launch(Box<Fn(&Rocket) + Send + Sync + 'static>),
+    Launch(Mutex<Option<Box<FnBox(&Rocket) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
     #[doc(hidden)]
     Request(Box<Fn(&mut Request, &Data) + Send + Sync + 'static>),
@@ -61,9 +64,9 @@ impl AdHoc {
     /// let fairing = AdHoc::on_attach(|rocket| Ok(rocket));
     /// ```
     pub fn on_attach<F>(f: F) -> AdHoc
-        where F: Fn(Rocket) -> Result<Rocket, Rocket> + Send + Sync + 'static
+        where F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static
     {
-        AdHoc::Attach(Box::new(f))
+        AdHoc::Attach(Mutex::new(Some(Box::new(f))))
     }
 
     /// Constructs an `AdHoc` launch fairing. The function `f` will be called by
@@ -80,9 +83,9 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_launch<F>(f: F) -> AdHoc
-        where F: Fn(&Rocket) + Send + Sync + 'static
+        where F: FnOnce(&Rocket) + Send + 'static
     {
-        AdHoc::Launch(Box::new(f))
+        AdHoc::Launch(Mutex::new(Some(Box::new(f))))
     }
 
     /// Constructs an `AdHoc` request fairing. The function `f` will be called
@@ -158,15 +161,22 @@ impl Fairing for AdHoc {
     }
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        match *self {
-            AdHoc::Attach(ref callback) => callback(rocket),
-            _ => Ok(rocket),
+        if let AdHoc::Attach(ref mutex) = *self {
+            let mut option = mutex.lock().expect("AdHoc::Attach lock");
+            option.take()
+                .expect("internal error: `on_attach` single-call invariant broken")
+                .call_box((rocket,))
+        } else {
+            Ok(rocket)
         }
     }
 
     fn on_launch(&self, rocket: &Rocket) {
-        if let AdHoc::Launch(ref callback) = *self {
-            callback(rocket)
+        if let AdHoc::Launch(ref mutex) = *self {
+            let mut option = mutex.lock().expect("AdHoc::Launch lock");
+            option.take()
+                .expect("internal error: `on_launch` single-call invariant broken")
+                .call_box((rocket, ))
         }
     }
 

@@ -2,6 +2,7 @@
 #![feature(const_fn)]
 #![feature(plugin, decl_macro)]
 #![feature(try_trait)]
+#![feature(fnbox)]
 #![recursion_limit="256"]
 
 #![plugin(pear_codegen)]
