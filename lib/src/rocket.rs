@@ -689,6 +689,9 @@ impl Rocket {
             let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
             server.keep_alive(timeout);
 
+            // Freeze managed state for synchronization-free accesses later.
+            self.state.freeze();
+
             // Run the launch fairings.
             self.fairings.handle_launch(&self);
 
