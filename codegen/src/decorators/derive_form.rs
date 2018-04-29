@@ -89,7 +89,7 @@ pub fn from_form_derive(
                 generics: ty::LifetimeBounds::empty(),
                 explicit_self: None,
                 args: vec![
-                    ty::Ptr(
+                    (ty::Ptr(
                         Box::new(ty::Literal(ty::Path::new_(
                             vec!["rocket", "request", "FormItems"],
                             lifetime_var,
@@ -97,8 +97,8 @@ pub fn from_form_derive(
                             ty::PathKind::Global,
                         ))),
                         ty::Borrowed(None, Mutability::Mutable)
-                    ),
-                    ty::Literal(ty::Path::new_local("bool")),
+                    ), "it"),
+                    (ty::Literal(ty::Path::new_local("bool")), "strict"),
                 ],
                 ret_ty: ty::Literal(ty::Path::new_(
                     vec!["result", "Result"],

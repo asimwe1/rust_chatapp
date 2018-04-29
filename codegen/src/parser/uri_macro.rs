@@ -2,7 +2,7 @@ use utils::{self, ParserExt, SpanExt};
 
 use syntax::codemap::{Spanned, Span};
 use syntax::ext::base::ExtCtxt;
-use syntax::symbol::InternedString;
+use syntax::symbol::LocalInternedString;
 use syntax::ast::{self, Expr, Name, Ident, Path};
 use syntax::parse::PResult;
 use syntax::parse::token::{DelimToken, Token};
@@ -27,7 +27,7 @@ pub enum Args {
 
 #[derive(Debug)]
 pub struct UriParams {
-    pub mount_point: Option<Spanned<InternedString>>,
+    pub mount_point: Option<Spanned<LocalInternedString>>,
     pub route_path: Path,
     pub arguments: Option<Spanned<Args>>,
 }
@@ -67,7 +67,7 @@ impl UriParams {
     pub fn parse_prelude<'a>(
         ecx: &'a ExtCtxt,
         parser: &mut Parser<'a>
-    ) -> PResult<'a, (Option<Spanned<InternedString>>, Path)> {
+    ) -> PResult<'a, (Option<Spanned<LocalInternedString>>, Path)> {
         if parser.token == Token::Eof {
             return Err(ecx.struct_span_err(ecx.call_site(),
                 "call to `uri!` cannot be empty"));

@@ -12,7 +12,7 @@ use syntax::ast::{Arg, Ident, Item, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
-use syntax::symbol::InternedString;
+use syntax::symbol::LocalInternedString;
 use syntax::ptr::P;
 
 use rocket::http::{Method, MediaType};
@@ -260,7 +260,7 @@ impl RouteParams {
         ).expect("consistent uri macro item")
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>) {
+    fn explode(&self, ecx: &ExtCtxt) -> (LocalInternedString, &str, Path, P<Expr>, P<Expr>) {
         let name = self.annotated_fn.ident().name.as_str();
         let path = &self.uri.node.as_str();
         let method = method_to_path(ecx, self.method.node);
