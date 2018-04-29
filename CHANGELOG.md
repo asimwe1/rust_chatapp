@@ -1,3 +1,26 @@
+# Version 0.3.9 (Apr 26, 2018)
+
+## Core
+
+  * Core was updated for `2018-04-26` nightly.
+  * Minimum required `rustc` is `1.27.0-nightly 2018-04-26`.
+  * Managed state retrieval cost was reduced to an unsynchronized `HashMap`
+    lookup.
+
+## Codegen
+
+  * Codegen was updated for `2018-04-26` nightly.
+  * Minimum required `rustc` is `1.27.0-nightly 2018-04-26`.
+
+## Contrib
+
+  * A 512-byte buffer is preallocated when deserializing JSON, improving
+    performance.
+
+## Docs
+
+  * Fixed various typos in rustdocs and guide.
+
 # Version 0.3.8 (Apr 07, 2018)
 
 ## Codegen
