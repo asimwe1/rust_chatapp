@@ -1,3 +1,22 @@
+# Version 0.3.10 (May 05, 2018)
+
+## Core
+
+  * Fixed parsing of nested TOML structures in config environment variables.
+
+## Codegen
+
+  * Codegen was updated for `2018-05-03` nightly.
+  * Minimum required `rustc` is `1.27.0-nightly 2018-05-04`.
+
+## Contrib
+
+  * Contrib was updated for `2018-05-03` nightly.
+
+## Docs
+
+  * Fixed database pool type in state guide.
+
 # Version 0.3.9 (Apr 26, 2018)
 
 ## Core
