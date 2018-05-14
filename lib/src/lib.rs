@@ -88,8 +88,8 @@
 //! Rocket and Rocket libraries are configured via the `Rocket.toml` file and/or
 //! `ROCKET_{PARAM}` environment variables. For more information on how to
 //! configure Rocket, see the [configuration
-//! section](https://rocket.rs/guide/overview/#configuration) of the guide as
-//! well as the [config](/rocket/config) module documentation.
+//! section](https://rocket.rs/guide/configuration/) of the guide as well as the
+//! [config](/rocket/config) module documentation.
 //!
 //! ## Testing
 //!

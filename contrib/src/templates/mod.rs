@@ -35,7 +35,7 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// `template_dir` configuration parameter and defaults to `templates/`. The
 /// path set in `template_dir` should be relative to the Rocket configuration
 /// file. See the [configuration
-/// chapter](https://rocket.rs/guide/overview/#configuration) of the guide for
+/// chapter](https://rocket.rs/guide/configuration/#extras) of the guide for
 /// more information on configuration.
 ///
 /// Templates are discovered according to their extension. At present, this

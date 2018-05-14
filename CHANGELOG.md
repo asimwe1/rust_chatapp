@@ -221,7 +221,7 @@ This release includes the following new features:
   * [`Response::content_type()`] was added to easily retrieve the Content-Type
     header of a response.
   * Size limits on incoming data are [now
-    configurable](https://rocket.rs/guide/overview/#configuration).
+    configurable](https://rocket.rs/guide/configuration/#data-limits).
   * [`Request::limits()`] was added to retrieve incoming data limits.
   * Responders may dynamically adjust their response based on the incoming
     request.
