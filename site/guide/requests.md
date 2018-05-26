@@ -742,24 +742,34 @@ errors, you'd write:
 
 ```rust
 #[catch(404)]
-fn not_found(req: &Request) -> String { ... }
+fn not_found(req: &Request) -> T { .. }
 ```
 
-As with routes, Rocket needs to know about a catcher before it is used to handle
-errors. The process is similar to mounting: call the `catch` method with a list
-of catchers via the `catchers!` macro. The invocation to add the **404** catcher
-declared above looks like:
+As with routes, the return type (here `T`) must implement `Responder`. A
+concrete implementation may look like:
+
+```rust
+#[catch(404)]
+fn not_found(req: &Request) -> String {
+    format!("Sorry, '{}' is not a valid path.", req.uri())
+}
+```
+
+Also as with routes, Rocket needs to know about a catcher before it is used to
+handle errors. The process is similar to mounting: call the `catch` method with
+a list of catchers via the `catchers!` macro. The invocation to add the **404**
+catcher declared above looks like:
 
 ```rust
 rocket::ignite().catch(catchers![not_found])
 ```
 
-Unlike request handlers, error handlers can only take 0, 1, or 2 parameters of
+Unlike route request handlers, catchers can only take 0, 1, or 2 parameters of
 types [`Request`](https://api.rocket.rs/rocket/struct.Request.html) and/or
 [`Error`](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
 type is not particularly useful, and so it is often omitted. The [error catcher
-example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/errors) on
-GitHub illustrates their use in full.
+example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/errors)
+on GitHub illustrates their use in full.
 
 Rocket has a default catcher for all of the standard HTTP error codes including
 **404**, **500**, and more.
