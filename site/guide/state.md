@@ -179,7 +179,7 @@ use the following dependencies:
 [dependencies]
 rocket = "0.4.0-dev"
 rocket_codegen = "0.4.0-dev"
-diesel = { version = "1.1", features = ["sqlite", "r2d2"] }
+diesel = { version = "<= 1.2", features = ["sqlite", "r2d2"] }
 ```
 
 Your `diesel` dependency information may differ. The crates are imported as
