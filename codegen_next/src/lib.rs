@@ -98,6 +98,6 @@ fn real_derive_from_form_value(input: TokenStream) -> PResult<TokenStream> {
 pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
     real_derive_from_form_value(input).unwrap_or_else(|diag| {
         diag.emit();
-        TokenStream::empty()
+        TokenStream::new()
     })
 }

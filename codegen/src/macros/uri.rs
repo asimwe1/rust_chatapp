@@ -3,7 +3,7 @@ use std::fmt::Display;
 use syntax::codemap::Span;
 use syntax::ext::base::{DummyResult, ExtCtxt, MacEager, MacResult};
 use syntax::tokenstream::{TokenStream, TokenTree};
-use syntax::ast::{self, Ident};
+use syntax::ast::{self, MacDelimiter, Ident};
 use syntax::symbol::Symbol;
 use syntax::parse::PResult;
 use syntax::ext::build::AstBuilder;
@@ -29,6 +29,7 @@ pub fn uri(
     let expr = parser.mk_mac_expr(sp,
         ast::Mac_ {
             path: path,
+            delim: MacDelimiter::Parenthesis,
             tts: args.to_vec().into_iter().collect::<TokenStream>().into(),
         },
         ::syntax::util::ThinVec::new(),
