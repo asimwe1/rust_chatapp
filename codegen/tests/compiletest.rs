@@ -1,27 +1,93 @@
-extern crate compiletest_rs;
+extern crate compiletest_rs as compiletest;
 
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 
-pub use self::compiletest_rs::common::Mode;
-pub use self::compiletest_rs::{Config, run_tests};
+#[derive(Copy, Clone)]
+enum Kind {
+    Dynamic, Static
+}
 
-pub fn run(mode: Mode) {
-    let mut config = Config::default();
-    config.mode = mode;
-    config.src_base = PathBuf::from(format!("tests/{}", mode));
+impl Kind {
+    fn extension(self) -> &'static str {
+        match self {
+            #[cfg(windows)] Kind::Dynamic => ".dll",
+            #[cfg(all(unix, target_os = "macos"))] Kind::Dynamic => ".dylib",
+            #[cfg(all(unix, not(target_os = "macos")))] Kind::Dynamic => ".so",
+            Kind::Static => ".rlib"
+        }
+    }
 
-    #[cfg(debug_assertions)]
-    let flags = [
-        "-L crate=../target/debug/",
-        "-L dependency=../target/debug/deps/",
-    ].join(" ");
+    fn prefix(self) -> &'static str {
+        #[cfg(windows)] { "" }
+        #[cfg(not(windows))] { "lib" }
+    }
+}
 
-    #[cfg(not(debug_assertions))]
-    let flags = [
-        "-L crate=../target/release/",
-        "-L dependency=../target/release/deps/",
-    ].join(" ");
+fn target_path() -> PathBuf {
+    #[cfg(debug_assertions)] const ENVIRONMENT: &str = "debug";
+    #[cfg(not(debug_assertions))] const ENVIRONMENT: &str = "release";
 
-    config.target_rustcflags = Some(flags);
-    run_tests(&config);
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent().unwrap()
+        .join("target")
+        .join(ENVIRONMENT)
+}
+
+fn link_flag(flag: &str, lib: &str, rel_path: &[&str]) -> String {
+    let mut path = target_path();
+    for component in rel_path {
+        path = path.join(component);
+    }
+
+    format!("{} {}={}", flag, lib, path.display())
+}
+
+fn extern_dep(name: &str, kind: Kind) -> io::Result<String> {
+    let deps_root = target_path().join("deps");
+    let dep_name = format!("{}{}", kind.prefix(), name);
+
+    let mut dep_path: Option<PathBuf> = None;
+    for entry in deps_root.read_dir().expect("read_dir call failed") {
+        let entry = entry?;
+        let filename = entry.file_name();
+        let filename = filename.to_string_lossy();
+        let lib_name = filename.split('.').next().unwrap().split('-').next().unwrap();
+
+        if lib_name == dep_name && filename.ends_with(kind.extension()) {
+            if let Some(ref mut existing) = dep_path {
+                if entry.metadata()?.created()? > existing.metadata()?.created()? {
+                    *existing = entry.path().into();
+                }
+            } else {
+                dep_path = Some(entry.path().into());
+            }
+        }
+    }
+
+    let dep = dep_path.ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
+    let filename = dep.file_name().ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+    Ok(link_flag("--extern", name, &["deps", &filename.to_string_lossy()]))
+}
+
+fn run_mode(mode: &'static str) {
+    let mut config = compiletest::Config::default();
+    config.mode = mode.parse().expect("Invalid mode");
+    config.src_base = format!("tests/{}", mode).into();
+    config.clean_rmeta();
+
+    config.target_rustcflags = Some([
+                                    link_flag("-L", "crate", &[]),
+                                    link_flag("-L", "dependency", &["deps"]),
+                                    extern_dep("rocket_codegen", Kind::Dynamic).expect("find codegen dep"),
+                                    extern_dep("rocket", Kind::Static).expect("find core dep")
+    ].join(" "));
+
+    compiletest::run_tests(&config);
+}
+
+#[test]
+fn compile_test() {
+    run_mode("compile-fail");
+    run_mode("ui");
 }
