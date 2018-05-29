@@ -1,7 +1,7 @@
 extern crate compiletest_rs as compiletest;
 
-use std::io;
 use std::path::{Path, PathBuf};
+use std::{io, fs::Metadata, time::SystemTime};
 
 #[derive(Copy, Clone)]
 enum Kind {
@@ -43,20 +43,31 @@ fn link_flag(flag: &str, lib: &str, rel_path: &[&str]) -> String {
     format!("{} {}={}", flag, lib, path.display())
 }
 
+fn best_time_for(metadata: &Metadata) -> SystemTime {
+    metadata.created()
+        .or_else(|_| metadata.modified())
+        .or_else(|_| metadata.accessed())
+        .unwrap_or_else(|_| SystemTime::now())
+}
+
 fn extern_dep(name: &str, kind: Kind) -> io::Result<String> {
     let deps_root = target_path().join("deps");
     let dep_name = format!("{}{}", kind.prefix(), name);
 
     let mut dep_path: Option<PathBuf> = None;
     for entry in deps_root.read_dir().expect("read_dir call failed") {
-        let entry = entry?;
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue
+        };
+
         let filename = entry.file_name();
         let filename = filename.to_string_lossy();
         let lib_name = filename.split('.').next().unwrap().split('-').next().unwrap();
 
         if lib_name == dep_name && filename.ends_with(kind.extension()) {
             if let Some(ref mut existing) = dep_path {
-                if entry.metadata()?.created()? > existing.metadata()?.created()? {
+                if best_time_for(&entry.metadata()?) > best_time_for(&existing.metadata()?) {
                     *existing = entry.path().into();
                 }
             } else {
