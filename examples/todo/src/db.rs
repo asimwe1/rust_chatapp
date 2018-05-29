@@ -9,7 +9,7 @@ use rocket::{Request, State, Outcome};
 
 pub type SqlitePool = Pool<ConnectionManager<SqliteConnection>>;
 
-pub const DATABASE_URL: &'static str = env!("DATABASE_URL");
+pub const DATABASE_URL: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/db/db.sql");
 
 pub fn init_pool() -> SqlitePool {
     let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
