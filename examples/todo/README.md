@@ -21,7 +21,7 @@ following commands:
 
 ```sh
 # install Diesel CLI tools
-cargo install diesel_cli --no-default-features --features sqlite
+cargo install diesel_cli --version '<= 1.2' --no-default-features --features=sqlite
 
 # create db/db.sql
 diesel migration run --database-url="db/db.sql"
