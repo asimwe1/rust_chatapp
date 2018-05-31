@@ -18,6 +18,7 @@ fi
 echo ":::: Running test suite..."
 cargo clean
 bash "${SCRIPT_DIR}/test.sh"
+bash "${SCRIPT_DIR}/test.sh" --release
 
 # Temporarily remove the dependency on codegen from core so crates.io verifies.
 sed -i.bak 's/rocket_codegen.*//' "${LIB_DIR}/Cargo.toml"
