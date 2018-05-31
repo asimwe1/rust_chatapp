@@ -1,3 +1,20 @@
+# Version 0.3.12 (May 31, 2018)
+
+## Codegen
+
+  * Codegen was updated for `2018-05-30` nightly.
+  * Minimum required `rustc` is `1.28.0-nightly 2018-05-30`.
+
+# Version 0.3.11 (May 19, 2018)
+
+## Core
+
+  * Core was updated for `2018-05-18` nightly.
+
+## Infrastructure
+
+  * Fixed injection of dependencies for codegen compile-fail tests.
+
 # Version 0.3.10 (May 05, 2018)
 
 ## Core
