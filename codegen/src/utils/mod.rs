@@ -17,15 +17,15 @@ use std::convert::AsRef;
 use syntax;
 use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Item, Ident, Expr};
+use syntax::ast::{Item, Expr, Attribute, Ty};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::codemap::{Span, Spanned, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::print::pprust::item_to_string;
-use syntax::ptr::P;
+use syntax::symbol::{Ident, Symbol};
 use syntax::fold::Folder;
-use syntax::ast::{Attribute, Lifetime, LifetimeDef, Ty};
 use syntax::attr::HasAttrs;
+use syntax::ptr::P;
 
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
     Spanned { node: t, span: span }
@@ -83,18 +83,13 @@ pub fn parse_as_tokens(ecx: &ExtCtxt, s: &str) -> Vec<TokenTree> {
 
 pub struct TyLifetimeRemover;
 
-// FIXME: Doesn't work for T + whatever.
 impl Folder for TyLifetimeRemover {
-    fn fold_opt_lifetime(&mut self, _: Option<Lifetime>) -> Option<Lifetime> {
-        None
-    }
-
-    fn fold_lifetime_defs(&mut self, _: Vec<LifetimeDef>) -> Vec<LifetimeDef> {
-        vec![]
-    }
-
-    fn fold_lifetimes(&mut self, _: Vec<Lifetime>) -> Vec<Lifetime> {
-        vec![]
+    fn fold_ident(&mut self, ident: Ident) -> Ident {
+        if ident.as_str().starts_with('\'') {
+            Ident::new(Symbol::intern("'_"), ident.span)
+        } else {
+            ident
+        }
     }
 }
 
