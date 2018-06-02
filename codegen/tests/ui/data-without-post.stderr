@@ -1,10 +1,9 @@
-error: `data` route parameters can only be used with payload supporting methods
+warning: `data` route parameter used with non-payload-supporting method
  --> $DIR/data-without-post.rs:6:12
   |
 6 | #[get("/", data = "<something>")]
   |            ^^^^^^^^^^^^^^^^^^^^
   |
-  = note: 'GET' does not support payloads
-
-error: aborting due to previous error
+  = note: 'GET' does not typically support payloads
+  = note: the 'format' attribute parameter will match against the 'Accept' header
 
