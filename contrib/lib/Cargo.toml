@@ -6,7 +6,7 @@ description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_contrib/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
-readme = "../README.md"
+readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT/Apache-2.0"
 
