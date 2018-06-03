@@ -29,7 +29,7 @@ fn target_path() -> PathBuf {
     #[cfg(not(debug_assertions))] const ENVIRONMENT: &str = "release";
 
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent().unwrap()
+        .parent().unwrap().parent().unwrap()
         .join("target")
         .join(ENVIRONMENT)
 }

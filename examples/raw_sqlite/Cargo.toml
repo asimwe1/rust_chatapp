@@ -2,8 +2,9 @@
 name = "raw_sqlite"
 version = "0.0.0"
 workspace = "../../"
+publish = false
 
 [dependencies]
-rocket = { path = "../../lib" }
-rocket_codegen = { path = "../../codegen" }
+rocket = { path = "../../core/lib" }
+rocket_codegen = { path = "../../core/codegen" }
 rusqlite = "0.13"

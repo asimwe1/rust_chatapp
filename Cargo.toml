@@ -3,10 +3,10 @@ codegen-units = 4
 
 [workspace]
 members = [
-  "lib/",
-  "codegen/",
-  "codegen_next/",
-  "contrib/",
+  "core/lib/",
+  "core/codegen/",
+  "core/codegen_next/",
+  "contrib/lib",
   "examples/cookies",
   "examples/errors",
   "examples/form_validation",

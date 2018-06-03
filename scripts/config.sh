@@ -25,9 +25,9 @@ function relative() {
 
 ROOT_DIR=$(relative "") || exit $?
 EXAMPLES_DIR=$(relative "examples") || exit $?
-LIB_DIR=$(relative "lib") || exit $?
-CODEGEN_DIR=$(relative "codegen") || exit $?
-CONTRIB_DIR=$(relative "contrib") || exit $?
+LIB_DIR=$(relative "core/lib") || exit $?
+CODEGEN_DIR=$(relative "core/codegen") || exit $?
+CONTRIB_DIR=$(relative "contrib/lib") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
 if [ "${1}" = "-p" ]; then

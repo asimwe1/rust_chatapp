@@ -2,7 +2,8 @@
 name = "tls"
 version = "0.0.0"
 workspace = "../../"
+publish = false
 
 [dependencies]
-rocket = { path = "../../lib", features = ["tls"] }
-rocket_codegen = { path = "../../codegen" }
+rocket = { path = "../../core/lib", features = ["tls"] }
+rocket_codegen = { path = "../../core/codegen" }

@@ -10,6 +10,9 @@ readme = "../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
 
+# if publishing, add to config scripts
+publish = false
+
 [lib]
 proc-macro = true
 
