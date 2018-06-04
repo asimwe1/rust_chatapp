@@ -85,6 +85,21 @@ pub enum AcceptParams {
     Dynamic(SmallVec<[QMediaType; 1]>)
 }
 
+impl ::pear::parsers::Collection for AcceptParams {
+    type Item = QMediaType;
+
+    fn new() -> Self {
+        AcceptParams::Dynamic(SmallVec::new())
+    }
+
+    fn add(&mut self, item: Self::Item) {
+        match *self {
+            AcceptParams::Static(..) => panic!("can't add to static collection!"),
+            AcceptParams::Dynamic(ref mut v) => v.push(item)
+        }
+    }
+}
+
 impl PartialEq for AcceptParams {
     fn eq(&self, other: &AcceptParams) -> bool {
         #[inline(always)]
@@ -143,7 +158,7 @@ impl PartialEq for AcceptParams {
 /// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct Accept(AcceptParams);
+pub struct Accept(pub(crate) AcceptParams);
 
 macro_rules! accept_constructor {
     ($($name:ident ($check:ident): $str:expr, $t:expr,

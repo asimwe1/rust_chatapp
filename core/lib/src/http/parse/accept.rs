@@ -1,37 +1,34 @@
-use pear::{ParseResult, ParseError};
+use pear::parser;
 use pear::parsers::*;
 
 use http::parse::checkers::is_whitespace;
 use http::parse::media_type::media_type;
-use http::{MediaType, Accept, QMediaType};
+use http::{Accept, QMediaType};
+use http::parse::{Input, Result};
 
-fn q<'a>(_: &'a str, media_type: &MediaType) -> ParseResult<&'a str, Option<f32>> {
-    match media_type.params().next() {
+#[parser]
+fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
+    let media_type = media_type()?;
+    let weight = match media_type.params().next() {
         Some(("q", value)) if value.len() <= 5 => match value.parse::<f32>().ok() {
-            Some(q) if q > 1. => ParseError::custom("accept", "q value must be <= 1"),
-            Some(q) if q < 0. => ParseError::custom("accept", "q value must be > 0"),
-            Some(q) => ParseResult::Done(Some(q)),
-            None => ParseError::custom("accept", "q value must be float")
+            Some(q) if q > 1. => return Err(pear_error!("q value must be <= 1")),
+            Some(q) if q < 0. => return Err(pear_error!("q value must be > 0")),
+            Some(q) => Some(q),
+            None => return Err(pear_error!("invalid media-type weight"))
         },
-        _ => ParseResult::Done(None)
-    }
+        _ => None
+    };
+
+    QMediaType(media_type, weight)
 }
 
 #[parser]
-fn accept<'a>(input: &mut &'a str) -> ParseResult<&'a str, Accept> {
-    let mut media_types = vec![];
-    repeat_while!(eat(','), {
-        skip_while(is_whitespace);
-        let media_type = media_type();
-        let weight = q(&media_type);
-        media_types.push(QMediaType(media_type, weight));
-    });
-
-    Accept::new(media_types)
+fn accept<'a>(input: &mut Input<'a>) -> Result<'a, Accept> {
+    Accept(series(false, ',', is_whitespace, weighted_media_type)?)
 }
 
-pub fn parse_accept(mut input: &str) -> Result<Accept, ParseError<&str>> {
-    parse!(&mut input, (accept(), eof()).0).into()
+pub fn parse_accept(input: &str) -> Result<Accept> {
+    parse!(accept: &mut input.into())
 }
 
 #[cfg(test)]

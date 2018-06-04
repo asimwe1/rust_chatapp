@@ -5,21 +5,36 @@ use std::hash::{Hash, Hasher};
 
 use ext::IntoCollection;
 use http::uncased::{uncased_eq, UncasedStr};
-use http::parse::{IndexedStr, parse_media_type};
+use http::parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
 
 #[derive(Debug, Clone)]
 struct MediaParam {
-    key: IndexedStr,
-    value: IndexedStr,
+    key: IndexedString,
+    value: IndexedString,
 }
 
 // FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
 #[derive(Debug, Clone)]
 pub enum MediaParams {
-    Static(&'static [(IndexedStr, IndexedStr)]),
-    Dynamic(SmallVec<[(IndexedStr, IndexedStr); 2]>)
+    Static(&'static [(IndexedString, IndexedString)]),
+    Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
+}
+
+impl ::pear::parsers::Collection for MediaParams {
+    type Item = (IndexedString, IndexedString);
+
+    fn new() -> Self {
+        MediaParams::Dynamic(SmallVec::new())
+    }
+
+    fn add(&mut self, item: Self::Item) {
+        match *self {
+            MediaParams::Static(..) => panic!("can't add to static collection!"),
+            MediaParams::Dynamic(ref mut v) => v.push(item)
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,17 +105,17 @@ pub struct MediaType {
     pub source: Source,
     /// The top-level type.
     #[doc(hidden)]
-    pub top: IndexedStr,
+    pub top: IndexedString,
     /// The subtype.
     #[doc(hidden)]
-    pub sub: IndexedStr,
+    pub sub: IndexedString,
     /// The parameters, if any.
     #[doc(hidden)]
     pub params: MediaParams
 }
 
 macro_rules! media_str {
-    ($string:expr) => (IndexedStr::Concrete(Cow::Borrowed($string)))
+    ($string:expr) => (Indexed::Concrete(Cow::Borrowed($string)))
 }
 
 macro_rules! media_types {
@@ -276,8 +291,8 @@ impl MediaType {
     {
         MediaType {
             source: Source::None,
-            top: IndexedStr::Concrete(top.into()),
-            sub: IndexedStr::Concrete(sub.into()),
+            top: Indexed::Concrete(top.into()),
+            sub: Indexed::Concrete(sub.into()),
             params: MediaParams::Static(&[]),
         }
     }
@@ -313,14 +328,14 @@ impl MediaType {
               P: IntoCollection<(K, V)>
     {
         let params = ps.mapped(|(key, val)| (
-            IndexedStr::Concrete(key.into()),
-            IndexedStr::Concrete(val.into())
+            Indexed::Concrete(key.into()),
+            Indexed::Concrete(val.into())
         ));
 
         MediaType {
             source: Source::None,
-            top: IndexedStr::Concrete(top.into()),
-            sub: IndexedStr::Concrete(sub.into()),
+            top: Indexed::Concrete(top.into()),
+            sub: Indexed::Concrete(sub.into()),
             params: MediaParams::Dynamic(params)
         }
     }
@@ -344,7 +359,7 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn top(&self) -> &UncasedStr {
-        self.top.to_str(self.source.as_str()).into()
+        self.top.from_source(self.source.as_str()).into()
     }
 
     /// Returns the subtype for this media type. The return type,
@@ -362,7 +377,7 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn sub(&self) -> &UncasedStr {
-        self.sub.to_str(self.source.as_str()).into()
+        self.sub.from_source(self.source.as_str()).into()
     }
 
     /// Returns a `u8` representing how specific the top-level type and subtype
@@ -471,7 +486,7 @@ impl MediaType {
         param_slice.iter()
             .map(move |&(ref key, ref val)| {
                 let source_str = self.source.as_str();
-                (key.to_str(source_str), val.to_str(source_str))
+                (key.from_source(source_str), val.from_source(source_str))
             })
     }
 

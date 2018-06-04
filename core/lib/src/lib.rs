@@ -4,9 +4,10 @@
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
-#![recursion_limit="256"]
+#![feature(proc_macro)]
+#![feature(proc_macro_non_items)]
 
-#![plugin(pear_codegen)]
+#![recursion_limit="256"]
 
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]

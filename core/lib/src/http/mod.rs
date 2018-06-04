@@ -24,7 +24,7 @@ pub(crate) mod parse;
 // We need to export these for codegen, but otherwise it's unnecessary.
 // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
 pub mod uncased;
-#[doc(hidden)] pub use self::parse::IndexedStr;
+#[doc(hidden)] pub use self::parse::Indexed;
 #[doc(hidden)] pub use self::media_type::{MediaParams, Source};
 
 pub use self::method::Method;

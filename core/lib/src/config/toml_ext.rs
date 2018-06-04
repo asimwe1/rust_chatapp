@@ -1,9 +1,9 @@
 use std::fmt;
-use std::collections::BTreeMap;
+use std::result::Result as StdResult;
 
 use config::Value;
 
-use pear::{ParseResult, ParseError};
+use pear::{Result, parser, switch};
 use pear::parsers::*;
 use pear::combinators::*;
 
@@ -30,43 +30,37 @@ fn is_ident_char(byte: char) -> bool {
 }
 
 #[parser]
-fn array<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
-    let array = (eat('['), collect!(value(), eat(',')), eat(']')).1;
-    Value::Array(array)
+fn array<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
+    Value::Array(collection('[', value, ',', ']')?)
 }
 
 #[parser]
-fn key<'a>(input: &mut &'a str) -> ParseResult<&'a str, String> {
-    take_some_while(is_ident_char).to_string()
+fn key<'a>(input: &mut &'a str) -> Result<String, &'a str> {
+    take_some_while(is_ident_char)?.to_string()
 }
 
 #[parser]
-fn table<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
-    eat('{');
-
-    let mut values = BTreeMap::new();
-    try_repeat_while!(eat(','), {
-        let key = surrounded(key, is_whitespace);
-        (eat('='), skip_while(is_whitespace));
-        values.insert(key, value())
-    });
-
-    eat('}');
-    Value::Table(values)
+fn key_value<'a>(input: &mut &'a str) -> Result<(String, Value), &'a str> {
+    let key = (surrounded(key, is_whitespace)?, eat('=')?).0.to_string();
+    (key, surrounded(value, is_whitespace)?)
 }
 
 #[parser]
-fn value<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
-    skip_while(is_whitespace);
+fn table<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
+    Value::Table(collection('{', key_value, ',', '}')?)
+}
+
+#[parser]
+fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
+    skip_while(is_whitespace)?;
     let val = switch! {
         eat_slice("true") => Value::Boolean(true),
         eat_slice("false") => Value::Boolean(false),
-        peek('{') => table(),
-        peek('[') => array(),
-        peek('"') => Value::String(delimited('"', |_| true, '"').to_string()),
+        peek('{') => table()?,
+        peek('[') => array()?,
+        peek('"') => Value::String(delimited('"', |_| true, '"')?.to_string()),
         _ => {
-            let value_str = take_some_while(is_not_separator);
-            // FIXME: Silence warning from pear.
+            let value_str = take_some_while(is_not_separator)?;
             if let Ok(int) = value_str.parse::<i64>() {
                 Value::Integer(int)
             } else if let Ok(float) = value_str.parse::<f64>() {
@@ -77,15 +71,12 @@ fn value<'a>(input: &mut &'a str) -> ParseResult<&'a str, Value> {
         }
     };
 
-    skip_while(is_whitespace);
+    skip_while(is_whitespace)?;
     val
 }
 
-pub fn parse_simple_toml_value(mut input: &str) -> Result<Value, String> {
-    let result: Result<Value, ParseError<&str>> =
-        parse!(&mut input, (value(), eof()).0).into();
-
-    result.map_err(|e| e.to_string())
+pub fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
+    parse!(value: &mut input).map_err(|e| e.to_string())
 }
 
 /// A simple wrapper over a `Value` reference with a custom implementation of
