@@ -4,9 +4,9 @@ use std::fmt;
 
 use smallvec::SmallVec;
 
+use {Header, MediaType};
 use ext::IntoCollection;
-use http::{Header, MediaType};
-use http::parse::parse_accept;
+use parse::parse_accept;
 
 /// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
@@ -18,6 +18,7 @@ impl QMediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{MediaType, QMediaType};
     ///
     /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
@@ -33,6 +34,7 @@ impl QMediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{MediaType, QMediaType};
     ///
     /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
@@ -51,6 +53,7 @@ impl QMediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{MediaType, QMediaType};
     ///
     /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
@@ -139,6 +142,7 @@ impl PartialEq for AcceptParams {
 /// Construct an `Accept` header with a single `application/json` media type:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::Accept;
 ///
 /// # #[allow(unused_variables)]
@@ -151,6 +155,7 @@ impl PartialEq for AcceptParams {
 /// where an `Into<Header>` is expected:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::Accept;
 /// use rocket::response::Response;
 ///
@@ -193,6 +198,7 @@ impl Accept {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
     /// // Construct an `Accept` via a `Vec<QMediaType>`.
@@ -228,6 +234,7 @@ impl Accept {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
     /// let media_types = vec![
@@ -274,6 +281,7 @@ impl Accept {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
     /// let accept = Accept::new(QMediaType(MediaType::XML, None));
@@ -291,6 +299,7 @@ impl Accept {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
     /// let qmedia_types = vec![
@@ -321,6 +330,7 @@ impl Accept {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
     /// let qmedia_types = vec![
@@ -378,7 +388,7 @@ impl Into<Header<'static>> for Accept {
 
 #[cfg(test)]
 mod test {
-    use http::{Accept, MediaType};
+    use {Accept, MediaType};
 
     macro_rules! assert_preference {
         ($string:expr, $expect:expr) => (

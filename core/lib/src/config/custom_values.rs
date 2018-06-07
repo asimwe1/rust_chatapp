@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[cfg(feature = "tls")] use rustls::{Certificate, PrivateKey};
+#[cfg(feature = "tls")] use http::tls::{Certificate, PrivateKey};
 
 use config::{Result, Config, Value, ConfigError, LoggingLevel};
 use http::uncased::uncased_eq;

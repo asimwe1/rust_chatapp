@@ -59,6 +59,7 @@ impl<'a> Uri<'a> {
     /// A valid URI with only non-empty segments:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c");
@@ -68,6 +69,7 @@ impl<'a> Uri<'a> {
     /// A URI with empty segments:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b//c/d///e");
@@ -96,6 +98,7 @@ impl<'a> Uri<'a> {
     /// A valid URI with only non-empty segments:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c?a=true#done");
@@ -112,6 +115,7 @@ impl<'a> Uri<'a> {
     /// A URI with empty segments:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("///a//b///c////d?#");
@@ -137,6 +141,7 @@ impl<'a> Uri<'a> {
     /// A URI with only a path:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c");
@@ -146,6 +151,7 @@ impl<'a> Uri<'a> {
     /// A URI with other components:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c?name=bob#done");
@@ -165,6 +171,7 @@ impl<'a> Uri<'a> {
     /// A URI with a query part:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c?alphabet=true");
@@ -174,6 +181,7 @@ impl<'a> Uri<'a> {
     /// A URI without the query part:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c");
@@ -192,6 +200,7 @@ impl<'a> Uri<'a> {
     /// A URI with a fragment part:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a?alphabet=true#end");
@@ -201,6 +210,7 @@ impl<'a> Uri<'a> {
     /// A URI without the fragment part:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a?query=true");
@@ -217,6 +227,7 @@ impl<'a> Uri<'a> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/Hello%2C%20world%21");
@@ -235,6 +246,7 @@ impl<'a> Uri<'a> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/Hello%2C%20world%21");
@@ -253,6 +265,7 @@ impl<'a> Uri<'a> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
@@ -271,6 +284,7 @@ impl<'a> Uri<'a> {
     /// ### Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b///c/d/e//f?name=Mike#end");
@@ -355,6 +369,7 @@ impl<'a> fmt::Display for Uri<'a> {
 /// ### Examples
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::uri::Uri;
 ///
 /// let uri = Uri::new("/a/////b/c////////d");
@@ -424,11 +439,11 @@ mod tests {
     fn seg_count(path: &str, expected: usize) -> bool {
         let actual = Uri::new(path).segment_count();
         if actual != expected {
-            trace_!("Count mismatch: expected {}, got {}.", expected, actual);
-            trace_!("{}", if actual != expected { "lifetime" } else { "buf" });
-            trace_!("Segments (for {}):", path);
+            eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
+            eprintln!("{}", if actual != expected { "lifetime" } else { "buf" });
+            eprintln!("Segments (for {}):", path);
             for (i, segment) in Uri::new(path).segments().enumerate() {
-                trace_!("{}: {}", i, segment);
+                eprintln!("{}: {}", i, segment);
             }
         }
 

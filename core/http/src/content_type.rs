@@ -3,9 +3,9 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
+use {Header, MediaType, Source};
 use ext::IntoCollection;
-use http::{Header, MediaType, Source};
-use http::hyper::mime::Mime;
+use hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -21,6 +21,7 @@ use http::hyper::mime::Mime;
 /// `HTML` constant:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::ContentType;
 ///
 /// # #[allow(unused_variables)]
@@ -33,6 +34,7 @@ use http::hyper::mime::Mime;
 /// context where an `Into<Header>` is expected:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::ContentType;
 /// use rocket::response::Response;
 ///
@@ -75,6 +77,7 @@ macro_rules! from_extension {
         /// Recognized content types:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::ContentType;
         ///
         /// let xml = ContentType::from_extension("xml");
@@ -87,6 +90,7 @@ macro_rules! from_extension {
         /// An unrecognized content type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::ContentType;
         ///
         /// let foo = ContentType::from_extension("foo");
@@ -118,6 +122,7 @@ macro_rules! parse_flexible {
         /// Using a shorthand:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::ContentType;
         ///
         /// let html = ContentType::parse_flexible("html");
@@ -130,6 +135,7 @@ macro_rules! parse_flexible {
         /// Using the full content-type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::ContentType;
         ///
         /// let html = ContentType::parse_flexible("text/html; charset=utf-8");
@@ -145,6 +151,7 @@ macro_rules! parse_flexible {
         /// An unrecognized content-type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::ContentType;
         ///
         /// let foo = ContentType::parse_flexible("foo");
@@ -170,6 +177,7 @@ impl ContentType {
     /// Create a custom `application/x-person` content type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
     /// let custom = ContentType::new("application", "x-person");
@@ -196,6 +204,7 @@ impl ContentType {
     /// Create a custom `application/x-id; id=1` content type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
     /// let id = ContentType::with_params("application", "x-id", ("id", "1"));
@@ -205,6 +214,7 @@ impl ContentType {
     /// Create a custom `text/person; name=bob; weight=175` content type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
     /// let params = vec![("name", "bob"), ("ref", "2382")];
@@ -225,6 +235,7 @@ impl ContentType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{ContentType, MediaType};
     ///
     /// let http = ContentType::HTML;
@@ -287,6 +298,7 @@ impl FromStr for ContentType {
     /// Parsing an `application/json`:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use std::str::FromStr;
     /// use rocket::http::ContentType;
     ///
@@ -298,6 +310,7 @@ impl FromStr for ContentType {
     /// Parsing a content type extension:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use std::str::FromStr;
     /// use rocket::http::ContentType;
     ///
@@ -310,6 +323,7 @@ impl FromStr for ContentType {
     /// Parsing an invalid Content-Type value:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use std::str::FromStr;
     /// use rocket::http::ContentType;
     ///
@@ -328,6 +342,7 @@ impl fmt::Display for ContentType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
     /// let ct = format!("{}", ContentType::JSON);

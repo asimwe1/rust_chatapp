@@ -27,6 +27,17 @@ use syntax::fold::Folder;
 use syntax::attr::HasAttrs;
 use syntax::ptr::P;
 
+macro_rules! debug {
+    ($($t:tt)*) => (
+        // Enable debug logs if the DEBUG_ENV_VAR is set.
+        if ::std::env::var(::DEBUG_ENV_VAR).is_ok() {
+            eprintln!("--> {}:{} ({})", file!(), line!(), module_path!());
+            eprintln!($($t)*);
+            eprintln!();
+        }
+    )
+}
+
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
     Spanned { node: t, span: span }
 }
@@ -133,12 +144,12 @@ pub fn split_idents(path: &str) -> Vec<Ident> {
 }
 
 macro_rules! quote_enum {
-    ($ecx:expr, $var:expr => $(::$root:ident)+
+    ($ecx:expr, $var:expr => $(::$from_root:ident)+ -> $(::$to_root:ident)+
      { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
         use syntax::codemap::DUMMY_SP;
         use syntax::ast::Ident;
-        use $(::$root)+::*;
-        let root_idents = vec![$(Ident::from_str(stringify!($root))),+];
+        use $(::$from_root)+::*;
+        let root_idents = vec![$(Ident::from_str(stringify!($to_root))),+];
         match $var {
             $($variant => {
                 let variant = Ident::from_str(stringify!($variant));

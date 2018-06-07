@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use pear::{parser, switch};
 use pear::parsers::*;
 
-use http::{MediaType, Source};
-use http::parse::checkers::{is_whitespace, is_valid_token};
-use http::parse::{Input, Slice, Result};
+use {MediaType, Source};
+use parse::checkers::{is_whitespace, is_valid_token};
+use parse::{Input, Slice, Result};
 
 #[parser]
 fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, Slice<'a>> {
@@ -58,7 +58,7 @@ pub fn parse_media_type(input: &str) -> Result<MediaType> {
 
 #[cfg(test)]
 mod test {
-    use http::MediaType;
+    use MediaType;
     use super::parse_media_type;
 
     macro_rules! assert_no_parse {

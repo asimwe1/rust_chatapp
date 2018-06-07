@@ -2,8 +2,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::borrow::Cow;
 
-use http::RawStr;
-use http::uri::Uri;
+use {RawStr, uri::Uri};
 
 use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 

@@ -2,7 +2,7 @@ use syntax::ast::*;
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::ext::base::ExtCtxt;
 
-use rocket::http::uri::Uri;
+use rocket_http::uri::Uri;
 use super::route::param_to_ident;
 use utils::{span, SpanExt, is_valid_ident};
 

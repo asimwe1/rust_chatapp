@@ -3,7 +3,7 @@ use std::fmt;
 
 use indexmap::IndexMap;
 
-use http::uncased::{Uncased, UncasedStr};
+use uncased::{Uncased, UncasedStr};
 
 /// Simple representation of an HTTP header.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -27,6 +27,7 @@ impl<'h> Header<'h> {
     /// value`.
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let header = Header::new("X-Custom-Header", "custom value");
@@ -36,6 +37,7 @@ impl<'h> Header<'h> {
     /// Use a `String` as a value to do the same.
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let value = format!("{} value", "custom");
@@ -60,6 +62,7 @@ impl<'h> Header<'h> {
     /// A case-sensitive equality check:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let value = format!("{} value", "custom");
@@ -71,6 +74,7 @@ impl<'h> Header<'h> {
     /// A case-insensitive equality check via `.name`:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let header = Header::new("X-Custom-Header", "custom value");
@@ -89,6 +93,7 @@ impl<'h> Header<'h> {
     /// A case-sensitive equality check:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let header = Header::new("X-Custom-Header", "custom value");
@@ -126,6 +131,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let map = HeaderMap::new();
@@ -140,6 +146,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, ContentType};
     ///
     /// let mut map = HeaderMap::new();
@@ -158,6 +165,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -183,6 +191,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let map = HeaderMap::new();
@@ -199,6 +208,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -228,6 +238,7 @@ impl<'h> HeaderMap<'h> {
     /// Retrieve the first value when one exists:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -243,6 +254,7 @@ impl<'h> HeaderMap<'h> {
     /// Attempt to retrieve a value that doesn't exist:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -270,6 +282,7 @@ impl<'h> HeaderMap<'h> {
     /// Replace a header that doesn't yet exist:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, ContentType};
     ///
     /// let mut map = HeaderMap::new();
@@ -281,6 +294,7 @@ impl<'h> HeaderMap<'h> {
     /// Replace a header that already exists:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, ContentType};
     ///
     /// let mut map = HeaderMap::new();
@@ -296,6 +310,7 @@ impl<'h> HeaderMap<'h> {
     /// An example of case-insensitivity.
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, Header, ContentType};
     ///
     /// let mut map = HeaderMap::new();
@@ -319,6 +334,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -344,6 +360,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -368,6 +385,7 @@ impl<'h> HeaderMap<'h> {
     /// previously added, that header will have one more value.
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Cookie, HeaderMap};
     ///
     /// let mut map = HeaderMap::new();
@@ -390,6 +408,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -415,6 +434,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -446,6 +466,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
@@ -470,6 +491,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, Header};
     /// use std::collections::HashSet;
     ///
@@ -510,6 +532,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, Header};
     ///
     /// // The headers we'll be storing.
@@ -554,6 +577,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{HeaderMap, Header};
     ///
     /// // The headers we'll be storing.
@@ -598,8 +622,10 @@ impl<'h> HeaderMap<'h> {
     /// Consumes `self` and returns an iterator over all of the headers stored
     /// in the map in the way they are stored. This is a low-level machinism and
     /// should likely not be used.
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
     #[inline]
-    pub(crate) fn into_iter_raw(self)
+    pub fn into_iter_raw(self)
             -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }

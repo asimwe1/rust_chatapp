@@ -1,3 +1,9 @@
+#![feature(specialization)]
+#![feature(proc_macro)]
+#![feature(proc_macro_non_items)]
+#![feature(const_fn)]
+#![recursion_limit="256"]
+
 //! Types that map to concepts in HTTP.
 //!
 //! This module exports types that map to HTTP concepts or to the underlying
@@ -5,9 +11,24 @@
 //! change (see <a
 //! href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>), types in
 //! [hyper](hyper/index.html) should be considered unstable.
+
+#[macro_use]
+extern crate pear;
+extern crate smallvec;
+#[macro_use]
+extern crate percent_encoding;
+extern crate cookie;
+extern crate time;
+extern crate indexmap;
+
 pub mod hyper;
 pub mod uri;
 
+#[cfg(feature = "tls")]
+pub mod tls;
+
+#[macro_use]
+mod docify;
 #[macro_use]
 mod known_media_types;
 mod cookies;
@@ -18,6 +39,7 @@ mod status;
 mod header;
 mod accept;
 mod raw_str;
+mod ext;
 
 pub(crate) mod parse;
 
@@ -36,4 +58,6 @@ pub use self::raw_str::RawStr;
 
 pub use self::media_type::MediaType;
 pub use self::cookies::{Cookie, Cookies};
-pub(crate) use self::cookies::{Key, CookieJar};
+
+#[doc(hidden)]
+pub use self::cookies::{Key, CookieJar};

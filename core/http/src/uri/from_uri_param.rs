@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use http::RawStr;
-use http::uri::UriDisplay;
+use {RawStr, uri::UriDisplay};
 
 /// Conversion trait for parameters used in `uri!` invocations.
 ///
@@ -57,6 +56,7 @@ use http::uri::UriDisplay;
 /// `uri!` invocation where a `User` type is expected.
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use std::fmt;
 ///
 /// use rocket::http::RawStr;

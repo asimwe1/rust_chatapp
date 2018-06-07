@@ -4,33 +4,35 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-pub(crate) use hyper::server::Request as Request;
-pub(crate) use hyper::server::Response as Response;
-pub(crate) use hyper::server::Server as Server;
-pub(crate) use hyper::server::Handler as Handler;
+extern crate hyper;
 
-pub(crate) use hyper::net;
+#[doc(hidden)] pub use self::hyper::server::Request as Request;
+#[doc(hidden)] pub use self::hyper::server::Response as Response;
+#[doc(hidden)] pub use self::hyper::server::Server as Server;
+#[doc(hidden)] pub use self::hyper::server::Handler as Handler;
 
-pub(crate) use hyper::method::Method;
-pub(crate) use hyper::status::StatusCode;
-pub(crate) use hyper::error::Error;
-pub(crate) use hyper::uri::RequestUri;
-pub(crate) use hyper::http::h1;
-pub(crate) use hyper::buffer;
+#[doc(hidden)] pub use self::hyper::net;
 
-pub use hyper::mime;
+#[doc(hidden)] pub use self::hyper::method::Method;
+#[doc(hidden)] pub use self::hyper::status::StatusCode;
+#[doc(hidden)] pub use self::hyper::error::Error;
+#[doc(hidden)] pub use self::hyper::uri::RequestUri;
+#[doc(hidden)] pub use self::hyper::http::h1;
+#[doc(hidden)] pub use self::hyper::buffer;
 
-/// Type alias to `hyper::Response<'a, hyper::net::Fresh>`.
-pub(crate) type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
+pub use self::hyper::mime;
+
+/// Type alias to `self::hyper::Response<'a, self::hyper::net::Fresh>`.
+#[doc(hidden)] pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 
 /// Reexported Hyper header types.
 pub mod header {
-    use http::Header;
+    use Header;
 
-    use hyper::header::Header as HyperHeaderTrait;
+    use super::hyper::header::Header as HyperHeaderTrait;
 
     macro_rules! import_hyper_items {
-        ($($item:ident),*) => ($(pub use hyper::header::$item;)*)
+        ($($item:ident),*) => ($(pub use super::hyper::header::$item;)*)
     }
 
     macro_rules! import_hyper_headers {

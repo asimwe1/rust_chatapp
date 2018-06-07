@@ -4,7 +4,7 @@ use std::cell::RefMut;
 pub use cookie::{Cookie, Key, CookieJar};
 use cookie::{SameSite, Delta};
 
-use http::Header;
+use Header;
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -117,23 +117,32 @@ pub enum Cookies<'a> {
 }
 
 impl<'a> Cookies<'a> {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[inline]
-    pub(crate) fn new(jar: RefMut<'a, CookieJar>, key: &'a Key) -> Cookies<'a> {
+    #[doc(hidden)]
+    pub fn new(jar: RefMut<'a, CookieJar>, key: &'a Key) -> Cookies<'a> {
         Cookies::Jarred(jar, key)
     }
 
-    #[inline]
-    pub(crate) fn empty() -> Cookies<'static> {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn empty() -> Cookies<'static> {
         Cookies::Empty(CookieJar::new())
     }
 
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
     #[inline(always)]
-    pub(crate) fn parse_cookie(cookie_str: &str) -> Option<Cookie<'static>> {
+    pub fn parse_cookie(cookie_str: &str) -> Option<Cookie<'static>> {
         Cookie::parse_encoded(cookie_str).map(|c| c.into_owned()).ok()
     }
 
     /// Adds an original `cookie` to this collection.
-    pub(crate) fn add_original(&mut self, cookie: Cookie<'static>) {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[inline]
+    #[doc(hidden)]
+    pub fn add_original(&mut self, cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, _) = *self {
             jar.add_original(cookie)
         }
@@ -145,6 +154,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Cookies;
     ///
     /// fn handler(cookies: Cookies) {
@@ -166,6 +176,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Cookies;
     ///
     /// fn handler(mut cookies: Cookies) {
@@ -184,6 +195,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Cookie, Cookies};
     ///
     /// fn handler(mut cookies: Cookies) {
@@ -223,6 +235,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Cookie, Cookies};
     ///
     /// fn handler(mut cookies: Cookies) {
@@ -237,7 +250,9 @@ impl<'a> Cookies<'a> {
     }
 
     /// Adds an original, private `cookie` to the collection.
-    pub(crate) fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
+    pub fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
             Cookies::set_private_defaults(&mut cookie);
             jar.private(key).add_original(cookie)
@@ -284,6 +299,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Cookie, Cookies};
     ///
     /// fn handler(mut cookies: Cookies) {
@@ -305,6 +321,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Cookie, Cookies};
     ///
     /// fn handler(mut cookies: Cookies) {
@@ -326,6 +343,7 @@ impl<'a> Cookies<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Cookies;
     ///
     /// fn handler(cookies: Cookies) {
@@ -341,7 +359,10 @@ impl<'a> Cookies<'a> {
         }
     }
 
-    pub(crate) fn delta(&self) -> Delta {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
+    #[inline]
+    pub fn delta(&self) -> Delta {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
             Cookies::Empty(ref jar) => jar.delta()

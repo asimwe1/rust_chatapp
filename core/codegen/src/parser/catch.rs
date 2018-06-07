@@ -2,7 +2,7 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
-use rocket::http::Status;
+use rocket_http::Status;
 
 use utils::{span, MetaItemExt};
 use super::Function;

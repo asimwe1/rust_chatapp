@@ -555,21 +555,21 @@ impl Config {
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use hyper_sync_rustls::util as tls;
-        use hyper_sync_rustls::util::Error::Io;
+        use http::tls::util::{self, Error};
+
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
-        let certs = tls::load_certs(self.root_relative(certs_path))
+        let certs = util::load_certs(self.root_relative(certs_path))
             .map_err(|e| match e {
-                Io(e) => ConfigError::Io(e, "tls.certs"),
+                Error::Io(e) => ConfigError::Io(e, "tls.certs"),
                 _ => self.bad_type("tls", pem_err, "a valid certificates file")
             })?;
 
         // And now the private key.
-        let key = tls::load_private_key(self.root_relative(key_path))
+        let key = util::load_private_key(self.root_relative(key_path))
             .map_err(|e| match e {
-                Io(e) => ConfigError::Io(e, "tls.key"),
+                Error::Io(e) => ConfigError::Io(e, "tls.key"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")
             })?;
 

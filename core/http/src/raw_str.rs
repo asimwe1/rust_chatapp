@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use std::str::Utf8Error;
 use std::fmt;
 
-use http::uncased::UncasedStr;
+use uncased::UncasedStr;
 
 /// A reference to a string inside of a raw HTTP message.
 ///
@@ -54,6 +54,7 @@ impl RawStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str = RawStr::from_str("Hello, world!");
@@ -77,6 +78,7 @@ impl RawStr {
     /// With a valid string:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str = RawStr::from_str("Hello%21");
@@ -87,6 +89,7 @@ impl RawStr {
     /// With an invalid string:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
@@ -108,6 +111,7 @@ impl RawStr {
     /// With a valid string:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str = RawStr::from_str("Hello%21");
@@ -118,6 +122,7 @@ impl RawStr {
     /// With an invalid string:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
@@ -141,6 +146,7 @@ impl RawStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str: &RawStr = "Hello%2C+world%21".into();
@@ -169,6 +175,7 @@ impl RawStr {
     /// Strings with HTML sequences are escaped:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str: &RawStr = "<b>Hi!</b>".into();
@@ -183,6 +190,7 @@ impl RawStr {
     /// Strings without HTML sequences remain untouched:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str: &RawStr = "Hello!".into();
@@ -239,6 +247,7 @@ impl RawStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str = RawStr::from_str("Hello, world!");
@@ -257,6 +266,7 @@ impl RawStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
     /// let raw_str = RawStr::from_str("Content-Type");

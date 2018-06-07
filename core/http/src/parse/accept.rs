@@ -1,10 +1,10 @@
 use pear::parser;
 use pear::parsers::*;
 
-use http::parse::checkers::is_whitespace;
-use http::parse::media_type::media_type;
-use http::{Accept, QMediaType};
-use http::parse::{Input, Result};
+use {Accept, QMediaType};
+use parse::{Input, Result};
+use parse::checkers::is_whitespace;
+use parse::media_type::media_type;
 
 #[parser]
 fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
@@ -33,7 +33,7 @@ pub fn parse_accept(input: &str) -> Result<Accept> {
 
 #[cfg(test)]
 mod test {
-    use http::MediaType;
+    use MediaType;
     use super::parse_accept;
 
     macro_rules! assert_parse {

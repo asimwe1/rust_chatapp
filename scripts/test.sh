@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# Brings in: ROOT_DIR, EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, CONTRIB_DIR, DOC_DIR
+# Brings in _ROOT, _DIR, _DIRS globals.
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/config.sh"
 
@@ -31,7 +31,7 @@ function check_versions_match() {
 # Ensures there are no tabs in any file.
 function ensure_tab_free() {
   local tab=$(printf '\t')
-  local matches=$(git grep -E -I "${tab}" "${ROOT_DIR}" | grep -v 'LICENSE')
+  local matches=$(git grep -E -I "${tab}" "${PROJECT_ROOT}" | grep -v 'LICENSE')
   if ! [ -z "${matches}" ]; then
     echo "Tab characters were found in the following:"
     echo "${matches}"
@@ -41,7 +41,7 @@ function ensure_tab_free() {
 
 # Ensures there are no files with trailing whitespace.
 function ensure_trailing_whitespace_free() {
-  local matches=$(git grep -E -I "\s+$" "${ROOT_DIR}")
+  local matches=$(git grep -E -I "\s+$" "${PROJECT_ROOT}")
   if ! [ -z "${matches}" ]; then
     echo "Trailing whitespace was found in the following:"
     echo "${matches}"
@@ -68,7 +68,7 @@ function bootstrap_examples() {
 }
 
 echo ":: Ensuring all crate versions match..."
-check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
+check_versions_match "${ALL_PROJECT_DIRS[@]}"
 
 echo ":: Checking for tabs..."
 ensure_tab_free

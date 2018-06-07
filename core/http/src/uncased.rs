@@ -14,6 +14,7 @@ use std::fmt;
 /// created from an `&str` as follows:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::uncased::UncasedStr;
 ///
 /// let ascii_ref: &UncasedStr = "Hello, world!".into();
@@ -28,6 +29,7 @@ impl UncasedStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::UncasedStr;
     ///
     /// let uncased_str = UncasedStr::new("Hello!");
@@ -45,6 +47,7 @@ impl UncasedStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::UncasedStr;
     ///
     /// let uncased_str = UncasedStr::new("Hello!");
@@ -61,6 +64,7 @@ impl UncasedStr {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::Uncased;
     ///
     /// let uncased = Uncased::new("Hello!");
@@ -164,6 +168,7 @@ impl<'s> Uncased<'s> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::Uncased;
     ///
     /// let uncased = Uncased::new("Content-Type");
@@ -180,6 +185,7 @@ impl<'s> Uncased<'s> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::Uncased;
     ///
     /// let uncased = Uncased::new("Content-Type");
@@ -196,6 +202,7 @@ impl<'s> Uncased<'s> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::uncased::Uncased;
     ///
     /// let boxed = Uncased::new("Content-Type").into_boxed_uncased();

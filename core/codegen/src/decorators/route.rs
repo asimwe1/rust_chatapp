@@ -15,10 +15,10 @@ use syntax::parse::token;
 use syntax::symbol::LocalInternedString;
 use syntax::ptr::P;
 
-use rocket::http::{Method, MediaType};
+use rocket_http::{Method, MediaType};
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
-    quote_enum!(ecx, method => ::rocket::http::Method {
+    quote_enum!(ecx, method => ::rocket_http::Method -> ::rocket::http::Method {
         Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch;
     })
 }

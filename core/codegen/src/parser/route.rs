@@ -9,8 +9,8 @@ use utils::{MetaItemExt, SpanExt, span, is_valid_ident};
 use super::Function;
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
-use rocket::http::{Method, MediaType};
-use rocket::http::uri::Uri;
+use rocket_http::{Method, MediaType};
+use rocket_http::uri::Uri;
 
 /// This structure represents the parsed `route` attribute.
 ///
@@ -131,7 +131,7 @@ impl RouteParams {
 }
 
 fn is_valid_method(method: Method) -> bool {
-    use rocket::http::Method::*;
+    use rocket_http::Method::*;
     match method {
         Get | Put | Post | Delete | Head | Patch | Options => true,
         Trace | Connect => false

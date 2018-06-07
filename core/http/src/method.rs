@@ -1,9 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use error::Error;
-use http::hyper;
-use http::uncased::uncased_eq;
+use {hyper, uncased::uncased_eq};
 
 use self::Method::*;
 
@@ -24,7 +22,9 @@ pub enum Method {
 }
 
 impl Method {
-    pub(crate) fn from_hyp(method: &hyper::Method) -> Option<Method> {
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
+    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
         match *method {
             hyper::Method::Get => Some(Get),
             hyper::Method::Put => Some(Put),
@@ -45,6 +45,7 @@ impl Method {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Method;
     ///
     /// assert_eq!(Method::Get.supports_payload(), false);
@@ -63,6 +64,7 @@ impl Method {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Method;
     ///
     /// assert_eq!(Method::Get.as_str(), "GET");
@@ -84,11 +86,11 @@ impl Method {
 }
 
 impl FromStr for Method {
-    type Err = Error;
+    type Err = ();
 
     // According to the RFC, method names are case-sensitive. But some old
     // clients don't follow this, so we just do a case-insensitive match here.
-    fn from_str(s: &str) -> Result<Method, Error> {
+    fn from_str(s: &str) -> Result<Method, ()> {
         match s {
             x if uncased_eq(x, Get.as_str()) => Ok(Get),
             x if uncased_eq(x, Put.as_str()) => Ok(Put),
@@ -99,7 +101,7 @@ impl FromStr for Method {
             x if uncased_eq(x, Trace.as_str()) => Ok(Trace),
             x if uncased_eq(x, Connect.as_str()) => Ok(Connect),
             x if uncased_eq(x, Patch.as_str()) => Ok(Patch),
-            _ => Err(Error::BadMethod),
+            _ => Err(()),
         }
     }
 }

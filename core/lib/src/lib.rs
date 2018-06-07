@@ -102,30 +102,22 @@
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen_next;
 #[doc(hidden)] pub use rocket_codegen_next::*;
 
+extern crate rocket_http;
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
-#[cfg(feature = "tls")] extern crate rustls;
-#[cfg(feature = "tls")] extern crate hyper_sync_rustls;
-#[macro_use] extern crate percent_encoding;
 extern crate yansi;
-extern crate hyper;
 extern crate toml;
 extern crate num_cpus;
 extern crate state;
-extern crate cookie;
 extern crate time;
 extern crate memchr;
 extern crate base64;
-extern crate smallvec;
-extern crate indexmap;
 extern crate isatty;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
-#[macro_use] mod docify;
 pub mod local;
-pub mod http;
 pub mod request;
 pub mod response;
 pub mod outcome;
@@ -134,6 +126,13 @@ pub mod data;
 pub mod handler;
 pub mod fairing;
 pub mod error;
+
+// Reexport of HTTP everything.
+pub mod http {
+    // FIXME: This unfortunately doesn't work! See rust-lang/rust#51252.
+    #[doc(inline)]
+    pub use rocket_http::*;
+}
 
 mod router;
 mod rocket;

@@ -6,6 +6,7 @@ members = [
   "core/lib/",
   "core/codegen/",
   "core/codegen_next/",
+  "core/http/",
   "contrib/lib",
   "examples/cookies",
   "examples/errors",

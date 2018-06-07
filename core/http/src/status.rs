@@ -55,6 +55,7 @@ impl StatusClass {
 /// A status of `200 OK` can be instantiated via the `Ok` constant:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::Status;
 ///
 /// # #[allow(unused_variables)]
@@ -64,6 +65,7 @@ impl StatusClass {
 /// A status of `404 Not Found` can be instantiated via the `NotFound` constant:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::Status;
 ///
 /// # #[allow(unused_variables)]
@@ -73,6 +75,7 @@ impl StatusClass {
 /// The code and phrase can be retrieved directly:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::Status;
 ///
 /// let not_found = Status::NotFound;
@@ -109,6 +112,7 @@ macro_rules! ctrs {
         /// Create a `Status` from a known `code`:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::Status;
         ///
         /// let not_found = Status::from_code(404);
@@ -118,6 +122,7 @@ macro_rules! ctrs {
         /// Create a `Status` from an unknown `code`:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::Status;
         ///
         /// let not_found = Status::from_code(600);
@@ -143,6 +148,7 @@ impl Status {
     /// Create a custom `299 Somewhat Successful` status:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::Status;
     ///
     /// let custom = Status::new(299, "Somewhat Successful");
@@ -161,6 +167,7 @@ impl Status {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::{Status, StatusClass};
     ///
     /// let processing = Status::Processing;

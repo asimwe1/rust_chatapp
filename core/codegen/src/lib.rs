@@ -222,12 +222,11 @@
 //! ```
 
 
-#[macro_use] extern crate log;
 extern crate syntax;
 extern crate syntax_ext;
 extern crate syntax_pos;
 extern crate rustc_plugin;
-extern crate rocket;
+extern crate rocket_http;
 extern crate indexmap;
 
 #[macro_use] mod utils;
@@ -235,7 +234,6 @@ mod parser;
 mod macros;
 mod decorators;
 
-use std::env;
 use rustc_plugin::Registry;
 use syntax::ext::base::SyntaxExtension;
 use syntax::symbol::Symbol;
@@ -279,11 +277,6 @@ macro_rules! register_macros {
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    // Enable logging early if the DEBUG_ENV_VAR is set.
-    if env::var(DEBUG_ENV_VAR).is_ok() {
-        ::rocket::logger::init(::rocket::config::LoggingLevel::Debug);
-    }
-
     register_macros!(reg,
         "routes" => routes,
         "catchers" => catchers,

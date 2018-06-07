@@ -4,8 +4,8 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use ext::IntoCollection;
-use http::uncased::{uncased_eq, UncasedStr};
-use http::parse::{Indexed, IndexedString, parse_media_type};
+use uncased::{uncased_eq, UncasedStr};
+use parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
 
@@ -77,6 +77,7 @@ impl Source {
 /// constant:
 ///
 /// ```rust
+/// # extern crate rocket;
 /// use rocket::http::MediaType;
 ///
 /// let json = MediaType::JSON;
@@ -180,6 +181,7 @@ macro_rules! from_extension {
         /// Recognized media types:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::MediaType;
         ///
         /// let xml = MediaType::from_extension("xml");
@@ -192,6 +194,7 @@ macro_rules! from_extension {
         /// An unrecognized media type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::MediaType;
         ///
         /// let foo = MediaType::from_extension("foo");
@@ -225,6 +228,7 @@ macro_rules! parse_flexible {
         /// Using a shorthand:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::MediaType;
         ///
         /// let html = MediaType::parse_flexible("html");
@@ -237,6 +241,7 @@ macro_rules! parse_flexible {
         /// Using the full media type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::MediaType;
         ///
         /// let html = MediaType::parse_flexible("text/html; charset=utf-8");
@@ -252,6 +257,7 @@ macro_rules! parse_flexible {
         /// An unrecognized media type:
         ///
         /// ```rust
+        /// # extern crate rocket;
         /// use rocket::http::MediaType;
         ///
         /// let foo = MediaType::parse_flexible("foo");
@@ -279,6 +285,7 @@ impl MediaType {
     /// Create a custom `application/x-person` media type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let custom = MediaType::new("application", "x-person");
@@ -306,6 +313,7 @@ impl MediaType {
     /// Create a custom `application/x-id; id=1` media type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let id = MediaType::with_params("application", "x-id", ("id", "1"));
@@ -315,6 +323,7 @@ impl MediaType {
     /// Create a custom `text/person; name=bob; weight=175` media type:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let params = vec![("name", "bob"), ("ref", "2382")];
@@ -350,6 +359,7 @@ impl MediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let plain = MediaType::Plain;
@@ -368,6 +378,7 @@ impl MediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let plain = MediaType::Plain;
@@ -392,6 +403,7 @@ impl MediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let mt = MediaType::Plain;
@@ -421,6 +433,7 @@ impl MediaType {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let plain = MediaType::Plain;
@@ -461,6 +474,7 @@ impl MediaType {
     /// The `MediaType::Plain` type has one parameter: `charset=utf-8`:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let plain = MediaType::Plain;
@@ -471,6 +485,7 @@ impl MediaType {
     /// The `MediaType::PNG` type has no parameters:
     ///
     /// ```rust
+    /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
     /// let png = MediaType::PNG;
