@@ -1,8 +1,8 @@
+use syntax::codemap;
+use syntax::parse::{token, SeqSep, PResult};
 use syntax::parse::parser::{PathStyle, Parser};
-use syntax::parse::PResult;
-use syntax::ast::{self, Path, StrStyle, Ident};
 use syntax::parse::token::Token::{Eof, Comma};
-use syntax::parse::common::SeqSep;
+use syntax::ast::{self, Path, StrStyle, Ident};
 use syntax::symbol::Symbol;
 
 pub trait ParserExt<'a> {
@@ -14,6 +14,10 @@ pub trait ParserExt<'a> {
 
     // Like `parse_ident` but also looks for an `ident` in a `Pat`.
     fn parse_ident_inc_pat(&mut self) -> PResult<'a, Ident>;
+
+    // Duplicates previously removed method in libsyntax.
+    fn parse_seq<T, F>(&mut self, bra: &token::Token, ket: &token::Token, sep: SeqSep, f: F)
+        -> PResult<'a, codemap::Spanned<Vec<T>>> where F: FnMut(&mut Parser<'a>) -> PResult<'a, T>;
 }
 
 impl<'a> ParserExt<'a> for Parser<'a> {
@@ -52,5 +56,24 @@ impl<'a> ParserExt<'a> for Parser<'a> {
                 e.cancel();
                 Ok(ident)
             })
+    }
+
+    // Duplicates previously removed method in libsyntax. NB: Do not use this
+    // function unless you actually plan to place the spanned list in the AST.
+    fn parse_seq<T, F>(
+        &mut self,
+        bra: &token::Token,
+        ket: &token::Token,
+        sep: SeqSep,
+        f: F
+    ) -> PResult<'a, codemap::Spanned<Vec<T>>>
+        where F: FnMut(&mut Parser<'a>) -> PResult<'a, T>
+    {
+        let lo = self.span;
+        self.expect(bra)?;
+        let result = self.parse_seq_to_before_end(ket, sep, f)?;
+        let hi = self.span;
+        self.bump();
+        Ok(codemap::respan(lo.to(hi), result))
     }
 }
