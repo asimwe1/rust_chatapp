@@ -90,6 +90,10 @@ impl Data {
     pub(crate) fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
         // Steal the internal, undecoded data buffer and net stream from Hyper.
         let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
+        // This is only valid because we know that hyper's `cap` represents the
+        // actual length of the vector. As such, this is really only setting
+        // things up correctly for future use. See
+        // https://github.com/hyperium/hyper/commit/bbbce5f for confirmation.
         unsafe { hyper_buf.set_len(cap); }
         let hyper_net_stream = body.get_ref().get_ref();
 
@@ -233,7 +237,7 @@ impl Data {
     #[inline(always)]
     pub(crate) fn new(mut stream: BodyReader) -> Data {
         trace_!("Date::new({:?})", stream);
-        let mut peek_buf = vec![0; PEEK_BYTES];
+        let mut peek_buf: Vec<u8> = vec![0; PEEK_BYTES];
 
         // Fill the buffer with as many bytes as possible. If we read less than
         // that buffer's length, we know we reached the EOF. Otherwise, it's
@@ -241,13 +245,16 @@ impl Data {
         let eof = match stream.read_max(&mut peek_buf[..]) {
             Ok(n) => {
                 trace_!("Filled peek buf with {} bytes.", n);
-                // TODO: Explain this.
-                unsafe { peek_buf.set_len(n); }
+                // We can use `set_len` here instead of `truncate`, but we'll
+                // take the performance hit to avoid `unsafe`. All of this code
+                // should go away when we migrate away from hyper 0.10.x.
+                peek_buf.truncate(n);
                 n < PEEK_BYTES
             }
             Err(e) => {
                 error_!("Failed to read into peek buffer: {:?}.", e);
-                unsafe { peek_buf.set_len(0); }
+                // Likewise here as above.
+                peek_buf.truncate(0);
                 false
             },
         };

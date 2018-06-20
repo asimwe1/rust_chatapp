@@ -35,8 +35,7 @@ fn media_param<'a>(input: &mut Input<'a>) -> Result<'a, (Slice<'a>, Slice<'a>)> 
 
 #[parser]
 pub fn media_type<'a>(input: &mut Input<'a>) -> Result<'a, MediaType> {
-    // FIXME: Explain the coerce safety.
-    let (top, sub, params) = unsafe {
+    let (top, sub, params) = {
         let top = (take_some_while_until(is_valid_token, '/')?, eat('/')?).0;
         let sub = take_some_while_until(is_valid_token, ';')?;
         let params = series(true, ';', is_whitespace, |i| {

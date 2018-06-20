@@ -1,6 +1,5 @@
 use std::fmt;
 use std::rc::Rc;
-use std::mem::transmute;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 
@@ -70,7 +69,33 @@ use http::{Header, Cookie};
 /// [`cloned_dispatch`]: #method.cloned_dispatch
 pub struct LocalRequest<'c> {
     client: &'c Client,
+    // This pointer exists to access the `Rc<Request>` mutably inside of
+    // `LocalRequest`. This is the only place that a `Request` can be accessed
+    // mutably. This is accomplished via the private `request_mut()` method.
     ptr: *mut Request<'c>,
+    // This `Rc` exists so that we can transfer ownership to the `LocalResponse`
+    // selectively on dispatch. This is necessary because responses may point
+    // into the request, and thus the request and all of its data needs to be
+    // alive while the response is accessible.
+    //
+    // Because both a `LocalRequest` and a `LocalResponse` can hold an `Rc` to
+    // the same `Request`, _and_ the `LocalRequest` can mutate the request, we
+    // must ensure that 1) neither `LocalRequest` not `LocalResponse` are `Sync`
+    // or `Send` and 2) mutatations carried out in `LocalRequest` are _stable_:
+    // they never _remove_ data, and any reallocations (say, for vectors or
+    // hashmaps) result in object pointers remaining the same. This means that
+    // even if the `Request` is mutated by a `LocalRequest`, those mutations are
+    // not observeable by `LocalResponse`.
+    //
+    // The first is ensured by the embedding of the `Rc` type which is neither
+    // `Send` nor `Sync`. The second is more difficult to argue. First, observe
+    // that any methods of `LocalRequest` that _remove_ values from `Request`
+    // only remove _Copy_ values, in particular, `SocketAddr`. Second, the
+    // lifetime of the `Request` object is tied tot he lifetime of the
+    // `LocalResponse`, so references from `Request` cannot be dangling in
+    // `Response`. And finally, observe how all of the data stored in `Request`
+    // is convered into its owned counterpart before insertion, ensuring stable
+    // addresses. Together, these properties guarantee the second condition.
     request: Rc<Request<'c>>,
     data: Vec<u8>
 }
@@ -100,7 +125,18 @@ impl<'c> LocalRequest<'c> {
     }
 
     #[inline(always)]
-    fn request(&mut self) -> &mut Request<'c> {
+    fn request_mut(&mut self) -> &mut Request<'c> {
+        // See the comments in the structure for the argument of correctness.
+        unsafe { &mut *self.ptr }
+    }
+
+    // This method should _never_ be publically exposed!
+    #[inline(always)]
+    fn long_lived_request<'a>(&mut self) -> &'a mut Request<'c> {
+        // See the comments in the structure for the argument of correctness.
+        // Additionally, the caller must ensure that the owned instance of
+        // `Request` itself remains valid as long as the returned reference can
+        // be accessed.
         unsafe { &mut *self.ptr }
     }
 
@@ -126,7 +162,7 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline]
     pub fn header<H: Into<Header<'static>>>(mut self, header: H) -> Self {
-        self.request().add_header(header.into());
+        self.request_mut().add_header(header.into());
         self
     }
 
@@ -146,7 +182,7 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline]
     pub fn add_header<H: Into<Header<'static>>>(&mut self, header: H) {
-        self.request().add_header(header.into());
+        self.request_mut().add_header(header.into());
     }
 
     /// Set the remote address of this request.
@@ -164,7 +200,7 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline]
     pub fn remote(mut self, address: SocketAddr) -> Self {
-        self.request().set_remote(address);
+        self.request_mut().set_remote(address);
         self
     }
 
@@ -297,7 +333,7 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline(always)]
     pub fn dispatch(mut self) -> LocalResponse<'c> {
-        let req = unsafe { transmute(self.request()) };
+        let req = self.long_lived_request();
         let response = self.client.rocket().dispatch(req, Data::local(self.data));
         self.client.update_cookies(&response);
 
@@ -361,7 +397,7 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
         let data = ::std::mem::replace(&mut self.data, vec![]);
-        let req = unsafe { transmute(self.request()) };
+        let req = self.long_lived_request();
         let response = self.client.rocket().dispatch(req, Data::local(data));
         self.client.update_cookies(&response);
 
@@ -414,62 +450,95 @@ impl<'c> fmt::Debug for LocalResponse<'c> {
     }
 }
 
-// fn test() {
-//     use local::Client;
+#[cfg(test)]
+mod tests {
+    // Someday...
 
-//     let rocket = Rocket::ignite();
-//     let res = {
-//         let mut client = Client::new(rocket).unwrap();
-//         client.get("/").dispatch()
-//     };
+    // #[test]
+    // #[compile_fail]
+    // fn local_req_not_sync() {
+    //     fn is_sync<T: Sync>() {  }
+    //     is_sync::<::local::LocalRequest>();
+    // }
 
-//     // let client = Client::new(rocket).unwrap();
-//     // let res1 = client.get("/").dispatch();
-//     // let res2 = client.get("/").dispatch();
-// }
+    // #[test]
+    // #[compile_fail]
+    // fn local_req_not_send() {
+    //     fn is_send<T: Send>() {  }
+    //     is_send::<::local::LocalRequest>();
+    // }
 
-// fn test() {
-//     use local::Client;
+    // #[test]
+    // #[compile_fail]
+    // fn local_req_not_sync() {
+    //     fn is_sync<T: Sync>() {  }
+    //     is_sync::<::local::LocalResponse>();
+    // }
 
-//     let rocket = Rocket::ignite();
-//     let res = {
-//         Client::new(rocket).unwrap()
-//             .get("/").dispatch();
-//     };
+    // #[test]
+    // #[compile_fail]
+    // fn local_req_not_send() {
+    //     fn is_send<T: Send>() {  }
+    //     is_send::<::local::LocalResponse>();
+    // }
 
-//     // let client = Client::new(rocket).unwrap();
-//     // let res1 = client.get("/").dispatch();
-//     // let res2 = client.get("/").dispatch();
-// }
+    // fn test() {
+    //     use local::Client;
 
-// fn test() {
-//     use local::Client;
+    //     let rocket = Rocket::ignite();
+    //     let res = {
+    //         let mut client = Client::new(rocket).unwrap();
+    //         client.get("/").dispatch()
+    //     };
 
-//     let rocket = Rocket::ignite();
-//     let client = Client::new(rocket).unwrap();
+    //     // let client = Client::new(rocket).unwrap();
+    //     // let res1 = client.get("/").dispatch();
+    //     // let res2 = client.get("/").dispatch();
+    // }
 
-//     let res = {
-//         let x = client.get("/").dispatch();
-//         let y = client.get("/").dispatch();
-//     };
+    // fn test() {
+    //     use local::Client;
 
-//     let x = client;
-// }
+    //     let rocket = Rocket::ignite();
+    //     let res = {
+    //         Client::new(rocket).unwrap()
+    //             .get("/").dispatch();
+    //     };
 
-// fn test() {
-//     use local::Client;
+    //     // let client = Client::new(rocket).unwrap();
+    //     // let res1 = client.get("/").dispatch();
+    //     // let res2 = client.get("/").dispatch();
+    // }
 
-//     let rocket1 = Rocket::ignite();
-//     let rocket2 = Rocket::ignite();
+    // fn test() {
+    //     use local::Client;
 
-//     let client1 = Client::new(rocket1).unwrap();
-//     let client2 = Client::new(rocket2).unwrap();
+    //     let rocket = Rocket::ignite();
+    //     let client = Client::new(rocket).unwrap();
 
-//     let res = {
-//         let mut res1 = client1.get("/");
-//         res1.set_client(&client2);
-//         res1
-//     };
+    //     let res = {
+    //         let x = client.get("/").dispatch();
+    //         let y = client.get("/").dispatch();
+    //     };
 
-//     drop(client1);
-// }
+    //     let x = client;
+    // }
+
+    // fn test() {
+    //     use local::Client;
+
+    //     let rocket1 = Rocket::ignite();
+    //     let rocket2 = Rocket::ignite();
+
+    //     let client1 = Client::new(rocket1).unwrap();
+    //     let client2 = Client::new(rocket2).unwrap();
+
+    //     let res = {
+    //         let mut res1 = client1.get("/");
+    //         res1.set_client(&client2);
+    //         res1
+    //     };
+
+    //     drop(client1);
+    // }
+}

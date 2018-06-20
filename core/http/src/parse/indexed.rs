@@ -10,7 +10,6 @@ pub type IndexedString = Indexed<'static, str>;
 
 pub trait AsPtr {
     fn as_ptr(&self) -> *const u8;
-    // unsafe fn from_raw<'a>(raw: *const u8, length: usize) -> &T;
 }
 
 impl AsPtr for str {
@@ -43,7 +42,7 @@ impl<'a, T: ?Sized + ToOwned + 'a, C: Into<Cow<'a, T>>> From<C> for Indexed<'a, 
 
 impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     #[inline(always)]
-    pub unsafe fn coerce<U: ?Sized + ToOwned>(self) -> Indexed<'a, U> {
+    pub fn coerce<U: ?Sized + ToOwned>(self) -> Indexed<'a, U> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
             _ => panic!("cannot convert indexed T to U unless indexed")
@@ -53,7 +52,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
 
 impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     #[inline(always)]
-    pub unsafe fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
+    pub fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
             _ => panic!("cannot coerce lifetime unless indexed")
@@ -217,9 +216,8 @@ impl<'a> IndexedInput<'a, [u8]> {
         let source_addr = self.source.as_ptr() as usize;
         let current_addr = self.current.as_ptr() as usize;
         if current_addr > n && (current_addr - n) >= source_addr {
-            let size = self.current.len() + n;
-            let addr = (current_addr - n) as *const u8;
-            self.current = unsafe { ::std::slice::from_raw_parts(addr, size) };
+            let forward = (current_addr - n) - source_addr;
+            self.current = &self.source[forward..];
             Ok(())
         } else {
             let diag = format!("({}, {:x} in {:x})", n, current_addr, source_addr);

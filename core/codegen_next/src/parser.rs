@@ -24,15 +24,18 @@ pub struct Parser {
 impl Parser {
     pub fn new(tokens: TokenStream) -> Parser {
         let buffer = Box::new(TokenBuffer::new(tokens.into()));
+        // Our `Parser` is self-referential. We cast a pointer to the heap
+        // allocation as `&'static` to allow the storage of the reference
+        // along-side the allocation. This is safe as long as `buffer` is never
+        // dropped while `self` lives and an instance or reference to `cursor`
+        // is never allowed to escape. Both of these properties can be
+        // confirmed with a cursor look over the method signatures of `Parser`.
         let cursor = unsafe {
             let buffer: &'static TokenBuffer = ::std::mem::transmute(&*buffer);
             buffer.begin()
         };
 
-        Parser {
-            buffer: buffer,
-            cursor: cursor,
-        }
+        Parser { buffer, cursor }
     }
 
     pub fn current_span(&self) -> Span {
@@ -46,6 +49,9 @@ impl Parser {
             .map_err(|e| {
                 let expected = match T::description() {
                     Some(desc) => desc,
+                    // We're just grabbing the type's name here. This is totally
+                    // unnecessary. There's nothing potentially memory-unsafe
+                    // about this. It's simply unsafe because it's an intrinsic.
                     None => unsafe { ::std::intrinsics::type_name::<T>() }
                 };
 
