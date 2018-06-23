@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData, Ident};
-use syntax::ast::{StructField, GenericParam};
+use syntax::ast::{StructField, GenericParamKind};
 use syntax::codemap::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
@@ -26,12 +26,10 @@ fn struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, sp: Span) -> Option<St
         Annotatable::Item(ref item) => match item.node {
             ItemKind::Struct(_, ref generics) => {
                 let mut lifetimes = generics.params.iter()
-                    .filter_map(|p| match *p {
-                        GenericParam::Lifetime(ref def) => Some(def),
-                        _ => None
-                    });
+                    .filter(|p| p.kind == GenericParamKind::Lifetime)
+                    .map(|p| p.ident.to_string());
 
-                let lifetime = lifetimes.next().map(|d| d.lifetime.ident.to_string());
+                let lifetime = lifetimes.next();
                 if lifetimes.next().is_some() {
                     ecx.span_err(generics.span, "cannot have more than one \
                         lifetime parameter when deriving `FromForm`.");
@@ -329,5 +327,3 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     cx.expr_block(cx.block(trait_span, stmts))
 }
-
-
