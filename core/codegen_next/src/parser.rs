@@ -27,9 +27,10 @@ impl Parser {
         // Our `Parser` is self-referential. We cast a pointer to the heap
         // allocation as `&'static` to allow the storage of the reference
         // along-side the allocation. This is safe as long as `buffer` is never
-        // dropped while `self` lives and an instance or reference to `cursor`
-        // is never allowed to escape. Both of these properties can be
-        // confirmed with a cursor look over the method signatures of `Parser`.
+        // dropped while `self` lives, `buffer` is never mutated, and an
+        // instance or reference to `cursor` is never allowed to escape. These
+        // properties can be confirmed with a cursory look over the method
+        // signatures and implementations of `Parser`.
         let cursor = unsafe {
             let buffer: &'static TokenBuffer = ::std::mem::transmute(&*buffer);
             buffer.begin()

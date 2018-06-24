@@ -91,10 +91,10 @@ pub struct LocalRequest<'c> {
     // `Send` nor `Sync`. The second is more difficult to argue. First, observe
     // that any methods of `LocalRequest` that _remove_ values from `Request`
     // only remove _Copy_ values, in particular, `SocketAddr`. Second, the
-    // lifetime of the `Request` object is tied tot he lifetime of the
+    // lifetime of the `Request` object is tied to the lifetime of the
     // `LocalResponse`, so references from `Request` cannot be dangling in
     // `Response`. And finally, observe how all of the data stored in `Request`
-    // is convered into its owned counterpart before insertion, ensuring stable
+    // is converted into its owned counterpart before insertion, ensuring stable
     // addresses. Together, these properties guarantee the second condition.
     request: Rc<Request<'c>>,
     data: Vec<u8>
