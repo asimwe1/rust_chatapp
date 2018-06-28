@@ -455,9 +455,9 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
+    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
     /// fn hi() -> &'static str {
@@ -542,10 +542,10 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(plugin, decl_macro)]
+    /// #![feature(plugin, decl_macro, proc_macro_non_items)]
     /// #![plugin(rocket_codegen)]
     ///
-    /// extern crate rocket;
+    /// #[macro_use] extern crate rocket;
     ///
     /// use rocket::{catch, Request};
     ///
@@ -601,9 +601,9 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
+    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
     /// struct MyValue(usize);
@@ -756,9 +756,9 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
+    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
