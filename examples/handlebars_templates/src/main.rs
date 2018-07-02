@@ -10,14 +10,16 @@ extern crate rocket;
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::{Template, handlebars};
+
 use handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
-    name: String,
-    items: Vec<String>,
-    title: String,
-    parent: String,
+    title: &'static str,
+    name: Option<String>,
+    items: Vec<&'static str>,
+    // This key tells handlebars which template is the parent.
+    parent: &'static str,
 }
 
 #[get("/")]
@@ -27,30 +29,22 @@ fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 fn hello(name: String) -> Template {
-    let page = "index".to_string();
-    let title = format!("Rocket Example - {}", page).to_string();
-    let context = TemplateContext {
-        name: name,
-        items: vec!["One".into(), "Two".into(), "Three".into()],
-        parent: "layout".to_string(),
-        title: title,
-    };
-
-    Template::render(page, &context)
+    Template::render("index", &TemplateContext {
+        title: "Hello",
+        name: Some(name),
+        items: vec!["One", "Two", "Three"],
+        parent: "layout",
+    })
 }
 
 #[get("/about")]
 fn about() -> Template {
-    let page = "about".to_string();
-    let title = format!("Rocket Example - {}", page).to_string();
-    let context = TemplateContext {
-        name: "Unknown".to_string(),
-        items: vec!["One".into(), "Two".into(), "Three".into()],
-        parent: "layout".to_string(),
-        title: title,
-    };
-
-    Template::render(page, &context)
+    Template::render("about", &TemplateContext {
+        title: "About",
+        name: None,
+        items: vec!["Four", "Five", "Six"],
+        parent: "layout",
+    })
 }
 
 #[catch(404)]
@@ -60,9 +54,7 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
-type HelperResult = Result<(), RenderError>;
-
-fn wow_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> HelperResult {
+fn wow_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
         write!(rc.writer, "<b><i>{}</i></b>", param.value().render())?;
     }

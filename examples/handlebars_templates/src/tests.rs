@@ -1,4 +1,5 @@
-use super::rocket;
+use super::{rocket, TemplateContext};
+
 use rocket::local::{Client, LocalResponse};
 use rocket::http::Method::*;
 use rocket::http::Status;
@@ -40,16 +41,17 @@ fn test_root() {
 #[test]
 fn test_name() {
     // Check that the /hello/<name> route works.
-    dispatch!(Get, "/hello/Jack", |_client: &Client, mut response: LocalResponse| {
-        let _context = super::TemplateContext {
-            name: "Jack".into(),
-            items: vec!["One".into(), "Two".into(), "Three".into()],
-            title: "hello".to_string(),
-            parent: "layout".to_string(),
+    dispatch!(Get, "/hello/Jack%20Daniels", |client: &Client, mut response: LocalResponse| {
+        let context = TemplateContext {
+            title: "Hello",
+            name: Some("Jack Daniels".into()),
+            items: vec!["One", "Two", "Three"],
+            parent: "layout",
         };
 
+        let expected = Template::show(client.rocket(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        assert!(response.body_string().unwrap().contains("Jack"));
+        assert_eq!(response.body_string(), Some(expected));
     });
 }
 
