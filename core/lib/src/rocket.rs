@@ -601,7 +601,9 @@ impl Rocket {
         self
     }
 
-    /// Attaches a fairing to this instance of Rocket.
+    /// Attaches a fairing to this instance of Rocket. If the fairing is an
+    /// _attach_ fairing, it is run immediately. All other kinds of fairings
+    /// will be executed at their appropriate time.
     ///
     /// # Example
     ///
