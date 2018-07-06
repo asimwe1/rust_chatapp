@@ -135,10 +135,8 @@ impl log::Log for RocketLogger {
 }
 
 pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
-    if !::isatty::stdout_isatty() {
+    if !::isatty::stdout_isatty() || (cfg!(windows) && !Paint::enable_windows_ascii()) {
         Paint::disable();
-    } else if cfg!(windows) {
-        Paint::enable_windows_ascii();
     }
 
     push_max_level(level);
@@ -146,6 +144,8 @@ pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
         if verbose {
             eprintln!("Logger failed to initialize: {}", e);
         }
+
+        pop_max_level();
     }
 }
 
