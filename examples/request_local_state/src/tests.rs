@@ -1,7 +1,6 @@
 use std::sync::atomic::{Ordering};
 
-use ::Atomics;
-use super::rocket;
+use super::{rocket, Atomics};
 use rocket::local::Client;
 
 #[test]

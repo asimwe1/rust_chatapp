@@ -1,5 +1,6 @@
 #![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
+
 extern crate rocket;
 
 use std::sync::atomic::{AtomicUsize, Ordering};

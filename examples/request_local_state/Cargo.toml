@@ -1,5 +1,5 @@
 [package]
-name = "request_state_local_cache"
+name = "request_local_state"
 version = "0.0.0"
 workspace = "../../"
 publish = false

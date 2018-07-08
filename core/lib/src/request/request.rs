@@ -82,8 +82,8 @@ impl<'r> Request<'r> {
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached
-    /// state of `self`. If no such value has previously been cached for
-    /// this request, `f` is called to produce the value which is subsequently
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `f` is called to produce the value which is subsequently
     /// returned.
     ///
     /// # Example
@@ -92,26 +92,24 @@ impl<'r> Request<'r> {
     /// # use rocket::http::Method;
     /// # use rocket::Request;
     /// # struct User;
-    /// fn current_user() -> User {
-    ///     // Load user...
+    /// fn current_user(request: &Request) -> User {
+    ///     // Validate request for a given user, load from database, etc.
     ///     # User
     /// }
     ///
     /// # Request::example(Method::Get, "/uri", |request| {
-    /// let user = request.local_cache(current_user);
+    /// let user = request.local_cache(|| current_user(request));
     /// # });
     /// ```
     pub fn local_cache<T, F>(&self, f: F) -> &T
-        where T: Send + Sync + 'static,
-              F: FnOnce() -> T {
-
-        match self.state.cache.try_get() {
-            Some(cached) => cached,
-            None => {
+        where F: FnOnce() -> T,
+              T: Send + Sync + 'static
+    {
+        self.state.cache.try_get()
+            .unwrap_or_else(|| {
                 self.state.cache.set(f());
                 self.state.cache.get()
-            }
-        }
+            })
     }
 
     /// Retrieve the method from `self`.
