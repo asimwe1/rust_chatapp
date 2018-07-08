@@ -585,9 +585,9 @@ impl Config {
     }
 
     #[inline(always)]
-    fn set_raw_tls(&mut self, paths: (&str, &str)) -> Result<()> {
+    fn set_raw_tls(&mut self, _paths: (&str, &str)) -> Result<()> {
         #[cfg(not(test))]
-        { self.set_tls(paths.0, paths.1) }
+        { self.set_tls(_paths.0, _paths.1) }
 
         // During unit testing, we don't want to actually read certs/keys.
         #[cfg(test)]
