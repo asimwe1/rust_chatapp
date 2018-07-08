@@ -536,7 +536,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("👾  {}:", Paint::purple("Catchers"));
+        info!("{}{}:", Paint::masked("👾  "), Paint::purple("Catchers"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
                 let msg = "(warning: duplicate catcher!)";
