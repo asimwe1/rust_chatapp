@@ -26,20 +26,28 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// [Serde](https://github.com/serde-rs/serde). The data is parsed from the HTTP
 /// request body.
 ///
-/// ```rust,ignore
-/// #[post("/users/", format = "application/msgpack", data = "<user>")]
+/// ```rust
+/// # #![feature(plugin, decl_macro)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// # fn main() {  }
+/// #
+/// use rocket_contrib::MsgPack;
+///
+/// #[post("/users", format = "msgpack", data = "<user>")]
 /// fn new_user(user: MsgPack<User>) {
-///     ...
+///     /* ... */
 /// }
 /// ```
 ///
-/// You don't _need_ to use `format = "application/msgpack"`, but it _may_ be
-/// what you want. Using `format = application/msgpack` means that any request
-/// that doesn't specify "application/msgpack" as its first `Content-Type:`
-/// header parameter will not be routed to this handler. By default, Rocket will
-/// accept a Content Type of any of the following for MessagePack data:
-/// `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, or
-/// `bin/x-msgpack`.
+/// You don't _need_ to use `format = "msgpack"`, but it _may_ be what you want.
+/// Using `format = msgpack` means that any request that doesn't specify
+/// "application/msgpack" as its first `Content-Type:` header parameter will not
+/// be routed to this handler. By default, Rocket will accept a Content-Type of
+/// any of the following for MessagePack data: `application/msgpack`,
+/// `application/x-msgpack`, `bin/msgpack`, or `bin/x-msgpack`.
 ///
 /// ## Sending MessagePack
 ///
@@ -48,11 +56,20 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// [Serde](https://github.com/serde-rs/serde). The content type of the response
 /// is set to `application/msgpack` automatically.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(plugin, decl_macro)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// # fn main() {  }
+/// #
+/// use rocket_contrib::MsgPack;
+///
 /// #[get("/users/<id>")]
 /// fn user(id: usize) -> MsgPack<User> {
 ///     let user_from_id = User::from(id);
-///     ...
+///     /* ... */
 ///     MsgPack(user_from_id)
 /// }
 /// ```
