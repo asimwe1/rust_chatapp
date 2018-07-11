@@ -1,59 +1,67 @@
-use rocket::{http::Status, outcome, request::{FromRequest, Outcome}, Request, State};
-use templates::context::Context;
+use rocket::{Request, State, Outcome};
+use rocket::http::Status;
+use rocket::request::{self, FromRequest};
 
-/// The TemplateEngine type: implements `FromRequest`, allowing you to communicate
-/// directly with the template engines.
-///
-/// Using it in a request handler always returns successfully except when the [`Template::fairing()`]
-/// wasn't attached to rocket.
+use templates::Context;
+
+/// The `TemplateMetadata` type: implements `FromRequest`, allowing dynamic
+/// queries about template metadata.
 ///
 /// # Usage
 ///
-/// Ensure that the template [fairing](/rocket/fairing/) is attached to
+/// First, ensure that the template [fairing](`rocket::fairing`) is attached to
 /// your Rocket application:
 ///
 /// ```rust
-/// extern crate rocket;
-/// extern crate rocket_contrib;
-///
+/// # extern crate rocket;
+/// # extern crate rocket_contrib;
+/// #
 /// use rocket_contrib::Template;
 ///
 /// fn main() {
 ///     rocket::ignite()
-///         // ...
 ///         .attach(Template::fairing())
 ///         // ...
 ///     # ;
 /// }
 /// ```
 ///
-/// The `TemplateEngine` type implements Rocket's `FromRequest` trait, so it can be
-/// used as Parameter in a request handler:
+/// The `TemplateMetadata` type implements Rocket's `FromRequest` trait, so it can
+/// be used as a request guard in any request handler.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(plugin, decl_macro)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
+/// # fn main() {  }
+/// #
+/// use rocket_contrib::{Template, TemplateMetadata};
+///
 /// #[get("/")]
-/// fn homepage(engine: TemplateEngine) -> Template {
-///     if engine.template_exists("specific") {
-///         return Template::render("specfic", json!({}));
+/// fn homepage(metadata: TemplateMetadata) -> Template {
+///     // Conditionally render a template if it's available.
+///     if metadata.contains_template("some-template") {
+///         Template::render("some-template", json!({ /* .. */ }))
+///     } else {
+///         Template::render("fallback", json!({ /* .. */ }))
 ///     }
-///     Template::render("fallback", json!({}))
 /// }
 /// ```
 pub struct TemplateMetadata<'a>(&'a Context);
 
 impl<'a> TemplateMetadata<'a> {
-    /// Returns `true` if the template with name `name` was loaded at start-up time. Otherwise,
-    /// returns `false`.
+    /// Returns `true` if the template with name `name` was loaded at start-up
+    /// time. Otherwise, returns `false`.
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// #[get("/")]
-    /// fn homepage(engine: TemplateEngine) -> Template {
-    ///     if engine.template_exists("specific") {
-    ///         return Template::render("specfic", json!({}));
-    ///     }
-    ///     Template::render("fallback", json!({}))
+    /// ```rust
+    /// use rocket_contrib::TemplateMetadata;
+    ///
+    /// fn handler(metadata: TemplateMetadata) {
+    ///     // Returns `true` if the template with name `"name"` was loaded.
+    ///     let loaded = metadata.contains_template("name");
     /// }
     /// ```
     pub fn contains_template(&self, name: &str) -> bool {
@@ -61,19 +69,21 @@ impl<'a> TemplateMetadata<'a> {
     }
 }
 
+/// Retrieves the template metadata. If a template fairing hasn't been attached,
+/// an error is printed and an empty `Err` with status `InternalServerError`
+/// (`500`) is returned.
 impl<'a, 'r> FromRequest<'a, 'r> for TemplateMetadata<'a> {
     type Error = ();
 
-    fn from_request(request: &'a Request) -> Outcome<Self, ()> {
-        request
-            .guard::<State<Context>>()
+    fn from_request(request: &'a Request) -> request::Outcome<Self, ()> {
+        request.guard::<State<Context>>()
             .succeeded()
-            .and_then(|ctxt| Some(outcome::Outcome::Success(TemplateMetadata(ctxt.inner()))))
+            .and_then(|ctxt| Some(Outcome::Success(TemplateMetadata(ctxt.inner()))))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");
                 info_!("See the `Template` documentation for more information.");
-                outcome::Outcome::Failure((Status::InternalServerError, ()))
+                Outcome::Failure((Status::InternalServerError, ()))
             })
     }
 }

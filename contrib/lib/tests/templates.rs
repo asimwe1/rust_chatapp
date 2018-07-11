@@ -6,15 +6,19 @@ extern crate rocket_contrib;
 
 #[cfg(feature = "templates")]
 mod templates_tests {
-    use rocket::{http::RawStr, response::content::Plain, Rocket};
-    use rocket::config::{Config, Environment};
-    use rocket_contrib::{Template, TemplateMetadata};
     use std::env;
     use std::path::PathBuf;
 
+    use rocket::{Rocket, http::RawStr};
+    use rocket::config::{Config, Environment};
+    use rocket_contrib::{Template, TemplateMetadata};
+
     #[get("/<engine>/<name>")]
-    fn contains_template(template_metadata: TemplateMetadata, engine: &RawStr, name: &RawStr) -> Plain<String> {
-        Plain(template_metadata.contains_template(&format!("{}/{}", engine, name)).to_string())
+    fn template_check(md: TemplateMetadata, engine: &RawStr, name: &RawStr) -> Option<()> {
+        match md.contains_template(&format!("{}/{}", engine, name)) {
+            true => Some(()),
+            false => None
+        }
     }
 
     fn template_root() -> PathBuf {
@@ -28,7 +32,7 @@ mod templates_tests {
             .expect("valid configuration");
 
         ::rocket::custom(config).attach(Template::fairing())
-            .mount("/", routes![contains_template])
+            .mount("/", routes![template_check])
     }
 
     #[cfg(feature = "tera_templates")]
@@ -60,20 +64,20 @@ mod templates_tests {
         }
 
         #[test]
-        fn test_template_engine_with_tera() {
+        fn test_template_metadata_with_tera() {
             let client = Client::new(rocket()).unwrap();
 
-            let mut response = client.get("/tera/txt_test").dispatch();
+            let response = client.get("/tera/txt_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
-            assert_eq!(response.body().unwrap().into_string().unwrap(), "true");
 
-            let mut response = client.get("/tera/html_test").dispatch();
+            let response = client.get("/tera/html_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
-            assert_eq!(response.body().unwrap().into_string().unwrap(), "true");
 
-            let mut response = client.get("/tera/not_existing").dispatch();
-            assert_eq!(response.status(), Status::Ok);
-            assert_eq!(response.body().unwrap().into_string().unwrap(), "false");
+            let response = client.get("/tera/not_existing").dispatch();
+            assert_eq!(response.status(), Status::NotFound);
+
+            let response = client.get("/hbs/txt_test").dispatch();
+            assert_eq!(response.status(), Status::NotFound);
         }
     }
 
@@ -100,16 +104,17 @@ mod templates_tests {
         }
 
         #[test]
-        fn test_template_engine_with_handlebars() {
+        fn test_template_metadata_with_handlebars() {
             let client = Client::new(rocket()).unwrap();
 
-            let mut response = client.get("/hbs/test").dispatch();
+            let response = client.get("/hbs/test").dispatch();
             assert_eq!(response.status(), Status::Ok);
-            assert_eq!(response.body().unwrap().into_string().unwrap(), "true");
 
-            let mut response = client.get("/hbs/not_existing").dispatch();
-            assert_eq!(response.status(), Status::Ok);
-            assert_eq!(response.body().unwrap().into_string().unwrap(), "false");
+            let response = client.get("/hbs/not_existing").dispatch();
+            assert_eq!(response.status(), Status::NotFound);
+
+            let response = client.get("/tera/test").dispatch();
+            assert_eq!(response.status(), Status::NotFound);
         }
     }
 }
