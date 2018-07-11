@@ -57,7 +57,7 @@ pub use self::header::{Header, HeaderMap};
 pub use self::raw_str::RawStr;
 
 pub use self::media_type::MediaType;
-pub use self::cookies::{Cookie, Cookies};
+pub use self::cookies::{Cookie, SameSite, Cookies};
 
 #[doc(hidden)]
 pub use self::cookies::{Key, CookieJar};

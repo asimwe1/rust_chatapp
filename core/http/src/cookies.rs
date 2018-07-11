@@ -1,8 +1,8 @@
 use std::fmt;
 use std::cell::RefMut;
 
-pub use cookie::{Cookie, Key, CookieJar};
-use cookie::{SameSite, Delta};
+use cookie::Delta;
+pub use cookie::{Cookie, Key, CookieJar, SameSite};
 
 use Header;
 
