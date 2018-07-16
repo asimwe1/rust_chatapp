@@ -4,6 +4,7 @@ mod parser_ext;
 mod ident_ext;
 mod span_ext;
 mod expr_ext;
+mod generics_ext;
 
 pub use self::arg_ext::ArgExt;
 pub use self::meta_item_ext::MetaItemExt;
@@ -11,6 +12,7 @@ pub use self::parser_ext::ParserExt;
 pub use self::ident_ext::IdentExt;
 pub use self::span_ext::SpanExt;
 pub use self::expr_ext::ExprExt;
+pub use self::generics_ext::GenericParamExt;
 
 use std::convert::AsRef;
 

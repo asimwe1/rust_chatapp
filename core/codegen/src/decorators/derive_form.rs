@@ -15,7 +15,7 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-use utils::{strip_ty_lifetimes, is_valid_ident, SpanExt};
+use utils::{strip_ty_lifetimes, is_valid_ident, SpanExt, GenericParamExt};
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
@@ -26,7 +26,7 @@ fn struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, sp: Span) -> Option<St
         Annotatable::Item(ref item) => match item.node {
             ItemKind::Struct(_, ref generics) => {
                 let mut lifetimes = generics.params.iter()
-                    .filter(|p| p.kind == GenericParamKind::Lifetime)
+                    .filter(|p| p.is_lifetime())
                     .map(|p| p.ident.to_string());
 
                 let lifetime = lifetimes.next();
