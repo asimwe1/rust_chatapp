@@ -4,8 +4,7 @@
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
-#![feature(proc_macro)]
-#![feature(proc_macro_non_items)]
+#![feature(proc_macro_non_items, use_extern_macros)]
 
 #![recursion_limit="256"]
 

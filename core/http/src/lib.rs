@@ -1,6 +1,5 @@
 #![feature(specialization)]
-#![feature(proc_macro)]
-#![feature(proc_macro_non_items)]
+#![feature(proc_macro_non_items, use_extern_macros)]
 #![feature(const_fn)]
 #![recursion_limit="256"]
 

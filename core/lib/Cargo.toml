@@ -26,10 +26,9 @@ toml = "0.4.2"
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.1"
-# TODO: Use pear instead.
-memchr = "2"
+memchr = "2" # TODO: Use pear instead.
 base64 = "0.9"
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "54667ae" }
+pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
 isatty = "0.1"
 
 [dev-dependencies]

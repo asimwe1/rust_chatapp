@@ -1,4 +1,5 @@
-#![feature(proc_macro, core_intrinsics, decl_macro)]
+#![feature(core_intrinsics, decl_macro)]
+#![feature(proc_macro_diagnostic, proc_macro_span)]
 #![recursion_limit="256"]
 
 extern crate syn;
