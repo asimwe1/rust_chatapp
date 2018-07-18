@@ -23,8 +23,8 @@ pub enum LoggingLevel {
 
 impl LoggingLevel {
     #[inline(always)]
-    fn to_level_filter(&self) -> log::LevelFilter {
-        match *self {
+    fn to_level_filter(self) -> log::LevelFilter {
+        match self {
             LoggingLevel::Critical => log::LevelFilter::Warn,
             LoggingLevel::Normal => log::LevelFilter::Info,
             LoggingLevel::Debug => log::LevelFilter::Trace,

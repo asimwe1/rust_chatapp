@@ -702,7 +702,7 @@ impl<'r> Request<'r> {
                     Err(_) => continue
                 };
 
-                for cookie_str in raw_str.split(";").map(|s| s.trim()) {
+                for cookie_str in raw_str.split(';').map(|s| s.trim()) {
                     if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
                         cookie_jar.add_original(cookie);
                     }
