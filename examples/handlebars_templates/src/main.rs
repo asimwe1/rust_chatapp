@@ -11,7 +11,7 @@ use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::{Template, handlebars};
 
-use handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
+use handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -54,9 +54,17 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
-fn wow_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
+fn wow_helper(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut Output
+) -> HelperResult {
     if let Some(param) = h.param(0) {
-        write!(rc.writer, "<b><i>{}</i></b>", param.value().render())?;
+        out.write("<b><i>")?;
+        out.write(&param.value().render())?;
+        out.write("</b></i>")?;
     }
 
     Ok(())
