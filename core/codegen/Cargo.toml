@@ -19,7 +19,7 @@ rocket_http = { version = "0.4.0-dev", path = "../http" }
 indexmap = "1.0"
 
 [dev-dependencies]
-compiletest_rs = "0.3.5"
+compiletest_rs = { git = "https://github.com/laumann/compiletest-rs" }
 rocket = { version = "0.4.0-dev", path = "../lib" }
 
 [build-dependencies]
