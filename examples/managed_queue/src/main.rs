@@ -6,7 +6,7 @@ extern crate rocket;
 
 #[cfg(test)] mod tests;
 
-use crossbeam::sync::MsQueue;
+use crossbeam::queue::MsQueue;
 use rocket::State;
 
 #[derive(FromForm, Debug)]

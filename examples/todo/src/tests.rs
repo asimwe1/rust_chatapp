@@ -3,7 +3,7 @@ extern crate rand;
 
 use super::task::Task;
 use self::parking_lot::Mutex;
-use self::rand::{Rng, thread_rng};
+use self::rand::{Rng, thread_rng, distributions::Alphanumeric};
 
 use rocket::local::Client;
 use rocket::http::{Status, ContentType};
@@ -90,7 +90,7 @@ fn test_many_insertions() {
 
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
-            let desc: String = rng.gen_ascii_chars().take(12).collect();
+            let desc: String = rng.sample_iter(&Alphanumeric).take(12).collect();
             client.post("/todo")
                 .header(ContentType::Form)
                 .body(format!("description={}", desc))
