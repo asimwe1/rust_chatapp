@@ -129,7 +129,7 @@ impl Limits {
             "forms" => self.forms = limit,
             _ => {
                 let mut found = false;
-                for tuple in self.extra.iter_mut() {
+                for tuple in &mut self.extra {
                     if tuple.0 == name {
                         tuple.1 = limit;
                         found = true;
@@ -199,7 +199,7 @@ impl fmt::Display for Limits {
 }
 
 pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
-    v.as_str().ok_or(conf.bad_type(name, v.type_str(), "a string"))
+    v.as_str().ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
 }
 
 pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
