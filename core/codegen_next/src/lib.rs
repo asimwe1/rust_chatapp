@@ -10,7 +10,6 @@ extern crate proc_macro2;
 mod parser;
 mod spanned;
 mod ext;
-mod codegen_ext;
 
 use parser::Result as PResult;
 use proc_macro::{Span, TokenStream};
@@ -23,12 +22,6 @@ const NO_FIELDS_ERR: &str = "variants in `FromFormValue` derives cannot have fie
 const NO_GENERICS: &str = "enums with generics cannot derive `FromFormValue`";
 const ONLY_ENUMS: &str = "`FromFormValue` can only be derived for enums";
 const EMPTY_ENUM_WARN: &str = "deriving `FromFormValue` for empty enum";
-
-#[derive(Debug, Clone)]
-pub(crate) struct FieldMember<'f> {
-    field: &'f Field,
-    member: Member
-}
 
 fn validate_input(input: DeriveInput) -> PResult<DataEnum> {
     // This derive doesn't support generics. Error out if there are generics.
@@ -67,7 +60,7 @@ fn real_derive_from_form_value(input: TokenStream) -> PResult<TokenStream> {
 
     // Create iterators over the identifers as idents and as strings.
     let variant_strs = enum_data.variants.iter().map(|v| v.ident.to_string());
-    let variant_idents = enum_data.variants.iter().map(|v| v.ident.clone());
+    let variant_idents = enum_data.variants.iter().map(|v| &v.ident);
     let names = ::std::iter::repeat(&name);
 
     // Generate the implementation.
