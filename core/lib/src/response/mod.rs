@@ -26,7 +26,7 @@ mod stream;
 mod response;
 mod failure;
 
-pub(crate) mod flash;
+crate mod flash;
 
 pub mod content;
 pub mod status;

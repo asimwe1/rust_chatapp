@@ -5,10 +5,13 @@ use pear::parsers::*;
 
 use {MediaType, Source};
 use parse::checkers::{is_whitespace, is_valid_token};
-use parse::{Input, Slice, Result};
+use parse::IndexedStr;
+
+type Input<'a> = ::parse::IndexedInput<'a, str>;
+type Result<'a, T> = ::pear::Result<T, Input<'a>>;
 
 #[parser]
-fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, Slice<'a>> {
+fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, IndexedStr<'a>> {
     eat('"')?;
 
     let mut is_escaped = false;
@@ -23,7 +26,7 @@ fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, Slice<'a>> {
 }
 
 #[parser]
-fn media_param<'a>(input: &mut Input<'a>) -> Result<'a, (Slice<'a>, Slice<'a>)> {
+fn media_param<'a>(input: &mut Input<'a>) -> Result<'a, (IndexedStr<'a>, IndexedStr<'a>)> {
     let key = (take_some_while_until(is_valid_token, '=')?, eat('=')?).0;
     let value = switch! {
         peek('"') => quoted_string()?,

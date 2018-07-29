@@ -239,7 +239,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     // caller via `get()` and constrain everything to that lifetime. This is, in
     // reality a little coarser than necessary, but the user can simply move the
     // call to right after the creation of a Form object to get the same effect.
-    pub(crate) fn new(string: String, strict: bool) -> FormResult<Self, T::Error> {
+    crate fn new(string: String, strict: bool) -> FormResult<Self, T::Error> {
         let long_lived_string: &'f str = unsafe {
             ::std::mem::transmute(string.as_str())
         };

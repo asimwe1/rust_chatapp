@@ -99,7 +99,7 @@ impl Catcher {
     }
 
     #[inline(always)]
-    pub(crate) fn handle<'r>(&self, e: Error, r: &'r Request) -> response::Result<'r> {
+    crate fn handle<'r>(&self, e: Error, r: &'r Request) -> response::Result<'r> {
         (self.handler)(e, r)
     }
 
@@ -109,7 +109,7 @@ impl Catcher {
     }
 
     #[inline(always)]
-    pub(crate) fn is_default(&self) -> bool {
+    crate fn is_default(&self) -> bool {
         self.is_default
     }
 }

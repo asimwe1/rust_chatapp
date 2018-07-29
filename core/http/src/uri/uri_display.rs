@@ -74,11 +74,12 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///     The implementation of `UriDisplay` for these types is identical to the
 ///     `Display` implementation.
 ///
-///   * **[`&RawStr`](/rocket/http/struct.RawStr.html), String, &str, Cow<str>**
+///   * **[`&RawStr`](/rocket/http/struct.RawStr.html), `String`, `&str`,
+///     `Cow<str>`**
 ///
 ///     The string is percent encoded.
 ///
-///   * **&T, &mut T** _where_ **T: UriDisplay**
+///   * **`&T`, `&mut T`** _where_ **`T: UriDisplay`**
 ///
 ///     Uses the implementation of `UriDisplay` for `T`.
 ///
@@ -94,8 +95,6 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// existing implementations of `UriDisplay` as much as possible. In the example
 /// below, for instance, `Name`'s implementation defers to `String`'s
 /// implementation. To percent-encode a string, use [`Uri::percent_encode()`].
-///
-/// [`Uri::percent_encode()`]: https://api.rocket.rs/rocket/http/uri/struct.Uri.html#method.percent_encode
 ///
 /// ## Example
 ///

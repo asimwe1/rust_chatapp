@@ -5,6 +5,8 @@
 #![feature(fnbox)]
 #![feature(never_type)]
 #![feature(proc_macro_non_items, use_extern_macros)]
+#![feature(crate_visibility_modifier)]
+#![feature(try_from)]
 
 #![recursion_limit="256"]
 
@@ -128,7 +130,6 @@ pub mod error;
 
 // Reexport of HTTP everything.
 pub mod http {
-    // FIXME: This unfortunately doesn't work! See rust-lang/rust#51252.
     #[doc(inline)]
     pub use rocket_http::*;
 }

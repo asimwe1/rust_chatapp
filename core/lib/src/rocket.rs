@@ -24,16 +24,16 @@ use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header};
 use http::hyper::{self, header};
-use http::uri::Uri;
+use http::uri::Origin;
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    pub(crate) config: Config,
+    crate config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    pub(crate) state: Container,
+    crate state: Container,
     fairings: Fairings,
 }
 
@@ -58,7 +58,11 @@ impl hyper::Handler for Rocket {
             Ok(req) => req,
             Err(e) => {
                 error!("Bad incoming request: {}", e);
-                let dummy = Request::new(self, Method::Get, Uri::new("<unknown>"));
+                // TODO: We don't have a request to pass in, so we just
+                // fabricate one. This is weird. We should let the user know
+                // that we failed to parse a request (by invoking some special
+                // handler) instead of doing this.
+                let dummy = Request::new(self, Method::Get, Origin::dummy());
                 let r = self.handle_error(Status::BadRequest, &dummy);
                 return self.issue_response(r, res);
             }
@@ -193,7 +197,7 @@ impl Rocket {
     }
 
     #[inline]
-    pub(crate) fn dispatch<'s, 'r>(
+    crate fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
         data: Data
@@ -269,7 +273,7 @@ impl Rocket {
     // (ensuring `handler` takes an immutable borrow), any caller to `route`
     // should be able to supply an `&mut` and retain an `&` after the call.
     #[inline]
-    pub(crate) fn route<'s, 'r>(
+    crate fn route<'s, 'r>(
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
@@ -302,7 +306,11 @@ impl Rocket {
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
-    fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
+    crate fn handle_error<'r>(
+        &self,
+        status: Status,
+        req: &'r Request
+    ) -> Response<'r> {
         warn_!("Responding with {} catcher.", Paint::red(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.
@@ -434,8 +442,12 @@ impl Rocket {
     ///
     /// # Panics
     ///
-    /// The `base` mount point must be a static path. That is, the mount point
-    /// must _not_ contain dynamic path parameters: `<param>`.
+    /// Panics if the `base` mount point is not a valid static path: a valid
+    /// origin URI without dynamic parameters.
+    ///
+    /// Panics if any route's URI is not a valid origin URI. This kind of panic
+    /// is guaranteed not to occur if the routes were generated using Rocket's
+    /// code generation.
     ///
     /// # Examples
     ///
@@ -486,17 +498,36 @@ impl Rocket {
               Paint::purple("Mounting"),
               Paint::blue(base));
 
-        if base.contains('<') || !base.starts_with('/') {
-            error_!("Bad mount point: '{}'.", base);
-            error_!("Mount points must be static, absolute URIs: `/example`");
-            panic!("Bad mount point.")
+        if base.contains('<') || base.contains('>') {
+            error_!("Invalid mount point: {}", base);
+            panic!("Mount points cannot contain dynamic parameters");
         }
 
         for mut route in routes {
-            let uri = Uri::new(format!("{}/{}", base, route.uri));
+            let base_uri = Origin::parse(base)
+                .unwrap_or_else(|e| {
+                    error_!("Invalid origin URI used as mount point: {}", base);
+                    panic!("Error: {}", e);
+                });
 
-            route.set_base(base);
-            route.set_uri(uri.to_string());
+            if base_uri.query().is_some() {
+                error_!("Mount point cannot contain a query string: {}", base_uri);
+                panic!("Invalid mount point.");
+            }
+
+            let complete_uri = format!("{}/{}", base_uri, route.uri);
+            let uri = Origin::parse_route(&complete_uri)
+                .unwrap_or_else(|e| {
+                    error_!("Invalid route URI: {}", base);
+                    panic!("Error: {}", e)
+                });
+
+            if !uri.is_normalized() {
+                warn_!("Abnormal URI '{}' will be automatically normalized.", uri);
+            }
+
+            route.set_base(base_uri);
+            route.set_uri(uri.to_normalized());
 
             info_!("{}", route);
             self.router.add(route);
@@ -633,7 +664,7 @@ impl Rocket {
         self
     }
 
-    pub(crate) fn prelaunch_check(&self) -> Option<LaunchError> {
+    crate fn prelaunch_check(&self) -> Option<LaunchError> {
         let collisions = self.router.collisions();
         if !collisions.is_empty() {
             let owned = collisions.iter().map(|&(a, b)| (a.clone(), b.clone()));

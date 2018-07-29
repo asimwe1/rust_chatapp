@@ -21,7 +21,7 @@ impl MemberExt for Member {
     }
 }
 
-pub(crate) trait FieldsExt {
+pub trait FieldsExt {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn named(&self) -> Option<&FieldsNamed>;

@@ -6,9 +6,11 @@ use yansi::Color::*;
 use codegen::StaticRouteInfo;
 use handler::Handler;
 use http::{Method, MediaType};
-use http::uri::Uri;
+use http::ext::IntoOwned;
+use http::uri::Origin;
 
 /// A route: a method, its handler, path, rank, and format/media type.
+#[derive(Clone)]
 pub struct Route {
     /// The name of this route, if one was given.
     pub name: Option<&'static str>,
@@ -17,10 +19,10 @@ pub struct Route {
     /// The function that should be called when the route matches.
     pub handler: Handler,
     /// The base mount point of this `Route`.
-    pub base: Uri<'static>,
-    /// The uri (in Rocket format) that should be matched against. This uri
-    /// already includes the base mount point.
-    pub uri: Uri<'static>,
+    pub base: Origin<'static>,
+    /// The uri (in Rocket's route format) that should be matched against. This
+    /// URI already includes the base mount point.
+    pub uri: Origin<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The media type this route matches against, if any.
@@ -28,10 +30,10 @@ pub struct Route {
 }
 
 #[inline(always)]
-fn default_rank(uri: &Uri) -> isize {
+fn default_rank(uri: &Origin) -> isize {
     // static path, query = -4; static path, no query = -3
     // dynamic path, query = -2; dynamic path, no query = -1
-    match (!uri.path().contains('<'),  uri.query().is_some()) {
+    match (!uri.path().contains('<'), uri.query().is_some()) {
         (true, true) => -4,
         (true, false) => -3,
         (false, true) => -2,
@@ -77,19 +79,19 @@ impl Route {
     /// // this is a rank -1 route matching requests to `GET /<name>`
     /// let name = Route::new(Method::Get, "/<name>", handler);
     /// ```
-    pub fn new<S>(m: Method, path: S, handler: Handler) -> Route
+    ///
+    /// # Panics
+    ///
+    /// Panics if `path` is not a valid origin URI.
+    pub fn new<S>(method: Method, path: S, handler: Handler) -> Route
         where S: AsRef<str>
     {
-        let uri = Uri::from(path.as_ref().to_string());
-        Route {
-            name: None,
-            method: m,
-            handler: handler,
-            rank: default_rank(&uri),
-            base: Uri::from("/"),
-            uri: uri,
-            format: None,
-        }
+        let path = path.as_ref();
+        let origin = Origin::parse_route(path)
+            .expect("invalid URI used as route path in `Route::new()`");
+
+        let rank = default_rank(&origin);
+        Route::ranked(rank, method, path, handler)
     }
 
     /// Creates a new route with the given rank, method, path, and handler with
@@ -109,17 +111,22 @@ impl Route {
     /// // this is a rank 1 route matching requests to `GET /`
     /// let index = Route::ranked(1, Method::Get, "/", handler);
     /// ```
-    pub fn ranked<S>(rank: isize, m: Method, uri: S, handler: Handler) -> Route
+    ///
+    /// # Panics
+    ///
+    /// Panics if `path` is not a valid origin URI.
+    pub fn ranked<S>(rank: isize, method: Method, path: S, handler: Handler) -> Route
         where S: AsRef<str>
     {
+        let uri = Origin::parse_route(path.as_ref())
+            .expect("invalid URI used as route path in `Route::ranked()`")
+            .into_owned();
+
         Route {
             name: None,
-            method: m,
-            handler: handler,
-            base: Uri::from("/"),
-            uri: Uri::from(uri.as_ref().to_string()),
-            rank: rank,
             format: None,
+            base: Origin::dummy(),
+            method, handler, rank, uri
         }
     }
 
@@ -146,14 +153,14 @@ impl Route {
     }
 
     /// Sets the base mount point of the route. Does not update the rank or any
-    /// other parameters.
+    /// other parameters. If `path` contains a query, it is ignored.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::{Request, Route, Data};
+    /// use rocket::http::{Method, uri::Origin};
     /// use rocket::handler::Outcome;
-    /// use rocket::http::Method;
     ///
     /// fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
     ///     Outcome::from(request, "Hello, world!")
@@ -163,12 +170,13 @@ impl Route {
     /// assert_eq!(index.base(), "/");
     /// assert_eq!(index.base.path(), "/");
     ///
-    /// index.set_base("/hi");
+    /// index.set_base(Origin::parse("/hi").unwrap());
     /// assert_eq!(index.base(), "/hi");
     /// assert_eq!(index.base.path(), "/hi");
     /// ```
-    pub fn set_base<S>(&mut self, path: S) where S: AsRef<str> {
-        self.base = Uri::from(path.as_ref().to_string());
+    pub fn set_base<'a>(&mut self, path: Origin<'a>) {
+        self.base = path.into_owned();
+        self.base.clear_query();
     }
 
     /// Sets the path of the route. Does not update the rank or any other
@@ -178,8 +186,8 @@ impl Route {
     ///
     /// ```rust
     /// use rocket::{Request, Route, Data};
+    /// use rocket::http::{Method, uri::Origin};
     /// use rocket::handler::Outcome;
-    /// use rocket::http::Method;
     ///
     /// fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
     ///     Outcome::from(request, "Hello, world!")
@@ -188,11 +196,11 @@ impl Route {
     /// let mut index = Route::ranked(1, Method::Get, "/", handler);
     /// assert_eq!(index.uri.path(), "/");
     ///
-    /// index.set_uri("/hello");
+    /// index.set_uri(Origin::parse("/hello").unwrap());
     /// assert_eq!(index.uri.path(), "/hello");
     /// ```
-    pub fn set_uri<S>(&mut self, uri: S) where S: AsRef<str> {
-        self.uri = Uri::from(uri.as_ref().to_string());
+    pub fn set_uri<'a>(&mut self, uri: Origin<'a>) {
+        self.uri = uri.into_owned();
     }
 
     // FIXME: Decide whether a component has to be fully variable or not. That
@@ -200,7 +208,7 @@ impl Route {
     // TODO: Don't return a Vec...take in an &mut [&'a str] (no alloc!)
     /// Given a URI, returns a vector of slices of that URI corresponding to the
     /// dynamic segments in this route.
-    pub(crate) fn get_param_indexes(&self, uri: &Uri) -> Vec<(usize, usize)> {
+    crate fn get_param_indexes(&self, uri: &Origin) -> Vec<(usize, usize)> {
         let route_segs = self.uri.segments();
         let uri_segs = uri.segments();
         let start_addr = uri.path().as_ptr() as usize;
@@ -218,20 +226,6 @@ impl Route {
         }
 
         result
-    }
-}
-
-impl Clone for Route {
-    fn clone(&self) -> Route {
-        Route {
-            name: self.name,
-            method: self.method,
-            handler: self.handler,
-            rank: self.rank,
-            base: self.base.clone(),
-            uri: self.uri.clone(),
-            format: self.format.clone(),
-        }
     }
 }
 
@@ -258,7 +252,14 @@ impl fmt::Display for Route {
 
 impl fmt::Debug for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        <Route as fmt::Display>::fmt(self, f)
+        f.debug_struct("Route")
+            .field("name", &self.name)
+            .field("method", &self.method)
+            .field("base", &self.base)
+            .field("uri", &self.uri)
+            .field("rank", &self.rank)
+            .field("format", &self.format)
+            .finish()
     }
 }
 

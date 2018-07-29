@@ -1,8 +1,10 @@
-use {Rocket, Request, Response};
-use local::LocalRequest;
-use http::{Method, CookieJar, uri::Uri};
-use error::LaunchError;
 use std::cell::RefCell;
+use std::borrow::Cow;
+
+use Rocket;
+use local::LocalRequest;
+use http::{Method, CookieJar};
+use error::LaunchError;
 
 /// A structure to construct requests for local dispatching.
 ///
@@ -53,7 +55,7 @@ use std::cell::RefCell;
 /// [`post`]: #method.post
 pub struct Client {
     rocket: Rocket,
-    cookies: Option<RefCell<CookieJar>>,
+    crate cookies: Option<RefCell<CookieJar>>,
 }
 
 impl Client {
@@ -150,25 +152,6 @@ impl Client {
         &self.rocket
     }
 
-    // If `self` is tracking cookies, updates the internal cookie jar with the
-    // changes reflected by `response`.
-    pub(crate) fn update_cookies(&self, response: &Response) {
-        if let Some(ref jar) = self.cookies {
-            let mut jar = jar.borrow_mut();
-            let current_time = ::time::now();
-            for cookie in response.cookies() {
-                if let Some(expires) = cookie.expires() {
-                    if expires <= current_time {
-                        jar.force_remove(cookie);
-                        continue;
-                    }
-                }
-
-                jar.add(cookie.into_owned());
-            }
-        }
-    }
-
     /// Create a local `GET` request to the URI `uri`.
     ///
     /// When dispatched, the request will be served by the instance of Rocket
@@ -186,7 +169,7 @@ impl Client {
     /// let req = client.get("/hello");
     /// ```
     #[inline(always)]
-    pub fn get<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn get<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Get, uri)
     }
 
@@ -207,7 +190,7 @@ impl Client {
     /// let req = client.put("/hello");
     /// ```
     #[inline(always)]
-    pub fn put<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn put<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Put, uri)
     }
 
@@ -232,7 +215,7 @@ impl Client {
     ///     .header(ContentType::Form);
     /// ```
     #[inline(always)]
-    pub fn post<'c, 'u: 'c, U: Into<Uri<'u>>>(&'c self, uri: U) -> LocalRequest<'c> {
+    pub fn post<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
         self.req(Method::Post, uri)
     }
 
@@ -254,7 +237,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn delete<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Uri<'u>>
+        where U: Into<Cow<'u, str>>
     {
         self.req(Method::Delete, uri)
     }
@@ -277,7 +260,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn options<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Uri<'u>>
+        where U: Into<Cow<'u, str>>
     {
         self.req(Method::Options, uri)
     }
@@ -300,7 +283,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn head<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Uri<'u>>
+        where U: Into<Cow<'u, str>>
     {
         self.req(Method::Head, uri)
     }
@@ -323,7 +306,7 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn patch<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Uri<'u>>
+        where U: Into<Cow<'u, str>>
     {
         self.req(Method::Patch, uri)
     }
@@ -347,16 +330,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
-        where U: Into<Uri<'u>>
+        where U: Into<Cow<'u, str>>
     {
-        let request = Request::new(&self.rocket, method, uri);
-
-        if let Some(ref jar) = self.cookies {
-            for cookie in jar.borrow().iter() {
-                request.cookies().add_original(cookie.clone().into_owned());
-            }
-        }
-
-        LocalRequest::new(&self, request)
+        LocalRequest::new(self, method, uri.into())
     }
 }

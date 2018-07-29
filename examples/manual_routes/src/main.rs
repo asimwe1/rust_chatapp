@@ -28,7 +28,7 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
 
 fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
     let param = req.uri()
-        .as_str()
+        .path()
         .split_at(6)
         .1;
 

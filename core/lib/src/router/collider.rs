@@ -1,6 +1,6 @@
 use super::Route;
 
-use http::uri::Uri;
+use http::uri::Origin;
 use http::MediaType;
 use request::Request;
 
@@ -38,8 +38,8 @@ impl<'a> Collider<str> for &'a str {
 }
 
 // This _only_ checks the `path` component of the URI.
-impl<'a, 'b> Collider<Uri<'b>> for Uri<'a> {
-    fn collides_with(&self, other: &Uri<'b>) -> bool {
+impl<'a, 'b> Collider<Origin<'b>> for Origin<'a> {
+    fn collides_with(&self, other: &Origin<'b>) -> bool {
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
                 return true;
@@ -123,7 +123,7 @@ mod tests {
     use handler::Outcome;
     use router::route::Route;
     use http::{Method, MediaType, ContentType, Accept};
-    use http::uri::Uri;
+    use http::uri::Origin;
     use http::Method::*;
 
     type SimpleRoute = (Method, &'static str);
@@ -139,16 +139,18 @@ mod tests {
 
     fn unranked_collide(a: &'static str, b: &'static str) -> bool {
         let route_a = Route::ranked(0, Get, a.to_string(), dummy_handler);
-        route_a.collides_with(&Route::ranked(0, Get, b.to_string(), dummy_handler))
+        let route_b = Route::ranked(0, Get, b.to_string(), dummy_handler);
+        eprintln!("Checking {} against {}.", route_a, route_b);
+        route_a.collides_with(&route_b)
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        Uri::new(a).collides_with(&Uri::new(b))
+        Origin::parse_route(a).unwrap()
+            .collides_with(&Origin::parse_route(b).unwrap())
     }
 
     #[test]
     fn simple_collisions() {
-        assert!(unranked_collide("a", "a"));
         assert!(unranked_collide("/a", "/a"));
         assert!(unranked_collide("/hello", "/hello"));
         assert!(unranked_collide("/hello", "/hello/"));
@@ -251,6 +253,13 @@ mod tests {
         assert!(!m_collide((Post, "/a"), (Put, "/")));
         assert!(!m_collide((Get, "/a"), (Put, "/")));
         assert!(!m_collide((Get, "/hello"), (Put, "/hello")));
+    }
+
+    #[test]
+    fn query_dependent_non_collisions() {
+        assert!(!m_collide((Get, "/"), (Get, "/?a")));
+        assert!(!m_collide((Get, "/"), (Get, "/?<a>")));
+        assert!(!m_collide((Get, "/a/<b>"), (Get, "/a/<b>?d")));
     }
 
     #[test]
@@ -365,7 +374,7 @@ mod tests {
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
         let rocket = Rocket::custom(Config::development().unwrap());
-        let mut req = Request::new(&rocket, m, "/");
+        let mut req = Request::new(&rocket, m, Origin::dummy());
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
@@ -423,7 +432,7 @@ mod tests {
 
     fn req_route_path_collide(a: &'static str, b: &'static str) -> bool {
         let rocket = Rocket::custom(Config::development().unwrap());
-        let req = Request::new(&rocket, Get, a.to_string());
+        let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
         route.collides_with(&req)
     }

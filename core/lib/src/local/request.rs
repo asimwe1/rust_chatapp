@@ -2,10 +2,11 @@ use std::fmt;
 use std::rc::Rc;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
+use std::borrow::Cow;
 
 use {Request, Response, Data};
+use http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
 use local::Client;
-use http::{Header, Cookie};
 
 /// A structure representing a local request as created by [`Client`].
 ///
@@ -37,25 +38,23 @@ use http::{Header, Cookie};
 ///
 /// # Dispatching
 ///
-/// A `LocalRequest` can be dispatched in one of three ways:
+/// A `LocalRequest` can be dispatched in one of two ways:
 ///
 ///   1. [`dispatch`]
 ///
 ///      This method should always be preferred. The `LocalRequest` is consumed
 ///      and a response is returned.
 ///
-///   2. [`cloned_dispatch`]
-///
-///      This method should be used when one `LocalRequest` will be dispatched
-///      many times. This method clones the request and dispatches the clone, so
-///      the request _is not_ consumed and can be reused.
-///
-///   3. [`mut_dispatch`]
+///   2. [`mut_dispatch`]
 ///
 ///      This method should _only_ be used when either it is known that the
 ///      application will not modify the request, or it is desired to see
 ///      modifications to the request. No cloning occurs, and the request is not
 ///      consumed.
+///
+/// Additionally, note that `LocalRequest` implements `Clone`. As such, if the
+/// same request needs to be dispatched multiple times, the request can first be
+/// cloned and then dispatched: `request.clone().dispatch()`.
 ///
 /// [`Client`]: /rocket/local/struct.Client.html
 /// [`header`]: #method.header
@@ -66,7 +65,6 @@ use http::{Header, Cookie};
 /// [`set_body`]: #method.set_body
 /// [`dispatch`]: #method.dispatch
 /// [`mut_dispatch`]: #method.mut_dispatch
-/// [`cloned_dispatch`]: #method.cloned_dispatch
 pub struct LocalRequest<'c> {
     client: &'c Client,
     // This pointer exists to access the `Rc<Request>` mutably inside of
@@ -97,15 +95,31 @@ pub struct LocalRequest<'c> {
     // is converted into its owned counterpart before insertion, ensuring stable
     // addresses. Together, these properties guarantee the second condition.
     request: Rc<Request<'c>>,
-    data: Vec<u8>
+    data: Vec<u8>,
+    uri: Cow<'c, str>,
 }
 
 impl<'c> LocalRequest<'c> {
     #[inline(always)]
-    pub(crate) fn new(client: &'c Client, request: Request<'c>) -> LocalRequest<'c> {
+    crate fn new(
+        client: &'c Client,
+        method: Method,
+        uri: Cow<'c, str>
+    ) -> LocalRequest<'c> {
+        // We set a dummy string for now and check the user's URI on dispatch.
+        let request = Request::new(client.rocket(), method, Origin::dummy());
+
+        // Set up any cookies we know about.
+        if let Some(ref jar) = client.cookies {
+            for cookie in jar.borrow().iter() {
+                request.cookies().add_original(cookie.clone().into_owned());
+            }
+        }
+
+        // See the comments on the structure for what's going on here.
         let mut request = Rc::new(request);
         let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request;
-        LocalRequest { client, ptr, request, data: vec![] }
+        LocalRequest { client, ptr, request, uri, data: vec![] }
     }
 
     /// Retrieves the inner `Request` as seen by Rocket.
@@ -135,8 +149,8 @@ impl<'c> LocalRequest<'c> {
     fn long_lived_request<'a>(&mut self) -> &'a mut Request<'c> {
         // See the comments in the structure for the argument of correctness.
         // Additionally, the caller must ensure that the owned instance of
-        // `Request` itself remains valid as long as the returned reference can
-        // be accessed.
+        // `Rc<Request>` remains valid as long as the returned reference can be
+        // accessed.
         unsafe { &mut *self.ptr }
     }
 
@@ -333,34 +347,8 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline(always)]
     pub fn dispatch(mut self) -> LocalResponse<'c> {
-        let req = self.long_lived_request();
-        let response = self.client.rocket().dispatch(req, Data::local(self.data));
-        self.client.update_cookies(&response);
-        LocalResponse { _request: self.request, response }
-    }
-
-    /// Dispatches the request, returning the response.
-    ///
-    /// This method _does not_ consume `self`. Instead, it clones `self` and
-    /// dispatches the clone. As such, `self` can be reused.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::local::Client;
-    ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
-    ///
-    /// let req = client.get("/");
-    /// let response_a = req.cloned_dispatch();
-    /// let response_b = req.cloned_dispatch();
-    /// ```
-    #[inline(always)]
-    pub fn cloned_dispatch(&self) -> LocalResponse<'c> {
-        let cloned = (*self.request).clone();
-        let mut req = LocalRequest::new(self.client, cloned);
-        req.data = self.data.clone();
-        req.dispatch()
+        let r = self.long_lived_request();
+        LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data)
     }
 
     /// Dispatches the request, returning the response.
@@ -373,11 +361,9 @@ impl<'c> LocalRequest<'c> {
     ///
     /// This method should _only_ be used when either it is known that
     /// the application will not modify the request, or it is desired to see
-    /// modifications to the request. Prefer to use [`dispatch`] or
-    /// [`cloned_dispatch`] instead
+    /// modifications to the request. Prefer to use [`dispatch`] instead.
     ///
     /// [`dispatch`]: #method.dispatch
-    /// [`cloned_dispatch`]: #method.cloned_dispatch
     ///
     /// # Example
     ///
@@ -392,11 +378,53 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline(always)]
     pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
-        let data = ::std::mem::replace(&mut self.data, vec![]);
         let req = self.long_lived_request();
-        let response = self.client.rocket().dispatch(req, Data::local(data));
-        self.client.update_cookies(&response);
-        LocalResponse { _request: self.request.clone(), response }
+        let data = ::std::mem::replace(&mut self.data, vec![]);
+        let rc_req = self.request.clone();
+        LocalRequest::_dispatch(self.client, req, rc_req, &self.uri, data)
+    }
+
+    // Performs the actual dispatch.
+    fn _dispatch(
+        client: &'c Client,
+        request: &'c mut Request<'c>,
+        owned_request: Rc<Request<'c>>,
+        uri: &str,
+        data: Vec<u8>
+    ) -> LocalResponse<'c> {
+        // First, validate the URI, returning an error response (generated from
+        // an error catcher) immediately if it's invalid.
+        if let Ok(uri) = Origin::parse(uri) {
+            request.set_uri(uri.into_owned());
+        } else {
+            let res = client.rocket().handle_error(Status::BadRequest, request);
+            return LocalResponse { _request: owned_request, response: res };
+        }
+
+        // Actually dispatch the request.
+        let response = client.rocket().dispatch(request, Data::local(data));
+
+        // If the client is tracking cookies, updates the internal cookie jar
+        // with the changes reflected by `response`.
+        if let Some(ref jar) = client.cookies {
+            let mut jar = jar.borrow_mut();
+            let current_time = ::time::now();
+            for cookie in response.cookies() {
+                if let Some(expires) = cookie.expires() {
+                    if expires <= current_time {
+                        jar.force_remove(cookie);
+                        continue;
+                    }
+                }
+
+                jar.add(cookie.into_owned());
+            }
+        }
+
+        LocalResponse {
+            _request: owned_request,
+            response: response
+        }
     }
 }
 
@@ -442,7 +470,19 @@ impl<'c> fmt::Debug for LocalResponse<'c> {
     }
 }
 
-#[cfg(test)]
+impl<'c> Clone for LocalRequest<'c> {
+    fn clone(&self) -> LocalRequest<'c> {
+        LocalRequest {
+            client: self.client,
+            ptr: self.ptr,
+            request: self.request.clone(),
+            data: self.data.clone(),
+            uri: self.uri.clone()
+        }
+    }
+}
+
+// #[cfg(test)]
 mod tests {
     // Someday...
 
@@ -474,8 +514,10 @@ mod tests {
     //     is_send::<::local::LocalResponse>();
     // }
 
+    // This checks that a response can't outlive the `Client`.
+    // #[compile_fail]
     // fn test() {
-    //     use local::Client;
+    //     use {Rocket, local::Client};
 
     //     let rocket = Rocket::ignite();
     //     let res = {
@@ -488,8 +530,10 @@ mod tests {
     //     // let res2 = client.get("/").dispatch();
     // }
 
+    // This checks that a response can't outlive the `Client`.
+    // #[compile_fail]
     // fn test() {
-    //     use local::Client;
+    //     use {Rocket, local::Client};
 
     //     let rocket = Rocket::ignite();
     //     let res = {
@@ -502,8 +546,11 @@ mod tests {
     //     // let res2 = client.get("/").dispatch();
     // }
 
+    // This checks that a response can't outlive the `Client`, in this case, by
+    // moving `client` while it is borrowed.
+    // #[compile_fail]
     // fn test() {
-    //     use local::Client;
+    //     use {Rocket, local::Client};
 
     //     let rocket = Rocket::ignite();
     //     let client = Client::new(rocket).unwrap();
@@ -511,13 +558,15 @@ mod tests {
     //     let res = {
     //         let x = client.get("/").dispatch();
     //         let y = client.get("/").dispatch();
+    //         (x, y)
     //     };
 
     //     let x = client;
     // }
 
+    // #[compile_fail]
     // fn test() {
-    //     use local::Client;
+    //     use {Rocket, local::Client};
 
     //     let rocket1 = Rocket::ignite();
     //     let rocket2 = Rocket::ignite();
@@ -527,7 +576,7 @@ mod tests {
 
     //     let res = {
     //         let mut res1 = client1.get("/");
-    //         res1.set_client(&client2);
+    //         res1.client = &client2;
     //         res1
     //     };
 

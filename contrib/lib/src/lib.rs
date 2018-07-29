@@ -1,4 +1,5 @@
 #![feature(use_extern_macros)]
+#![feature(crate_visibility_modifier)]
 
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]

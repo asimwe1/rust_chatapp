@@ -10,7 +10,7 @@ use super::Function;
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
 use rocket_http::{Method, MediaType};
-use rocket_http::uri::Uri;
+use rocket_http::uri::Origin;
 
 /// This structure represents the parsed `route` attribute.
 ///
@@ -22,7 +22,7 @@ use rocket_http::uri::Uri;
 pub struct RouteParams {
     pub annotated_fn: Function,
     pub method: Spanned<Method>,
-    pub uri: Spanned<Uri<'static>>,
+    pub uri: Spanned<Origin<'static>>,
     pub data_param: Option<KVSpanned<Ident>>,
     pub query_param: Option<Spanned<Ident>>,
     pub format: Option<KVSpanned<MediaType>>,
@@ -185,9 +185,10 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     dummy_spanned(Method::Get)
 }
 
-fn parse_path(ecx: &ExtCtxt,
-              meta_item: &NestedMetaItem)
-              -> (Spanned<Uri<'static>>, Option<Spanned<Ident>>) {
+fn parse_path(
+    ecx: &ExtCtxt,
+    meta_item: &NestedMetaItem
+) -> (Spanned<Origin<'static>>, Option<Spanned<Ident>>) {
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
         if name != "path" {
@@ -207,7 +208,7 @@ fn parse_path(ecx: &ExtCtxt,
             .emit();
     }
 
-    (dummy_spanned(Uri::new("")), None)
+    (dummy_spanned(Origin::dummy()), None)
 }
 
 fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanned<O>>

@@ -34,7 +34,7 @@ fn get(name: String) -> Template {
 #[catch(404)]
 fn not_found(req: &Request) -> Template {
     let mut map = HashMap::new();
-    map.insert("path", req.uri().as_str());
+    map.insert("path", req.uri().path());
     Template::render("error/404", &map)
 }
 

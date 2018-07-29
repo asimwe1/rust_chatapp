@@ -24,6 +24,12 @@ pub enum Args {
     Named(Vec<(Spanned<Ident>, P<Expr>)>),
 }
 
+// For an invocation that looks like:
+//  uri!("/mount/point", this::route: e1, e2, e3);
+//       ^-------------| ^----------| ^---------|
+//           uri_params.mount_point |    uri_params.arguments
+//                      uri_params.route_path
+//
 #[derive(Debug)]
 pub struct UriParams {
     pub mount_point: Option<Spanned<LocalInternedString>>,
@@ -31,6 +37,9 @@ pub struct UriParams {
     pub arguments: Option<Spanned<Args>>,
 }
 
+// `fn_args` are the URI arguments (excluding guards) from the original route's
+// handler in the order they were declared in the URI (`<first>/<second>`).
+// `uri` is the full URI used in the origin route's attribute
 #[derive(Debug)]
 pub struct InternalUriParams {
     pub uri: Spanned<String>,
@@ -251,12 +260,5 @@ impl InternalUriParams {
                 }
             }
         }
-    }
-
-    pub fn uri_fmt_string(&self) -> String {
-        self.uri.node
-            .replace('<', "{fmt")
-            .replace("..>", "}")
-            .replace('>', "}")
     }
 }

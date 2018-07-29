@@ -1,9 +1,15 @@
+//! Extension traits implemented by several HTTP types.
+
 use smallvec::{Array, SmallVec};
 
 // TODO: It would be nice if we could somehow have one trait that could give us
 // either SmallVec or Vec.
+/// Trait implemented by types that can be converted into a collection.
 pub trait IntoCollection<T> {
+    /// Converts `self` into a collection.
     fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A>;
+
+    #[doc(hidden)]
     fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
 }
 
@@ -62,3 +68,33 @@ impl_for_slice!(; 7);
 impl_for_slice!(; 8);
 impl_for_slice!(; 9);
 impl_for_slice!(; 10);
+
+use std::borrow::Cow;
+
+/// Trait implemented by types that can be converted into owned versions of
+/// themselves.
+pub trait IntoOwned {
+    /// The owned version of the type.
+    type Owned: 'static;
+
+    /// Converts `self` into an owned version of itself.
+    fn into_owned(self) -> Self::Owned;
+}
+
+impl<T: IntoOwned> IntoOwned for Option<T> {
+    type Owned = Option<T::Owned>;
+
+    #[inline(always)]
+    fn into_owned(self) -> Self::Owned {
+        self.map(|inner| inner.into_owned())
+    }
+}
+
+impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
+    type Owned = Cow<'static, B>;
+
+    #[inline(always)]
+    fn into_owned(self) -> Self::Owned {
+        Cow::Owned(self.into_owned())
+    }
+}

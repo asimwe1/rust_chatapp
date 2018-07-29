@@ -260,9 +260,9 @@ impl RouteParams {
         ).expect("consistent uri macro item")
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (LocalInternedString, &str, Path, P<Expr>, P<Expr>) {
+    fn explode(&self, ecx: &ExtCtxt) -> (LocalInternedString, String, Path, P<Expr>, P<Expr>) {
         let name = self.annotated_fn.ident().name.as_str();
-        let path = &self.uri.node.as_str();
+        let path = self.uri.node.to_string();
         let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
         let media_type = option_as_expr(ecx, &media_type_to_expr(ecx, format));

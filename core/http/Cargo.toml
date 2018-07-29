@@ -24,6 +24,7 @@ hyper = { version = "0.10.13", default-features = false }
 time = "0.1"
 indexmap = "1.0"
 rustls = { version = "0.13", optional = true }
+state = "0.4"
 
 [dependencies.cookie]
 git = "https://github.com/alexcrichton/cookie-rs"

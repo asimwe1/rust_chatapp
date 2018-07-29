@@ -88,8 +88,9 @@
 //!         other: String
 //!     }
 //!
-//! Each field's type is required to implement [`FromFormValue`]. The derive
-//! accepts one field attribute: `form`, with the following syntax:
+//! Each field's type is required to implement [`FromFormValue`].
+//!
+//! The derive accepts one field attribute: `form`, with the following syntax:
 //!
 //! <pre>
 //! form := 'field' '=' '"' IDENT '"'
@@ -113,8 +114,8 @@
 //! implementation succeeds only when all of the field parses succeed.
 //!
 //! The `form` field attribute can be used to direct that a different incoming
-//! field name is expected. In this case, the attribute's field name is used
-//! instead of the structure's field name when parsing a form.
+//! field name is expected. In this case, the `field` name in the attribute is
+//! used instead of the structure's actual field name when parsing a form.
 //!
 //! [`FromForm`]: /rocket/request/trait.FromForm.html
 //! [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
@@ -138,7 +139,9 @@
 //! ### Typed URIs: `uri!`
 //!
 //! The `uri!` macro creates a type-safe URI given a route and values for the
-//! route's URI parameters.
+//! route's URI parameters. The inputs to the macro are the path to a route, a
+//! colon, and one argument for each dynamic parameter (parameters in `<>`) in
+//! the route's path.
 //!
 //! For example, for the following route:
 //!
@@ -152,10 +155,10 @@
 //! A URI can be created as follows:
 //!
 //! ```rust,ignore
-//! // with unnamed parameters
+//! // with unnamed parameters, in route path declaration order
 //! let mike = uri!(person: "Mike", 28);
 //!
-//! // with named parameters
+//! // with named parameters, order irrelevant
 //! let mike = uri!(person: name = "Mike", age = 28);
 //! let mike = uri!(person: age = 28, name = "Mike");
 //!
@@ -183,11 +186,14 @@
 //!
 //! #### Semantics
 //!
-//! The `uri!` macro returns a `Uri` structure with the URI of the supplied
-//! route with the given values. A `uri!` invocation only succeeds if the type
-//! of every value in the invocation matches the type declared for the parameter
-//! in the given route.
+//! The `uri!` macro returns an [`Origin`](rocket::uri::Origin) structure with
+//! the URI of the supplied route interpolated with the given values. Note that
+//! `Origin` implements `Into<Uri>` (and by extension, `TryInto<Uri>`), so it
+//! can be converted into a [`Uri`](rocket::uri::Uri) using `.into()` as needed.
 //!
+//!
+//! A `uri!` invocation only typechecks if the type of every value in the
+//! invocation matches the type declared for the parameter in the given route.
 //! The [`FromUriParam`] trait is used to typecheck and perform a conversion for
 //! each value. If a `FromUriParam<S>` implementation exists for a type `T`,
 //! then a value of type `S` can be used in `uri!` macro for a route URI
@@ -220,7 +226,6 @@
 //! ```
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
-
 
 extern crate syntax;
 extern crate syntax_ext;

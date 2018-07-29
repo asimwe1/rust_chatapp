@@ -2,7 +2,8 @@ use syntax::ast::*;
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::ext::base::ExtCtxt;
 
-use rocket_http::uri::Uri;
+use rocket_http::ext::IntoOwned;
+use rocket_http::uri::{Uri, Origin};
 use super::route::param_to_ident;
 use utils::{span, SpanExt, is_valid_ident};
 
@@ -11,24 +12,18 @@ use utils::{span, SpanExt, is_valid_ident};
 // stripped out at runtime. So, to avoid any confusion, we issue an error at
 // compile-time for empty segments. At the moment, this disallows trailing
 // slashes as well, since then the last segment is empty.
-fn valid_path(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
-    let cleaned = uri.to_string();
-    if !uri.as_str().starts_with('/') {
-        ecx.struct_span_err(sp, "route paths must be absolute")
-            .note(&format!("expected {:?}, found {:?}", cleaned, uri.as_str()))
-            .emit()
-    } else if cleaned != uri.as_str() {
+fn valid_path(ecx: &ExtCtxt, uri: &Origin, sp: Span) -> bool {
+    if !uri.is_normalized() {
+        let normalized = uri.to_normalized();
         ecx.struct_span_err(sp, "paths cannot contain empty segments")
-            .note(&format!("expected {:?}, found {:?}", cleaned, uri.as_str()))
-            .emit()
-    } else {
-        return true;
+            .note(&format!("expected '{}', found '{}'", normalized, uri))
+            .emit();
     }
 
-    false
+    uri.is_normalized()
 }
 
-fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
+fn valid_segments(ecx: &ExtCtxt, uri: &Origin, sp: Span) -> bool {
     let mut validated = true;
     let mut segments_span = None;
     for segment in uri.segments() {
@@ -97,18 +92,32 @@ fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
     validated
 }
 
-pub fn validate_uri(ecx: &ExtCtxt,
-                    string: &str,
-                    sp: Span)
-                    -> (Spanned<Uri<'static>>, Option<Spanned<Ident>>) {
-    let uri = Uri::from(string.to_string());
+pub fn validate_uri(
+    ecx: &ExtCtxt,
+    string: &str,
+    sp: Span,
+) -> (Spanned<Origin<'static>>, Option<Spanned<Ident>>) {
     let query_param = string.find('?')
         .map(|i| span(&string[(i + 1)..], sp.trim_left(i + 1)))
         .and_then(|spanned_q_param| param_to_ident(ecx, spanned_q_param));
 
-    if valid_segments(ecx, &uri, sp) && valid_path(ecx, &uri, sp) {
-        (span(uri, sp), query_param)
-    } else {
-        (dummy_spanned(Uri::new("")), query_param)
+    let dummy = (dummy_spanned(Origin::dummy()), query_param);
+    match Origin::parse_route(string) {
+        Ok(uri) => {
+            let uri = uri.into_owned();
+            if valid_segments(ecx, &uri, sp) && valid_path(ecx, &uri, sp) {
+                return (span(uri, sp), query_param)
+            }
+
+            dummy
+        }
+        Err(e) => {
+            ecx.struct_span_err(sp, &format!("invalid path URI: {}", e))
+                .note("expected path URI in origin form")
+                .help("example: /path/<route>")
+                .emit();
+
+            dummy
+        }
     }
 }

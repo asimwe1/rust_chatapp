@@ -57,7 +57,6 @@ impl Router {
         result
     }
 
-
     // This is slow. Don't expose this publicly; only for tests.
     #[cfg(test)]
     fn has_collisions(&self) -> bool {
@@ -78,7 +77,7 @@ mod test {
     use config::Config;
     use http::Method;
     use http::Method::*;
-    use http::uri::Uri;
+    use http::uri::Origin;
     use request::Request;
     use data::Data;
     use handler::Outcome;
@@ -139,10 +138,26 @@ mod test {
         assert!(unranked_route_collisions(&["/<a>/b", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/<b>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/<c>", "/a/<a..>"]));
-        assert!(unranked_route_collisions(&["<a..>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/c/d", "/a/<a..>"]));
+    }
+
+    #[test]
+    fn test_collisions_normalize() {
+        assert!(unranked_route_collisions(&["/hello/", "/hello"]));
+        assert!(unranked_route_collisions(&["//hello/", "/hello"]));
+        assert!(unranked_route_collisions(&["//hello/", "/hello//"]));
+        assert!(unranked_route_collisions(&["/<a>", "/hello//"]));
+        assert!(unranked_route_collisions(&["/<a>", "/hello///"]));
+        assert!(unranked_route_collisions(&["/hello///bob", "/hello/<b>"]));
+        assert!(unranked_route_collisions(&["/<a..>//", "/a//<a..>"]));
+        assert!(unranked_route_collisions(&["/a/<a..>//", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/<a..>//", "/a/b//c//d/"]));
+        assert!(unranked_route_collisions(&["/a/<a..>/", "/a/bd/e/"]));
+        assert!(unranked_route_collisions(&["/a/<a..>//", "/a/b//c//d/e/"]));
+        assert!(unranked_route_collisions(&["/a//<a..>//", "/a/b//c//d/e/"]));
     }
 
     #[test]
@@ -166,7 +181,7 @@ mod test {
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::development().unwrap());
-        let request = Request::new(&rocket, method, Uri::new(uri));
+        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -177,7 +192,7 @@ mod test {
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::development().unwrap());
-        let request = Request::new(&rocket, method, Uri::new(uri));
+        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         router.route(&request)
     }
 
@@ -245,8 +260,8 @@ mod test {
     macro_rules! assert_ranked_routes {
         ($routes:expr, $to:expr, $want:expr) => ({
             let router = router_with_routes($routes);
-            let route_path = route(&router, Get, $to).unwrap().uri.as_str();
-            assert_eq!(route_path as &str, $want as &str);
+            let route_path = route(&router, Get, $to).unwrap().uri.to_string();
+            assert_eq!(route_path, $want.to_string());
         })
     }
 
@@ -275,21 +290,21 @@ mod test {
 
     #[test]
     fn test_no_manual_ranked_collisions() {
-        assert!(!ranked_collisions(&[(1, "a/<b>"), (2, "a/<b>")]));
-        assert!(!ranked_collisions(&[(0, "a/<b>"), (2, "a/<b>")]));
-        assert!(!ranked_collisions(&[(5, "a/<b>"), (2, "a/<b>")]));
-        assert!(!ranked_collisions(&[(1, "a/<b>"), (1, "b/<b>")]));
-        assert!(!ranked_collisions(&[(1, "a/<b..>"), (2, "a/<b..>")]));
-        assert!(!ranked_collisions(&[(0, "a/<b..>"), (2, "a/<b..>")]));
-        assert!(!ranked_collisions(&[(5, "a/<b..>"), (2, "a/<b..>")]));
-        assert!(!ranked_collisions(&[(1, "<a..>"), (2, "<a..>")]));
+        assert!(!ranked_collisions(&[(1, "/a/<b>"), (2, "/a/<b>")]));
+        assert!(!ranked_collisions(&[(0, "/a/<b>"), (2, "/a/<b>")]));
+        assert!(!ranked_collisions(&[(5, "/a/<b>"), (2, "/a/<b>")]));
+        assert!(!ranked_collisions(&[(1, "/a/<b>"), (1, "/b/<b>")]));
+        assert!(!ranked_collisions(&[(1, "/a/<b..>"), (2, "/a/<b..>")]));
+        assert!(!ranked_collisions(&[(0, "/a/<b..>"), (2, "/a/<b..>")]));
+        assert!(!ranked_collisions(&[(5, "/a/<b..>"), (2, "/a/<b..>")]));
+        assert!(!ranked_collisions(&[(1, "/<a..>"), (2, "/<a..>")]));
     }
 
     #[test]
     fn test_ranked_collisions() {
-        assert!(ranked_collisions(&[(2, "a/<b..>"), (2, "a/<b..>")]));
-        assert!(ranked_collisions(&[(2, "a/c/<b..>"), (2, "a/<b..>")]));
-        assert!(ranked_collisions(&[(2, "<b..>"), (2, "a/<b..>")]));
+        assert!(ranked_collisions(&[(2, "/a/<b..>"), (2, "/a/<b..>")]));
+        assert!(ranked_collisions(&[(2, "/a/c/<b..>"), (2, "/a/<b..>")]));
+        assert!(ranked_collisions(&[(2, "/<b..>"), (2, "/a/<b..>")]));
     }
 
     macro_rules! assert_ranked_routing {
@@ -300,7 +315,7 @@ mod test {
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
                 assert_eq!(got.rank, expected.0);
-                assert_eq!(got.uri.as_str(), expected.1);
+                assert_eq!(got.uri.to_string(), expected.1.to_string());
             }
         })
     }
@@ -308,33 +323,33 @@ mod test {
     #[test]
     fn test_ranked_routing() {
         assert_ranked_routing!(
-            to: "a/b",
-            with: [(1, "a/<b>"), (2, "a/<b>")],
-            expect: (1, "a/<b>"), (2, "a/<b>")
+            to: "/a/b",
+            with: [(1, "/a/<b>"), (2, "/a/<b>")],
+            expect: (1, "/a/<b>"), (2, "/a/<b>")
         );
 
         assert_ranked_routing!(
-            to: "b/b",
-            with: [(1, "a/<b>"), (2, "b/<b>"), (3, "b/b")],
-            expect: (2, "b/<b>"), (3, "b/b")
+            to: "/b/b",
+            with: [(1, "/a/<b>"), (2, "/b/<b>"), (3, "/b/b")],
+            expect: (2, "/b/<b>"), (3, "/b/b")
         );
 
         assert_ranked_routing!(
-            to: "b/b",
-            with: [(2, "b/<b>"), (1, "a/<b>"), (3, "b/b")],
-            expect: (2, "b/<b>"), (3, "b/b")
+            to: "/b/b",
+            with: [(2, "/b/<b>"), (1, "/a/<b>"), (3, "/b/b")],
+            expect: (2, "/b/<b>"), (3, "/b/b")
         );
 
         assert_ranked_routing!(
-            to: "b/b",
-            with: [(3, "b/b"), (2, "b/<b>"), (1, "a/<b>")],
-            expect: (2, "b/<b>"), (3, "b/b")
+            to: "/b/b",
+            with: [(3, "/b/b"), (2, "/b/<b>"), (1, "/a/<b>")],
+            expect: (2, "/b/<b>"), (3, "/b/b")
         );
 
         assert_ranked_routing!(
-            to: "b/b",
-            with: [(1, "a/<b>"), (2, "b/<b>"), (0, "b/b")],
-            expect: (0, "b/b"), (2, "b/<b>")
+            to: "/b/b",
+            with: [(1, "/a/<b>"), (2, "/b/<b>"), (0, "/b/b")],
+            expect: (0, "/b/b"), (2, "/b/<b>")
         );
 
         assert_ranked_routing!(
@@ -369,7 +384,7 @@ mod test {
             let expected = &[$($want),+];
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
-                assert_eq!(got.uri.as_str(), expected as &str);
+                assert_eq!(got.uri.to_string(), expected.to_string());
             }
         })
     }
@@ -377,34 +392,35 @@ mod test {
     #[test]
     fn test_default_ranked_routing() {
         assert_default_ranked_routing!(
-            to: "a/b?v=1",
-            with: ["a/<b>", "a/b"],
-            expect: "a/b", "a/<b>"
+            to: "/a/b?v=1",
+            with: ["/a/<b>", "/a/b"],
+            expect: "/a/b", "/a/<b>"
         );
 
         assert_default_ranked_routing!(
-            to: "a/b?v=1",
-            with: ["a/<b>", "a/b", "a/b?<v>"],
-            expect: "a/b?<v>", "a/b", "a/<b>"
+            to: "/a/b?v=1",
+            with: ["/a/<b>", "/a/b", "/a/b?<v>"],
+            expect: "/a/b?<v>", "/a/b", "/a/<b>"
         );
 
         assert_default_ranked_routing!(
-            to: "a/b?v=1",
-            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
-            expect: "a/b?<v>", "a/b", "a/<b>?<v>", "a/<b>"
+            to: "/a/b?v=1",
+            with: ["/a/<b>", "/a/b", "/a/b?<v>", "/a/<b>?<v>"],
+            expect: "/a/b?<v>", "/a/b", "/a/<b>?<v>", "/a/<b>"
         );
 
         assert_default_ranked_routing!(
-            to: "a/b",
-            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
-            expect: "a/b", "a/<b>"
+            to: "/a/b",
+            with: ["/a/<b>", "/a/b", "/a/b?<v>", "/a/<b>?<v>"],
+            expect: "/a/b", "/a/<b>"
         );
     }
 
     fn match_params(router: &Router, path: &str, expected: &[&str]) -> bool {
         println!("Testing: {} (expect: {:?})", path, expected);
         route(router, Get, path).map_or(false, |route| {
-            let params = route.get_param_indexes(&Uri::new(path));
+            let uri = Origin::parse_route(path).unwrap();
+            let params = route.get_param_indexes(&uri);
             if params.len() != expected.len() {
                 return false;
             }

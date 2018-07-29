@@ -6,8 +6,7 @@ use request::Request;
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
-use http::{Status, ContentType, Accept, Method, Cookies};
-use http::uri::Uri;
+use http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -102,10 +101,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **&URI**
+///   * **&Origin**
 ///
-///     Extracts the [`Uri`](/rocket/http/uri/struct.Uri.html) from the incoming
-///     request.
+///     Extracts the [`Origin`](/rocket/http/uri/struct.Origin.html) URI from
+///     the incoming request.
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -229,7 +228,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Method {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a Uri<'a> {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Origin<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {

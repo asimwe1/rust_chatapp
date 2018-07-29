@@ -163,7 +163,7 @@ impl PartialEq for AcceptParams {
 /// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct Accept(pub(crate) AcceptParams);
+pub struct Accept(crate AcceptParams);
 
 macro_rules! accept_constructor {
     ($($name:ident ($check:ident): $str:expr, $t:expr,

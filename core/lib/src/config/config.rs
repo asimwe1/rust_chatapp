@@ -52,9 +52,9 @@ pub struct Config {
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
-    pub(crate) secret_key: SecretKey,
+    crate secret_key: SecretKey,
     /// TLS configuration.
-    pub(crate) tls: Option<TlsConfig>,
+    crate tls: Option<TlsConfig>,
     /// Streaming read size limits.
     pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
@@ -221,7 +221,7 @@ impl Config {
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    pub(crate) fn default<P>(env: Environment, path: P) -> Result<Config>
+    crate fn default<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
         let config_path = path.as_ref().to_path_buf();
@@ -288,7 +288,7 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    pub(crate) fn bad_type(&self,
+    crate fn bad_type(&self,
                            name: &str,
                            actual: &'static str,
                            expect: &'static str) -> ConfigError {
@@ -312,7 +312,7 @@ impl Config {
     ///   * **log**: String
     ///   * **secret_key**: String (256-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
-    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
+    crate fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
         config_from_raw!(self, name, val,
             address => (str, set_address, id),
@@ -663,7 +663,7 @@ impl Config {
 
     /// Retrieves the secret key from `self`.
     #[inline]
-    pub(crate) fn secret_key(&self) -> &Key {
+    crate fn secret_key(&self) -> &Key {
         self.secret_key.inner()
     }
 

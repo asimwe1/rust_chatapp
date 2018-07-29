@@ -6,7 +6,11 @@ use std::fmt::{self, Debug};
 
 use pear::{Input, Length};
 
+use ext::IntoOwned;
+
 pub type IndexedString = Indexed<'static, str>;
+pub type IndexedStr<'a> = Indexed<'a, str>;
+pub type IndexedBytes<'a> = Indexed<'a, [u8]>;
 
 pub trait AsPtr {
     fn as_ptr(&self) -> *const u8;
@@ -48,14 +52,23 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
             _ => panic!("cannot convert indexed T to U unless indexed")
         }
     }
-}
 
-impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     #[inline(always)]
     pub fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
             _ => panic!("cannot coerce lifetime unless indexed")
+        }
+    }
+}
+
+impl<'a, T: 'static + ?Sized + ToOwned> IntoOwned for Indexed<'a, T> {
+    type Owned = Indexed<'static, T>;
+
+    fn into_owned(self) -> Indexed<'static, T> {
+        match self {
+            Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
+            Indexed::Concrete(cow) => Indexed::Concrete(IntoOwned::into_owned(cow))
         }
     }
 }
@@ -303,12 +316,12 @@ pub struct Context {
 impl ::std::fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         const LIMIT: usize = 7;
-        write!(f, "{}", self.offset)?;
+        write!(f, "[{}:]", self.offset)?;
 
         if self.string.len() > LIMIT {
-            write!(f, " ({}..)", &self.string[..LIMIT])
+            write!(f, " {}..", &self.string[..LIMIT])
         } else if !self.string.is_empty() {
-            write!(f, " ({})", &self.string)
+            write!(f, " {}", &self.string)
         } else {
             Ok(())
         }

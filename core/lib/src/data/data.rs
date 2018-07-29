@@ -87,7 +87,7 @@ impl Data {
     }
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
-    pub(crate) fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
+    crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
         // Steal the internal, undecoded data buffer and net stream from Hyper.
         let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
         // This is only valid because we know that hyper's `cap` represents the
@@ -235,7 +235,7 @@ impl Data {
     // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
     // bytes can be read from `stream`.
     #[inline(always)]
-    pub(crate) fn new(mut stream: BodyReader) -> Data {
+    crate fn new(mut stream: BodyReader) -> Data {
         trace_!("Date::new({:?})", stream);
         let mut peek_buf: Vec<u8> = vec![0; PEEK_BYTES];
 
@@ -269,7 +269,7 @@ impl Data {
 
     /// This creates a `data` object from a local data source `data`.
     #[inline]
-    pub(crate) fn local(data: Vec<u8>) -> Data {
+    crate fn local(data: Vec<u8>) -> Data {
         let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
 
         Data {

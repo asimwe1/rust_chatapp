@@ -12,7 +12,7 @@ use super::{FromParam, FromSegments, FromRequest, Outcome};
 use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
-use http::uri::{Uri, Segments};
+use http::uri::{Origin, Segments};
 use error::Error;
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
@@ -40,25 +40,23 @@ struct RequestState<'r> {
 #[derive(Clone)]
 pub struct Request<'r> {
     method: Cell<Method>,
-    uri: Uri<'r>,
+    uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     state: RequestState<'r>,
 }
 
 impl<'r> Request<'r> {
-    /// Create a new `Request` with the given `method` and `uri`. The `uri`
-    /// parameter can be of any type that implements `Into<Uri>` including
-    /// `&str` and `String`; it must be a valid absolute URI.
+    /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
-    pub(crate) fn new<'s: 'r, U: Into<Uri<'s>>>(
+    crate fn new<'s: 'r>(
         rocket: &'r Rocket,
         method: Method,
-        uri: U
+        uri: Origin<'s>
     ) -> Request<'r> {
         Request {
             method: Cell::new(method),
-            uri: uri.into(),
+            uri: uri,
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
@@ -74,9 +72,11 @@ impl<'r> Request<'r> {
         }
     }
 
+    // Only used by doc-tests!
     #[doc(hidden)]
     pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development().unwrap());
+        let uri = Origin::parse(uri).expect("invalid URI in example");
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
     }
@@ -150,7 +150,7 @@ impl<'r> Request<'r> {
         self._set_method(method);
     }
 
-    /// Borrow the URI from `self`, which is guaranteed to be an absolute URI.
+    /// Borrow the `Origin` URI from `self`.
     ///
     /// # Example
     ///
@@ -158,31 +158,34 @@ impl<'r> Request<'r> {
     /// # use rocket::Request;
     /// # use rocket::http::Method;
     /// # Request::example(Method::Get, "/uri", |request| {
-    /// assert_eq!(request.uri().as_str(), "/uri");
+    /// assert_eq!(request.uri().path(), "/uri");
     /// # });
     /// ```
     #[inline(always)]
-    pub fn uri(&self) -> &Uri {
+    pub fn uri(&self) -> &Origin {
         &self.uri
     }
 
-    /// Set the URI in `self`. The `uri` parameter can be of any type that
-    /// implements `Into<Uri>` including `&str` and `String`; it _must_ be a
-    /// valid, absolute URI.
+    /// Set the URI in `self` to `uri`.
     ///
     /// # Example
     ///
     /// ```rust
+    /// use rocket::http::uri::Origin;
+    ///
     /// # use rocket::Request;
     /// # use rocket::http::Method;
     /// # Request::example(Method::Get, "/uri", |mut request| {
-    /// request.set_uri("/hello/Sergio?type=greeting");
-    /// assert_eq!(request.uri().as_str(), "/hello/Sergio?type=greeting");
+    /// let uri = Origin::parse("/hello/Sergio?type=greeting").unwrap();
+    ///
+    /// request.set_uri(uri);
+    /// assert_eq!(request.uri().path(), "/hello/Sergio");
+    /// assert_eq!(request.uri().query(), Some("type=greeting"));
     /// # });
     /// ```
     #[inline(always)]
-    pub fn set_uri<'u: 'r, U: Into<Uri<'u>>>(&mut self, uri: U) {
-        self.uri = uri.into();
+    pub fn set_uri<'u: 'r>(&mut self, uri: Origin<'u>) {
+        self.uri = uri;
         *self.state.params.borrow_mut() = Vec::new();
     }
 
@@ -647,36 +650,37 @@ impl<'r> Request<'r> {
     /// use may result in out of bounds indexing.
     /// TODO: Figure out the mount path from here.
     #[inline]
-    pub(crate) fn set_route(&self, route: &'r Route) {
+    crate fn set_route(&self, route: &'r Route) {
         self.state.route.set(Some(route));
         *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
     /// Set the method of `self`, even when `self` is a shared reference.
     #[inline(always)]
-    pub(crate) fn _set_method(&self, method: Method) {
+    crate fn _set_method(&self, method: Method) {
         self.method.set(method);
     }
 
     /// Replace all of the cookies in `self` with those in `jar`.
     #[inline]
-    pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
+    crate fn set_cookies(&mut self, jar: CookieJar) {
         self.state.cookies = RefCell::new(jar);
     }
 
     /// Get the managed state T, if it exists. For internal use only!
     #[inline(always)]
-    pub(crate) fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
+    crate fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
         self.state.managed.try_get()
     }
 
     /// Convert from Hyper types into a Rocket Request.
-    pub(crate) fn from_hyp(rocket: &'r Rocket,
-                           h_method: hyper::Method,
-                           h_headers: hyper::header::Headers,
-                           h_uri: hyper::RequestUri,
-                           h_addr: SocketAddr,
-                           ) -> Result<Request<'r>, String> {
+    crate fn from_hyp(
+        rocket: &'r Rocket,
+        h_method: hyper::Method,
+        h_headers: hyper::header::Headers,
+        h_uri: hyper::RequestUri,
+        h_addr: SocketAddr,
+    ) -> Result<Request<'r>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,
@@ -688,6 +692,9 @@ impl<'r> Request<'r> {
             Some(method) => method,
             None => return Err(format!("Invalid method: {}", h_method))
         };
+
+        // We need to re-parse the URI since we don't trust Hyper... :(
+        let uri = Origin::parse_owned(uri).map_err(|e| e.to_string())?;
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);

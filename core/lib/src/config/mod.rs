@@ -217,7 +217,7 @@ pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
 pub use logger::LoggingLevel;
-pub(crate) use self::toml_ext::LoggedValue;
+crate use self::toml_ext::LoggedValue;
 
 use logger;
 use self::Environment::*;
@@ -470,7 +470,7 @@ impl RocketConfig {
 /// # Panics
 ///
 /// If there is a problem, prints a nice error message and bails.
-pub(crate) fn init() -> Config {
+crate fn init() -> Config {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
         e.pretty_print();

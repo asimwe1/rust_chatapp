@@ -1,255 +1,154 @@
-use std::fmt;
+use std::fmt::{self, Display};
 use std::convert::From;
 use std::borrow::Cow;
 use std::str::Utf8Error;
-use std::sync::atomic::{AtomicIsize, Ordering};
+use std::convert::TryFrom;
 
-/// Index (start, end) into a string, to prevent borrowing.
-type Index = (usize, usize);
+use ext::IntoOwned;
+use parse::Indexed;
+use uri::{Origin, Authority, Absolute, Error};
 
-/// Representation of an empty segment count.
-const EMPTY: isize = -1;
-
-// TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
-/// Borrowed string type for absolute URIs.
-#[derive(Debug)]
-pub struct Uri<'a> {
-    uri: Cow<'a, str>,
-    path: Index,
-    query: Option<Index>,
-    fragment: Option<Index>,
-    // The cached segment count. `EMPTY` is used to represent no segment count.
-    segment_count: AtomicIsize,
+/// An `enum` encapsulating any of the possible URI variants.
+///
+/// # Usage
+///
+/// In Rocket, this type will rarely be used directly. Instead, you will
+/// typically encounter URIs via the [`Origin`] type. This is because all
+/// incoming requests contain origin-type URIs.
+///
+/// Nevertheless, the `Uri` type is typically enountered as a conversion target.
+/// In particular, you will likely see generic bounds of the form: `T:
+/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::Redirect) methods).
+/// This means that you can provide any type `T` that implements `TryInto<Uri>`,
+/// or, equivalently, any type `U` for which `Uri` implements `TryFrom<U>` or
+/// `From<U>`. These include `&str` and `String`, [`Origin`], [`Authority`], and
+/// [`Absolute`].
+///
+/// ## Parsing
+///
+/// The `Uri` type implements a full, zero-allocation, zero-copy [RFC 7230]
+/// compliant parser. To parse an `&str` into a `Uri`, use the [`Uri::parse()`]
+/// method. Alternatively, you may also use the `TryFrom<&str>` and
+/// `TryFrom<String>` trait implementation. To inspect the parsed type, match on
+/// the resulting `enum` and use the methods of the internal structure.
+///
+/// [RFC 7230]: https://tools.ietf.org/html/rfc7230
+///
+/// ## Percent Encoding/Decoding
+///
+/// This type also provides the following percent encoding/decoding helper
+/// methods: [`Uri::percent_encode`], [`Uri::percent_decode`], and
+/// [`Uri::percent_decode_lossy`].
+#[derive(Debug, PartialEq)]
+pub enum Uri<'a> {
+    /// An [`Origin`] URI.
+    Origin(Origin<'a>),
+    /// An [`Authority`] URI.
+    Authority(Authority<'a>),
+    /// An [`Absolute`] URI.
+    Absolute(Absolute<'a>),
+    /// An asterisk: exactly `*`.
+    Asterisk,
 }
 
 impl<'a> Uri<'a> {
-    /// Constructs a new URI from a given string. The URI is assumed to be an
-    /// absolute, well formed URI.
-    pub fn new<T: Into<Cow<'a, str>>>(uri: T) -> Uri<'a> {
-        let uri = uri.into();
-        let qmark = uri.find('?');
-        let hmark = uri.find('#');
-
-        let end = uri.len();
-        let (path, query, fragment) = match (qmark, hmark) {
-            (Some(i), Some(j)) if i < j => ((0, i), Some((i+1, j)), Some((j+1, end))),
-            (Some(_i), Some(j)) => ((0, j), None, Some((j+1, end))),
-            (Some(i), None) => ((0, i), Some((i+1, end)), None),
-            (None, Some(j)) => ((0, j), None, Some((j+1, end))),
-            (None, None) => ((0, end), None, None),
-        };
-
-        Uri { uri, path, query, fragment, segment_count: AtomicIsize::new(EMPTY) }
+    #[inline]
+    crate unsafe fn raw_absolute(
+        source: Cow<'a, [u8]>,
+        scheme: Indexed<'a, [u8]>,
+        path: Indexed<'a, [u8]>,
+        query: Option<Indexed<'a, [u8]>>,
+    ) -> Uri<'a> {
+        let origin = Origin::raw(source.clone(), path, query);
+        Uri::Absolute(Absolute::raw(source.clone(), scheme, None, Some(origin)))
     }
 
-    /// Returns the number of segments in the URI. Empty segments, which are
-    /// invalid according to RFC#3986, are not counted.
+    /// Parses the string `string` into a `Uri`. Parsing will never allocate.
+    /// Returns an `Error` if `string` is not a valid URI.
     ///
-    /// The segment count is cached after the first invocation. As a result,
-    /// this function is O(1) after the first invocation, and O(n) before.
-    ///
-    /// ### Examples
-    ///
-    /// A valid URI with only non-empty segments:
+    /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
-    /// let uri = Uri::new("/a/b/c");
-    /// assert_eq!(uri.segment_count(), 3);
+    /// // Parse a valid origin URI (note: in practice, use `Origin::parse()`).
+    /// let uri = Uri::parse("/a/b/c?query").expect("valid URI");
+    /// let origin = uri.origin().expect("origin URI");
+    /// assert_eq!(origin.path(), "/a/b/c");
+    /// assert_eq!(origin.query(), Some("query"));
+    ///
+    /// // Invalid URIs fail to parse.
+    /// Uri::parse("foo bar").expect_err("invalid URI");
     /// ```
-    ///
-    /// A URI with empty segments:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a/b//c/d///e");
-    /// assert_eq!(uri.segment_count(), 5);
-    /// ```
-    #[inline(always)]
-    pub fn segment_count(&self) -> usize {
-        let count = self.segment_count.load(Ordering::Relaxed);
-        if count == EMPTY {
-            let real_count = self.segments().count();
-            if real_count <= isize::max_value() as usize {
-                self.segment_count.store(real_count as isize, Ordering::Relaxed);
-            }
+    pub fn parse(string: &'a str) -> Result<Uri<'a>, Error> {
+        ::parse::uri::from_str(string)
+    }
 
-            real_count
-        } else {
-            count as usize
+    /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
+    /// Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let uri = Uri::parse("/a/b/c?query").expect("valid URI");
+    /// assert!(uri.origin().is_some());
+    ///
+    /// let uri = Uri::parse("http://google.com").expect("valid URI");
+    /// assert!(uri.origin().is_none());
+    /// ```
+    pub fn origin(&self) -> Option<&Origin<'a>> {
+        match self {
+            Uri::Origin(ref inner) => Some(inner),
+            _ => None
         }
     }
 
-    /// Returns an iterator over the segments of the path in this URI. Skips
-    /// empty segments.
+    /// Returns the internal instance of `Authority` if `self` is a
+    /// `Uri::Authority`. Otherwise, returns `None`.
     ///
-    /// ### Examples
-    ///
-    /// A valid URI with only non-empty segments:
+    /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
-    /// let uri = Uri::new("/a/b/c?a=true#done");
-    /// for (i, segment) in uri.segments().enumerate() {
-    ///     match i {
-    ///         0 => assert_eq!(segment, "a"),
-    ///         1 => assert_eq!(segment, "b"),
-    ///         2 => assert_eq!(segment, "c"),
-    ///         _ => panic!("only three segments")
-    ///     }
-    /// }
+    /// let uri = Uri::parse("user:pass@domain.com").expect("valid URI");
+    /// assert!(uri.authority().is_some());
+    ///
+    /// let uri = Uri::parse("http://google.com").expect("valid URI");
+    /// assert!(uri.authority().is_none());
     /// ```
-    ///
-    /// A URI with empty segments:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("///a//b///c////d?#");
-    /// for (i, segment) in uri.segments().enumerate() {
-    ///     match i {
-    ///         0 => assert_eq!(segment, "a"),
-    ///         1 => assert_eq!(segment, "b"),
-    ///         2 => assert_eq!(segment, "c"),
-    ///         3 => assert_eq!(segment, "d"),
-    ///         _ => panic!("only four segments")
-    ///     }
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn segments(&self) -> Segments {
-        Segments(self.path())
+    pub fn authority(&self) -> Option<&Authority<'a>> {
+        match self {
+            Uri::Authority(ref inner) => Some(inner),
+            _ => None
+        }
     }
 
-    /// Returns the path part of this URI.
+    /// Returns the internal instance of `Absolute` if `self` is a
+    /// `Uri::Absolute`. Otherwise, returns `None`.
     ///
-    /// ### Examples
-    ///
-    /// A URI with only a path:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a/b/c");
-    /// assert_eq!(uri.path(), "/a/b/c");
-    /// ```
-    ///
-    /// A URI with other components:
+    /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
-    /// let uri = Uri::new("/a/b/c?name=bob#done");
-    /// assert_eq!(uri.path(), "/a/b/c");
+    /// let uri = Uri::parse("http://google.com").expect("valid URI");
+    /// assert!(uri.absolute().is_some());
+    ///
+    /// let uri = Uri::parse("/path").expect("valid URI");
+    /// assert!(uri.absolute().is_none());
     /// ```
-    #[inline(always)]
-    pub fn path(&self) -> &str {
-        let (i, j) = self.path;
-        &self.uri[i..j]
-    }
-
-    /// Returns the query part of this URI without the question mark, if there is
-    /// any.
-    ///
-    /// ### Examples
-    ///
-    /// A URI with a query part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a/b/c?alphabet=true");
-    /// assert_eq!(uri.query(), Some("alphabet=true"));
-    /// ```
-    ///
-    /// A URI without the query part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a/b/c");
-    /// assert_eq!(uri.query(), None);
-    /// ```
-    #[inline(always)]
-    pub fn query(&self) -> Option<&str> {
-        self.query.map(|(i, j)| &self.uri[i..j])
-    }
-
-    /// Returns the fragment part of this URI without the hash mark, if there is
-    /// any.
-    ///
-    /// ### Examples
-    ///
-    /// A URI with a fragment part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a?alphabet=true#end");
-    /// assert_eq!(uri.fragment(), Some("end"));
-    /// ```
-    ///
-    /// A URI without the fragment part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/a?query=true");
-    /// assert_eq!(uri.fragment(), None);
-    /// ```
-    #[inline(always)]
-    pub fn fragment(&self) -> Option<&str> {
-        self.fragment.map(|(i, j)| &self.uri[i..j])
-    }
-
-    /// Returns a URL-decoded version of the string. If the percent encoded
-    /// values are not valid UTF-8, an `Err` is returned.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/Hello%2C%20world%21");
-    /// let decoded_path = Uri::percent_decode(uri.path().as_bytes()).expect("decoded");
-    /// assert_eq!(decoded_path, "/Hello, world!");
-    /// ```
-    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
-        let decoder = ::percent_encoding::percent_decode(string);
-        decoder.decode_utf8()
-    }
-
-    /// Returns a URL-decoded version of the path. Any invalid UTF-8
-    /// percent-encoded byte sequences will be replaced � U+FFFD, the
-    /// replacement character.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Uri;
-    ///
-    /// let uri = Uri::new("/Hello%2C%20world%21");
-    /// let decoded_path = Uri::percent_decode_lossy(uri.path().as_bytes());
-    /// assert_eq!(decoded_path, "/Hello, world!");
-    /// ```
-    pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
-        let decoder = ::percent_encoding::percent_decode(string);
-        decoder.decode_utf8_lossy()
+    pub fn absolute(&self) -> Option<&Absolute<'a>> {
+        match self {
+            Uri::Absolute(ref inner) => Some(inner),
+            _ => None
+        }
     }
 
     /// Returns a URL-encoded version of the string. Any characters outside of
@@ -270,340 +169,104 @@ impl<'a> Uri<'a> {
         ::percent_encoding::utf8_percent_encode(string, set).into()
     }
 
-    /// Returns the inner string of this URI.
+    /// Returns a URL-decoded version of the string. If the percent encoded
+    /// values are not valid UTF-8, an `Err` is returned.
     ///
-    /// The returned string is in raw form. It contains empty segments. If you'd
-    /// like a string without empty segments, use `to_string` instead.
-    ///
-    /// ### Example
+    /// # Examples
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::uri::Uri;
     ///
-    /// let uri = Uri::new("/a/b///c/d/e//f?name=Mike#end");
-    /// assert_eq!(uri.as_str(), "/a/b///c/d/e//f?name=Mike#end");
+    /// let decoded = Uri::percent_decode("/Hello%2C%20world%21".as_bytes());
+    /// assert_eq!(decoded.unwrap(), "/Hello, world!");
     /// ```
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        &self.uri
+    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
+        let decoder = ::percent_encoding::percent_decode(string);
+        decoder.decode_utf8()
+    }
+
+    /// Returns a URL-decoded version of the path. Any invalid UTF-8
+    /// percent-encoded byte sequences will be replaced � U+FFFD, the
+    /// replacement character.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let decoded = Uri::percent_decode_lossy("/Hello%2C%20world%21".as_bytes());
+    /// assert_eq!(decoded, "/Hello, world!");
+    /// ```
+    pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
+        let decoder = ::percent_encoding::percent_decode(string);
+        decoder.decode_utf8_lossy()
     }
 }
 
-impl<'a> Clone for Uri<'a> {
-    #[inline(always)]
-    fn clone(&self) -> Uri<'a> {
-        Uri {
-            uri: self.uri.clone(),
-            path: self.path,
-            query: self.query,
-            fragment: self.fragment,
-            segment_count: AtomicIsize::new(EMPTY),
+crate unsafe fn as_utf8_unchecked(input: Cow<[u8]>) -> Cow<str> {
+    match input {
+        Cow::Borrowed(bytes) => Cow::Borrowed(::std::str::from_utf8_unchecked(bytes)),
+        Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes))
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Uri<'a> {
+    type Error = Error<'a>;
+
+    #[inline]
+    fn try_from(string: &'a str) -> Result<Uri<'a>, Self::Error> {
+        Uri::parse(string)
+    }
+}
+
+impl TryFrom<String> for Uri<'static> {
+    type Error = Error<'static>;
+
+    #[inline]
+    fn try_from(string: String) -> Result<Uri<'static>, Self::Error> {
+        // TODO: Potentially optimize this like `Origin::parse_owned`.
+        Uri::parse(&string)
+            .map(|u| u.into_owned())
+            .map_err(|e| e.into_owned())
+    }
+}
+
+impl<'a> IntoOwned for Uri<'a> {
+    type Owned = Uri<'static>;
+
+    fn into_owned(self) -> Uri<'static> {
+        match self {
+            Uri::Origin(origin) => Uri::Origin(origin.into_owned()),
+            Uri::Authority(authority) => Uri::Authority(authority.into_owned()),
+            Uri::Absolute(absolute) => Uri::Absolute(absolute.into_owned()),
+            Uri::Asterisk => Uri::Asterisk
         }
     }
 }
 
-impl<'a, 'b> PartialEq<Uri<'b>> for Uri<'a> {
-    #[inline]
-    fn eq(&self, other: &Uri<'b>) -> bool {
-        self.path() == other.path() &&
-            self.query() == other.query() &&
-            self.fragment() == other.fragment()
-    }
-}
-
-impl<'a> Eq for Uri<'a> {}
-
-impl<'a> From<&'a str> for Uri<'a> {
-    #[inline(always)]
-    fn from(uri: &'a str) -> Uri<'a> {
-        Uri::new(uri)
-    }
-}
-
-impl<'a> From<Cow<'a, str>> for Uri<'a> {
-    #[inline(always)]
-    fn from(uri: Cow<'a, str>) -> Uri<'a> {
-        Uri::new(uri)
-    }
-}
-
-impl From<String> for Uri<'static> {
-    #[inline(always)]
-    fn from(uri: String) -> Uri<'static> {
-        Uri::new(uri)
-    }
-}
-
-impl<'a> fmt::Display for Uri<'a> {
+impl<'a> Display for Uri<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // If this is the root path, then there are "zero" segments.
-        if self.segment_count() == 0 {
-            write!(f, "/")?;
-        } else {
-            for segment in self.segments() {
-                write!(f, "/{}", segment)?;
+        match *self {
+            Uri::Origin(ref origin) => write!(f, "{}", origin),
+            Uri::Authority(ref authority) => write!(f, "{}", authority),
+            Uri::Absolute(ref absolute) => write!(f, "{}", absolute),
+            Uri::Asterisk => write!(f, "*")
+        }
+    }
+}
+
+macro_rules! impl_uri_from {
+    ($type:ident) => (
+        impl<'a> From<$type<'a>> for Uri<'a> {
+            fn from(other: $type<'a>) -> Uri<'a> {
+                Uri::$type(other)
             }
         }
-
-        if let Some(query_str) = self.query() {
-            write!(f, "?{}", query_str)?;
-        }
-
-        if let Some(fragment_str) = self.fragment() {
-            write!(f, "#{}", fragment_str)?;
-        }
-
-        Ok(())
-    }
+    )
 }
 
-/// Iterator over the segments of an absolute URI path. Skips empty segments.
-///
-/// ### Examples
-///
-/// ```rust
-/// # extern crate rocket;
-/// use rocket::http::uri::Uri;
-///
-/// let uri = Uri::new("/a/////b/c////////d");
-/// let segments = uri.segments();
-/// for (i, segment) in segments.enumerate() {
-///     match i {
-///         0 => assert_eq!(segment, "a"),
-///         1 => assert_eq!(segment, "b"),
-///         2 => assert_eq!(segment, "c"),
-///         3 => assert_eq!(segment, "d"),
-///         _ => panic!("only four segments")
-///     }
-/// }
-/// ```
-#[derive(Clone, Debug)]
-pub struct Segments<'a>(pub &'a str);
-
-impl<'a> Iterator for Segments<'a> {
-    type Item = &'a str;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        // Find the start of the next segment (first that's not '/').
-        let i = match self.0.find(|c| c != '/') {
-            Some(index) => index,
-            None => return None,
-        };
-
-        // Get the index of the first character that _is_ a '/' after start.
-        // j = index of first character after i (hence the i +) that's not a '/'
-        let j = self.0[i..].find('/').map_or(self.0.len(), |j| i + j);
-
-        // Save the result, update the iterator, and return!
-        let result = Some(&self.0[i..j]);
-        self.0 = &self.0[j..];
-        result
-    }
-
-    // TODO: Potentially take a second parameter with Option<cached count> and
-    // return it here if it's Some. The downside is that a decision has to be
-    // made about -when- to compute and cache that count. A place to do it is in
-    // the segments() method. But this means that the count will always be
-    // computed regardless of whether it's needed. Maybe this is ok. We'll see.
-    // fn count(self) -> usize where Self: Sized {
-    //     self.1.unwrap_or_else(self.fold(0, |cnt, _| cnt + 1))
-    // }
-}
-
-/// Errors which can occur when attempting to interpret a segment string as a
-/// valid path segment.
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum SegmentError {
-    /// The segment contained invalid UTF8 characters when percent decoded.
-    Utf8(Utf8Error),
-    /// The segment started with the wrapped invalid character.
-    BadStart(char),
-    /// The segment contained the wrapped invalid character.
-    BadChar(char),
-    /// The segment ended with the wrapped invalid character.
-    BadEnd(char),
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Uri;
-
-    fn seg_count(path: &str, expected: usize) -> bool {
-        let actual = Uri::new(path).segment_count();
-        if actual != expected {
-            eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
-            eprintln!("{}", if actual != expected { "lifetime" } else { "buf" });
-            eprintln!("Segments (for {}):", path);
-            for (i, segment) in Uri::new(path).segments().enumerate() {
-                eprintln!("{}: {}", i, segment);
-            }
-        }
-
-        actual == expected
-    }
-
-    fn eq_segments(path: &str, expected: &[&str]) -> bool {
-        let uri = Uri::new(path);
-        let actual: Vec<&str> = uri.segments().collect();
-        actual == expected
-    }
-
-    #[test]
-    fn send_and_sync() {
-        fn assert<T: Send + Sync>() {};
-        assert::<Uri>();
-    }
-
-    #[test]
-    fn simple_segment_count() {
-        assert!(seg_count("", 0));
-        assert!(seg_count("/", 0));
-        assert!(seg_count("a", 1));
-        assert!(seg_count("/a", 1));
-        assert!(seg_count("a/", 1));
-        assert!(seg_count("/a/", 1));
-        assert!(seg_count("/a/b", 2));
-        assert!(seg_count("/a/b/", 2));
-        assert!(seg_count("a/b/", 2));
-        assert!(seg_count("ab/", 1));
-    }
-
-    #[test]
-    fn segment_count() {
-        assert!(seg_count("////", 0));
-        assert!(seg_count("//a//", 1));
-        assert!(seg_count("//abc//", 1));
-        assert!(seg_count("//abc/def/", 2));
-        assert!(seg_count("//////abc///def//////////", 2));
-        assert!(seg_count("a/b/c/d/e/f/g", 7));
-        assert!(seg_count("/a/b/c/d/e/f/g", 7));
-        assert!(seg_count("/a/b/c/d/e/f/g/", 7));
-        assert!(seg_count("/a/b/cdjflk/d/e/f/g", 7));
-        assert!(seg_count("//aaflja/b/cdjflk/d/e/f/g", 7));
-        assert!(seg_count("/a   /b", 2));
-    }
-
-    #[test]
-    fn single_segments_match() {
-        assert!(eq_segments("", &[]));
-        assert!(eq_segments("a", &["a"]));
-        assert!(eq_segments("/a", &["a"]));
-        assert!(eq_segments("/a/", &["a"]));
-        assert!(eq_segments("a/", &["a"]));
-        assert!(eq_segments("///a/", &["a"]));
-        assert!(eq_segments("///a///////", &["a"]));
-        assert!(eq_segments("a///////", &["a"]));
-        assert!(eq_segments("//a", &["a"]));
-        assert!(eq_segments("", &[]));
-        assert!(eq_segments("abc", &["abc"]));
-        assert!(eq_segments("/a", &["a"]));
-        assert!(eq_segments("/abc/", &["abc"]));
-        assert!(eq_segments("abc/", &["abc"]));
-        assert!(eq_segments("///abc/", &["abc"]));
-        assert!(eq_segments("///abc///////", &["abc"]));
-        assert!(eq_segments("abc///////", &["abc"]));
-        assert!(eq_segments("//abc", &["abc"]));
-    }
-
-    #[test]
-    fn multi_segments_match() {
-        assert!(eq_segments("a/b/c", &["a", "b", "c"]));
-        assert!(eq_segments("/a/b", &["a", "b"]));
-        assert!(eq_segments("/a///b", &["a", "b"]));
-        assert!(eq_segments("a/b/c/d", &["a", "b", "c", "d"]));
-        assert!(eq_segments("///a///////d////c", &["a", "d", "c"]));
-        assert!(eq_segments("abc/abc", &["abc", "abc"]));
-        assert!(eq_segments("abc/abc/", &["abc", "abc"]));
-        assert!(eq_segments("///abc///////a", &["abc", "a"]));
-        assert!(eq_segments("/////abc/b", &["abc", "b"]));
-        assert!(eq_segments("//abc//c////////d", &["abc", "c", "d"]));
-    }
-
-    #[test]
-    fn multi_segments_match_funky_chars() {
-        assert!(eq_segments("a/b/c!!!", &["a", "b", "c!!!"]));
-        assert!(eq_segments("a  /b", &["a  ", "b"]));
-        assert!(eq_segments("  a/b", &["  a", "b"]));
-        assert!(eq_segments("  a/b  ", &["  a", "b  "]));
-        assert!(eq_segments("  a///b  ", &["  a", "b  "]));
-        assert!(eq_segments("  ab  ", &["  ab  "]));
-    }
-
-    #[test]
-    fn segment_mismatch() {
-        assert!(!eq_segments("", &["a"]));
-        assert!(!eq_segments("a", &[]));
-        assert!(!eq_segments("/a/a", &["a"]));
-        assert!(!eq_segments("/a/b", &["b", "a"]));
-        assert!(!eq_segments("/a/a/b", &["a", "b"]));
-        assert!(!eq_segments("///a/", &[]));
-    }
-
-    fn test_query(uri: &str, query: Option<&str>) {
-        let uri = Uri::new(uri);
-        assert_eq!(uri.query(), query);
-    }
-
-    fn test_fragment(uri: &str, fragment: Option<&str>) {
-        let uri = Uri::new(uri);
-        assert_eq!(uri.fragment(), fragment);
-    }
-
-    #[test]
-    fn query_does_not_exist() {
-        test_query("/test", None);
-        test_query("/a/b/c/d/e", None);
-        test_query("/////", None);
-        test_query("//a///", None);
-        test_query("/a/b/c#a?123", None);
-        test_query("/#", None);
-        test_query("/#?", None);
-    }
-
-    #[test]
-    fn query_exists() {
-        test_query("/test?abc", Some("abc"));
-        test_query("/a/b/c?abc", Some("abc"));
-        test_query("/a/b/c/d/e/f/g/?abc#hijklmnop", Some("abc"));
-        test_query("?123", Some("123"));
-        test_query("?", Some(""));
-        test_query("/?", Some(""));
-        test_query("?#", Some(""));
-        test_query("/?hi", Some("hi"));
-    }
-
-    #[test]
-    fn fragment_exists() {
-        test_fragment("/test#abc", Some("abc"));
-        test_fragment("/#abc", Some("abc"));
-        test_fragment("/#ab?c", Some("ab?c"));
-        test_fragment("/a/b/c?123#a", Some("a"));
-        test_fragment("/a/b/c#a?123", Some("a?123"));
-        test_fragment("/a/b/c?123#a?b", Some("a?b"));
-        test_fragment("/#a", Some("a"));
-    }
-
-    #[test]
-    fn fragment_does_not_exist() {
-        test_fragment("/testabc", None);
-        test_fragment("/abc", None);
-        test_fragment("/a/b/c?123", None);
-        test_fragment("/a", None);
-    }
-
-    #[test]
-    fn to_string() {
-        let uri_to_string = |string| Uri::new(string).to_string();
-
-        assert_eq!(uri_to_string("/"), "/".to_string());
-        assert_eq!(uri_to_string("//"), "/".to_string());
-        assert_eq!(uri_to_string("//////a/"), "/a".to_string());
-        assert_eq!(uri_to_string("//ab"), "/ab".to_string());
-        assert_eq!(uri_to_string("//a"), "/a".to_string());
-        assert_eq!(uri_to_string("/a/b///c"), "/a/b/c".to_string());
-        assert_eq!(uri_to_string("/a///b/c/d///"), "/a/b/c/d".to_string());
-        assert_eq!(uri_to_string("/a/b/c#a?123"), "/a/b/c#a?123".to_string());
-    }
-}
+impl_uri_from!(Origin);
+impl_uri_from!(Authority);
+impl_uri_from!(Absolute);

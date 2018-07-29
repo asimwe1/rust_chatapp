@@ -1,10 +1,9 @@
-use std::str::FromStr;
+use std::str::{FromStr, Utf8Error};
 use std::path::PathBuf;
 use std::fmt::Debug;
 use std::borrow::Cow;
 
-use http::uri::{Uri, Segments, SegmentError};
-use http::RawStr;
+use http::{RawStr, uri::{Uri, Segments}};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -307,6 +306,20 @@ impl<'a> FromSegments<'a> for Segments<'a> {
     fn from_segments(segments: Segments<'a>) -> Result<Segments<'a>, Self::Error> {
         Ok(segments)
     }
+}
+
+/// Errors which can occur when attempting to interpret a segment string as a
+/// valid path segment.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum SegmentError {
+    /// The segment contained invalid UTF8 characters when percent decoded.
+    Utf8(Utf8Error),
+    /// The segment started with the wrapped invalid character.
+    BadStart(char),
+    /// The segment contained the wrapped invalid character.
+    BadChar(char),
+    /// The segment ended with the wrapped invalid character.
+    BadEnd(char),
 }
 
 /// Creates a `PathBuf` from a `Segments` iterator. The returned `PathBuf` is

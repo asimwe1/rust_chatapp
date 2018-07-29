@@ -2,9 +2,11 @@ use pear::parser;
 use pear::parsers::*;
 
 use {Accept, QMediaType};
-use parse::{Input, Result};
 use parse::checkers::is_whitespace;
 use parse::media_type::media_type;
+
+type Input<'a> = ::parse::IndexedInput<'a, str>;
+type Result<'a, T> = ::pear::Result<T, Input<'a>>;
 
 #[parser]
 fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
