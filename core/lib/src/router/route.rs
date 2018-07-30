@@ -266,6 +266,7 @@ impl fmt::Debug for Route {
 #[doc(hidden)]
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
+        // This should never panic since `info.path` is statically checked.
         let mut route = Route::new(info.method, info.path, info.handler);
         route.format = info.format.clone();
         route.name = Some(info.name);

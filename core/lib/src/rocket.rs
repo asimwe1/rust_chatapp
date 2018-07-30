@@ -499,22 +499,28 @@ impl Rocket {
               Paint::blue(base));
 
         if base.contains('<') || base.contains('>') {
-            error_!("Invalid mount point: {}", base);
-            panic!("Mount points cannot contain dynamic parameters");
+            error_!("Mount point '{}' contains dynamic paramters.", base);
+            panic!("Invalid mount point.");
+        }
+
+        let base_uri = Origin::parse(base)
+            .unwrap_or_else(|e| {
+                error_!("Invalid origin URI '{}' used as mount point.", base);
+                panic!("Error: {}", e);
+            });
+
+        if base_uri.query().is_some() {
+            error_!("Mount point '{}' contains query string.", base);
+            panic!("Invalid mount point.");
+        }
+
+        if !base_uri.is_normalized() {
+            error_!("Mount point '{}' is not normalized.", base_uri);
+            info_!("Expected: '{}'.", base_uri.to_normalized());
+            panic!("Invalid mount point.");
         }
 
         for mut route in routes {
-            let base_uri = Origin::parse(base)
-                .unwrap_or_else(|e| {
-                    error_!("Invalid origin URI used as mount point: {}", base);
-                    panic!("Error: {}", e);
-                });
-
-            if base_uri.query().is_some() {
-                error_!("Mount point cannot contain a query string: {}", base_uri);
-                panic!("Invalid mount point.");
-            }
-
             let complete_uri = format!("{}/{}", base_uri, route.uri);
             let uri = Origin::parse_route(&complete_uri)
                 .unwrap_or_else(|e| {
@@ -522,11 +528,7 @@ impl Rocket {
                     panic!("Error: {}", e)
                 });
 
-            if !uri.is_normalized() {
-                warn_!("Abnormal URI '{}' will be automatically normalized.", uri);
-            }
-
-            route.set_base(base_uri);
+            route.set_base(base_uri.clone());
             route.set_uri(uri.to_normalized());
 
             info_!("{}", route);

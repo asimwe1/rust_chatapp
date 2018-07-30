@@ -80,7 +80,7 @@ fn rocket() -> (Rocket, Option<db::Conn>) {
     let rocket = rocket::ignite()
         .manage(pool)
         .mount("/", routes![index, static_files::all])
-        .mount("/todo/", routes![new, toggle, delete])
+        .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing());
 
     (rocket, conn)
