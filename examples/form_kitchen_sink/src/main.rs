@@ -1,4 +1,4 @@
-#![feature(plugin, decl_macro, custom_derive)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 #[macro_use] extern crate rocket;
@@ -11,7 +11,6 @@ use rocket::http::RawStr;
 
 #[cfg(test)] mod tests;
 
-// TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug, FromFormValue)]
 enum FormOption {
     A, B, C

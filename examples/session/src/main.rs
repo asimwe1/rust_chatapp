@@ -1,8 +1,8 @@
-#![feature(plugin, decl_macro, custom_derive)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket_contrib;
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
 

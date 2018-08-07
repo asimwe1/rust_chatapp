@@ -56,9 +56,9 @@ impl<'f, T: FromForm<'f> + 'f> LenientForm<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
     /// #[derive(FromForm)]
@@ -84,9 +84,9 @@ impl<'f, T: FromForm<'f> + 'f> LenientForm<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
     /// #[derive(FromForm)]
@@ -114,9 +114,9 @@ impl<'f, T: FromForm<'f> + 'static> LenientForm<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
     /// #[derive(FromForm)]

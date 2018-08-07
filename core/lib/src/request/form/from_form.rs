@@ -14,11 +14,11 @@ use request::FormItems;
 /// validation.
 ///
 /// ```rust
-/// #![feature(plugin, decl_macro, custom_derive)]
+/// #![feature(plugin, decl_macro)]
 /// #![plugin(rocket_codegen)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 ///
-/// extern crate rocket;
+/// #[macro_use] extern crate rocket;
 ///
 /// #[derive(FromForm)]
 /// struct TodoTask {
@@ -34,10 +34,10 @@ use request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, custom_derive)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # #[derive(FromForm)]
 /// # struct TodoTask { description: String, completed: bool }

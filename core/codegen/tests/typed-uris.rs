@@ -1,8 +1,8 @@
-#![feature(plugin, decl_macro, custom_derive)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 #![allow(dead_code, unused_variables)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use std::fmt;
 use std::path::PathBuf;

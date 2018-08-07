@@ -1,7 +1,7 @@
-#![feature(plugin, decl_macro, custom_derive)]
+#![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::request::{Form, LenientForm};
 use rocket::http::RawStr;

@@ -49,10 +49,10 @@ use request::form::{FromForm, FormItems};
 /// The simplest data structure with a reference into form data looks like this:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, custom_derive)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::http::RawStr;
 /// #[derive(FromForm)]
 /// struct UserInput<'f> {
@@ -65,10 +65,10 @@ use request::form::{FromForm, FormItems};
 /// a string. A handler for this type can be written as:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, custom_derive)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # use rocket::http::RawStr;
 /// # #[derive(FromForm)]
@@ -91,24 +91,18 @@ use request::form::{FromForm, FormItems};
 /// The owned analog of the `UserInput` type above is:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, custom_derive)]
-/// # #![allow(deprecated, dead_code, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
-/// #[derive(FromForm)]
 /// struct OwnedUserInput {
 ///     value: String
 /// }
-/// # fn main() {  }
 /// ```
 ///
 /// The handler is written similarly:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, custom_derive)]
+/// # #![feature(plugin, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # #[derive(FromForm)]
 /// # struct OwnedUserInput {
@@ -170,9 +164,9 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///
     /// #[derive(FromForm)]
@@ -198,9 +192,9 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///
     /// #[derive(FromForm)]
@@ -269,9 +263,9 @@ impl<'f, T: FromForm<'f> + 'static> Form<'f, T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, custom_derive)]
+    /// # #![feature(plugin, decl_macro)]
     /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///
     /// #[derive(FromForm)]

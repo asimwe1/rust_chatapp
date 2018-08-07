@@ -18,5 +18,15 @@ proc-macro = true
 
 [dependencies]
 quote = "0.6.1"
-proc-macro2 = { version = "0.4.3", features = ["nightly"] }
-syn = { version = "0.14.0", features = ["full", "extra-traits"] }
+rocket_http = { version = "0.4.0-dev", path = "../http/" }
+
+[dependencies.derive_utils]
+git = "https://github.com/SergioBenitez/derive-utils"
+rev = "160da392"
+
+[dev-dependencies]
+rocket = { version = "0.4.0-dev", path = "../lib" }
+
+[dev-dependencies.compiletest_rs]
+git = "https://github.com/SergioBenitez/compiletest-rs"
+branch = "regex-support"

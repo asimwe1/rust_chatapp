@@ -14,6 +14,16 @@
 //! here is purely technical. The code generation facilities are documented
 //! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
 //!
+//! ## **Table of Contents**
+//!
+//!   1. [Custom Attributes](#custom-attributes)
+//!   2. [Custom Derives](#custom-derives)
+//!       * [`FromForm`](#fromform)
+//!       * [`FromFormValue`](#fromformvalue)
+//!       * [`Responder`](#responder)
+//!   3. [Procedural Macros](#procedural-macros)
+//!   4. [Debugging Generated Code](#debugging-codegen)
+//!
 //! ## Custom Attributes
 //!
 //! This crate implements the following custom attributes:
@@ -74,10 +84,15 @@
 //!
 //! ## Custom Derives
 //!
-//! This crate implements the following custom derives:
+//! This crate* implements the following custom derives:
 //!
 //!   * **FromForm**
+//!   * **FromFormValue**
+//!   * **Responder**
 //!
+//! <small>* In reality, all of these custom derives are currently implemented
+//! by the `rocket_codegen_next` crate. Nonetheless, they are documented
+//! here.</small>
 //! ### `FromForm`
 //!
 //! The [`FromForm`] derive can be applied to structures with named fields:
@@ -119,6 +134,154 @@
 //!
 //! [`FromForm`]: /rocket/request/trait.FromForm.html
 //! [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
+//!
+//! ### `FromFormValue`
+//!
+//! The [`FromFormValue`] derive can be applied to enums with nullary
+//! (zero-length) fields:
+//!
+//!     #[derive(FromFormValue)]
+//!     enum MyValue {
+//!         First,
+//!         Second,
+//!         Third,
+//!     }
+//!
+//! The derive generates an implementation of the [`FromFormValue`] trait for
+//! the decorated `enum`. The implementation returns successfully when the form
+//! value matches, case insensitively, the stringified version of a variant's
+//! name, returning an instance of said variant.
+//!
+//! As an example, for the `enum` above, the form values `"first"`, `"FIRST"`,
+//! `"fiRSt"`, and so on would parse as `MyValue::First`, while `"second"` and
+//! `"third"` would parse as `MyValue::Second` and `MyValue::Third`,
+//! respectively.
+//!
+//! The `form` field attribute can be used to change the string that is compared
+//! against for a given variant:
+//!
+//!     #[derive(FromFormValue)]
+//!     enum MyValue {
+//!         First,
+//!         Second,
+//!         #[form(value = "fourth")]
+//!         Third,
+//!     }
+//!
+//! The attribute's grammar is:
+//!
+//! <pre>
+//! form := 'field' '=' STRING_LIT
+//!
+//! STRING_LIT := any valid string literal, as defined by Rust
+//! </pre>
+//!
+//! The attribute accepts a single string parameter of name `value`
+//! corresponding to the string to use to match against for the decorated
+//! variant. In the example above, the the strings `"fourth"`, `"FOUrth"` and so
+//! on would parse as `MyValue::Third`.
+//!
+//! ## `Responder`
+//!
+//! The [`Responder`] derive can be applied to enums and named structs. When
+//! applied to enums, variants must have at least one field. When applied to
+//! structs, the struct must have at least one field.
+//!
+//!     #[derive(Responder)]
+//!     enum MyResponder {
+//!         A(String),
+//!         B(OtherResponse, ContentType),
+//!     }
+//!
+//!     #[derive(Responder)]
+//!     struct MyResponder {
+//!         inner: OtherResponder,
+//!         header: ContentType,
+//!     }
+//!
+//! The derive generates an implementation of the [`Responder`] trait for the
+//! decorated enum or structure. The derive uses the _first_ field of a variant
+//! or structure to generate a `Response`. As such, the type of the first field
+//! must implement [`Responder`]. The remaining fields of a variant or structure
+//! are set as headers in the produced [`Response`] using
+//! [`Response::set_header()`]. As such, every other field (unless explicitly
+//! ignored, explained next) must implement `Into<Header>`.
+//!
+//! Except for the first field, fields decorated with `#[response(ignore)]` are
+//! ignored by the derive:
+//!
+//!     #[derive(Responder)]
+//!     enum MyResponder {
+//!         A(String),
+//!         B(OtherResponse, ContentType, #[response(ignore)] Other),
+//!     }
+//!
+//!     #[derive(Responder)]
+//!     struct MyResponder {
+//!         inner: InnerResponder,
+//!         header: ContentType,
+//!         #[response(ignore)]
+//!         other: Other,
+//!     }
+//!
+//! Decorating the first field with `#[response(ignore)]` has no effect.
+//!
+//! Additionally, the `response` attribute can be used on named structures and
+//! enum variants to override the status and/or content-type of the [`Response`]
+//! produced by the generated implementation. The `response` attribute used in
+//! these positions has the following grammar:
+//!
+//! <pre>
+//! response := parameter (',' parameter)?
+//!
+//! parameter := 'status' '=' STATUS
+//!            | 'content_type' '=' CONTENT_TYPE
+//!
+//! STATUS := unsigned integer >= 100 and < 600
+//! CONTENT_TYPE := string literal, as defined by Rust, identifying a valid
+//!                 Content-Type, as defined by Rocket
+//! </pre>
+//!
+//! It can be used as follows:
+//!
+//!     #[derive(Responder)]
+//!     enum Error {
+//!         #[response(status = 500, content_type = "json")]
+//!         A(String),
+//!         #[response(status = 404)]
+//!         B(OtherResponse, ContentType),
+//!     }
+//!
+//!     #[derive(Responder)]
+//!     #[response(status = 400)]
+//!     struct MyResponder {
+//!         inner: InnerResponder,
+//!         header: ContentType,
+//!         #[response(ignore)]
+//!         other: Other,
+//!     }
+//!
+//! The attribute accepts two key/value pairs: `status` and `content_type`. The
+//! value of `status` must be an unsigned integer representing a valid status
+//! code. The [`Response`] produced from the generated implementation will have
+//! its status overriden to this value.
+//!
+//! The value of `content_type` must be a valid media-type in `top/sub` form or
+//! `shorthand` form. Examples include:
+//!
+//!   * `"text/html"`
+//!   * `"application/x-custom"`
+//!   * `"html"`
+//!   * `"json"`
+//!   * `"plain"`
+//!   * `"binary"`
+//!
+//! The [`Response`] produced from the generated implementation will have its
+//! content-type overriden to this value.
+//!
+//! [`Responder`]: /rocket/response/trait.Responder.html
+//! [`Response`]: /rocket/struct.Response.html
+//! [`Response::set_header()`]: /rocket/struct.Response.html#method.set_header
 //!
 //! ## Procedural Macros
 //!
@@ -265,14 +428,6 @@ macro_rules! register_decorators {
     )
 }
 
-macro_rules! register_derives {
-    ($registry:expr, $($name:expr => $func:ident),+) => (
-        $($registry.register_custom_derive(Symbol::intern($name),
-                SyntaxExtension::MultiDecorator(Box::new(decorators::$func)));
-         )+
-    )
-}
-
 macro_rules! register_macros {
     ($reg:expr, $($n:expr => $f:ident),+) => (
         $($reg.register_macro($n, macros::$f);)+
@@ -287,10 +442,6 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "catchers" => catchers,
         "uri" => uri,
         "rocket_internal_uri" => uri_internal
-    );
-
-    register_derives!(reg,
-        "derive_FromForm" => from_form_derive
     );
 
     register_decorators!(reg,

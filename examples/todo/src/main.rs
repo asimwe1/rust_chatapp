@@ -1,7 +1,7 @@
-#![feature(plugin, decl_macro, custom_derive, const_fn)]
+#![feature(plugin, decl_macro, const_fn)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate serde_derive;
 extern crate rocket_contrib;
