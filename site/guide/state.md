@@ -69,6 +69,17 @@ You can retrieve more than one `State` type in a single route as well:
 fn state(hit_count: State<HitCount>, config: State<Config>) -> T { ... }
 ```
 
+If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
+the offending route. Instead, Rocket will log an error message and return a
+**500** error to the client.
+
+You can find a complete example using the `HitCount` structure in the [state
+example on
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/state) and
+learn more about the [`manage`
+method](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) and
+[`State` type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
+
 ### Within Guards
 
 It can also be useful to retrieve managed state from a `FromRequest`
@@ -84,68 +95,6 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 ```
 
 [`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
-
-### Unmanaged State
-
-If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
-the offending route. Instead, Rocket will log an error message and return a
-**500** error to the client.
-
-While this behavior is 100% safe, it isn't fun to return **500** errors to
-clients, especially when the issue can be easily avoided. Because of this,
-Rocket tries to prevent an application with unmanaged state from ever running
-via the `unmanaged_state` lint. The lint reads through your code at compile-time
-and emits a warning when a `State<T>` request guard is being used in a mounted
-route for a type `T` that isn't being managed.
-
-As an example, consider the following short application using our `HitCount`
-type from previous examples:
-
-```rust
-#[get("/count")]
-fn count(hit_count: State<HitCount>) -> String {
-    let current_count = hit_count.count.load(Ordering::Relaxed);
-    format!("Number of visits: {}", current_count)
-}
-
-fn main() {
-    rocket::ignite()
-        .manage(Config::from(user_input))
-        .launch()
-}
-```
-
-The application is buggy: a value for `HitCount` isn't being `managed`, but a
-`State<HitCount>` type is being requested in the `count` route. When we compile
-this application, Rocket emits the following warning:
-
-```rust
-warning: HitCount is not currently being managed by Rocket
- --> src/main.rs:2:17
-  |
-2 | fn count(hit_count: State<HitCount>) -> String {
-  |                           ^^^^^^^^
-  |
-  = note: this State request guard will always fail
-help: maybe add a call to 'manage' here?
- --> src/main.rs:8:5
-  |
-8 |     rocket::ignite()
-  |     ^^^^^^^^^^^^^^^^
-```
-
-The `unmanaged_state` lint isn't perfect. In particular, it cannot track calls
-to `manage` across function boundaries. Because of this, you may find yourself
-with incorrect warnings. You can disable the lint on a per-route basis by adding
-`#[allow(unmanaged_state)]` to a route handler. If you wish to disable the lint
-globally, add `#![allow(unmanaged_state)]` to your crate attributes.
-
-You can find a complete example using the `HitCount` structure in the [state
-example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/state) and
-learn more about the [`manage`
-method](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) and
-[`State` type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
 
 ### Request-Local State
 
