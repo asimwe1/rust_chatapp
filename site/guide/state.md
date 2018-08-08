@@ -85,50 +85,6 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 
 [`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
 
-### Request-Local State
-
-While managed state is *global* and available application-wide, request-local
-state is *local* to a given request, carried along with the request, and dropped
-once the request is completed. Request-local state can be used whenever a
-`Request` is available, such as in a fairing, a request guard, or a responder.
-
-Request-local state is *cached*: if data of a given type has already been
-stored, it will be reused. This is especially useful for request guards that
-might be invoked multiple times during the routing and processing of a single
-request, such as those dealing with authentication.
-
-```rust
-/// A global counter for arbitrary request IDs
-static request_id_counter: AtomicUsize = AtomicUsize::new(0);
-/// A type that represents request IDs
-struct RequestId(pub usize);
-
-/// Returns the current request's RequestId, assigning one
-/// if the current request does not have one already.
-impl<'a, 'r> FromRequest<'a, 'r> for RequestId {
-    fn from_request(request: &'a Request<'r>) -> request::Outcome {
-        // The closure passed to local_cache will be executed at most once per
-        // request, the first time the RequestId guard is used. If it is
-        // requested again, local_cache will return the same value.
-        Outcome::Success(request.local_cache(|| {
-            RequestId(request_id_counter.fetch_add(1, Ordering::Relaxed))
-        }))
-    }
-}
-```
-
-Another use case for request-local state is request validation. A fairing can
-read request headers, query a database or other external service, and store the
-result in request-local state. The result of the validation is available to each
-individual route and also to any custom `Responder`s, for example from an
-authentication library.
-
-Refer to the documentation for the [`FromRequest`] and [`Fairing`] traits for
-more examples of this functionality.
-
-[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
-[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
-
 ### Unmanaged State
 
 If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
@@ -190,6 +146,55 @@ GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/state) 
 learn more about the [`manage`
 method](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) and
 [`State` type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
+
+### Request-Local State
+
+While managed state is *global* and available application-wide, request-local
+state is *local* to a given request, carried along with the request, and dropped
+once the request is completed. Request-local state can be used whenever a
+`Request` is available, such as in a fairing, a request guard, or a responder.
+
+Request-local state is *cached*: if data of a given type has already been
+stored, it will be reused. This is especially useful for request guards that
+might be invoked multiple times during routing and processing of a single
+request, such as those that deal with authentication.
+
+As an example, consider the following request guard implementation for
+`RequestId` that uses request-local state to generate and expose a unique
+integer ID per request:
+
+```rust
+/// A global atomic counter for generating IDs.
+static request_id_counter: AtomicUsize = AtomicUsize::new(0);
+
+/// A type that represents a request's ID.
+struct RequestId(pub usize);
+
+/// Returns the current request's ID, assigning one only as necessary.
+impl<'a, 'r> FromRequest<'a, 'r> for RequestId {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome {
+        // The closure passed to `local_cache` will be executed at most once per
+        // request: the first time the `RequestId` guard is used. If it is
+        // requested again, `local_cache` will return the same value.
+        Outcome::Success(request.local_cache(|| {
+            RequestId(request_id_counter.fetch_add(1, Ordering::Relaxed))
+        }))
+    }
+}
+```
+
+Note that, without request-local state, it would not be possible to:
+
+    1. Associate a piece of data, here an ID, directly with a request.
+    2. Ensure that a value is generated at most once per request.
+
+For more examples, see the [`FromRequest`] documentation, which uses
+request-local state to cache expensive authentication and authorization
+computations, and the [`Fairing`] documentation, which uses request-local state
+to implement request timing.
+
+[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.htmll#request-local-state
+[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#request-local-state
 
 ## Databases
 

@@ -208,14 +208,15 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # fn main() { }
 /// ```
 ///
-/// # Request-Local Cache
+/// # Request-Local State
 ///
-/// Request guards that perform expensive operations, such as querying a
-/// database or an external service, should use the *request-local cache* to
-/// store the result if they might be invoked multiple times during the routing
+/// Request guards that perform expensive operations, such as those that query a
+/// database or an external service, should use the [request-local state] cache
+/// to store results if they might be invoked multiple times during the routing
 /// of a single request.
 ///
-/// For example, consider a pair of `User` and `Admin` guards:
+/// For example, consider a pair of `User` and `Admin` guards and a pair of
+/// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]
@@ -275,10 +276,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// fn user_dashboard(user: User) { }
 /// ```
 ///
-/// When a non-admin user is logged in, the database will be queried twice: Once
+/// When a non-admin user is logged in, the database will be queried twice: once
 /// via the `Admin` guard invoking the `User` guard, and a second time via the
-/// `User` guard directly. For cases such as these, the request-local cache
-/// should be used:
+/// `User` guard directly. For cases like these, request-local state should be
+/// used, as illustrated below:
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]
@@ -307,8 +308,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     type Error = ();
 ///
 ///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, ()> {
-///         // The closure will run only once per request, and future
-///         // invocations will reuse the result of the first calculation
+///         // This closure will execute at most once per request, regardless of
+///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache(|| {
 ///             let db = request.guard::<Database>().succeeded()?;
 ///             request.cookies()
@@ -316,6 +317,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///                 .and_then(|cookie| cookie.value().parse().ok())
 ///                 .and_then(|id| db.get_user(id).ok())
 ///         });
+///
 ///         user_result.as_ref().or_forward(())
 ///     }
 /// }
@@ -335,9 +337,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// }
 /// ```
 ///
-/// Notice that these request guards provide access to *borrowed* data
-/// (`&'a User` and `Admin<'a>`). The data is now owned by the request's cache,
-/// so it must either be borrowed or cloned by the guards.
+/// Notice that these request guards provide access to *borrowed* data (`&'a
+/// User` and `Admin<'a>`) as the data is now owned by the request's cache.
+///
+/// [request-local state]: https://rocket.rs/guide/state/#request-local-state
 
 pub trait FromRequest<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.
