@@ -48,7 +48,7 @@ fn new(id: usize) -> status::Accepted<String> {
 Similarly, the types in the [`content`
 module](https://api.rocket.rs/rocket/response/content/index.html) can be used to
 override the Content-Type of a response. For instance, to set the Content-Type
-an `&'static str` to JSON, you can use the [`content::Json`] type as follows:
+of `&'static str` to JSON, you can use the [`content::Json`] type as follows:
 
 ```rust
 use rocket::response::content;
@@ -125,7 +125,7 @@ fn handler() -> &'static str {
 
 ### `Option`
 
-`Option` is _wrapping_ responder: an `Option<T>` can only be returned when `T`
+`Option` is a _wrapping_ responder: an `Option<T>` can only be returned when `T`
 implements `Responder`. If the `Option` is `Some`, the wrapped responder is used
 to respond to the client. Otherwise, a error of **404 - Not Found** is returned
 to the client.
