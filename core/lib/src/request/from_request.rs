@@ -181,21 +181,24 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     key == "valid_api_key"
 /// }
 ///
+/// #[derive(Debug)]
+/// enum ApiKeyError {
+///     BadCount,
+///     Missing,
+///     Invalid,
+/// }
+///
 /// impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
-///     type Error = ();
+///     type Error = ApiKeyError;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<ApiKey, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
 ///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
-///         if keys.len() != 1 {
-///             return Outcome::Failure((Status::BadRequest, ()));
+///         match keys.len() {
+///             0 => Outcome::Failure((Status::BadRequest, ApiKeyError::Missing)),
+///             1 if is_valid(keys[0]) => Outcome::Success(ApiKey(keys[0].to_string())),
+///             1 => Outcome::Failure((Status::BadRequest, ApiKeyError::Invalid)),
+///             _ => Outcome::Failure((Status::BadRequest, ApiKeyError::BadCount)),
 ///         }
-///
-///         let key = keys[0];
-///         if !is_valid(keys[0]) {
-///             return Outcome::Forward(());
-///         }
-///
-///         return Outcome::Success(ApiKey(key.to_string()));
 ///     }
 /// }
 ///
@@ -219,7 +222,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(plugin, decl_macro, never_type)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #
@@ -282,7 +285,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// used, as illustrated below:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(plugin, decl_macro, never_type)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// #
@@ -305,9 +308,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # struct Admin<'a> { user: &'a User };
 /// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
-///     type Error = ();
+///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, !> {
 ///         // This closure will execute at most once per request, regardless of
 ///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache(|| {
@@ -323,9 +326,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// }
 ///
 /// impl<'a, 'r> FromRequest<'a, 'r> for Admin<'a> {
-///     type Error = ();
+///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin<'a>, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin<'a>, !> {
 ///         let user = request.guard::<&User>()?;
 ///
 ///         if user.is_admin {
@@ -356,7 +359,7 @@ pub trait FromRequest<'a, 'r>: Sized {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for Method {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.method())
@@ -364,7 +367,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Method {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for &'a Origin<'a> {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.uri())
@@ -372,7 +375,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a Origin<'a> {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.route() {
@@ -383,7 +386,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
@@ -391,7 +394,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.accept() {
@@ -402,7 +405,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
@@ -413,7 +416,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.remote() {
@@ -424,7 +427,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
 }
 
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error> {
-    type Error = ();
+    type Error = T::Error;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
@@ -436,7 +439,7 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error>
 }
 
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
-    type Error = ();
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {

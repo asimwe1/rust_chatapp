@@ -1,4 +1,4 @@
-#![feature(plugin, decl_macro)]
+#![feature(plugin, decl_macro, never_type)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket_contrib;
@@ -24,9 +24,9 @@ struct Login {
 struct User(usize);
 
 impl<'a, 'r> FromRequest<'a, 'r> for User {
-    type Error = ();
+    type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<User, !> {
         request.cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())

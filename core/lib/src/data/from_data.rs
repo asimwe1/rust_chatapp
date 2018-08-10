@@ -226,14 +226,15 @@ pub trait FromData: Sized {
 
 /// The identity implementation of `FromData`. Always returns `Success`.
 impl FromData for Data {
-    type Error = ();
+    type Error = !;
+
     fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
         Success(data)
     }
 }
 
 impl<T: FromData> FromData for Result<T, T::Error> {
-    type Error = ();
+    type Error = !;
 
     fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error> {
         match T::from_data(request, data) {
@@ -245,7 +246,7 @@ impl<T: FromData> FromData for Result<T, T::Error> {
 }
 
 impl<T: FromData> FromData for Option<T> {
-    type Error = ();
+    type Error = !;
 
     fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error> {
         match T::from_data(request, data) {

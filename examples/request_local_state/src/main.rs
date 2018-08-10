@@ -1,4 +1,4 @@
-#![feature(plugin, decl_macro)]
+#![feature(plugin, decl_macro, never_type)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;

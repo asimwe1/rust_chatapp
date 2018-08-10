@@ -202,7 +202,7 @@ pub trait FromParam<'a>: Sized {
 }
 
 impl<'a> FromParam<'a> for &'a RawStr {
-    type Error = ();
+    type Error = !;
 
     #[inline(always)]
     fn from_param(param: &'a RawStr) -> Result<&'a RawStr, Self::Error> {

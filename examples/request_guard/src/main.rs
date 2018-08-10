@@ -1,31 +1,25 @@
-#![feature(plugin, decl_macro)]
+#![feature(plugin, decl_macro, never_type)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
 
-use std::fmt;
 use rocket::request::{self, Request, FromRequest};
 use rocket::outcome::Outcome::*;
 
 #[derive(Debug)]
 struct HeaderCount(usize);
 
-impl fmt::Display for HeaderCount {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 impl<'a, 'r> FromRequest<'a, 'r> for HeaderCount {
-    type Error = ();
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+    type Error = !;
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, !> {
         Success(HeaderCount(request.headers().len()))
     }
 }
 
 #[get("/")]
 fn header_count(header_count: HeaderCount) -> String {
-    format!("Your request contained {} headers!", header_count)
+    format!("Your request contained {} headers!", header_count.0)
 }
 
 fn rocket() -> rocket::Rocket {
