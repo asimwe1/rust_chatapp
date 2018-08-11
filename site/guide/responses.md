@@ -257,7 +257,7 @@ a template and a context to render the template with. The context can be any
 type that implements `Serialize` and serializes into an `Object` value, such as
 structs, `HashMaps`, and others.
 
-Rocket searches for a template with the given name in the configurable
+Rocket searches for a template with the given name in the [configurable]
 `template_dir` directory. Templating support in Rocket is engine agnostic. The
 engine used to render a template depends on the template file's extension. For
 example, if a file ends with `.hbs`, Handlebars is used, while if a file ends
@@ -281,10 +281,11 @@ fn main() {
 }
 ```
 
-The [`Template`] API
-documentation contains more information about templates, while the [Handlebars
-Templates example on
+The [`Template`] API documentation contains more information about templates,
+including how to customize a template engine to add custom helpers and filters.
+The [Handlebars Templates example on
 GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/handlebars_templates)
 is a fully composed application that makes use of Handlebars templates.
 
 [`Template`]: https://api.rocket.rs/rocket_contrib/struct.Template.html
+[configurable]: /guide/configuration/#extras

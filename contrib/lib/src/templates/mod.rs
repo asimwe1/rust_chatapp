@@ -125,7 +125,7 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// }
 /// ```
 ///
-/// # Customizing
+/// # Helpers, Filters, and Customization
 ///
 /// You can use the [`Template::custom()`] method to construct a fairing with
 /// customized templating engines. Among other things, this method allows you to
