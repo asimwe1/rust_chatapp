@@ -427,7 +427,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
 }
 
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error> {
-    type Error = T::Error;
+    type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
