@@ -290,7 +290,7 @@ impl Template {
         Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
     }
 
-    /// Aactually render this template given a template context. This method is
+    /// Actually render this template given a template context. This method is
     /// called by the `Template` `Responder` implementation as well as
     /// `Template::show()`.
     #[inline(always)]
