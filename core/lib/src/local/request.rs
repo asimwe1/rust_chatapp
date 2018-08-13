@@ -397,6 +397,7 @@ impl<'c> LocalRequest<'c> {
         if let Ok(uri) = Origin::parse(uri) {
             request.set_uri(uri.into_owned());
         } else {
+            error!("Malformed request URI: {}", uri);
             let res = client.rocket().handle_error(Status::BadRequest, request);
             return LocalResponse { _request: owned_request, response: res };
         }
