@@ -81,37 +81,6 @@ impl<'r> Request<'r> {
         f(&mut request);
     }
 
-    /// Retrieves the cached value for type `T` from the request-local cached
-    /// state of `self`. If no such value has previously been cached for this
-    /// request, `f` is called to produce the value which is subsequently
-    /// returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # use rocket::http::Method;
-    /// # use rocket::Request;
-    /// # struct User;
-    /// fn current_user(request: &Request) -> User {
-    ///     // Validate request for a given user, load from database, etc.
-    ///     # User
-    /// }
-    ///
-    /// # Request::example(Method::Get, "/uri", |request| {
-    /// let user = request.local_cache(|| current_user(request));
-    /// # });
-    /// ```
-    pub fn local_cache<T, F>(&self, f: F) -> &T
-        where F: FnOnce() -> T,
-              T: Send + Sync + 'static
-    {
-        self.state.cache.try_get()
-            .unwrap_or_else(|| {
-                self.state.cache.set(f());
-                self.state.cache.get()
-            })
-    }
-
     /// Retrieve the method from `self`.
     ///
     /// # Example
@@ -551,6 +520,37 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
         T::from_request(self)
+    }
+
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `f` is called to produce the value which is subsequently
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # struct User;
+    /// fn current_user(request: &Request) -> User {
+    ///     // Validate request for a given user, load from database, etc.
+    ///     # User
+    /// }
+    ///
+    /// # Request::example(Method::Get, "/uri", |request| {
+    /// let user = request.local_cache(|| current_user(request));
+    /// # });
+    /// ```
+    pub fn local_cache<T, F>(&self, f: F) -> &T
+        where F: FnOnce() -> T,
+              T: Send + Sync + 'static
+    {
+        self.state.cache.try_get()
+            .unwrap_or_else(|| {
+                self.state.cache.set(f());
+                self.state.cache.get()
+            })
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
