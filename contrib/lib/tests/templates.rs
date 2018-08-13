@@ -6,8 +6,7 @@ extern crate rocket_contrib;
 
 #[cfg(feature = "templates")]
 mod templates_tests {
-    use std::env;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use rocket::{Rocket, http::RawStr};
     use rocket::config::{Config, Environment};
@@ -22,8 +21,7 @@ mod templates_tests {
     }
 
     fn template_root() -> PathBuf {
-        let cwd = env::current_dir().expect("current working directory");
-        cwd.join("tests").join("templates")
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("templates")
     }
 
     fn rocket() -> Rocket {
@@ -122,7 +120,6 @@ mod templates_tests {
         fn test_template_reload() {
             use std::fs::File;
             use std::io::Write;
-            use std::path::Path;
             use std::thread;
             use std::time::Duration;
 
@@ -138,18 +135,13 @@ mod templates_tests {
                 file.sync_all().expect("sync file");
             }
 
-            let reload_path = Path::join(
-                Path::new(env!("CARGO_MANIFEST_DIR")),
-                "tests/templates/hbs/reload.txt.hbs"
-            );
-
             // set up the template before initializing the Rocket instance so
             // that it will be picked up in the initial loading of templates.
+            let reload_path = template_root().join("hbs").join("reload.txt.hbs");
             write_file(&reload_path, INITIAL_TEXT);
 
-            let client = Client::new(rocket()).unwrap();
-
             // verify that the initial content is correct
+            let client = Client::new(rocket()).unwrap();
             let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
