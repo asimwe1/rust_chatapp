@@ -6,6 +6,7 @@ mod from_uri_param;
 mod origin;
 mod authority;
 mod absolute;
+mod segments;
 
 pub use parse::uri::Error;
 
@@ -15,3 +16,4 @@ pub use self::origin::*;
 pub use self::absolute::*;
 pub use self::uri_display::*;
 pub use self::from_uri_param::*;
+pub use self::segments::*;

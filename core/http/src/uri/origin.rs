@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use ext::IntoOwned;
 use parse::{Indexed, IndexedStr};
-use uri::{as_utf8_unchecked, Error};
+use uri::{as_utf8_unchecked, Error, Segments};
 
 use state::Storage;
 
@@ -449,57 +449,6 @@ impl<'a> Display for Origin<'a> {
 
         Ok(())
     }
-}
-
-/// Iterator over the segments of an absolute URI path. Skips empty segments.
-///
-/// ### Examples
-///
-/// ```rust
-/// # extern crate rocket;
-/// use rocket::http::uri::Origin;
-///
-/// let uri = Origin::parse("/a/////b/c////////d").unwrap();
-/// let segments = uri.segments();
-/// for (i, segment) in segments.enumerate() {
-///     match i {
-///         0 => assert_eq!(segment, "a"),
-///         1 => assert_eq!(segment, "b"),
-///         2 => assert_eq!(segment, "c"),
-///         3 => assert_eq!(segment, "d"),
-///         _ => panic!("only four segments")
-///     }
-/// }
-/// ```
-#[derive(Clone, Debug)]
-pub struct Segments<'a>(pub &'a str);
-
-impl<'a> Iterator for Segments<'a> {
-    type Item = &'a str;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        // Find the start of the next segment (first that's not '/').
-        let i = self.0.find(|c| c != '/')?;
-
-        // Get the index of the first character that _is_ a '/' after start.
-        // j = index of first character after i (hence the i +) that's not a '/'
-        let j = self.0[i..].find('/').map_or(self.0.len(), |j| i + j);
-
-        // Save the result, update the iterator, and return!
-        let result = Some(&self.0[i..j]);
-        self.0 = &self.0[j..];
-        result
-    }
-
-    // TODO: Potentially take a second parameter with Option<cached count> and
-    // return it here if it's Some. The downside is that a decision has to be
-    // made about -when- to compute and cache that count. A place to do it is in
-    // the segments() method. But this means that the count will always be
-    // computed regardless of whether it's needed. Maybe this is ok. We'll see.
-    // fn count(self) -> usize where Self: Sized {
-    //     self.1.unwrap_or_else(self.fold(0, |cnt, _| cnt + 1))
-    // }
 }
 
 #[cfg(test)]

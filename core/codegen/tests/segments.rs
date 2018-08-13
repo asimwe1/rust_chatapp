@@ -4,7 +4,7 @@
 extern crate rocket;
 
 use std::path::PathBuf;
-use rocket::request::SegmentError;
+use rocket::http::uri::SegmentError;
 
 #[post("/<a>/<b..>")]
 fn get(a: String, b: PathBuf) -> String {
