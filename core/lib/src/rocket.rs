@@ -492,7 +492,7 @@ impl Rocket {
     /// # }
     /// ```
     #[inline]
-    pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
+    pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         info!("{}{} '{}':",
               Paint::masked("🛰  "),
               Paint::purple("Mounting"),
@@ -520,7 +520,7 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        for mut route in routes {
+        for mut route in routes.into() {
             let complete_uri = format!("{}/{}", base_uri, route.uri);
             let uri = Origin::parse_route(&complete_uri)
                 .unwrap_or_else(|e| {

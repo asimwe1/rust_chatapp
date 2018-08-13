@@ -38,23 +38,12 @@ pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 /// Such a handler might be written and used as follows:
 ///
 /// ```rust
-/// # #[derive(Copy, Clone)]
-/// # enum Kind {
-/// #     Simple,
-/// #     Intermediate,
-/// #     Complex,
-/// # }
+/// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
 /// use rocket::handler::{self, Handler, Outcome};
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
-///
-/// impl CustomHandler {
-///     pub fn new(kind: Kind) -> Vec<Route> {
-///         vec![Route::new(Method::Get, "/", CustomHandler(kind))]
-///     }
-/// }
 ///
 /// impl Handler for CustomHandler {
 ///     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
@@ -66,10 +55,16 @@ pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 ///     }
 /// }
 ///
+/// impl Into<Vec<Route>> for CustomHandler {
+///     fn into(self) -> Vec<Route> {
+///         vec![Route::new(Method::Get, "/", self)]
+///     }
+/// }
+///
 /// fn main() {
 /// # if false {
 ///     rocket::ignite()
-///         .mount("/", CustomHandler::new(Kind::Simple))
+///         .mount("/", CustomHandler(Kind::Simple))
 ///         .launch();
 /// # }
 /// }
@@ -81,8 +76,8 @@ pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 ///      `CustomHandler` implements `Cloneable` automatically. The `Cloneable`
 ///      trait serves no other purpose but to ensure that every `Handler` can be
 ///      cloned, allowing `Route`s to be cloned.
-///   2. The `CustomHandler::new()` method returns a vector of routes so that
-///      the user can trivially mount the handler.
+///   2. `CustomHandler` implements `Into<Vec<Route>>`, allowing an instance to
+///      be used directly as the second parameter to `rocket.mount()`.
 ///   3. Unlike static-function-based handlers, this custom handler can make use
 ///      of any internal state.
 ///
