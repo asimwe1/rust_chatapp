@@ -11,11 +11,12 @@ keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT/Apache-2.0"
 
 [features]
-default = ["json"]
+default = ["json", "static_files"]
 json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
+static_files = []
 
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]

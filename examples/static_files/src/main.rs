@@ -2,27 +2,14 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
+extern crate rocket_contrib;
 
-#[cfg(test)]
-mod tests;
+#[cfg(test)] mod tests;
 
-use std::io;
-use std::path::{Path, PathBuf};
-
-use rocket::response::NamedFile;
-
-#[get("/")]
-fn index() -> io::Result<NamedFile> {
-    NamedFile::open("static/index.html")
-}
-
-#[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
-}
+use rocket_contrib::static_files::StaticFiles;
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index, files])
+    rocket::ignite().mount("/", StaticFiles::from("static"))
 }
 
 fn main() {

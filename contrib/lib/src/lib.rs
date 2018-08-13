@@ -18,6 +18,7 @@
 //! an asterisk next to the features that are enabled by default:
 //!
 //! * [json*](struct.Json.html)
+//! * [static_files*](static_files)
 //! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
@@ -82,3 +83,6 @@ mod uuid;
 
 #[cfg(feature = "uuid")]
 pub use uuid::{Uuid, UuidParseError};
+
+#[cfg(feature = "static_files")]
+pub mod static_files;

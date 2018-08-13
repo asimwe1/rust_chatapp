@@ -21,7 +21,7 @@ fn test_query_file<T> (path: &str, file: T, status: Status)
 }
 
 fn read_file_content(path: &str) -> Vec<u8> {
-    let mut fp = File::open(&path).expect(&format!("Can not open {}", path));
+    let mut fp = File::open(&path).expect(&format!("Can't open {}", path));
     let mut file_content = vec![];
 
     fp.read_to_end(&mut file_content).expect(&format!("Reading {} failed.", path));
