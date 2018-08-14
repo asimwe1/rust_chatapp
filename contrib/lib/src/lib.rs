@@ -49,7 +49,7 @@ extern crate serde;
 extern crate serde_json;
 
 #[cfg(feature = "json")]
-pub use serde_json::json_internal;
+pub use serde_json::{json_internal, json_internal_vec};
 
 #[cfg(feature = "handlebars_templates")]
 pub extern crate handlebars;
