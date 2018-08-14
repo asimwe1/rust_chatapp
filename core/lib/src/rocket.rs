@@ -649,7 +649,9 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch(|_| println!("Rocket is launching!")))
+    ///         .attach(AdHoc::on_launch("Launch Message", |_| {
+    ///             println!("Rocket is launching!");
+    ///         }))
     ///         .launch();
     /// # }
     /// }
@@ -821,7 +823,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch(|rocket| {
+    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
     ///             println!("Rocket launch config: {:?}", rocket.config());
     ///         }))
     ///         .launch();

@@ -23,8 +23,8 @@
 //!
 //! ```rust
 //! # use rocket::fairing::AdHoc;
-//! # let req_fairing = AdHoc::on_request(|_, _| ());
-//! # let res_fairing = AdHoc::on_response(|_, _| ());
+//! # let req_fairing = AdHoc::on_request("Request", |_, _| ());
+//! # let res_fairing = AdHoc::on_response("Response", |_, _| ());
 //! let rocket = rocket::ignite()
 //!     .attach(req_fairing)
 //!     .attach(res_fairing);

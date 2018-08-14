@@ -25,11 +25,11 @@ fn index(counter: State<Counter>) -> String {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index])
-        .attach(AdHoc::on_attach(|rocket| {
+        .attach(AdHoc::on_attach("Outer", |rocket| {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)
-                .attach(AdHoc::on_request(|req, _| {
+                .attach(AdHoc::on_request("Inner", |req, _| {
                     if req.method() == Method::Get {
                         let counter = req.guard::<State<Counter>>().unwrap();
                         counter.get.fetch_add(1, Ordering::Release);

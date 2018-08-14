@@ -194,22 +194,22 @@ function or closure. Using the `AdHoc` type is easy: simply call the
 to create an `AdHoc` structure from a function or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached
-ad-hoc fairings. The first, a launch fairing, simply prints a message indicating
-that the application is about to the launch. The second, a request fairing,
-changes the method of all requests to `PUT`.
+ad-hoc fairings. The first, a launch fairing named "Launch Printer", simply
+prints a message indicating that the application is about to the launch. The
+second named "Put Rewriter", a request fairing, rewrites the method of all
+requests to be `PUT`.
 
 ```rust
 use rocket::fairing::AdHoc;
 use rocket::http::Method;
 
 rocket::ignite()
-    .attach(AdHoc::on_launch(|_| {
-        println!("Rocket is about to launch! Exciting!");
+    .attach(AdHoc::on_launch("Launch Printer", |_| {
+        println!("Rocket is about to launch! Exciting! Here we go...");
     }))
-    .attach(AdHoc::on_request(|req, _| {
+    .attach(AdHoc::on_request("Put Rewriter", |req, _| {
         req.set_method(Method::Put);
     }));
 ```
 
 [`AdHoc`]: https://api.rocket.rs/rocket/fairing/enum.AdHoc.html
-

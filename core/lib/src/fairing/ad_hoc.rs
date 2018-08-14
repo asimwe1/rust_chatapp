@@ -19,41 +19,43 @@ use fairing::{Fairing, Kind, Info};
 /// # Example
 ///
 /// The following snippet creates a `Rocket` instance with two ad-hoc fairings.
-/// The first, a launch fairing, simply prints a message indicating that the
-/// application is about to the launch. The second, a request fairing, rewrites
-/// the method of all requests to be `PUT`.
+/// The first, a launch fairing named "Launch Printer", simply prints a message
+/// indicating that the application is about to the launch. The second named
+/// "Put Rewriter", a request fairing, rewrites the method of all requests to be
+/// `PUT`.
 ///
 /// ```rust
 /// use rocket::fairing::AdHoc;
 /// use rocket::http::Method;
 ///
 /// rocket::ignite()
-///     .attach(AdHoc::on_launch(|_| {
+///     .attach(AdHoc::on_launch("Launch Printer", |_| {
 ///         println!("Rocket is about to launch! Exciting! Here we go...");
 ///     }))
-///     .attach(AdHoc::on_request(|req, _| {
+///     .attach(AdHoc::on_request("Put Rewriter", |req, _| {
 ///         req.set_method(Method::Put);
 ///     }));
 /// ```
-pub enum AdHoc {
+pub struct AdHoc {
+    name: &'static str,
+    kind: AdHocKind,
+}
+
+enum AdHocKind {
     /// An ad-hoc **attach** fairing. Called when the fairing is attached.
-    #[doc(hidden)]
     Attach(Mutex<Option<Box<FnBox(Rocket) -> Result<Rocket, Rocket> + Send + 'static>>>),
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
-    #[doc(hidden)]
     Launch(Mutex<Option<Box<FnBox(&Rocket) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
-    #[doc(hidden)]
     Request(Box<Fn(&mut Request, &Data) + Send + Sync + 'static>),
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
-    #[doc(hidden)]
     Response(Box<Fn(&Request, &mut Response) + Send + Sync + 'static>),
 }
 
 impl AdHoc {
-    /// Constructs an `AdHoc` attach fairing. The function `f` will be called by
-    /// Rocket when this fairing is attached.
+    /// Constructs an `AdHoc` attach fairing named `name`. The function `f` will
+    /// be called by Rocket when this fairing is attached.
     ///
     /// # Example
     ///
@@ -61,16 +63,16 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op attach fairing.
-    /// let fairing = AdHoc::on_attach(|rocket| Ok(rocket));
+    /// let fairing = AdHoc::on_attach("No-Op", |rocket| Ok(rocket));
     /// ```
-    pub fn on_attach<F>(f: F) -> AdHoc
+    pub fn on_attach<F>(name: &'static str, f: F) -> AdHoc
         where F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static
     {
-        AdHoc::Attach(Mutex::new(Some(Box::new(f))))
+        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
     }
 
-    /// Constructs an `AdHoc` launch fairing. The function `f` will be called by
-    /// Rocket just prior to launching.
+    /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
+    /// be called by Rocket just prior to launching.
     ///
     /// # Example
     ///
@@ -78,18 +80,18 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // A fairing that prints a message just before launching.
-    /// let fairing = AdHoc::on_launch(|rocket| {
+    /// let fairing = AdHoc::on_launch("Launch Count", |rocket| {
     ///     println!("Launching in T-3..2..1..");
     /// });
     /// ```
-    pub fn on_launch<F>(f: F) -> AdHoc
+    pub fn on_launch<F>(name: &'static str, f: F) -> AdHoc
         where F: FnOnce(&Rocket) + Send + 'static
     {
-        AdHoc::Launch(Mutex::new(Some(Box::new(f))))
+        AdHoc { name, kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))) }
     }
 
-    /// Constructs an `AdHoc` request fairing. The function `f` will be called
-    /// by Rocket when a new request is received.
+    /// Constructs an `AdHoc` request fairing named `name`. The function `f`
+    /// will be called by Rocket when a new request is received.
     ///
     /// # Example
     ///
@@ -97,19 +99,19 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op request fairing.
-    /// let fairing = AdHoc::on_request(|req, data| {
+    /// let fairing = AdHoc::on_request("Dummy", |req, data| {
     ///     // do something with the request and data...
     /// #   let (_, _) = (req, data);
     /// });
     /// ```
-    pub fn on_request<F>(f: F) -> AdHoc
+    pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
         where F: Fn(&mut Request, &Data) + Send + Sync + 'static
     {
-        AdHoc::Request(Box::new(f))
+        AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
 
-    /// Constructs an `AdHoc` response fairing. The function `f` will be called
-    /// by Rocket when a response is ready to be sent.
+    /// Constructs an `AdHoc` response fairing named `name`. The function `f`
+    /// will be called by Rocket when a response is ready to be sent.
     ///
     /// # Example
     ///
@@ -117,51 +119,32 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op response fairing.
-    /// let fairing = AdHoc::on_response(|req, resp| {
+    /// let fairing = AdHoc::on_response("Dummy", |req, resp| {
     ///     // do something with the request and pending response...
     /// #   let (_, _) = (req, resp);
     /// });
     /// ```
-    pub fn on_response<F>(f: F) -> AdHoc
+    pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
         where F: Fn(&Request, &mut Response) + Send + Sync + 'static
     {
-        AdHoc::Response(Box::new(f))
+        AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }
 }
 
 impl Fairing for AdHoc {
     fn info(&self) -> Info {
-        use self::AdHoc::*;
-        match *self {
-            Attach(_) => {
-                Info {
-                    name: "AdHoc::Attach",
-                    kind: Kind::Attach,
-                }
-            }
-            Launch(_) => {
-                Info {
-                    name: "AdHoc::Launch",
-                    kind: Kind::Launch,
-                }
-            }
-            Request(_) => {
-                Info {
-                    name: "AdHoc::Request",
-                    kind: Kind::Request,
-                }
-            }
-            Response(_) => {
-                Info {
-                    name: "AdHoc::Response",
-                    kind: Kind::Response,
-                }
-            }
-        }
+        let kind = match self.kind {
+            AdHocKind::Attach(_) => Kind::Attach,
+            AdHocKind::Launch(_) => Kind::Launch,
+            AdHocKind::Request(_) => Kind::Request,
+            AdHocKind::Response(_) => Kind::Response,
+        };
+
+        Info { name: self.name, kind }
     }
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        if let AdHoc::Attach(ref mutex) = *self {
+        if let AdHocKind::Attach(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Attach lock");
             option.take()
                 .expect("internal error: `on_attach` single-call invariant broken")
@@ -172,7 +155,7 @@ impl Fairing for AdHoc {
     }
 
     fn on_launch(&self, rocket: &Rocket) {
-        if let AdHoc::Launch(ref mutex) = *self {
+        if let AdHocKind::Launch(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Launch lock");
             option.take()
                 .expect("internal error: `on_launch` single-call invariant broken")
@@ -181,13 +164,13 @@ impl Fairing for AdHoc {
     }
 
     fn on_request(&self, request: &mut Request, data: &Data) {
-        if let AdHoc::Request(ref callback) = *self {
+        if let AdHocKind::Request(ref callback) = self.kind {
             callback(request, data)
         }
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
-        if let AdHoc::Response(ref callback) = *self {
+        if let AdHocKind::Response(ref callback) = self.kind {
             callback(request, response)
         }
     }

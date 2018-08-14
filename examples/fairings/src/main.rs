@@ -67,22 +67,22 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::on_attach(|rocket| {
+        .attach(AdHoc::on_attach("Token State", |rocket| {
             println!("Adding token managed state...");
             let token_val = rocket.config().get_int("token").unwrap_or(-1);
             Ok(rocket.manage(Token(token_val)))
         }))
-        .attach(AdHoc::on_launch(|_| {
+        .attach(AdHoc::on_launch("Launch Message", |_| {
             println!("Rocket is about to launch!");
         }))
-        .attach(AdHoc::on_request(|req, _| {
+        .attach(AdHoc::on_request("PUT Rewriter", |req, _| {
             println!("    => Incoming request: {}", req);
             if req.uri().path() == "/" {
                 println!("    => Changing method to `PUT`.");
                 req.set_method(Method::Put);
             }
         }))
-        .attach(AdHoc::on_response(|req, res| {
+        .attach(AdHoc::on_response("Response Rewriter", |req, res| {
             if req.uri().path() == "/" {
                 println!("    => Rewriting response body.");
                 res.set_sized_body(Cursor::new("Hello, fairings!"));
