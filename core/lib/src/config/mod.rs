@@ -477,8 +477,9 @@ crate fn init() -> Config {
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
-            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
-                | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..) => bail(e),
+            | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
+            | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..)
+            | Missing(..) => bail(e),
             IoError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }

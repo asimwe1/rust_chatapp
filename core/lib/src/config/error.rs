@@ -48,6 +48,10 @@ pub enum ConfigError {
     ///
     /// Parameters: (key)
     UnknownKey(String),
+    /// The entry (key) was expected but was missing.
+    ///
+    /// Parameters: (key)
+    Missing(String),
 }
 
 impl ConfigError {
@@ -101,6 +105,9 @@ impl ConfigError {
                 error!("the configuration key '{}' is unknown and disallowed in \
                        this position", White.paint(key));
             }
+            Missing(ref key) => {
+                error!("missing configuration key: '{}'", White.paint(key));
+            }
         }
     }
 
@@ -134,6 +141,7 @@ impl fmt::Display for ConfigError {
             BadEnv(ref e) => write!(f, "{:?} is not a valid `ROCKET_ENV` value", e),
             ParseError(..) => write!(f, "the config file contains invalid TOML"),
             UnknownKey(ref k) => write!(f, "'{}' is an unknown key", k),
+            Missing(ref k) => write!(f, "missing key: '{}'", k),
             BadEntry(ref e, _) => {
                 write!(f, "{:?} is not a valid `[environment]` entry", e)
             }
@@ -161,6 +169,7 @@ impl Error for ConfigError {
             BadType(..) => "a key was specified with a value of the wrong type",
             BadEnvVal(..) => "an environment variable could not be parsed",
             UnknownKey(..) => "an unknown key was used in a disallowed position",
+            Missing(..) => "an expected key was not found",
         }
     }
 }
@@ -183,10 +192,11 @@ impl PartialEq for ConfigError {
             (&BadEnvVal(ref k1, ref v1, _), &BadEnvVal(ref k2, ref v2, _)) => {
                 k1 == k2 && v1 == v2
             }
+            (&Missing(ref k1), &Missing(ref k2)) => k1 == k2,
             (&BadCWD, _) | (&NotFound, _) | (&IoError, _) | (&Io(..), _)
                 | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
                 | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
-                | (&BadEnvVal(..), _) => false
+                | (&BadEnvVal(..), _) | (&Missing(..), _) => false
         }
     }
 }

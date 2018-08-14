@@ -667,11 +667,33 @@ impl Config {
         self.secret_key.inner()
     }
 
+    /// Attempts to retrieve the extra named `name` as a raw value.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Value};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("name", "value")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.get_extra("name"), Ok(&Value::String("value".into())));
+    /// assert!(config.get_extra("other").is_err());
+    /// ```
+    pub fn get_extra<'a>(&'a self, name: &str) -> Result<&'a Value> {
+        self.extras.get(name).ok_or_else(|| ConfigError::Missing(name.into()))
+    }
+
     /// Attempts to retrieve the extra named `name` as a borrowed string.
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a string, returns a
     /// `BadType` error.
     ///
@@ -687,7 +709,7 @@ impl Config {
     /// assert_eq!(config.get_str("my_extra"), Ok("extra_value"));
     /// ```
     pub fn get_str<'a>(&'a self, name: &str) -> Result<&'a str> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_str().ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
     }
 
@@ -695,7 +717,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a string, returns a
     /// `BadType` error.
     ///
@@ -718,7 +740,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not an integer, returns a
     /// `BadType` error.
     ///
@@ -734,7 +756,7 @@ impl Config {
     /// assert_eq!(config.get_int("my_extra"), Ok(1025));
     /// ```
     pub fn get_int(&self, name: &str) -> Result<i64> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_integer().ok_or_else(|| self.bad_type(name, val.type_str(), "an integer"))
     }
 
@@ -742,7 +764,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a boolean, returns a
     /// `BadType` error.
     ///
@@ -758,7 +780,7 @@ impl Config {
     /// assert_eq!(config.get_bool("my_extra"), Ok(true));
     /// ```
     pub fn get_bool(&self, name: &str) -> Result<bool> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_bool().ok_or_else(|| self.bad_type(name, val.type_str(), "a boolean"))
     }
 
@@ -766,7 +788,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a float, returns a
     /// `BadType` error.
     ///
@@ -782,7 +804,7 @@ impl Config {
     /// assert_eq!(config.get_float("pi"), Ok(3.14159));
     /// ```
     pub fn get_float(&self, name: &str) -> Result<f64> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_float().ok_or_else(|| self.bad_type(name, val.type_str(), "a float"))
     }
 
@@ -790,7 +812,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not an array, returns a
     /// `BadType` error.
     ///
@@ -806,7 +828,7 @@ impl Config {
     /// assert!(config.get_slice("numbers").is_ok());
     /// ```
     pub fn get_slice(&self, name: &str) -> Result<&Array> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_array().ok_or_else(|| self.bad_type(name, val.type_str(), "an array"))
     }
 
@@ -814,7 +836,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a table, returns a
     /// `BadType` error.
     ///
@@ -834,7 +856,7 @@ impl Config {
     /// assert!(config.get_table("my_table").is_ok());
     /// ```
     pub fn get_table(&self, name: &str) -> Result<&Table> {
-        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        let val = self.get_extra(name)?;
         val.as_table().ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
     }
 
@@ -842,7 +864,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` doesn't exist, returns an `Err` of `Missing`.
     /// If an extra with `name` _does_ exist but is not a datetime, returns a
     /// `BadType` error.
     ///
@@ -860,8 +882,9 @@ impl Config {
     /// assert_eq!(config.get_datetime("my_date"), Ok(&date));
     /// ```
     pub fn get_datetime(&self, name: &str) -> Result<&Datetime> {
-        let v = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        v.as_datetime().ok_or_else(|| self.bad_type(name, v.type_str(), "a datetime"))
+        let val = self.get_extra(name)?;
+        val.as_datetime()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "a datetime"))
     }
 
     /// Returns the path at which the configuration file for `self` is stored.
