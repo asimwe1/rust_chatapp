@@ -17,8 +17,12 @@ msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 static_files = []
+
+# Database pooling features.
+# Iternal use only.
 database_pool_codegen = ["rocket_contrib_codegen", "rocket_contrib_codegen/database_attribute"]
 database_pool = ["r2d2", "database_pool_codegen"]
+# External features.
 diesel_pg_pool = ["database_pool", "diesel/postgres", "diesel/r2d2"]
 diesel_sqlite_pool = ["database_pool", "diesel/sqlite", "diesel/r2d2"]
 diesel_mysql_pool = ["database_pool", "diesel/mysql", "diesel/r2d2"]

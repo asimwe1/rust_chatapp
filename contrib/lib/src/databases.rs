@@ -1,3 +1,5 @@
+//! Traits, utilities, and a macro for easy database connection pooling.
+//!
 //! # Overview
 //!
 //! This module provides traits, utilities, and a procedural macro that allows
@@ -5,8 +7,7 @@
 //! connection pools. A _database connection pool_ is a data structure that
 //! maintains active database connections for later use in the application.
 //! This implementation of connection pooling support is based on
-//! [`r2d2`](https://crates.io/crates/r2d2) and exposes connections through
-//! [request guards](../../rocket/request/trait.FromRequest.html). Databases are
+//! [`r2d2`] and exposes connections through [request guards]. Databases are
 //! individually configured through Rocket's regular configuration mechanisms: a
 //! `Rocket.toml` file, environment variables, or procedurally.
 //!
@@ -14,31 +15,33 @@
 //! in three simple steps:
 //!
 //!   1. Configure your databases in `Rocket.toml`.
-//! (see [Configuration](#configuration))
+//!      (see [Configuration](#configuration))
 //!   2. Associate a request guard type and fairing with each database.
-//! (see [Guard Types](#guard-types))
+//!      (see [Guard Types](#guard-types))
 //!   3. Use the request guard to retrieve a connection in a handler.
-//! (see [Handlers](#handlers))
+//!      (see [Handlers](#handlers))
 //!
-//! For a list of supported databases, see [Provided Databases](#provided).
-//! This support can be easily extended by implementing the
-//! [`Poolable`](trait.Poolable.html) trait. See [Extending](#extending)
-//! for more.
+//! For a list of supported databases, see [Provided Databases](#provided). This
+//! support can be easily extended by implementing the [`Poolable`] trait. See
+//! [Extending](#extending) for more.
 //!
-//! The next section provides a complete but un-detailed example of these steps
-//! in actions. The sections following provide more detail for each component.
+//! [`r2d2`]: https://crates.io/crates/r2d2
+//! [request guards]: [rocket::FromRequest]
 //!
 //! ## Example
 //!
-//! Before using this library, the `database_pool` feature in `rocket_contrib`
-//! must be enabled:
+//! Before using this library, the feature corresponding to your database type
+//! in `rocket_contrib` must be enabled:
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
 //! version = "0.4.0-dev"
 //! default-features = false
-//! features = ["database_pool", "diesel_sqlite_pool"]
+//! features = ["diesel_sqlite_pool"]
 //! ```
+//!
+//! See [Provided](#provided) for a list of supported database and their
+//! associated feature name.
 //!
 //! In `Rocket.toml` or the equivalent via environment variables:
 //!
@@ -49,29 +52,49 @@
 //!
 //! In your application's source code, one-time:
 //!
-//! ```rust,ignore
-//! #![feature(use_extern_macros)]
-//! extern crate rocket;
-//! extern crate rocket_contrib;
-//!
+//! ```rust
+//! # #![feature(use_extern_macros)]
+//! #
+//! # extern crate rocket;
+//! # extern crate rocket_contrib;
+//! #
 //! use rocket_contrib::databases::{database, diesel};
 //!
 //! #[database("sqlite_logs")]
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
 //! fn main() {
+//! # if false {
 //!     rocket::ignite()
 //!        .attach(LogsDbConn::fairing())
 //!        .launch();
+//! # }
 //! }
 //! ```
 //!
 //! Whenever a connection to the database is needed:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #![feature(plugin, decl_macro, use_extern_macros)]
+//! # #![plugin(rocket_codegen)]
+//! #
+//! # extern crate rocket;
+//! # extern crate rocket_contrib;
+//! #
+//! # use rocket_contrib::databases::{database, diesel};
+//! #
+//! # #[database("sqlite_logs")]
+//! # struct LogsDbConn(diesel::SqliteConnection);
+//! #
+//! # type Logs = ();
+//! # type Result<T> = ::std::result::Result<T, ()>;
+//! #
 //! #[get("/logs/<id>")]
-//! fn get_logs(conn: LogsDbConn, id: LogId) -> Result<Logs> {
+//! fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
+//! # /*
 //!     Logs::by_id(&conn, id)
+//! # */
+//! # Ok(())
 //! }
 //! ```
 //!
@@ -79,38 +102,49 @@
 //!
 //! ## Configuration
 //!
-//! There are a few ways to configure your database connection. You can use the
-//! `Rocket.toml` file, you can build it yourself procedurally via the
-//! `rocket::custom()` method, or through environment variables.
+//! Databases can be configured via various mechanisms: `Rocket.toml`,
+//! procedurally via `rocket::custom()`, or via environment variables.
 //!
-//! ### Configuring via `Rocket.toml`
+//! ### `Rocket.toml`
 //!
-//! The following examples are all valid ways of configuring your database via
-//! the `Rocket.toml` file.
-//!
-//! The basic structure includes attaching a key to the `global.databases` table
-//! and including the __required__ keys `url` and `pool_size`. Additional
-//! options that can be added to the table vary by adapter and are referenced
-//! below in the [Supported Databases](#provided) section.
+//! To configure a database via `Rocket.toml`, add a table for each database
+//! to the `databases` table where the key is a name of your choice. The table
+//! should have a `url` key and, optionally, a `pool_size` key. This looks as
+//! follows:
 //!
 //! ```toml
+//! // Option 1:
 //! [global.databases]
-//! my_database = { url = "database.sqlite", pool_size = 10 }
+//! sqlite_db = { url = "db.sqlite" }
 //!
-//! [[global.databases.other_database]]
-//! url = "mysql://root:root@localhost/other_database
-//! pool_size = 25
+//! // Option 2:
+//! [global.databases.pg_db]
+//! url = "mysql://root:root@localhost/pg_db"
+//!
+//! // With a `pool_size` key:
+//! [global.databases]
+//! sqlite_db = { url = "db.sqlite", pool_size = 20 }
 //! ```
 //!
-//! ### Configuring procedurally
+//! The table _requires_ one key:
 //!
-//! It's also possible to procedurally configure your database via the
-//! `rocket::custom()` method. Below is an example of doing this:
+//!   * `url` - the URl to the database
 //!
-//! ```rust,ignore
+//! Additionally, all configurations accept the following _optional_ keys:
+//!
+//!   * `pool_size` - the size of the pool, i.e., the number of connections to
+//!     pool (defaults to the configured number of workers)
+//!
+//! Additional options may be required or supported by other adapters.
+//!
+//! ### Procedurally
+//!
+//! Databases can also be configured procedurally database via
+//! `rocket::custom()`. The example below does just this:
+//!
+//! ```rust
 //! extern crate rocket;
 //!
-//! use std::io::Error;
 //! use std::collections::HashMap;
 //! use rocket::config::{Config, Environment, Value};
 //!
@@ -118,6 +152,8 @@
 //!     let mut database_config = HashMap::new();
 //!     let mut databases = HashMap::new();
 //!
+//!     // This is the same as the following TOML:
+//!     // my_db = { url = "database.sqlite" }
 //!     database_config.insert("url", Value::from("database.sqlite"));
 //!     databases.insert("my_db", Value::from(database_config));
 //!
@@ -126,15 +162,18 @@
 //!         .finalize()
 //!         .unwrap();
 //!
+//! # if false {
 //!     rocket::custom(config).launch();
+//! # }
 //! }
 //! ```
 //!
-//! ### Configuring via Environment Variable
+//! ### Environment Variables
 //!
-//! The final way to configure your databases is via an environment variable.
-//! Following the syntax laid out in the guide on [Environment Variables](https://rocket.rs/guide/configuration/#environment-variables),
-//! you can configure your database this way. Below is an example
+//! Lastly, databases can be configured via environment variables by specifying
+//! the `databases` table as detailed in the [Environment Variables
+//! configuration
+//! guide](https://rocket.rs/guide/configuration/#environment-variables):
 //!
 //! ```bash
 //! ROCKET_DATABASES={my_db={url="db.sqlite"}}
@@ -142,49 +181,61 @@
 //!
 //! ## Guard Types
 //!
-//! The included database support generates request guard types that can be used
-//! with Rocket handlers. In order to associate a configured database with a
-//! type, you need to use the `database` procedural macro:
+//! Once a database has been configured, the `#[database]` attribute can be used
+//! to tie a type in your application to a configured database. The database
+//! attributes accepts a single string parameter that indicates the name of the
+//! database. This corresponds to the database name set as the database's
+//! configuration key.
+//!
+//! The attribute can only be applied to unit-like structs with one type. The
+//! internal type of the structure must implement [`Poolable`].
 //!
 //! ```rust
 //! # #![feature(use_extern_macros)]
 //! # extern crate rocket;
 //! # extern crate rocket_contrib;
-//! # use rocket_contrib::databases::{database, diesel};
+//! use rocket_contrib::databases::{database, diesel};
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //! ```
 //!
-//! From there, the macro will generate code to turn your defined type into a
-//! valid request guard type. The interior type must have an implementation of
-//! the [`Poolable` trait](trait.Poolable.html). The trait implements methods
-//! on the interior type that are used by the generated code to spin up a
-//! connection pool. The trait can be used to extend other connection types that
-//! aren't supported in this library. See the section on [Extending](#extending)
-//! for more information.
+//! The macro generates a [`FromRequest`] implementation for the decorated type,
+//! allowing the type to be used as a request guard. This implementation
+//! retrieves a connection from the database pool or fails with a
+//! `Status::ServiceUnavailable` if no connections are available. The macro also
+//! generates an implementation of the [`Deref`](::std::ops::Deref) trait with
+//! the internal `Poolable` type as the target.
 //!
-//! The generated code will give your defined type two methods, `get_one` and
-//! `fairing`, as well as implementations of the [`FromRequest`](../../rocket/request/trait.FromRequest.html)
-//! and [`Deref`](../../std/ops/trait.Deref.html) traits.
+//! [`FromRequest`]: /rocket/request/trait.FromRequest.html
 //!
-//! The `fairing` method will allow you to attach your database type to the
-//! application state via the method call. You __will need__ to call the
-//! `fairing` method on your type in order to be able to retrieve connections
-//! in your request guards.
+//! The macro will also generate two inherent methods on the decorated type:
 //!
-//! Below is an example:
+//!   * `fn fairing() -> impl Fairing`
 //!
-//! ```rust,ignore
+//!      Returns a fairing that initializes the associated database connection
+//!      pool.
+//!
+//!   * `fn get_one(&Rocket) -> Option<Self>`
+//!
+//!     Retrieves a connection from the configured pool. Returns `Some` as long
+//!     as `Self::fairing()` has been attached and there is at least one
+//!     connection in the pool.
+//!
+//! The fairing returned from the generated `fairing()` method _must_ be
+//! attached for the request guard implementation to succeed. Putting the pieces
+//! together, a use of the `#[database]` attribute looks as follows:
+//!
+//! ```rust
 //! # #![feature(use_extern_macros)]
-//! #
 //! # extern crate rocket;
 //! # extern crate rocket_contrib;
 //! #
 //! # use std::collections::HashMap;
 //! # use rocket::config::{Config, Environment, Value};
-//! # use rocket_contrib::databases::{database, diesel};
 //! #
+//! use rocket_contrib::databases::{database, diesel};
+//!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
@@ -201,88 +252,116 @@
 //! #         .finalize()
 //! #         .unwrap();
 //! #
+//! # if false {
 //!     rocket::custom(config)
-//!         .attach(MyDatabase::fairing()); // Required!
+//!         .attach(MyDatabase::fairing())
 //!         .launch();
+//! # }
 //! }
 //! ```
 //!
 //! ## Handlers
 //!
-//! For request handlers, you should use the database type you defined in your
-//! code as a request guard. Because of the `FromRequest` implementation that's
-//! generated at compile-time, you can use this type in such a way. For example:
+//! Finally, simply use your type as a request guard in a handler to retrieve a
+//! connection to a given database:
 //!
-//! ```rust,ignore
-//! #[database("my_db")
-//! struct MyDatabase(diesel::MysqlConnection);
-//! ...
+//! ```rust
+//! # #![feature(use_extern_macros)]
+//! # #![feature(plugin, decl_macro)]
+//! # #![plugin(rocket_codegen)]
+//! #
+//! # extern crate rocket;
+//! # extern crate rocket_contrib;
+//! # use rocket_contrib::databases::{database, diesel};
+//! #[database("my_db")]
+//! struct MyDatabase(diesel::SqliteConnection);
+//!
 //! #[get("/")]
 //! fn my_handler(conn: MyDatabase) {
+//! # /*
 //!     ...
+//! # */
 //! }
+//! # fn main() {  }
 //! ```
 //!
-//! Additionally, because of the `Deref` implementation, you can dereference
-//! the database type in order to access the inner connection type. For example:
+//! The generated `Deref` implementation allows easy access to the inner
+//! connection type:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #![feature(plugin, decl_macro, use_extern_macros)]
+//! # #![plugin(rocket_codegen)]
+//! #
+//! # extern crate rocket;
+//! # extern crate rocket_contrib;
+//! # use rocket_contrib::databases::{database, diesel};
+//! #
+//! # type Data = ();
+//! #
+//! #[database("my_db")]
+//! struct MyDatabase(diesel::SqliteConnection);
+//!
+//! fn load_from_db(conn: &diesel::SqliteConnection) -> Data {
+//!     // Do something with connection, return some data.
+//!     # ()
+//! }
+//!
 //! #[get("/")]
-//! fn my_handler(conn: MyDatabase) {
-//!     ...
-//!     Thing::load(&conn);
-//!     ...
+//! fn my_handler(conn: MyDatabase) -> Data {
+//!     load_from_db(&conn)
 //! }
+//! # fn main() {  }
 //! ```
-//!
-//! Under the hood, the dereferencing of your type is returning the interior
-//! type of your connection:
-//!
-//! ```rust,ignore
-//! &self.0
-//! ```
-//!
-//! This section should be simple. It should cover:
-//!
-//!   * The fact that `MyType` is not a request guard, and you can use it.
-//!   * The `Deref` impl and what it means for using `&my_conn`.
 //!
 //! # Database Support
 //!
-//! This library provides built-in support for many popular databases and their
-//! corresponding drivers. It also makes extending this support simple.
+//! Built-in support is provided for many popular databases and drivers. Support
+//! can be easily extended by [`Poolable`] implementations.
 //!
 //! ## Provided
 //!
-//! The list below includes all presently supported database adapters, their
-//! corresponding [`Poolable`] type, and any special considerations for
-//! configuration, if any.
+//! The list below includes all presently supported database adapters and their
+//! corresponding [`Poolable`] type.
 //!
-//! | Database Kind    | Driver                                                                | `Poolable` Type                                                                                                 | Feature                | Notes |
-//! | -- ------------- | -----------------------                                               | -------------------------                                                                                       | ---------------------  | ----- |
-//! | MySQL            | [Diesel](https://diesel.rs)                                           | [`diesel::MysqlConnection`](http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html)                     | `diesel_mysql_pool`    | None  |
-//! | MySQL            | [`rust-mysql-simple`](https://github.com/blackbeam/rust-mysql-simple) | [`mysql::conn`](https://docs.rs/mysql/14.0.0/mysql/struct.Conn.html)                                            | `mysql_pool`           | None  |
-//! | Postgres         | [Diesel](https://diesel.rs)                                           | [`diesel::PgConnection`](http://docs.diesel.rs/diesel/pg/struct.PgConnection.html)                              | `diesel_postgres_pool` | None  |
-//! | Postgres         | [Rust-Postgres](https://github.com/sfackler/rust-postgres)            | [`postgres::Connection`](https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html)                       | `postgres_pool`        | None  |
-//! | Sqlite           | [Diesel](https://diesel.rs)                                           | [`diesel::SqliteConnection`](http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html)                 | `diesel_sqlite_pool`   | None  |
-//! | Sqlite           | [`Rustqlite`](https://github.com/jgallagher/rusqlite)                 | [`rusqlite::Connection`](https://docs.rs/rusqlite/0.13.0/rusqlite/struct.Connection.html)                       | `sqlite_pool`          | None  |
-//! | Neo4j            | [`rusted_cypher`](https://github.com/livioribeiro/rusted-cypher)      | [`rusted_cypher::GraphClient`](https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html) | `cypher_pool`          | None  |
-//! | Redis            | [`Redis-rs`](https://github.com/mitsuhiko/redis-rs)                   | [`redis::Connection`](https://docs.rs/redis/0.9.0/redis/struct.Connection.html)                                 | `redis_pool`           | None  |
+//! | Kind     | Driver                | [`Poolable`] Type              | Feature                |
+//! |----------|-----------------------|--------------------------------|------------------------|
+//! | MySQL    | [Diesel]              | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
+//! | MySQL    | [`rust-mysql-simple`] | [`mysql::conn`]                | `mysql_pool`           |
+//! | Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+//! | Postgres | [Rust-Postgres]       | [`postgres::Connection`]       | `postgres_pool`        |
+//! | Sqlite   | [Diesel]              | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
+//! | Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
+//! | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
 //!
-//! ### How to use the table
+//! [Diesel]: https://diesel.rs
+//! [`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
+//! [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
+//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.13.0/rusqlite/struct.Connection.html
+//! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
+//! [`postgres::Connection`]: https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html
+//! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+//! [`mysql::conn`]: https://docs.rs/mysql/14.0.0/mysql/struct.Conn.html
+//! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
+//! [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
+//! [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
+//! [`Rustqlite`]: https://github.com/jgallagher/rusqlite
+//! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
+//! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
+//! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+//!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
-//! you must first enable the feature listed in the 'Feature' column. The inner
-//! type you should use for your database type should be what's listed in the
-//! corresponding `Poolable` Type column.
+//! you must first enable the feature listed in the "Feature" column. The
+//! interior type of your decorated database type should match the type in the
+//! "`Poolable` Type" column.
 //!
 //! ## Extending
 //!
 //! Extending Rocket's support to your own custom database adapter (or other
-//! database-like struct that can be pooled by r2d2) is as easy as implementing
-//! the `Poolable` trait for your own type. See the documentation for the
-//! [`Poolable` trait](trait.Poolable.html) for more details on how to implement
-//! it and extend your type for use with Rocket's database pooling feature.
+//! database-like struct that can be pooled by `r2d2`) is as easy as
+//! implementing the [`Poolable`] trait. See the documentation for [`Poolable`]
+//! for more details on how to implement it.
 
 pub extern crate r2d2;
 
@@ -292,6 +371,7 @@ use std::marker::{Send, Sized};
 
 use rocket::config::{self, Value};
 
+#[doc(inline)]
 pub use rocket_contrib_codegen::database;
 
 use self::r2d2::ManageConnection;
@@ -324,12 +404,12 @@ pub extern crate redis;
 #[cfg(feature = "redis_pool")]
 pub extern crate r2d2_redis;
 
-/// A struct containing database configuration options from some configuration.
+/// A structure representing a particular database configuration.
 ///
 /// For the following configuration:
 ///
 /// ```toml
-/// [[global.databases.my_database]]
+/// [global.databases.my_database]
 /// url = "postgres://root:root@localhost/my_database
 /// pool_size = 10
 /// certs = "sample_cert.pem"
@@ -337,16 +417,16 @@ pub extern crate r2d2_redis;
 /// ```
 ///
 /// The following structure would be generated after calling
-/// `database_config("my_database", &some_config)`:
+/// [`database_config`]`("my_database", &config)`:
 ///
-/// ```ignore
+/// ```rust,ignore
 /// DatabaseConfig {
 ///     url: "dummy_db.sqlite",
 ///     pool_size: 10,
 ///     extras: {
 ///         "certs": String("certs.pem"),
-///         "key": String("key.pem")
-///     }
+///         "key": String("key.pem"),
+///     },
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -361,12 +441,10 @@ pub struct DatabaseConfig<'a> {
     pub extras: BTreeMap<String, Value>,
 }
 
-/// A wrapper around `r2d2::Error`s or a custom database error type. This type
-/// is mostly relevant to implementors of the [Poolable](trait.Poolable.html)
-/// trait.
+/// A wrapper around `r2d2::Error`s or a custom database error type.
 ///
-/// Example usages of this type are in the `Poolable` implementations that ship
-/// with `rocket_contrib`.
+/// This type is only relevant to implementors of the [`Poolable`] trait. See
+/// the [`Poolable`] documentation for more information on how to use this type.
 #[derive(Debug)]
 pub enum DbError<T> {
     /// The custom error type to wrap alongside `r2d2::Error`.
@@ -375,43 +453,42 @@ pub enum DbError<T> {
     PoolError(r2d2::Error),
 }
 
-/// The error type for fetching the DatabaseConfig
+/// Error returned on invalid database configurations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatabaseConfigError {
-    /// Returned when the `[[global.databases]]` key is missing or empty from
-    /// the loaded configuration.
+    /// The `databases` configuration key is missing or is empty.
     MissingTable,
-    /// Returned when the database configuration key is missing from the active
+    /// The requested database configuration key is missing from the active
     /// configuration.
     MissingKey,
-    /// Returned when the configuration associated with the key isn't in the
-    /// expected [Table](../../rocket/config/type.Table.html) format.
+    /// The configuration associated with the key isn't a
+    /// [Table](/rocket/config/type.Table.html).
     MalformedConfiguration,
-    /// Returned when the `url` field is missing.
+    /// The required `url` key is missing.
     MissingUrl,
-    /// Returned when the `url` field is of the wrong type.
+    /// The value for `url` isn't a string.
     MalformedUrl,
-    /// Returned when the `pool_size` exceeds `u32::max_value()` or is negative.
+    /// The `pool_size` exceeds `u32::max_value()` or is negative.
     InvalidPoolSize(i64),
 }
 
-/// This method retrieves the database configuration from the loaded
-/// configuration and returns a [`DatabaseConfig`](struct.DatabaseConfig.html)
-/// struct.
+/// Retrieves the database configuration for the database named `name`.
 ///
-/// # Example:
+/// This function is primarily used by the code generated by the `#[database]`
+/// attribute.
 ///
-/// Given the following configuration:
+/// # Example
+///
+/// Consider the following configuration:
 ///
 /// ```toml
-/// [[global.databases]]
+/// [global.databases]
 /// my_db = { url = "db/db.sqlite", pool_size = 25 }
 /// my_other_db = { url = "mysql://root:root@localhost/database" }
 /// ```
 ///
-/// Calling the `database_config` method will return the
-/// [`DatabaseConfig`](struct.DatabaseConfig.html) structure for any valid
-/// configuration key. See the example code below.
+/// The following example uses `database_config` to retrieve the configurations
+/// for the `my_db` and `my_other_db` databases:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -428,29 +505,28 @@ pub enum DatabaseConfigError {
 /// # my_db.insert("pool_size".to_string(), Value::from(25));
 /// #
 /// # let mut my_other_db = BTreeMap::new();
-/// # my_other_db.insert("url".to_string(), Value::from("mysql://root:root@localhost/database"));
+/// # my_other_db.insert("url".to_string(),
+/// #     Value::from("mysql://root:root@localhost/database"));
 /// #
 /// # databases.insert("my_db".to_string(), Value::from(my_db));
 /// # databases.insert("my_other_db".to_string(), Value::from(my_other_db));
 /// #
-/// # let config = Config::build(Environment::Development).extra("databases", databases).expect("custom config okay");
+/// # let config = Config::build(Environment::Development)
+/// #     .extra("databases", databases)
+/// #     .expect("custom config okay");
 /// #
-/// # rocket::custom(config).attach(AdHoc::on_attach(|rocket| {
-/// #     // HACK: This is a dirty hack required to be able to make this work
-/// #     let thing = {
-/// #        let rocket_config = rocket.config();
-/// let config = database_config("my_db", rocket_config).expect("my_db config okay");
+/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |rocket| {
+/// # {
+/// let config = database_config("my_db", rocket.config()).unwrap();
 /// assert_eq!(config.url, "db/db.sqlite");
 /// assert_eq!(config.pool_size, 25);
 ///
-/// let other_config = database_config("my_other_db", rocket_config).expect("my_other_db config okay");
+/// let other_config = database_config("my_other_db", rocket.config()).unwrap();
 /// assert_eq!(other_config.url, "mysql://root:root@localhost/database");
 ///
-/// let error = database_config("invalid_db", rocket_config).unwrap_err();
+/// let error = database_config("invalid_db", rocket.config()).unwrap_err();
 /// assert_eq!(error, DatabaseConfigError::MissingKey);
-/// #
-/// #         10
-/// #    };
+/// # }
 /// #
 /// #     Ok(rocket)
 /// # }));
@@ -513,112 +589,108 @@ impl<'a> Display for DatabaseConfigError {
     }
 }
 
-/// Trait implemented by database adapters to allow for r2d2 connection pools to
-/// be easily created.
+/// Trait implemented by `r2d2`-based database adapters.
 ///
 /// # Provided Implementations
 ///
-/// Rocket Contrib implements `Poolable` on several common database adapters.
-/// The provided implementations are listed here.
+/// Implementations of `Poolable` are provided for the following types:
 ///
-/// * **diesel::MysqlConnection**
-///
-/// * **diesel::PgConnection**
-///
-/// * **diesel::SqliteConnection**
-///
-/// * **postgres::Connection**
-///
-/// * **mysql::Conn**
-///
-/// * **rusqlite::Connection**
-///
-/// * **rusted_cypher::GraphClient**
-///
-/// * **redis::Connection**
+///   * `diesel::MysqlConnection`
+///   * `diesel::PgConnection`
+///   * `diesel::SqliteConnection`
+///   * `postgres::Connection`
+///   * `mysql::Conn`
+///   * `rusqlite::Connection`
+///   * `rusted_cypher::GraphClient`
+///   * `redis::Connection`
 ///
 /// # Implementation Guide
 ///
 /// As a r2d2-compatible database (or other resource) adapter provider,
 /// implementing `Poolable` in your own library will enable Rocket users to
-/// consume your adapter with its built-in connection pooling primitives.
+/// consume your adapter with its built-in connection pooling support.
 ///
 /// ## Example
 ///
-/// This example assumes a `FooConnectionManager` implementing the
-/// `ManageConnection`trait required by r2d2. This connection manager abstracts
-/// over a pool of `FooClient` connections.
+/// Consider a library `foo` with the following types:
 ///
-/// Given the following definition of the client and connection manager:
+///   * `foo::ConnectionManager`, which implements [`r2d2::ManageConnection`]
+///   * `foo::Connection`, the `Connection` associated type of
+///     `foo::ConnectionManager`
+///   * `foo::Error`, errors resulting from manager instantiation
 ///
-/// ```rust,ignore
-/// struct FooClient { ... };
+/// [`r2d2`]: https://crates.io/crates/r2d2
+/// [`r2d2::ManageConnection`]: http://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html
 ///
-/// impl FooClient {
-///     pub fn new(...) -> Result<Self, foo::Error> {
-///         ...
-///     }
-/// }
+/// In order for Rocket to generate the required code to automatically provision
+/// a r2d2 connection pool into application state, the `Poolable` trait needs to
+/// be implemented for the connection type. The following example implements
+/// `Poolable` for `foo::Connection`:
 ///
-/// struct FooConnectionManager { ... };
+/// ```rust
+/// use rocket_contrib::databases::{r2d2, DbError, DatabaseConfig, Poolable};
 ///
-/// impl FooConnectionManager {
-///     pub fn new(...) -> Result<Self, foo::Error> {
-///         ...
-///     }
-/// }
-/// ```
-///
-/// In order to allow for Rocket Contrib to generate the required code to
-/// automatically provision a r2d2 connection pool into application state, the
-/// `Poolable` trait needs to be implemented for the connection type.
-///
-/// Given the above definitions, the following would be a valid implementation
-/// of the `Poolable` trait:
-///
-/// ```rust,ignore
-/// impl Poolable for FooClient {
-///     type Manager = FooConnectionManager;
+/// # mod foo {
+/// #     use rocket_contrib::databases::r2d2;
+/// #     use std::fmt;
+/// #     #[derive(Debug)] pub struct Error;
+/// #     impl ::std::error::Error for Error {  }
+/// #     impl fmt::Display for Error {
+/// #         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
+/// #     }
+/// #
+/// #     pub struct Connection;
+/// #     pub struct ConnectionManager;
+/// #
+/// #     type Result<T> = ::std::result::Result<T, Error>;
+/// #
+/// #     impl self::r2d2::ManageConnection for ConnectionManager {
+/// #          type Connection = Connection;
+/// #          type Error = Error;
+/// #          fn connect(&self) -> Result<Connection> { panic!(()) }
+/// #          fn is_valid(&self, _: &mut Connection) -> Result<()> { panic!() }
+/// #          fn has_broken(&self, _: &mut Connection) -> bool { panic!() }
+/// #     }
+/// # }
+/// #
+/// impl Poolable for foo::Connection {
+///     type Manager = foo::ConnectionManager;
 ///     type Error = DbError<foo::Error>;
 ///
 ///     fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-///         let manager = FooConnectionManager::new(config.url)
+///         # let _ = config; /*
+///         let manager = foo::ConnectionManager::new(config.url)
 ///             .map_err(DbError::Custom)?;
 ///
-///         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+///         r2d2::Pool::builder()
+///             .max_size(config.pool_size)
+///             .build(manager)
 ///             .map_err(DbError::PoolError)
+///         # */
+///         # Err(DbError::Custom(foo::Error))
 ///     }
 /// }
 /// ```
 ///
-/// In the above example, the connection manager is failable and returns the the
-/// `FooClient`'s error type. Since the error type can diverge from a simple
-/// r2d2 pool error, the [`DbError`](enum.DbError.html) wrapper is used. This
-/// error type is defined as part of the associated type in the `Poolable` trait
-/// definition.
+/// In this example, `ConnectionManager::new()` method returns a `foo::Error` on
+/// failure. For convenience, the [`DbError`] enum is used to consolidate this
+/// error type and the `r2d2::Error` type that can result from
+/// `r2d2::Pool::builder()`.
 ///
-/// Additionally, you'll notice that the `pool` method of the trait is used to
-/// to create the connection manager and the pool. This method returns a
-/// `Result` containing an r2d2 pool monomorphized to the `Manager` associated
-/// type in the trait definition, or containing the `Error` associated type.
-///
-/// In the event that the connection manager isn't failable (as is the case in
-/// Diesel's r2d2 connection manager, for example), the associated error type
+/// In the event that a connection manager isn't fallible (as is the case with
+/// Diesel's r2d2 connection manager, for instance), the associated error type
 /// for the `Poolable` implementation can simply be `r2d2::Error` as this is the
-/// only error that can be returned by the `pool` method. You can refer to the
-/// included implementations of `Poolable` in the `rocket_contrib::databases`
-/// module for concrete examples.
-///
+/// only error that can be result. For more concrete example, consult Rocket's
+/// existing implementations of [`Poolable`].
 pub trait Poolable: Send + Sized + 'static {
     /// The associated connection manager for the given connection type.
     type Manager: ManageConnection<Connection=Self>;
     /// The associated error type in the event that constructing the connection
-    /// manager and/or the connection pool fails
+    /// manager and/or the connection pool fails.
     type Error;
 
-    /// Creates an r2d2 connection pool from the provided Manager associated
-    /// type and returns the pool or the error associated with the trait
-    /// implementation.
+    /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
+    /// the pool on success.
     fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error>;
 }
 
@@ -721,7 +793,7 @@ impl Poolable for redis::Connection {
 mod tests {
     use std::collections::BTreeMap;
     use rocket::{Config, config::{Environment, Value}};
-    use super::{DatabaseConfigError, database_config};
+    use super::{DatabaseConfigError::*, database_config};
 
     #[test]
     fn no_database_entry_in_config_returns_error() {
@@ -730,7 +802,7 @@ mod tests {
             .unwrap();
         let database_config_result = database_config("dummy_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::MissingTable), database_config_result);
+        assert_eq!(Err(MissingTable), database_config_result);
     }
 
     #[test]
@@ -749,7 +821,7 @@ mod tests {
 
         let database_config_result = database_config("real_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::MissingKey), database_config_result);
+        assert_eq!(Err(MissingKey), database_config_result);
     }
 
     #[test]
@@ -765,7 +837,7 @@ mod tests {
 
         let database_config_result = database_config("dummy_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::MalformedConfiguration), database_config_result);
+        assert_eq!(Err(MalformedConfiguration), database_config_result);
     }
 
     #[test]
@@ -781,7 +853,7 @@ mod tests {
 
         let database_config_result = database_config("dummy_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::MissingUrl), database_config_result);
+        assert_eq!(Err(MissingUrl), database_config_result);
     }
 
     #[test]
@@ -798,7 +870,7 @@ mod tests {
 
         let database_config_result = database_config("dummy_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::MalformedUrl), database_config_result);
+        assert_eq!(Err(MalformedUrl), database_config_result);
     }
 
     #[test]
@@ -816,15 +888,16 @@ mod tests {
 
         let database_config_result = database_config("dummy_db", &config);
 
-        assert_eq!(Err(DatabaseConfigError::InvalidPoolSize(-1)), database_config_result);
+        assert_eq!(Err(InvalidPoolSize(-1)), database_config_result);
     }
 
     #[test]
     fn pool_size_beyond_u32_max_returns_error() {
         let mut database_extra = BTreeMap::new();
         let mut connection_config = BTreeMap::new();
+        let over_max = (u32::max_value()) as i64 + 1;
         connection_config.insert("url".to_string(), Value::from("dummy_db.sqlite"));
-        connection_config.insert("pool_size".to_string(), Value::from(4294967296));
+        connection_config.insert("pool_size".to_string(), Value::from(over_max));
         database_extra.insert("dummy_db", connection_config);
 
         let config = Config::build(Environment::Development)
@@ -835,7 +908,7 @@ mod tests {
         let database_config_result = database_config("dummy_db", &config);
 
         // The size of `0` is an overflow wrap-around
-        assert_eq!(Err(DatabaseConfigError::InvalidPoolSize(0)), database_config_result);
+        assert_eq!(Err(InvalidPoolSize(over_max)), database_config_result);
     }
 
     #[test]

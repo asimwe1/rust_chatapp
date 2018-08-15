@@ -1,8 +1,6 @@
-use proc_macro::{TokenStream, Diagnostic};
+use proc_macro::TokenStream;
+use derive_utils::{Spanned, Result};
 use syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
-use spanned::Spanned;
-
-type Result<T> = ::std::result::Result<T, Diagnostic>;
 
 #[derive(Debug)]
 struct DatabaseInvocation {
@@ -20,10 +18,10 @@ struct DatabaseInvocation {
 
 const EXAMPLE: &str = "example: `struct MyDatabase(diesel::SqliteConnection);`";
 const ONLY_ON_STRUCTS_MSG: &str = "`database` attribute can only be used on structs";
-const ONLY_UNNAMED_FIELDS: &str = "`database` attribute can only be applied to structs with \
-    exactly one unnamed field";
-const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to a struct with a \
-    generic type";
+const ONLY_UNNAMED_FIELDS: &str = "`database` attribute can only be applied to \
+    structs with exactly one unnamed field";
+const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to a struct \
+    with a generic type";
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = ::proc_macro2::TokenStream::from(attr);
@@ -61,44 +59,61 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
 pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let invocation = parse_invocation(attr, input)?;
 
+    // Store everything we're going to need to generate code.
     let connection_type = &invocation.connection_type;
-    let database_name = &invocation.db_name;
+    let name = &invocation.db_name;
     let request_guard_type = &invocation.type_name;
-    let request_guard_vis = &invocation.visibility;
+    let vis = &invocation.visibility;
     let pool_type = Ident::new(&format!("{}Pool", request_guard_type), request_guard_type.span());
+    let fairing_name = format!("'{}' Database Pool", name);
 
-    let tokens = quote! {
-        #request_guard_vis struct #request_guard_type(
-            pub ::rocket_contrib::databases::r2d2::PooledConnection<<#connection_type as ::rocket_contrib::databases::Poolable>::Manager>
+    // A few useful paths.
+    let databases = quote!(::rocket_contrib::databases);
+    let r2d2 = quote!(#databases::r2d2);
+    let request = quote!(::rocket::request);
+
+    Ok(quote! {
+        /// The request guard type.
+        #vis struct #request_guard_type(
+            pub #r2d2::PooledConnection<<#connection_type as #databases::Poolable>::Manager>
         );
-        #request_guard_vis struct #pool_type(
-            ::rocket_contrib::databases::r2d2::Pool<<#connection_type as ::rocket_contrib::databases::Poolable>::Manager>
+
+        /// The pool type.
+        #vis struct #pool_type(
+            #r2d2::Pool<<#connection_type as #databases::Poolable>::Manager>
         );
 
         impl #request_guard_type {
+            /// Returns a fairing that initializes the associated database
+            /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
-                use ::rocket_contrib::databases::Poolable;
+                use #databases::Poolable;
 
-                ::rocket::fairing::AdHoc::on_attach(|rocket| {
-                    let pool = ::rocket_contrib::databases::database_config(#database_name, rocket.config())
+                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |rocket| {
+                    let pool = #databases::database_config(#name, rocket.config())
                         .map(#connection_type::pool);
 
                     match pool {
                         Ok(Ok(p)) => Ok(rocket.manage(#pool_type(p))),
                         Err(config_error) => {
-                            ::rocket::logger::log_err(&format!("Error while instantiating database: '{}': {}", #database_name, config_error));
+                            ::rocket::logger::log_err(false,
+                                &format!("Database configuration failure: '{}'", #name));
+                            ::rocket::logger::log_err(true, &format!("{}", config_error));
                             Err(rocket)
                         },
                         Ok(Err(pool_error)) => {
-                            ::rocket::logger::log_err(&format!("Error initializing pool for '{}': {:?}", #database_name, pool_error));
+                            ::rocket::logger::log_err(false,
+                                &format!("Failed to initialize pool for '{}'", #name));
+                            ::rocket::logger::log_err(true, &format!("{:?}", pool_error));
                             Err(rocket)
                         },
                     }
                 })
             }
 
-            /// Retrieves a connection of type `Self` from the `rocket` instance. Returns `Some` as long as
-            /// `Self::fairing()` has been attached and there is at least one connection in the pool.
+            /// Retrieves a connection of type `Self` from the `rocket`
+            /// instance. Returns `Some` as long as `Self::fairing()` has been
+            /// attached and there is at least one connection in the pool.
             pub fn get_one(rocket: &::rocket::Rocket) -> Option<Self> {
                 rocket.state::<#pool_type>()
                     .and_then(|pool| pool.0.get().ok())
@@ -115,19 +130,18 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             }
         }
 
-        impl<'a, 'r> ::rocket::request::FromRequest<'a, 'r> for #request_guard_type {
+        impl<'a, 'r> #request::FromRequest<'a, 'r> for #request_guard_type {
             type Error = ();
 
-            fn from_request(request: &'a ::rocket::request::Request<'r>) -> ::rocket::request::Outcome<Self, Self::Error> {
+            fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+                use ::rocket::{Outcome, http::Status};
                 let pool = request.guard::<::rocket::State<#pool_type>>()?;
 
                 match pool.0.get() {
-                    Ok(conn) => ::rocket::Outcome::Success(#request_guard_type(conn)),
-                    Err(_) => ::rocket::Outcome::Failure((::rocket::http::Status::ServiceUnavailable, ())),
+                    Ok(conn) => Outcome::Success(#request_guard_type(conn)),
+                    Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
                 }
             }
         }
-    };
-
-    Ok(tokens.into())
+    }.into())
 }

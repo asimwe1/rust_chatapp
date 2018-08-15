@@ -12,6 +12,6 @@ pushd "${SCRIPT_PATH}" > /dev/null
     cargo install diesel_cli --version '<= 1.2' --no-default-features --features=sqlite > /dev/null
   fi
 
-  # create db/db.sql
+  # create db/db.sqlite
   diesel migration --database-url="${DATABASE_URL}" run > /dev/null
 popd > /dev/null

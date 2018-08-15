@@ -1,4 +1,5 @@
 #![feature(proc_macro_span, proc_macro_diagnostic)]
+#![feature(crate_visibility_modifier)]
 #![recursion_limit="256"]
 
 //! # Rocket Contrib - Code Generation
@@ -23,22 +24,24 @@
 //! DATABASE_NAME := (string literal)
 //! </pre>
 
-extern crate syn;
+extern crate derive_utils;
 extern crate proc_macro;
-extern crate proc_macro2;
+
+#[allow(unused_imports)]
 #[macro_use] extern crate quote;
 
-mod spanned;
+#[allow(unused_imports)]
+crate use derive_utils::{syn, proc_macro2};
 
 #[cfg(feature = "database_attribute")]
 mod database;
 
-#[allow(dead_code)]
+#[allow(unused_imports)]
 use proc_macro::TokenStream;
 
+/// The procedural macro for the `databases` annotation.
 #[cfg(feature = "database_attribute")]
 #[proc_macro_attribute]
-/// The procedural macro for the `databases` annotation.
 pub fn database(attr: TokenStream, input: TokenStream) -> TokenStream {
     ::database::database_attr(attr, input).unwrap_or_else(|diag| {
         diag.emit();

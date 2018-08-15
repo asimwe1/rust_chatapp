@@ -154,8 +154,6 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// A `FromData` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![allow(unused_attributes)]
-/// # #![allow(unused_variables)]
 /// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;

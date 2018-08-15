@@ -147,141 +147,112 @@ to implement request timing.
 
 ## Databases
 
-While Rocket doesn't have built-in support for databases yet, you can combine a
-few external libraries to get native-feeling access to databases in a Rocket
-application. Let's take a look at how we might integrate Rocket with two common
-database libraries: [`diesel`], a type-safe ORM and query builder, and [`r2d2`],
-a library for connection pooling.
+Rocket includes built-in, ORM-agnostic support for databases. In particular,
+Rocket provides a procedural macro that allows you to easily connect your Rocket
+application to databases through connection pools. A _database connection pool_
+is a data structure that maintains active database connections for later use in
+the application. This implementation of connection pooling support is based on
+[`r2d2`] and exposes connections through request guards. Databases are
+individually configured through Rocket's regular configuration mechanisms: a
+`Rocket.toml` file, environment variables, or procedurally.
 
-Our approach will be to have Rocket manage a pool of database connections using
-managed state and then implement a request guard that retrieves one connection.
-This will allow us to get access to the database in a handler by simply adding a
-`DbConn` argument:
+Connecting your Rocket application to a database using this library occurs in
+three simple steps:
 
-```rust
-#[get("/users")]
-fn handler(conn: DbConn) { ... }
-```
+  1. Configure the databases in `Rocket.toml`.
+  2. Associate a request guard type and fairing with each database.
+  3. Use the request guard to retrieve a connection in a handler.
 
-[`diesel`]: http://diesel.rs/
-[`r2d2`]: https://docs.rs/r2d2/
+Presently, Rocket provides built-in support for the following databases:
 
-### Dependencies
+| Kind     | Driver                | `Poolable` Type                | Feature                |
+|----------|-----------------------|--------------------------------|------------------------|
+| MySQL    | [Diesel]              | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
+| MySQL    | [`rust-mysql-simple`] | [`mysql::conn`]                | `mysql_pool`           |
+| Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+| Postgres | [Rust-Postgres]       | [`postgres::Connection`]       | `postgres_pool`        |
+| Sqlite   | [Diesel]              | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
+| Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
+| Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
+| Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
 
-To get started, we need to depend on the `diesel` and `r2d2` crates. For
-detailed information on how to use Diesel, please see the [Diesel getting
-started guide](http://diesel.rs/guides/getting-started/). For this example, we
-use the following dependencies:
-
-```
-[dependencies]
-rocket = "0.4.0-dev"
-rocket_codegen = "0.4.0-dev"
-diesel = { version = "<= 1.2", features = ["sqlite", "r2d2"] }
-```
-
-Your `diesel` dependency information may differ. The crates are imported as
-well:
-
-```rust
-extern crate rocket;
-#[macro_use] extern crate diesel;
-```
-
-### Managed Pool
-
-The first step is to initialize a pool of database connections. The `init_pool`
-function below uses `r2d2` to create a new pool of database connections. Diesel
-advocates for using a `DATABASE_URL` environment variable to set the database
-URL, and we use the same convention here. Excepting the long-winded types, the
-code is fairly straightforward: the `DATABASE_URL` environment variable is
-stored in the `DATABASE_URL` static, and an `r2d2::Pool` is created using the
-default configuration parameters and a Diesel `SqliteConnection`
-`ConnectionManager`.
-
-```rust
-use diesel::sqlite::SqliteConnection;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-
-// An alias to the type for a pool of Diesel SQLite connections.
-type SqlitePool = Pool<ConnectionManager<SqliteConnection>>;
-
-// The URL to the database, set via the `DATABASE_URL` environment variable.
-static DATABASE_URL: &'static str = env!("DATABASE_URL");
-
-/// Initializes a database pool.
-fn init_pool() -> SqlitePool {
-    let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
-    Pool::new(manager).expect("db pool")
-}
-```
-
-We then use managed state to have Rocket manage the pool for us:
-
-```rust
-fn main() {
-    rocket::ignite()
-        .manage(init_pool())
-        .launch();
-}
-```
-
-### Connection Guard
-
-The second and final step is to implement a request guard that retrieves a
-single connection from the managed connection pool. We create a new type,
-`DbConn`, that wraps an `r2d2` pooled connection. We then implement
-`FromRequest` for `DbConn` so that we can use it as a request guard. Finally, we
-implement `Deref` with a target of `SqliteConnection` so that we can
-transparently use an `&*DbConn` as an `&SqliteConnection`.
-
-```rust
-use std::ops::Deref;
-use rocket::http::Status;
-use rocket::request::{self, FromRequest};
-use rocket::{Request, State, Outcome};
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-
-// Connection request guard type: a wrapper around an r2d2 pooled connection.
-pub struct DbConn(pub PooledConnection<ConnectionManager<SqliteConnection>>);
-
-/// Attempts to retrieve a single connection from the managed database pool. If
-/// no pool is currently managed, fails with an `InternalServerError` status. If
-/// no connections are available, fails with a `ServiceUnavailable` status.
-impl<'a, 'r> FromRequest<'a, 'r> for DbConn {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        let pool = request.guard::<State<SqlitePool>>()?;
-        match pool.get() {
-            Ok(conn) => Outcome::Success(DbConn(conn)),
-            Err(_) => Outcome::Failure((Status::ServiceUnavailable, ()))
-        }
-    }
-}
-
-// For the convenience of using an &DbConn as an &SqliteConnection.
-impl Deref for DbConn {
-    type Target = SqliteConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-```
+[`r2d2`]: https://crates.io/crates/r2d2
+[Diesel]: https://diesel.rs
+[`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
+[`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
+[`rusqlite::Connection`]: https://docs.rs/rusqlite/0.13.0/rusqlite/struct.Connection.html
+[`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
+[`postgres::Connection`]: https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html
+[`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+[`mysql::conn`]: https://docs.rs/mysql/14.0.0/mysql/struct.Conn.html
+[`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
+[`redis-rs`]: https://github.com/mitsuhiko/redis-rs
+[`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
+[`Rustqlite`]: https://github.com/jgallagher/rusqlite
+[Rust-Postgres]: https://github.com/sfackler/rust-postgres
+[`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
+[`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 
 ### Usage
 
-With these two pieces in place, we can use `DbConn` as a request guard in any
-handler or other request guard implementation, giving our application access to
-a database. As a simple example, we might write a route that returns a JSON
-array of some `Task` structures that are fetched from a database:
+To connect your Rocket application to a given database, first identify the
+"Kind" and "Driver" in the table that matches your environment. The feature
+corresponding to your database type must be enabled. This is the feature
+identified in the "Feature" column. For instance, for Diesel-based SQLite
+databases, you'd write in `Cargo.toml`:
+
+```toml
+[dependencies.rocket_contrib]
+version = "0.4.0-dev"
+default-features = false
+features = ["diesel_sqlite_pool"]
+```
+
+Then, in `Rocket.toml` or the equivalent via environment variables, configure
+the URL for the database in the `databases` table:
+
+```toml
+[global.databases]
+sqlite_logs = { url = "/path/to/database.sqlite" }
+```
+
+In your application's source code, create a unit-like struct with one internal
+type. This type should be the type listed in the "`Poolable` Type" column. Then
+decorate the type with the `#[database]` attribute, providing the name of the
+database that you configured in the previous step as the only parameter.
+Finally, attach the fairing returned by `YourType::fairing()`, which was
+generated by the `#[database]` attribute:
 
 ```rust
-#[get("/tasks")]
-fn get_tasks(conn: DbConn) -> QueryResult<Json<Vec<Task>>> {
-    all_tasks.order(tasks::id.desc())
-        .load::<Task>(&*conn)
-        .map(|tasks| Json(tasks))
+use rocket_contrib::databases::{database, diesel};
+
+#[database("sqlite_logs")]
+struct LogsDbConn(diesel::SqliteConnection);
+
+fn main() {
+    rocket::ignite()
+       .attach(LogsDbConn::fairing())
+       .launch();
 }
 ```
+
+That's it! Whenever a connection to the database is needed, use your type as a
+request guard:
+
+```rust
+impl Logs {
+    fn by_id(conn: &diesel::SqliteConnection, log_id: usize) -> Result<Logs> {
+        logs.filter(id.eq(log_id)).load(conn)
+    }
+}
+
+#[get("/logs/<id>")]
+fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
+    Logs::by_id(&conn, id)
+}
+```
+
+For more on Rocket's built-in database support, see the
+[`rocket_contrib::databases`] module documentation.
+
+[`rocket_contrib::databases`]: https://api.rocket.rs/rocket_contrib/databases/index.html
