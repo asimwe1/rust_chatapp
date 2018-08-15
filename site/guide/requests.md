@@ -238,24 +238,32 @@ fn new_user(user: Json<User>) -> T { ... }
 
 The `format` parameter in the `post` attribute declares that only incoming
 requests with `Content-Type: application/json` will match `new_user`. (The
-`data` parameter is described in the next section.)
+`data` parameter is described in the next section.) Shorthand is also supported
+for the most common `format` arguments. Instead of using the full Content-Type,
+`format = "application/json"`, you can also write shorthands like `format =
+"json"`. For a full list of available shorthands, see the
+[`ContentType::parse_flexible()`] documentation.
 
-When a route indicates a non-payload-supporting method (`GET`, `HEAD`, and
-`OPTIONS`), the `format` route parameter instructs Rocket to check against the
-`Accept` header of the incoming request. Only requests where the preferred media
-type in the `Accept` header matches the `format` parameter will match to the
-route.
+When a route indicates a non-payload-supporting method (`HEAD`, `OPTIONS`, and,
+these purposes, `GET`) the `format` route parameter instructs Rocket to check
+against the `Accept` header of the incoming request. Only requests where the
+preferred media type in the `Accept` header matches the `format` parameter will
+match to the route.
 
 As an example, consider the following route:
 
 ```rust
-#[get("/user/<id>", format = "application/json")]
+#[get("/user/<id>", format = "json")]
 fn user(id: usize) -> Json<User> { ... }
 ```
 
 The `format` parameter in the `get` attribute declares that only incoming
 requests with `application/json` as the preferred media type in the `Accept`
-header will match `user`.
+header will match `user`. If instead the route had been declared as `post`,
+Rocket would match the `format` against the `Content-Type` header of the
+incoming response.
+
+[`ContentType::parse_flexible()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.parse_flexible
 
 ## Request Guards
 
@@ -655,7 +663,7 @@ possible via the [`Data`](https://api.rocket.rs/rocket/data/struct.Data.html)
 type:
 
 ```rust
-#[post("/upload", format = "text/plain", data = "<data>")]
+#[post("/upload", format = "plain", data = "<data>")]
 fn upload(data: Data) -> io::Result<String> {
     data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())
 }
