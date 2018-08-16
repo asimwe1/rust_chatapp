@@ -410,7 +410,7 @@ pub extern crate r2d2_redis;
 ///
 /// ```toml
 /// [global.databases.my_database]
-/// url = "postgres://root:root@localhost/my_database
+/// url = "postgres://root:root@localhost/my_database"
 /// pool_size = 10
 /// certs = "sample_cert.pem"
 /// key = "key.pem"
