@@ -26,7 +26,4 @@ rev = "160da392"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
-
-[dev-dependencies.compiletest_rs]
-git = "https://github.com/SergioBenitez/compiletest-rs"
-branch = "regex-support"
+compiletest_rs = { git = "https://github.com/laumann/compiletest-rs" }
