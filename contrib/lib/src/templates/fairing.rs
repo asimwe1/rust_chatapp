@@ -142,7 +142,7 @@ impl Fairing for TemplateFairing {
         let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
         match rocket.config().get_str("template_dir") {
             Ok(dir) => template_root = rocket.config().root_relative(dir),
-            Err(ConfigError::NotFound) => { /* ignore missing configs */ }
+            Err(ConfigError::Missing(_)) => { /* ignore missing */ }
             Err(e) => {
                 e.pretty_print();
                 warn_!("Using default templates directory '{:?}'", template_root);
