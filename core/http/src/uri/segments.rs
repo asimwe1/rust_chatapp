@@ -51,7 +51,7 @@ impl<'a> Segments<'a> {
     ///   * Decoded segment starts with any of: '*'
     ///   * Decoded segment ends with any of: `:`, `>`, `<`
     ///   * Decoded segment contains any of: `/`
-    ///   * On Windows, decoded segment contains any of: '\'
+    ///   * On Windows, decoded segment contains any of: `\`
     ///   * Percent-encoding results in invalid UTF8.
     ///
     /// Additionally, if `allow_dotfiles` is `false`, an `Err` is returned if

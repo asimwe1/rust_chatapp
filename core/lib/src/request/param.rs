@@ -318,7 +318,7 @@ impl<'a> FromSegments<'a> for Segments<'a> {
 ///   * Decoded segment starts with any of: `.` (except `..`), `*`
 ///   * Decoded segment ends with any of: `:`, `>`, `<`
 ///   * Decoded segment contains any of: `/`
-///   * On Windows, decoded segment contains any of: '\'
+///   * On Windows, decoded segment contains any of: `\`
 ///   * Percent-encoding results in invalid UTF8.
 ///
 /// As a result of these conditions, a `PathBuf` derived via `FromSegments` is
