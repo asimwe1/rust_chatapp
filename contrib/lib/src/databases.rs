@@ -705,7 +705,7 @@ impl Poolable for diesel::SqliteConnection {
     }
 }
 
-#[cfg(feature = "diesel_pg_pool")]
+#[cfg(feature = "diesel_postgres_pool")]
 impl Poolable for diesel::PgConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::PgConnection>;
     type Error = r2d2::Error;
