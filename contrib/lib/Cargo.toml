@@ -17,6 +17,8 @@ msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 static_files = []
+# Internal use only.
+templates = ["serde", "serde_json", "glob"]
 
 # Database pooling features.
 # Iternal use only.
@@ -31,9 +33,6 @@ mysql_pool = ["database_pool", "mysql", "r2d2_mysql"]
 sqlite_pool = ["database_pool", "rusqlite", "r2d2_sqlite"]
 cypher_pool = ["database_pool", "rusted_cypher", "r2d2_cypher"]
 redis_pool = ["database_pool", "redis", "r2d2_redis"]
-
-# Internal use only.
-templates = ["serde", "serde_json", "glob"]
 
 [dependencies]
 rocket = { version = "0.4.0-dev", path = "../../core/lib/" }
@@ -63,8 +62,8 @@ rusqlite = { version = "0.13.0", optional = true }
 r2d2_sqlite = { version = "0.5", optional = true }
 rusted_cypher = { version = "1", optional = true }
 r2d2_cypher = { version = "0.4", optional = true }
-redis = { version = "0.8", optional = true }
-r2d2_redis = { version = "0.7", optional = true }
+redis = { version = "0.9", optional = true }
+r2d2_redis = { version = "0.8", optional = true }
 
 # Contrib codegen dependencies
 rocket_contrib_codegen = { path = "../codegen", optional = true }
