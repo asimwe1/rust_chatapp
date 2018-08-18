@@ -5,6 +5,7 @@ cache: cargo
 env:
   - TEST_FLAGS=
   - TEST_FLAGS=--release
+  - TEST_FLAGS=--contrib
 rust:
   - nightly
 script: ./scripts/test.sh $TEST_FLAGS

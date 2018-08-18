@@ -13,6 +13,7 @@ pub trait Engine: Send + Sync + 'static {
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String>;
 }
 
+#[doc(cfg(feature = "tera_templates"))]
 /// A structure exposing access to templating engines.
 ///
 /// Calling methods on the exposed template engine types may require importing

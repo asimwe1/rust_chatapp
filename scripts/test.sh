@@ -79,8 +79,38 @@ ensure_trailing_whitespace_free
 echo ":: Updating dependencies..."
 cargo update
 
-echo ":: Bootstrapping examples..."
-bootstrap_examples
+if [ "$1" = "--contrib" ]; then
+  FEATURES=(
+    json
+    msgpack
+    tera_templates
+    handlebars_templates
+    static_files
+    diesel_postgres_pool
+    diesel_sqlite_pool
+    diesel_mysql_pool
+    postgres_pool
+    mysql_pool
+    sqlite_pool
+    cypher_pool
+    redis_pool
+  )
 
-echo ":: Building and testing libraries..."
-CARGO_INCREMENTAL=0 cargo test --all-features --all $@
+  pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
+
+  echo ":: Building and testing contrib [default]..."
+  CARGO_INCREMENTAL=0 cargo test
+
+  for feature in "${FEATURES[@]}"; do
+    echo ":: Building and testing contrib [${feature}]..."
+    CARGO_INCREMENTAL=0 cargo test --no-default-features --features "${feature}"
+  done
+
+  popd > /dev/null 2>&1
+else
+  echo ":: Bootstrapping examples..."
+  bootstrap_examples
+
+  echo ":: Building and testing libraries..."
+  CARGO_INCREMENTAL=0 cargo test --all-features --all $@
+fi

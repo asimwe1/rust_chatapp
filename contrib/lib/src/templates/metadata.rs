@@ -9,8 +9,8 @@ use super::ContextManager;
 ///
 /// # Usage
 ///
-/// First, ensure that the template [fairing](`rocket::fairing`) is attached to
-/// your Rocket application:
+/// First, ensure that the template [fairing](`rocket::fairing`),
+/// [`Template::fairing()`] is attached to your Rocket application:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -26,8 +26,8 @@ use super::ContextManager;
 /// }
 /// ```
 ///
-/// The `TemplateMetadata` type implements Rocket's `FromRequest` trait, so it can
-/// be used as a request guard in any request handler.
+/// The `TemplateMetadata` type implements Rocket's `FromRequest` trait, so it
+/// can be used as a request guard in any request handler.
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]
@@ -40,11 +40,13 @@ use super::ContextManager;
 ///
 /// #[get("/")]
 /// fn homepage(metadata: TemplateMetadata) -> Template {
+///     # use std::collections::HashMap;
+///     # let context: HashMap<String, String> = HashMap::new();
 ///     // Conditionally render a template if it's available.
 ///     if metadata.contains_template("some-template") {
-///         Template::render("some-template", json!({ /* .. */ }))
+///         Template::render("some-template", &context)
 ///     } else {
-///         Template::render("fallback", json!({ /* .. */ }))
+///         Template::render("fallback", &context)
 ///     }
 /// }
 /// ```

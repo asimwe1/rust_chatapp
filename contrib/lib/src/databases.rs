@@ -1,3 +1,4 @@
+#![doc(cfg(feature = "diesel_sqlite_pool"))]
 //! Traits, utilities, and a macro for easy database connection pooling.
 //!
 //! # Overview
