@@ -4,7 +4,7 @@
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
-#![feature(proc_macro_non_items, use_extern_macros)]
+#![feature(proc_macro_non_items)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 

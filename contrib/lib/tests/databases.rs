@@ -1,5 +1,3 @@
-#![feature(use_extern_macros)]
-
 extern crate rocket;
 extern crate rocket_contrib;
 

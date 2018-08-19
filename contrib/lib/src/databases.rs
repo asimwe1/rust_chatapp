@@ -54,8 +54,6 @@
 //! In your application's source code, one-time:
 //!
 //! ```rust
-//! # #![feature(use_extern_macros)]
-//! #
 //! # extern crate rocket;
 //! # extern crate rocket_contrib;
 //! #
@@ -76,7 +74,7 @@
 //! Whenever a connection to the database is needed:
 //!
 //! ```rust
-//! # #![feature(plugin, decl_macro, use_extern_macros)]
+//! # #![feature(plugin, decl_macro)]
 //! # #![plugin(rocket_codegen)]
 //! #
 //! # extern crate rocket;
@@ -192,7 +190,6 @@
 //! internal type of the structure must implement [`Poolable`].
 //!
 //! ```rust
-//! # #![feature(use_extern_macros)]
 //! # extern crate rocket;
 //! # extern crate rocket_contrib;
 //! use rocket_contrib::databases::{database, diesel};
@@ -228,7 +225,6 @@
 //! together, a use of the `#[database]` attribute looks as follows:
 //!
 //! ```rust
-//! # #![feature(use_extern_macros)]
 //! # extern crate rocket;
 //! # extern crate rocket_contrib;
 //! #
@@ -267,7 +263,6 @@
 //! connection to a given database:
 //!
 //! ```rust
-//! # #![feature(use_extern_macros)]
 //! # #![feature(plugin, decl_macro)]
 //! # #![plugin(rocket_codegen)]
 //! #
@@ -290,7 +285,7 @@
 //! connection type:
 //!
 //! ```rust
-//! # #![feature(plugin, decl_macro, use_extern_macros)]
+//! # #![feature(plugin, decl_macro)]
 //! # #![plugin(rocket_codegen)]
 //! #
 //! # extern crate rocket;

@@ -1,5 +1,5 @@
 #![feature(specialization)]
-#![feature(proc_macro_non_items, use_extern_macros)]
+#![feature(proc_macro_non_items)]
 #![feature(const_fn)]
 #![feature(try_from)]
 #![feature(crate_visibility_modifier)]
