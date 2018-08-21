@@ -1,4 +1,4 @@
-use syntax::codemap;
+use syntax::source_map;
 use syntax::parse::{token, SeqSep, PResult};
 use syntax::parse::parser::{PathStyle, Parser};
 use syntax::parse::token::Token::{Eof, Comma};
@@ -17,7 +17,7 @@ pub trait ParserExt<'a> {
 
     // Duplicates previously removed method in libsyntax.
     fn parse_seq<T, F>(&mut self, bra: &token::Token, ket: &token::Token, sep: SeqSep, f: F)
-        -> PResult<'a, codemap::Spanned<Vec<T>>> where F: FnMut(&mut Parser<'a>) -> PResult<'a, T>;
+        -> PResult<'a, source_map::Spanned<Vec<T>>> where F: FnMut(&mut Parser<'a>) -> PResult<'a, T>;
 }
 
 impl<'a> ParserExt<'a> for Parser<'a> {
@@ -66,7 +66,7 @@ impl<'a> ParserExt<'a> for Parser<'a> {
         ket: &token::Token,
         sep: SeqSep,
         f: F
-    ) -> PResult<'a, codemap::Spanned<Vec<T>>>
+    ) -> PResult<'a, source_map::Spanned<Vec<T>>>
         where F: FnMut(&mut Parser<'a>) -> PResult<'a, T>
     {
         let lo = self.span;
@@ -74,6 +74,6 @@ impl<'a> ParserExt<'a> for Parser<'a> {
         let result = self.parse_seq_to_before_end(ket, sep, f)?;
         let hi = self.span;
         self.bump();
-        Ok(codemap::respan(lo.to(hi), result))
+        Ok(source_map::respan(lo.to(hi), result))
     }
 }

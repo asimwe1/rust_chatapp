@@ -1,6 +1,6 @@
 use utils::{self, ParserExt, SpanExt};
 
-use syntax::codemap::{Spanned, Span};
+use syntax::source_map::{Spanned, Span};
 use syntax::ext::base::ExtCtxt;
 use syntax::symbol::LocalInternedString;
 use syntax::ast::{self, Expr, Name, Ident, Path};

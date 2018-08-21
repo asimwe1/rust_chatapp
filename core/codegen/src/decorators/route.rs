@@ -6,7 +6,7 @@ use ::{ROUTE_ATTR, ROUTE_INFO_ATTR};
 use parser::{Param, RouteParams};
 use utils::*;
 
-use syntax::codemap::{Span, Spanned, dummy_spanned};
+use syntax::source_map::{Span, Spanned, dummy_spanned};
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Arg, Ident, Item, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};

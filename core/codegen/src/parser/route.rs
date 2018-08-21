@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
-use syntax::codemap::{Span, Spanned, dummy_spanned};
+use syntax::source_map::{Span, Spanned, dummy_spanned};
 
 use utils::{MetaItemExt, SpanExt, span, is_valid_ident};
 use super::Function;

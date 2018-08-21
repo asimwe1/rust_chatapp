@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use syntax::codemap::Span;
+use syntax::source_map::Span;
 use syntax::ext::base::{DummyResult, ExtCtxt, MacEager, MacResult};
 use syntax::tokenstream::{TokenStream, TokenTree};
 use syntax::ast::{self, Expr, GenericArg, MacDelimiter, Ident};

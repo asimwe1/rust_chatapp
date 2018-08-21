@@ -3,7 +3,7 @@ mod uri;
 use {ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 use utils::{sep_by_tok, ParserExt, IdentExt};
 
-use syntax::codemap::Span;
+use syntax::source_map::Span;
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Path, Expr};
 use syntax::ext::base::{DummyResult, ExtCtxt, MacResult, MacEager};

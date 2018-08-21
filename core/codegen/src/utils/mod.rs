@@ -21,7 +21,7 @@ use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Item, Expr, Attribute, Ty};
 use syntax::ext::base::{Annotatable, ExtCtxt};
-use syntax::codemap::{Span, Spanned, DUMMY_SP};
+use syntax::source_map::{Span, Spanned, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::print::pprust::item_to_string;
 use syntax::symbol::{Ident, Symbol};
@@ -148,7 +148,7 @@ pub fn split_idents(path: &str) -> Vec<Ident> {
 macro_rules! quote_enum {
     ($ecx:expr, $var:expr => $(::$from_root:ident)+ -> $(::$to_root:ident)+
      { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
-        use syntax::codemap::DUMMY_SP;
+        use syntax::source_map::DUMMY_SP;
         use syntax::ast::Ident;
         use $(::$from_root)+::*;
         let root_idents = vec![$(Ident::from_str(stringify!($to_root))),+];

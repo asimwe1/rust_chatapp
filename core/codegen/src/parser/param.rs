@@ -1,5 +1,5 @@
 use syntax::ast::Ident;
-use syntax::codemap::{Span, Spanned};
+use syntax::source_map::{Span, Spanned};
 use syntax::ext::base::ExtCtxt;
 use utils::SpanExt;
 use syntax::parse::PResult;
