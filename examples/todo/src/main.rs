@@ -6,15 +6,13 @@
 #[macro_use] extern crate serde_derive;
 extern crate rocket_contrib;
 
-mod static_files;
 mod task;
 #[cfg(test)] mod tests;
 
 use rocket::Rocket;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::Template;
-use rocket_contrib::databases::database;
+use rocket_contrib::{Template, databases::database, static_files::StaticFiles};
 use diesel::SqliteConnection;
 
 use task::{Task, Todo};
@@ -76,7 +74,8 @@ fn index(msg: Option<FlashMessage>, conn: DbConn) -> Template {
 fn rocket() -> (Rocket, Option<DbConn>) {
     let rocket = rocket::ignite()
         .attach(DbConn::fairing())
-        .mount("/", routes![index, static_files::all])
+        .mount("/", StaticFiles::from("static/"))
+        .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing());
 
