@@ -1,8 +1,6 @@
 // normalize-stderr-test: "<(.*) as (.*)>" -> "$1 as $$TRAIT"
 // normalize-stderr-test: "and \d+ others" -> "and $$N others"
 
-#![feature(attr_literals)]
-
 #[macro_use] extern crate rocket;
 
 #[derive(Responder)]
