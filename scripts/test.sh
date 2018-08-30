@@ -86,6 +86,7 @@ if [ "$1" = "--contrib" ]; then
     tera_templates
     handlebars_templates
     serve
+    space_helmet
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool

@@ -21,6 +21,7 @@ json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
+space_helmet = ["time"]
 serve = []
 
 # The barage of user-facing database features.
@@ -66,8 +67,14 @@ r2d2_cypher = { version = "0.4", optional = true }
 redis = { version = "0.9", optional = true }
 r2d2_redis = { version = "0.8", optional = true }
 
+# SpaceHelmet dependencies
+time = { version = "0.1.40", optional = true }
+
 [target.'cfg(debug_assertions)'.dependencies]
 notify = { version = "^4.0" }
+
+[dev-dependencies]
+rocket_codegen = { version = "0.4.0-dev", path = "../../core/codegen" }
 
 [package.metadata.docs.rs]
 all-features = true

@@ -1,0 +1,4 @@
+# Example cert and key pair from the tls example, NEVER use these in production, for demonstration only!!!
+[global.tls]
+certs = "private/cert.pem"
+key = "private/key.pem"

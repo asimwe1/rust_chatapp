@@ -24,6 +24,7 @@
 //! * [tera_templates](templates) - Tera Templating
 //! * [uuid](uuid) - UUID (de)serialization
 //! * [${database}_pool](databases) - Database Configuration and Pooling
+//! * [space_helmet](space_helmet)
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -49,6 +50,7 @@
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
+#[cfg(feature = "space_helmet")] pub mod space_helmet;
 
 #[cfg(feature="databases")] extern crate rocket_contrib_codegen;
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;
