@@ -10,7 +10,7 @@ extern crate rocket_http;
 mod derive;
 mod http_codegen;
 
-crate use derive_utils::{syn, proc_macro2};
+crate use derive_utils::proc_macro2;
 
 use proc_macro::TokenStream;
 

@@ -133,20 +133,20 @@ note: error occurred while deriving `FromForm`
 60 | #[derive(FromForm)]
    |          ^^^^^^^^
 
-error: malformed attribute
+error: malformed attribute: expected list
   --> $DIR/from_form.rs:69:7
    |
 69 |     #[form]
    |       ^^^^
    |
-   = help: expected syntax: #[attr(key = value, ..)]
+   = help: expected syntax: #[form(key = value, ..)]
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:67:10
    |
 67 | #[derive(FromForm)]
    |          ^^^^^^^^
 
-error: unexpected literal
+error: expected key/value pair
   --> $DIR/from_form.rs:76:12
    |
 76 |     #[form("blah")]
@@ -158,7 +158,7 @@ note: error occurred while deriving `FromForm`
 74 | #[derive(FromForm)]
    |          ^^^^^^^^
 
-error: unexpected literal
+error: expected key/value pair
   --> $DIR/from_form.rs:83:12
    |
 83 |     #[form(123)]
@@ -170,7 +170,7 @@ note: error occurred while deriving `FromForm`
 81 | #[derive(FromForm)]
    |          ^^^^^^^^
 
-error: unexpected attribute parameter: beep
+error: unexpected attribute parameter: `beep`
   --> $DIR/from_form.rs:90:12
    |
 90 |     #[form(beep = "bop")]
@@ -194,7 +194,7 @@ note: error occurred while deriving `FromForm`
 95 | #[derive(FromForm)]
    |          ^^^^^^^^
 
-error: invalid value: expected string
+error: invalid value: expected string literal
    --> $DIR/from_form.rs:105:20
     |
 105 |     #[form(field = true)]
@@ -206,7 +206,7 @@ note: error occurred while deriving `FromForm`
 103 | #[derive(FromForm)]
     |          ^^^^^^^^
 
-error: malformed parameter: expected key/value pair
+error: expected literal or key/value pair
    --> $DIR/from_form.rs:112:12
     |
 112 |     #[form(field)]
@@ -218,7 +218,7 @@ note: error occurred while deriving `FromForm`
 110 | #[derive(FromForm)]
     |          ^^^^^^^^
 
-error: invalid value: expected string
+error: invalid value: expected string literal
    --> $DIR/from_form.rs:119:20
     |
 119 |     #[form(field = 123)]

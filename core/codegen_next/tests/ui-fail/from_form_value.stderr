@@ -67,7 +67,7 @@ note: error occurred while deriving `FromFormValue`
 27 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
 
-error: invalid value: expected string
+error: invalid value: expected string literal
   --> $DIR/from_form_value.rs:35:20
    |
 35 |     #[form(value = 123)]
@@ -79,7 +79,7 @@ note: error occurred while deriving `FromFormValue`
 33 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
 
-error: malformed parameter: expected key/value pair
+error: expected literal or key/value pair
   --> $DIR/from_form_value.rs:42:12
    |
 42 |     #[form(value)]

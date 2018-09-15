@@ -74,14 +74,14 @@ struct MyForm1 {
 #[derive(FromForm)]
 struct MyForm2 {
     #[form("blah")]
-    //~^ ERROR unexpected literal
+    //~^ ERROR expected key/value
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm3 {
     #[form(123)]
-    //~^ ERROR unexpected literal
+    //~^ ERROR expected key/value
     my_field: String,
 }
 
@@ -110,7 +110,7 @@ struct MyForm6 {
 #[derive(FromForm)]
 struct MyForm7 {
     #[form(field)]
-    //~^ ERROR malformed parameter
+    //~^ ERROR expected literal or key/value
     my_field: String,
 }
 

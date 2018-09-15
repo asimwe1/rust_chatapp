@@ -40,6 +40,6 @@ enum Bar1 {
 #[derive(FromFormValue)]
 enum Bar2 {
     #[form(value)]
-    //~^ ERROR malformed parameter
+    //~^ ERROR expected literal or key/value
     A,
 }
