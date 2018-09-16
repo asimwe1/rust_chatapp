@@ -13,7 +13,6 @@ use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
 use http::uri::{Origin, Segments};
-use error::Error;
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
@@ -554,9 +553,9 @@ impl<'r> Request<'r> {
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
-    /// the request. Returns `Error::NoKey` if `n` is greater than the number of
-    /// params. Returns `Error::BadParse` if the parameter type `T` can't be
-    /// parsed from the parameter.
+    /// the request. Returns `None` if `n` is greater than the number of params.
+    /// Returns `Some(Err(T::Error))` if the parameter type `T` failed to be
+    /// parsed from the `n`th dynamic parameter.
     ///
     /// This method exists only to be used by manual routing. To retrieve
     /// parameters from a request, use Rocket's code generation facilities.
@@ -572,12 +571,17 @@ impl<'r> Request<'r> {
     ///
     /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     Outcome::from(req, req.get_param::<String>(0).unwrap_or("unnamed".into()))
+    ///     let string = req.get_param::<String>(0)
+    ///         .and_then(|res| res.ok())
+    ///         .unwrap_or_else(|| "unnamed".into());
+    ///
+    ///     Outcome::from(req, string)
     /// }
     /// ```
-    pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
-        let param = self.get_param_str(n).ok_or(Error::NoKey)?;
-        T::from_param(param).map_err(|_| Error::BadParse)
+    pub fn get_param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
+        where T: FromParam<'a>
+    {
+        Some(T::from_param(self.get_param_str(n)?))
     }
 
     /// Get the `n`th path parameter as a string, if it exists. This is used by
@@ -610,8 +614,8 @@ impl<'r> Request<'r> {
     ///
     /// # Error
     ///
-    /// If there are less than `n` segments, returns an `Err` of `NoKey`. If
-    /// parsing the segments failed, returns an `Err` of `BadParse`.
+    /// If there are less than `n` segments, returns `None`. If parsing the
+    /// segments failed, returns `Some(Err(T:Error))`.
     ///
     /// # Example
     ///
@@ -619,10 +623,10 @@ impl<'r> Request<'r> {
     /// path for this request is `"/hello/<name>/i/<segs..>"`, then
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
     /// `"am/here"` as type `T`.
-    pub fn get_segments<'a, T: FromSegments<'a>>(&'a self, n: usize)
-            -> Result<T, Error> {
-        let segments = self.get_raw_segments(n).ok_or(Error::NoKey)?;
-        T::from_segments(segments).map_err(|_| Error::BadParse)
+    pub fn get_segments<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
+        where T: FromSegments<'a>
+    {
+        Some(T::from_segments(self.get_raw_segments(n)?))
     }
 
     /// Get the segments beginning at the `n`th dynamic parameter, if they

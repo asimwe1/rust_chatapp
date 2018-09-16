@@ -6,10 +6,9 @@ mod tests;
 use std::io;
 use std::fs::File;
 
-use rocket::{Request, Handler, Route, Data, Catcher, Error};
+use rocket::{Request, Handler, Route, Data, Catcher};
 use rocket::http::{Status, RawStr};
-use rocket::response::{self, Responder};
-use rocket::response::status::Custom;
+use rocket::response::{self, Responder, status::Custom};
 use rocket::handler::Outcome;
 use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
@@ -23,8 +22,11 @@ fn hi<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    let param = req.get_param::<&'a RawStr>(0);
-    Outcome::from(req, param.map(|r| r.as_str()).unwrap_or("unnamed"))
+    let param = req.get_param::<&'a RawStr>(0)
+        .and_then(|res| res.ok())
+        .unwrap_or("unnamed".into());
+
+    Outcome::from(req, param.as_str())
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
@@ -60,7 +62,7 @@ fn get_upload<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     Outcome::from(req, File::open("/tmp/upload.txt").ok())
 }
 
-fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
+fn not_found_handler<'r>(req: &'r Request) -> response::Result<'r> {
     let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
     res.respond_to(req)
 }
@@ -78,7 +80,10 @@ impl CustomHandler {
 
 impl Handler for CustomHandler {
     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
-        let id = req.get_param::<&RawStr>(0).ok().or_forward(data)?;
+        let id = req.get_param::<&RawStr>(0)
+            .and_then(|res| res.ok())
+            .or_forward(data)?;
+
         Outcome::from(req, format!("{} - {}", self.data, id))
     }
 }

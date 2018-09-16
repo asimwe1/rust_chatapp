@@ -19,7 +19,7 @@ use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::{Error, LaunchError, LaunchErrorKind};
+use error::{LaunchError, LaunchErrorKind};
 use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header};
@@ -320,12 +320,11 @@ impl Rocket {
         });
 
         // Dispatch to the user's catcher. If it fails, use the default 500.
-        let error = Error::NoRoute;
-        catcher.handle(error, req).unwrap_or_else(|err_status| {
+        catcher.handle(req).unwrap_or_else(|err_status| {
             error_!("Catcher failed with status: {}!", err_status);
             warn_!("Using default 500 error catcher.");
             let default = self.default_catchers.get(&500).expect("Default 500");
-            default.handle(error, req).expect("Default 500 response.")
+            default.handle(req).expect("Default 500 response.")
         })
     }
 

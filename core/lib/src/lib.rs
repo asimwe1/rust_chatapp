@@ -150,7 +150,6 @@ mod ext;
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
 #[doc(inline)] pub use config::Config;
-#[doc(inline)] pub use error::Error;
 pub use router::Route;
 pub use request::{Request, State};
 pub use catcher::Catcher;

@@ -227,7 +227,8 @@ impl Handler for StaticFiles {
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
         // only allowing dotfiles if the user allowed it.
         let allow_dotfiles = self.options.contains(Options::DotFiles);
-        let path = req.get_segments::<Segments>(0).ok()
+        let path = req.get_segments::<Segments>(0)
+            .and_then(|res| res.ok())
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path))
             .into_outcome(Status::NotFound)?;

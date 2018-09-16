@@ -3,7 +3,6 @@
 use data::Data;
 use request::Request;
 use response::{self, Response, Responder};
-use error::Error;
 use http::Status;
 use outcome;
 
@@ -180,7 +179,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
 }
 
 /// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> response::Result<'r>;
+pub type ErrorHandler = for<'r> fn(&'r Request) -> response::Result<'r>;
 
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.

@@ -7,7 +7,7 @@ extern crate rocket;
 
 #[cfg(test)] mod tests;
 
-use rocket::{catch, Request, State};
+use rocket::{catch, State};
 use rocket_contrib::{Json, JsonValue};
 use std::collections::HashMap;
 use std::sync::Mutex;

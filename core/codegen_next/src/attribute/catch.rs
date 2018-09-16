@@ -83,7 +83,6 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         #user_catcher_fn
 
         #vis fn #generated_fn_name<'_b>(
-            _: ::rocket::Error,
             __req: &'_b ::rocket::Request
         ) -> ::rocket::response::Result<'_b> {
             let response = #catcher_response;

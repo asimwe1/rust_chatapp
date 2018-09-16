@@ -1,7 +1,6 @@
 use response;
 use handler::ErrorHandler;
 use codegen::StaticCatchInfo;
-use error::Error;
 use request::Request;
 
 use std::fmt;
@@ -76,17 +75,17 @@ impl Catcher {
     ///
     /// ```rust
     /// # #![allow(unused_variables)]
-    /// use rocket::{Catcher, Request, Error};
+    /// use rocket::{Catcher, Request};
     /// use rocket::response::{Result, Responder};
     /// use rocket::response::status::Custom;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    /// fn handle_404<'r>(req: &'r Request) -> Result<'r> {
     ///     let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
     ///     res.respond_to(req)
     /// }
     ///
-    /// fn handle_500<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    /// fn handle_500<'r>(req: &'r Request) -> Result<'r> {
     ///     "Whoops, we messed up!".respond_to(req)
     /// }
     ///
@@ -99,8 +98,8 @@ impl Catcher {
     }
 
     #[inline(always)]
-    crate fn handle<'r>(&self, e: Error, r: &'r Request) -> response::Result<'r> {
-        (self.handler)(e, r)
+    crate fn handle<'r>(&self, req: &'r Request) -> response::Result<'r> {
+        (self.handler)(req)
     }
 
     #[inline(always)]
@@ -150,7 +149,7 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
+            fn $fn_name<'r>(req: &'r Request) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
                     content::Html(error_page_template!($code, $name, $description))
                 ).respond_to(req)
@@ -171,7 +170,6 @@ pub mod defaults {
     use request::Request;
     use response::{self, content, status, Responder};
     use http::Status;
-    use error::Error;
 
     pub fn get() -> HashMap<u16, Catcher> {
         default_catchers! {
