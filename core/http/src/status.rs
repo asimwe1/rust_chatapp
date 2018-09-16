@@ -134,7 +134,6 @@ macro_rules! ctrs {
                 _ => None
             }
         }
-
     };
 }
 

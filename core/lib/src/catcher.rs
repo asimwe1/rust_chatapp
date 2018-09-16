@@ -40,7 +40,7 @@ use yansi::Color::*;
 ///
 /// extern crate rocket;
 ///
-/// use rocket::Request;
+/// use rocket::{catch, Request};
 ///
 /// #[catch(500)]
 /// fn internal_error() -> &'static str {
@@ -59,13 +59,14 @@ use yansi::Color::*;
 /// }
 /// ```
 ///
-/// A function decorated with `catch` can take in 0, 1, or 2 parameters:
-/// `Error`, `&Request`, or both, as desired.
+/// A function decorated with `catch` must take exactly zero or one arguments.
+/// If the catcher takes an argument, it must be of type `&Request`.
 pub struct Catcher {
     /// The HTTP status code to match against.
     pub code: u16,
-    handler: ErrorHandler,
-    is_default: bool,
+    /// The catcher's associated handler.
+    pub handler: ErrorHandler,
+    crate is_default: bool,
 }
 
 impl Catcher {
@@ -106,11 +107,6 @@ impl Catcher {
     #[inline(always)]
     fn new_default(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code, handler, is_default: true, }
-    }
-
-    #[inline(always)]
-    crate fn is_default(&self) -> bool {
-        self.is_default
     }
 }
 

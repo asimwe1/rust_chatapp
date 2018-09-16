@@ -8,7 +8,9 @@ extern crate proc_macro;
 extern crate rocket_http;
 
 mod derive;
+mod attribute;
 mod http_codegen;
+mod syn_ext;
 
 crate use derive_utils::proc_macro2;
 
@@ -27,4 +29,9 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Responder, attributes(response))]
 pub fn derive_responder(input: TokenStream) -> TokenStream {
     derive::responder::derive_responder(input)
+}
+
+#[proc_macro_attribute]
+pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
+    attribute::catch::catch_attribute(args, input)
 }

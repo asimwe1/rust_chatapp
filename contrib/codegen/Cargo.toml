@@ -21,7 +21,7 @@ proc-macro = true
 
 [dependencies.derive_utils]
 git = "https://github.com/SergioBenitez/derive-utils"
-rev = "5fad71394"
+rev = "87ad56ba"
 
 [dependencies]
 quote = "0.6"

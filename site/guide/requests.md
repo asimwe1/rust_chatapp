@@ -742,13 +742,17 @@ Routing may fail for a variety of reasons. These include:
   * No matching route was found.
 
 If any of these conditions occur, Rocket returns an error to the client. To do
-so, Rocket invokes the _error catcher_ corresponding to the error's status code.
-A catcher is like a route, except it only handles errors. Catchers are declared
-via the `catch` attribute, which takes a single integer corresponding to the
-HTTP status code to catch. For instance, to declare a catcher for **404**
-errors, you'd write:
+so, Rocket invokes the _catcher_ corresponding to the error's status code. A
+catcher is like a route, except it only handles errors. Rocket provides default
+catchers for all of the standard HTTP error codes. To override a default
+catcher, or declare a catcher for a custom status code, use the `catch`
+attribute, which takes a single integer corresponding to the HTTP status code to
+catch. For instance, to declare a catcher for `404 Not Found` errors, you'd
+write:
 
 ```rust
+use rocket::catch;
+
 #[catch(404)]
 fn not_found(req: &Request) -> T { .. }
 ```
@@ -772,12 +776,8 @@ catcher declared above looks like:
 rocket::ignite().catch(catchers![not_found])
 ```
 
-Unlike route request handlers, catchers can only take 0, 1, or 2 parameters of
-types [`Request`](https://api.rocket.rs/rocket/struct.Request.html) and/or
-[`Error`](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
-type is not particularly useful, and so it is often omitted. The [error catcher
-example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/errors)
+Unlike route request handlers, catchers take exactly zero or one parameters. If
+the catcher takes a parameter, it must be of type
+[`&Request`](https://api.rocket.rs/rocket/struct.Request.html) The [error
+catcher example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/errors)
 on GitHub illustrates their use in full.
-
-Rocket has a default catcher for all of the standard HTTP error codes including
-**404**, **500**, and more.

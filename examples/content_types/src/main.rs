@@ -3,13 +3,11 @@
 
 extern crate rocket;
 extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
-use rocket::Request;
-use rocket::response::content;
+use rocket::{catch, Request, response::content};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {

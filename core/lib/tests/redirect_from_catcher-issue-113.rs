@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::response::Redirect;
+use rocket::{catch, Request, response::Redirect};
 
 #[catch(404)]
 fn not_found() -> Redirect {

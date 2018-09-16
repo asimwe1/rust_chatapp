@@ -412,13 +412,10 @@ const PARAM_PREFIX: &str = "rocket_param_";
 const ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 const CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
-const CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
 const URI_INFO_MACRO_PREFIX: &str = "rocket_uri_for_";
 
 const ROUTE_ATTR: &str = "rocket_route";
 const ROUTE_INFO_ATTR: &str = "rocket_route_info";
-
-const CATCHER_ATTR: &str = "rocket_catcher";
 
 macro_rules! register_decorators {
     ($registry:expr, $($name:expr => $func:ident),+) => (
@@ -445,7 +442,6 @@ pub fn plugin_registrar(reg: &mut Registry) {
     );
 
     register_decorators!(reg,
-        "catch" => catch_decorator,
         "route" => route_decorator,
         "get" => get_decorator,
         "put" => put_decorator,

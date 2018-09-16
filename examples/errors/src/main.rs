@@ -5,7 +5,7 @@ extern crate rocket;
 
 #[cfg(test)] mod tests;
 
-use rocket::response::content;
+use rocket::{catch, response::content};
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: String, age: i8) -> String {

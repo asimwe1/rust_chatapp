@@ -548,7 +548,7 @@ impl Rocket {
     ///
     /// extern crate rocket;
     ///
-    /// use rocket::Request;
+    /// use rocket::{catch, Request};
     ///
     /// #[catch(500)]
     /// fn internal_error() -> &'static str {
@@ -571,9 +571,8 @@ impl Rocket {
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
         info!("{}{}:", Paint::masked("👾  "), Paint::purple("Catchers"));
         for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
-                let msg = "(warning: duplicate catcher!)";
-                info_!("{} {}", c, Paint::yellow(msg));
+            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
+                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
             } else {
                 info_!("{}", c);
             }

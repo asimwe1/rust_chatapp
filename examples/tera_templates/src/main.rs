@@ -10,7 +10,7 @@ extern crate serde_json;
 
 use std::collections::HashMap;
 
-use rocket::Request;
+use rocket::{catch, Request};
 use rocket::response::Redirect;
 use rocket_contrib::Template;
 
