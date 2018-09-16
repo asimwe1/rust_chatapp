@@ -42,7 +42,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::fairing())
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
 }
 
 fn main() {

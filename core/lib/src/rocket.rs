@@ -562,13 +562,14 @@ impl Rocket {
     ///
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
-    ///     rocket::ignite().catch(catchers![internal_error, not_found])
+    ///     rocket::ignite()
+    ///         .register(catchers![internal_error, not_found])
     /// #       .launch();
     /// # }
     /// }
     /// ```
     #[inline]
-    pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
+    pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
         info!("{}{}:", Paint::masked("👾  "), Paint::purple("Catchers"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {

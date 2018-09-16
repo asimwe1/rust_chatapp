@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::{catch, Request, response::Redirect};
+use rocket::{catch, response::Redirect};
 
 #[catch(404)]
 fn not_found() -> Redirect {
@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn error_catcher_redirect() {
-        let client = Client::new(rocket::ignite().catch(catchers![not_found])).unwrap();
+        let client = Client::new(rocket::ignite().register(catchers![not_found])).unwrap();
         let response = client.get("/unknown").dispatch();
         println!("Response:\n{:?}", response);
 

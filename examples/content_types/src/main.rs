@@ -51,6 +51,6 @@ fn not_found(request: &Request) -> content::Html<String> {
 fn main() {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
         .launch();
 }

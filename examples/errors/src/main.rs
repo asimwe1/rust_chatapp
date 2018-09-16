@@ -23,7 +23,7 @@ fn main() {
     let e = rocket::ignite()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
         .launch();
 
     println!("Whoops! Rocket didn't launch!");

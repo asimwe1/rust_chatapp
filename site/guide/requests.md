@@ -768,12 +768,13 @@ fn not_found(req: &Request) -> String {
 ```
 
 Also as with routes, Rocket needs to know about a catcher before it is used to
-handle errors. The process is similar to mounting: call the `catch` method with
-a list of catchers via the `catchers!` macro. The invocation to add the **404**
-catcher declared above looks like:
+handle errors. The process, known as "registering" a catcher, is similar to
+mounting a route: call the `register` method with a list of catchers via the
+`catchers!` macro. The invocation to add the **404** catcher declared above
+looks like:
 
 ```rust
-rocket::ignite().catch(catchers![not_found])
+rocket::ignite().register(catchers![not_found])
 ```
 
 Unlike route request handlers, catchers take exactly zero or one parameters. If
