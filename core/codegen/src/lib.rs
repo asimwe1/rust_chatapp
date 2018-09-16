@@ -410,7 +410,6 @@ const DEBUG_ENV_VAR: &str = "ROCKET_CODEGEN_DEBUG";
 
 const PARAM_PREFIX: &str = "rocket_param_";
 const ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
-const CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
 const ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
 const URI_INFO_MACRO_PREFIX: &str = "rocket_uri_for_";
 

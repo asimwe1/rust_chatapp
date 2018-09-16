@@ -29,4 +29,3 @@ impl ReturnTypeExt for syn::ReturnType {
         }
     }
 }
-
