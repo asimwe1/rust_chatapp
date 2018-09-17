@@ -1,6 +1,4 @@
-use rocket;
-use rocket::routes;
-use rocket::local::Client;
+use rocket::{self, routes, local::Client};
 
 #[test]
 fn hello_world() {

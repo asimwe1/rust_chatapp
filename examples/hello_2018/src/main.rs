@@ -1,8 +1,7 @@
 #![feature(plugin, decl_macro, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 
-use rocket;
-use rocket::routes;
+use rocket::{self, routes};
 
 #[cfg(test)] mod tests;
 
