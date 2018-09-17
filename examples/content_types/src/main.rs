@@ -1,14 +1,13 @@
 #![feature(plugin, decl_macro, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 
-#[macro_use]
-extern crate rocket;
+#[macro_use] extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
-use rocket::{catch, Request, response::content};
+use rocket::{Request, response::content};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {

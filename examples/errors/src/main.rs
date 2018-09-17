@@ -5,7 +5,7 @@
 
 #[cfg(test)] mod tests;
 
-use rocket::{catch, response::content};
+use rocket::response::content;
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: String, age: i8) -> String {

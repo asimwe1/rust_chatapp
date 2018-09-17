@@ -751,8 +751,6 @@ catch. For instance, to declare a catcher for `404 Not Found` errors, you'd
 write:
 
 ```rust
-use rocket::catch;
-
 #[catch(404)]
 fn not_found(req: &Request) -> T { .. }
 ```

@@ -547,7 +547,7 @@ impl Rocket {
     ///
     /// #[macro_use] extern crate rocket;
     ///
-    /// use rocket::{catch, Request};
+    /// use rocket::Request;
     ///
     /// #[catch(500)]
     /// fn internal_error() -> &'static str {

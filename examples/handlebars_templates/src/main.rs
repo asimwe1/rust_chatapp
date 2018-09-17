@@ -7,7 +7,7 @@ extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
-use rocket::{catch, Request};
+use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::{Template, handlebars};
 

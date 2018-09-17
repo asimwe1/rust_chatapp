@@ -7,7 +7,7 @@
 
 #[cfg(test)] mod tests;
 
-use rocket::{catch, State};
+use rocket::State;
 use rocket_contrib::{Json, JsonValue};
 use std::collections::HashMap;
 use std::sync::Mutex;
