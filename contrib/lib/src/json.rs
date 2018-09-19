@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use std::io::Read;
+use std::io::{self, Read};
 
 use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
@@ -10,24 +10,6 @@ use rocket::http::Status;
 use serde::{Serialize, Serializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde_json;
-
-pub use serde_json::error::Error as SerdeError;
-
-/// Like [`from_reader`] but eagerly reads the content of the reader to a string
-/// and delegates to `from_str`.
-///
-/// [`from_reader`]: https://docs.serde.rs/serde_json/fn.from_reader.html
-fn from_reader_eager<R, T>(mut reader: R) -> serde_json::Result<T>
-    where R: Read, T: DeserializeOwned
-{
-    let mut s = String::with_capacity(512);
-    if let Err(io_err) = reader.read_to_string(&mut s) {
-        // Error::io is private to serde_json. Do not use outside of Rocket.
-        return Err(SerdeError::io(io_err));
-    }
-
-    serde_json::from_str(&s)
-}
 
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
 /// consume and respond with JSON.
@@ -99,13 +81,39 @@ impl<T> Json<T> {
     }
 }
 
+/// Like [`from_reader`] but eagerly reads the content of the reader to a string
+/// and delegates to `from_str`.
+///
+/// [`from_reader`]: https://docs.serde.rs/serde_json/fn.from_reader.html
+fn from_reader_eager<R, T>(mut reader: R) -> Result<T, JsonError>
+    where R: Read, T: DeserializeOwned
+{
+    let mut s = String::with_capacity(512);
+    reader.read_to_string(&mut s).map_err(JsonError::Io)?;
+
+    serde_json::from_str(&s).map_err(|e| JsonError::Parse(s, e))
+}
+
 /// Default limit for JSON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
-impl<T: DeserializeOwned> FromData for Json<T> {
-    type Error = SerdeError;
+/// An error returned by the [`Json`] data guard when incoming data fails to
+/// serialize as JSON.
+#[derive(Debug)]
+pub enum JsonError {
+    /// An I/O error occurred while reading the incoming request data.
+    Io(io::Error),
+    /// The client's data was received successfully but failed to parse as valid
+    /// JSON or as the requested type. The `String` value in `.0` is the raw
+    /// data received from the user, while the `Error` in `.1` is the
+    /// deserialization error from `serde`.
+    Parse(String, serde_json::error::Error),
+}
 
-    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
+impl<T: DeserializeOwned> FromData for Json<T> {
+    type Error = JsonError;
+
+    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         if !request.content_type().map_or(false, |ct| ct.is_json()) {
             error_!("Content-Type is not JSON.");
             return Outcome::Forward(data);
@@ -122,8 +130,8 @@ impl<T: DeserializeOwned> FromData for Json<T> {
 /// Serializes the wrapped value into JSON. Returns a response with Content-Type
 /// JSON and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
-impl<T: Serialize> Responder<'static> for Json<T> {
-    fn respond_to(self, req: &Request) -> response::Result<'static> {
+impl<'a, T: Serialize> Responder<'a> for Json<T> {
+    fn respond_to(self, req: &Request) -> response::Result<'a> {
         serde_json::to_string(&self.0).map(|string| {
             content::Json(string).respond_to(req).unwrap()
         }).map_err(|e| {
