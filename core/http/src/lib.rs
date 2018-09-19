@@ -2,7 +2,7 @@
 #![feature(proc_macro_non_items)]
 #![feature(try_from)]
 #![feature(crate_visibility_modifier)]
-#![recursion_limit="256"]
+#![recursion_limit="512"]
 
 //! Types that map to concepts in HTTP.
 //!

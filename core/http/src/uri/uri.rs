@@ -18,11 +18,11 @@ use uri::{Origin, Authority, Absolute, Error};
 ///
 /// Nevertheless, the `Uri` type is typically enountered as a conversion target.
 /// In particular, you will likely see generic bounds of the form: `T:
-/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::Redirect) methods).
-/// This means that you can provide any type `T` that implements `TryInto<Uri>`,
-/// or, equivalently, any type `U` for which `Uri` implements `TryFrom<U>` or
-/// `From<U>`. These include `&str` and `String`, [`Origin`], [`Authority`], and
-/// [`Absolute`].
+/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::response::Redirect)
+/// methods). This means that you can provide any type `T` that implements
+/// `TryInto<Uri>`, or, equivalently, any type `U` for which `Uri` implements
+/// `TryFrom<U>` or `From<U>`. These include `&str` and `String`, [`Origin`],
+/// [`Authority`], and [`Absolute`].
 ///
 /// ## Parsing
 ///
