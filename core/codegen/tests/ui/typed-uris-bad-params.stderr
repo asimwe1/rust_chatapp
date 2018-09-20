@@ -18,7 +18,7 @@ error: `simple` route uri expects 1 parameter but 2 were supplied
   --> $DIR/typed-uris-bad-params.rs:20:18
    |
 20 |     uri!(simple: "Hello", 23, );
-   |                  ^^^^^^^^^^^^
+   |                  ^^^^^^^^^^^
    |
    = note: expected parameter: id: i32
 
@@ -73,7 +73,7 @@ error: invalid parameters for `simple` route uri
   --> $DIR/typed-uris-bad-params.rs:26:18
    |
 26 |     uri!(simple: id = 100, id = 100, );
-   |                  ^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: duplicate parameter: `id`

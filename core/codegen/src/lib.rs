@@ -399,7 +399,6 @@ extern crate indexmap;
 
 #[macro_use] mod utils;
 mod parser;
-mod macros;
 mod decorators;
 
 use rustc_plugin::Registry;
@@ -424,20 +423,9 @@ macro_rules! register_decorators {
     )
 }
 
-macro_rules! register_macros {
-    ($reg:expr, $($n:expr => $f:ident),+) => (
-        $($reg.register_macro($n, macros::$f);)+
-    )
-}
-
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    register_macros!(reg,
-        "uri" => uri,
-        "rocket_internal_uri" => uri_internal
-    );
-
     register_decorators!(reg,
         "route" => route_decorator,
         "get" => get_decorator,

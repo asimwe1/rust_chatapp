@@ -5,6 +5,9 @@ use derive_utils::{syn, Spanned, Result};
 use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
 use syn_ext::{IdentExt, syn_to_diag};
 
+mod uri;
+mod uri_parsing;
+
 fn _prefixed_vec(prefix: &str, input: TokenStream, ty: &TokenStream2) -> Result<TokenStream2> {
     // Parse a comma-separated list of paths.
     let mut paths = <Punctuated<Path, Comma>>::parse_terminated
@@ -45,4 +48,16 @@ pub static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
 
 pub fn catchers_macro(input: TokenStream) -> TokenStream {
     prefixed_vec(CATCH_STRUCT_PREFIX, input, quote!(::rocket::Catcher))
+}
+
+pub fn uri_macro(input: TokenStream) -> TokenStream {
+    uri::_uri_macro(input)
+        .map_err(|diag| diag.emit())
+        .unwrap_or_else(|_| quote!(()).into())
+}
+
+pub fn uri_internal_macro(input: TokenStream) -> TokenStream {
+    uri::_uri_internal_macro(input)
+        .map_err(|diag| diag.emit())
+        .unwrap_or_else(|_| quote!(()).into())
 }

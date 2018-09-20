@@ -1,9 +1,10 @@
-#![feature(proc_macro_diagnostic)]
+#![feature(proc_macro_diagnostic, proc_macro_span)]
 #![feature(crate_visibility_modifier)]
 #![recursion_limit="128"]
 
 #[macro_use] extern crate quote;
 #[macro_use] extern crate derive_utils;
+extern crate indexmap;
 extern crate proc_macro;
 extern crate rocket_http;
 
@@ -45,4 +46,14 @@ pub fn routes(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn catchers(input: TokenStream) -> TokenStream {
     bang::catchers_macro(input)
+}
+
+#[proc_macro]
+pub fn uri(input: TokenStream) -> TokenStream {
+    bang::uri_macro(input)
+}
+
+#[proc_macro]
+pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
+    bang::uri_internal_macro(input)
 }

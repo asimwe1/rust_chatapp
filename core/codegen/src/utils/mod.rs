@@ -141,10 +141,6 @@ pub fn is_valid_ident<S: AsRef<str>>(s: S) -> bool {
     true
 }
 
-pub fn split_idents(path: &str) -> Vec<Ident> {
-    path.split("::").map(|segment| Ident::from_str(segment)).collect()
-}
-
 macro_rules! quote_enum {
     ($ecx:expr, $var:expr => $(::$from_root:ident)+ -> $(::$to_root:ident)+
      { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
@@ -162,27 +158,4 @@ macro_rules! quote_enum {
             $($extra => $result),*
         }
     })
-}
-
-macro_rules! try_parse {
-    ($sp:expr, $parse:expr) => (
-        match $parse {
-            Ok(v) => v,
-            Err(mut e) => { e.emit(); return DummyResult::expr($sp); }
-        }
-    )
-}
-
-macro_rules! p {
-    ("parameter", $num:expr) => (
-        if $num == 1 { "parameter" } else { "parameters" }
-    );
-
-    ($num:expr, "was") => (
-        if $num == 1 { "1 was".into() } else { format!("{} were", $num) }
-    );
-
-    ($num:expr, "parameter") => (
-        if $num == 1 { "1 parameter".into() } else { format!("{} parameters", $num) }
-    )
 }
