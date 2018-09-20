@@ -7,4 +7,3 @@ publish = false
 [dependencies]
 crossbeam = "0.4"
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }

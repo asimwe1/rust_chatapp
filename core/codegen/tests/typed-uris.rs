@@ -1,5 +1,5 @@
-#![feature(plugin, decl_macro, proc_macro_non_items)]
-#![plugin(rocket_codegen)]
+#![feature(plugin, proc_macro_non_items, proc_macro_gen, decl_macro)]
+
 #![allow(dead_code, unused_variables)]
 
 #[macro_use] extern crate rocket;
@@ -67,10 +67,10 @@ fn no_uri_display_okay(id: i32, form: Form<Second>) -> &'static str {
     "Typed URI testing."
 }
 
-#[post("/<name>?<query>", data = "<user>", rank = 2)]
+#[post("/<name>?<query..>", data = "<user>", rank = 2)]
 fn complex<'r>(
     name: &RawStr,
-    query: User<'r>,
+    query: Form<User<'r>>,
     user: Form<User<'r>>,
     cookies: Cookies
 ) -> &'static str { "" }

@@ -112,7 +112,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
             Ok(quote! {
                 #(#constructors)*
 
-                for (__k, __v) in __items {
+                for (__k, __v) in __items.map(|item| item.key_value()) {
                     match __k.as_str() {
                         #(#matchers)*
                         _ if __strict && __k != "_method" => {

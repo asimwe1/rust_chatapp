@@ -98,7 +98,7 @@ use {RawStr, uri::UriDisplay};
 ///
 /// [`uri!`]: /rocket_codegen/#typed-uris-uri
 /// [`UriDisplay`]: /rocket/http/uri/trait.UriDisplay.html
-pub trait FromUriParam<T>: UriDisplay {
+pub trait FromUriParam<T> {
     /// The resulting type of this conversion.
     type Target: UriDisplay;
 
@@ -141,6 +141,20 @@ impl<'a, 'b> FromUriParam<&'a str> for &'b RawStr {
     fn from_uri_param(param: &'a str) -> &'a str { param }
 }
 
+/// A no cost conversion allowing a `String` to be used in place of an `&RawStr`.
+impl<'a> FromUriParam<String> for &'a RawStr {
+    type Target = String;
+    #[inline(always)]
+    fn from_uri_param(param: String) -> String { param }
+}
+
+/// A no cost conversion allowing a `String` to be used in place of an `&str`.
+impl<'a> FromUriParam<String> for &'a str {
+    type Target = String;
+    #[inline(always)]
+    fn from_uri_param(param: String) -> String { param }
+}
+
 /// A no cost conversion allowing an `&Path` to be used in place of a `PathBuf`.
 impl<'a> FromUriParam<&'a Path> for PathBuf {
     type Target = &'a Path;
@@ -151,6 +165,7 @@ impl<'a> FromUriParam<&'a Path> for PathBuf {
 /// A no cost conversion allowing an `&str` to be used in place of a `PathBuf`.
 impl<'a> FromUriParam<&'a str> for PathBuf {
     type Target = &'a Path;
+
     #[inline(always)]
     fn from_uri_param(param: &'a str) -> &'a Path {
         Path::new(param)

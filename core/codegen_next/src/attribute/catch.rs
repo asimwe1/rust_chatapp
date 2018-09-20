@@ -1,14 +1,11 @@
-use proc_macro::TokenStream;
+use proc_macro::{TokenStream, Span};
 use derive_utils::{syn, Spanned, Result, FromMeta};
 use proc_macro2::TokenStream as TokenStream2;
-use proc_macro::Span;
 
 use http_codegen::Status;
 use syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt};
 use self::syn::{Attribute, parse::Parser};
-
-crate const CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
-crate const CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
+use {CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
 /// The raw, parsed `#[catch(code)]` attribute.
 #[derive(Debug, FromMeta)]
@@ -72,9 +69,8 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         .unwrap_or(Span::call_site().into());
 
     let catcher_response = quote_spanned!(return_type_span => {
-        // Check the type signature.
+        // Emit this to force a type signature check.
         let __catcher: #fn_sig = #user_catcher_fn_name;
-        // Generate the response.
         ::rocket::response::Responder::respond_to(__catcher(#inputs), __req)?
     });
 
@@ -82,6 +78,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     Ok(quote! {
         #user_catcher_fn
 
+        /// Rocket code generated wrapping catch function.
         #vis fn #generated_fn_name<'_b>(
             __req: &'_b ::rocket::Request
         ) -> ::rocket::response::Result<'_b> {
@@ -92,6 +89,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
                 .ok()
         }
 
+        /// Rocket code generated static catcher info.
         #[allow(non_upper_case_globals)]
         #vis static #generated_struct_name: ::rocket::StaticCatchInfo =
             ::rocket::StaticCatchInfo {
@@ -102,11 +100,5 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
 }
 
 pub fn catch_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
-    match _catch(args, input) {
-        Ok(tokens) => tokens,
-        Err(diag) => {
-            diag.emit();
-            TokenStream::new()
-        }
-    }
+    _catch(args, input).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
 }

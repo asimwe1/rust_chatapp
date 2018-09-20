@@ -22,7 +22,7 @@ error: invalid value: expected unsigned integer literal
    |
    = help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
 
-error: unexpected named parameter: expected bare literal
+error: unexpected parameter: expected literal or identifier
   --> $DIR/catch.rs:19:9
    |
 19 | #[catch(code = "404")] //~ ERROR unexpected named parameter
@@ -30,7 +30,7 @@ error: unexpected named parameter: expected bare literal
    |
    = help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
 
-error: unexpected named parameter: expected bare literal
+error: unexpected parameter: expected literal or identifier
   --> $DIR/catch.rs:23:9
    |
 23 | #[catch(code = 404)] //~ ERROR unexpected named parameter

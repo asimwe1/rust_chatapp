@@ -166,9 +166,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// `sensitive` handler.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Outcome;
 /// use rocket::http::Status;
@@ -222,9 +221,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, never_type)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
@@ -285,9 +283,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// used, as illustrated below:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, never_type)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(never_type)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};

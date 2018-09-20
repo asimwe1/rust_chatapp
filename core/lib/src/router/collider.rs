@@ -1,7 +1,7 @@
 use super::Route;
 
-use http::uri::Origin;
 use http::MediaType;
+use http::route::Kind;
 use request::Request;
 
 impl Route {
@@ -15,22 +15,15 @@ impl Route {
     ///   * If route specifies a format, it only gets requests for that format.
     ///   * If route doesn't specify a format, it gets requests for any format.
     ///
-    /// Query collisions work like this:
-    ///
-    ///   * If routes specify a query, they only gets request that have queries.
-    ///   * If routes don't specify a query, requests with queries also match.
-    ///
-    /// As a result, as long as everything else collides, whether a route has a
-    /// query or not is irrelevant: it will collide.
+    /// Because query parsing is lenient, and dynamic query parameters can be
+    /// missing, queries do not impact whether two routes collide.
     pub fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
-            && paths_collide(&self.uri, &other.uri)
+            && paths_collide(self, other)
             && match (self.format.as_ref(), other.format.as_ref()) {
                 (Some(a), Some(b)) => media_types_collide(a, b),
-                (Some(_), None) => true,
-                (None, Some(_)) => true,
-                (None, None) => true
+                _ => true
             }
     }
 
@@ -43,21 +36,13 @@ impl Route {
     ///     - If route doesn't specify format, it gets requests for any format.
     ///   * All static components in the route's path match the corresponding
     ///     components in the same position in the incoming request.
-    ///   * If the route specifies a query, the request must have a query as
-    ///     well. If the route doesn't specify a query, requests with and
-    ///     without queries match.
-    ///
-    /// In the future, query handling will work as follows:
-    ///
     ///   * All static components in the route's query string are also in the
-    ///     request query string, though in any position, and there exists a
-    ///     query parameter named exactly like each non-multi dynamic component
-    ///     in the route's query that wasn't matched against a static component.
+    ///     request query string, though in any position.
     ///     - If no query in route, requests with/without queries match.
     pub fn matches(&self, req: &Request) -> bool {
         self.method == req.method()
-            && paths_collide(&self.uri, req.uri())
-            && queries_collide(self, req)
+            && paths_match(self, req)
+            && queries_match(self, req)
             && match self.format {
                 Some(ref a) => match req.format() {
                     Some(ref b) => media_types_collide(a, b),
@@ -68,49 +53,67 @@ impl Route {
     }
 }
 
-#[inline(always)]
-fn iters_match_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
-    where A: Iterator<Item = u8>, B: Iterator<Item = u8>
-{
-    loop {
-        match (a.next(), b.next()) {
-            (None, Some(_)) => return false,
-            (Some(_), None) => return false,
-            (None, None) => return true,
-            (Some(c1), Some(c2)) if c1 == break_c || c2 == break_c => return true,
-            (Some(c1), Some(c2)) if c1 != c2 => return false,
-            (Some(_), Some(_)) => continue
-        }
-    }
-}
-
-fn segments_collide(first: &str, other: &str) -> bool {
-    let a_iter = first.as_bytes().iter().cloned();
-    let b_iter = other.as_bytes().iter().cloned();
-    iters_match_until(b'<', a_iter.clone(), b_iter.clone())
-        && iters_match_until(b'>', a_iter.rev(), b_iter.rev())
-}
-
-fn paths_collide(first: &Origin, other: &Origin) -> bool {
-    for (seg_a, seg_b) in first.segments().zip(other.segments()) {
-        if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
+fn paths_collide(route: &Route, other: &Route) -> bool {
+    let a_segments = &route.metadata.path_segments;
+    let b_segments = &other.metadata.path_segments;
+    for (seg_a, seg_b) in a_segments.iter().zip(b_segments.iter()) {
+        if seg_a.kind == Kind::Multi || seg_b.kind == Kind::Multi {
             return true;
         }
 
-        if !segments_collide(seg_a, seg_b) {
-            return false;
+        if seg_a.kind == Kind::Static && seg_b.kind == Kind::Static {
+            if seg_a.string != seg_b.string {
+                return false;
+            }
         }
     }
 
-    if first.segment_count() != other.segment_count() {
+    a_segments.len() == b_segments.len()
+}
+
+fn paths_match(route: &Route, request: &Request) -> bool {
+    let route_segments = &route.metadata.path_segments;
+    if route_segments.len() > request.state.path_segments.len() {
         return false;
     }
 
-    true
+    let request_segments = request.raw_path_segments();
+    for (route_seg, req_seg) in route_segments.iter().zip(request_segments) {
+        match route_seg.kind {
+            Kind::Multi => return true,
+            Kind::Static if &*route_seg.string != req_seg.as_str() => return false,
+            _ => continue,
+        }
+    }
+
+    route_segments.len() == request.state.path_segments.len()
 }
 
-fn queries_collide(route: &Route, req: &Request) -> bool {
-    route.uri.query().map_or(true, |_| req.uri().query().is_some())
+fn queries_match(route: &Route, request: &Request) -> bool {
+    if route.metadata.fully_dynamic_query {
+        return true;
+    }
+
+    let route_query_segments = match route.metadata.query_segments {
+        Some(ref segments) => segments,
+        None => return true
+    };
+
+    let req_query_segments = match request.raw_query_items() {
+        Some(iter) => iter.map(|item| item.raw.as_str()),
+        None => return route.metadata.fully_dynamic_query
+    };
+
+    for seg in route_query_segments.iter() {
+        if seg.kind == Kind::Static {
+            // it's okay; this clones the iterator
+            if !req_query_segments.clone().any(|r| r == seg.string) {
+                return false;
+            }
+        }
+    }
+
+    true
 }
 
 fn media_types_collide(first: &MediaType, other: &MediaType) -> bool {
@@ -134,20 +137,20 @@ mod tests {
     type SimpleRoute = (Method, &'static str);
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
-        let route_a = Route::new(a.0, a.1.to_string(), dummy_handler);
-        route_a.collides_with(&Route::new(b.0, b.1.to_string(), dummy_handler))
+        let route_a = Route::new(a.0, a.1, dummy_handler);
+        route_a.collides_with(&Route::new(b.0, b.1, dummy_handler))
     }
 
     fn unranked_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::ranked(0, Get, a.to_string(), dummy_handler);
-        let route_b = Route::ranked(0, Get, b.to_string(), dummy_handler);
+        let route_a = Route::ranked(0, Get, a, dummy_handler);
+        let route_b = Route::ranked(0, Get, b, dummy_handler);
         eprintln!("Checking {} against {}.", route_a, route_b);
         route_a.collides_with(&route_b)
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        let a = Origin::parse_route(a).unwrap();
-        let b = Origin::parse_route(b).unwrap();
+        let a = Route::new(Get, a, dummy_handler);
+        let b = Route::new(Get, b, dummy_handler);
         paths_collide(&a, &b)
     }
 
@@ -187,15 +190,10 @@ mod tests {
 
     #[test]
     fn hard_param_collisions() {
-        assert!(unranked_collide("/<name>bob", "/<name>b"));
-        assert!(unranked_collide("/a<b>c", "/abc"));
-        assert!(unranked_collide("/a<b>c", "/azooc"));
-        assert!(unranked_collide("/a<b>", "/ab"));
-        assert!(unranked_collide("/<b>", "/a"));
-        assert!(unranked_collide("/<a>/<b>", "/a/b<c>"));
-        assert!(unranked_collide("/<a>/bc<b>", "/a/b<c>"));
-        assert!(unranked_collide("/<a>/bc<b>d", "/a/b<c>"));
         assert!(unranked_collide("/<a..>", "///a///"));
+        assert!(unranked_collide("/<a..>", "//a/bcjdklfj//<c>"));
+        assert!(unranked_collide("/a/<a..>", "//a/bcjdklfj//<c>"));
+        assert!(unranked_collide("/a/<b>/<c..>", "//a/bcjdklfj//<c>"));
     }
 
     #[test]
@@ -222,12 +220,7 @@ mod tests {
         assert!(!unranked_collide("/a/hello", "/a/c"));
         assert!(!unranked_collide("/hello", "/a/c"));
         assert!(!unranked_collide("/hello/there", "/hello/there/guy"));
-        assert!(!unranked_collide("/b<a>/there", "/hi/there"));
-        assert!(!unranked_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!unranked_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!unranked_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!unranked_collide("/a/<b>", "/b/<b>"));
-        assert!(!unranked_collide("/a<a>/<b>", "/b/<b>"));
         assert!(!unranked_collide("/<a..>", "/"));
         assert!(!unranked_collide("/hi/<a..>", "/hi"));
         assert!(!unranked_collide("/hi/<a..>", "/hi/"));
@@ -272,36 +265,21 @@ mod tests {
         assert!(!s_s_collide("/a/hello", "/a/c"));
         assert!(!s_s_collide("/hello", "/a/c"));
         assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
-        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
-        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
         assert!(!s_s_collide("/a", "/b"));
         assert!(!s_s_collide("/a/b", "/a"));
         assert!(!s_s_collide("/a/b", "/a/c"));
         assert!(!s_s_collide("/a/hello", "/a/c"));
         assert!(!s_s_collide("/hello", "/a/c"));
         assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
-        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
-        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
         assert!(!s_s_collide("/a", "/b"));
         assert!(!s_s_collide("/a/b", "/a"));
         assert!(!s_s_collide("/a/b", "/a/c"));
         assert!(!s_s_collide("/a/hello", "/a/c"));
         assert!(!s_s_collide("/hello", "/a/c"));
         assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
-        assert!(!s_s_collide("/b<a>/there", "/hi/there"));
-        assert!(!s_s_collide("/<a>/<b>c", "/hi/person"));
-        assert!(!s_s_collide("/<a>/<b>cd", "/hi/<a>e"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b<b>/<a>"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_s_collide("/a<a>/<b>", "/b/<b>"));
         assert!(!s_s_collide("/<a..>", "/"));
         assert!(!s_s_collide("/hi/<a..>", "/hi/"));
         assert!(!s_s_collide("/a/hi/<a..>", "/a/hi/"));
@@ -432,7 +410,7 @@ mod tests {
         assert!(!req_route_mt_collide(Post, None, "application/json"));
     }
 
-    fn req_route_path_collide(a: &'static str, b: &'static str) -> bool {
+    fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
         let rocket = Rocket::custom(Config::development().unwrap());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
@@ -441,21 +419,37 @@ mod tests {
 
     #[test]
     fn test_req_route_query_collisions() {
-        assert!(req_route_path_collide("/a/b?a=b", "/a/b?<c>"));
-        assert!(req_route_path_collide("/a/b?a=b", "/<a>/b?<c>"));
-        assert!(req_route_path_collide("/a/b?a=b", "/<a>/<b>?<c>"));
-        assert!(req_route_path_collide("/a/b?a=b", "/a/<b>?<c>"));
-        assert!(req_route_path_collide("/?b=c", "/?<b>"));
+        assert!(req_route_path_match("/a/b?a=b", "/a/b?<c>"));
+        assert!(req_route_path_match("/a/b?a=b", "/<a>/b?<c>"));
+        assert!(req_route_path_match("/a/b?a=b", "/<a>/<b>?<c>"));
+        assert!(req_route_path_match("/a/b?a=b", "/a/<b>?<c>"));
+        assert!(req_route_path_match("/?b=c", "/?<b>"));
 
-        assert!(req_route_path_collide("/a/b?a=b", "/a/b"));
-        assert!(req_route_path_collide("/a/b", "/a/b"));
-        assert!(req_route_path_collide("/a/b/c/d?", "/a/b/c/d"));
-        assert!(req_route_path_collide("/a/b/c/d?v=1&v=2", "/a/b/c/d"));
+        assert!(req_route_path_match("/a/b?a=b", "/a/b"));
+        assert!(req_route_path_match("/a/b", "/a/b"));
+        assert!(req_route_path_match("/a/b/c/d?", "/a/b/c/d"));
+        assert!(req_route_path_match("/a/b/c/d?v=1&v=2", "/a/b/c/d"));
 
-        assert!(!req_route_path_collide("/a/b", "/a/b?<c>"));
-        assert!(!req_route_path_collide("/a/b/c", "/a/b?<c>"));
-        assert!(!req_route_path_collide("/a?b=c", "/a/b?<c>"));
-        assert!(!req_route_path_collide("/?b=c", "/a/b?<c>"));
-        assert!(!req_route_path_collide("/?b=c", "/a?<c>"));
+        assert!(req_route_path_match("/a/b", "/a/b?<c>"));
+        assert!(req_route_path_match("/a/b", "/a/b?<c..>"));
+        assert!(req_route_path_match("/a/b?c", "/a/b?c"));
+        assert!(req_route_path_match("/a/b?c", "/a/b?<c>"));
+        assert!(req_route_path_match("/a/b?c=foo&d=z", "/a/b?<c>"));
+        assert!(req_route_path_match("/a/b?c=foo&d=z", "/a/b?<c..>"));
+
+        assert!(req_route_path_match("/a/b?c=foo&d=z", "/a/b?c=foo&<c..>"));
+        assert!(req_route_path_match("/a/b?c=foo&d=z", "/a/b?d=z&<c..>"));
+
+        assert!(!req_route_path_match("/a/b/c", "/a/b?<c>"));
+        assert!(!req_route_path_match("/a?b=c", "/a/b?<c>"));
+        assert!(!req_route_path_match("/?b=c", "/a/b?<c>"));
+        assert!(!req_route_path_match("/?b=c", "/a?<c>"));
+
+        assert!(!req_route_path_match("/a/b?c=foo&d=z", "/a/b?a=b&<c..>"));
+        assert!(!req_route_path_match("/a/b?c=foo&d=z", "/a/b?d=b&<c..>"));
+        assert!(!req_route_path_match("/a/b", "/a/b?c"));
+        assert!(!req_route_path_match("/a/b", "/a/b?foo"));
+        assert!(!req_route_path_match("/a/b", "/a/b?foo&<rest..>"));
+        assert!(!req_route_path_match("/a/b", "/a/b?<a>&b&<rest..>"));
     }
 }

@@ -86,8 +86,7 @@ pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 /// managed state and a static route, as follows:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, proc_macro_non_items)]
-/// # #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Copy, Clone)]

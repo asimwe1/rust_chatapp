@@ -4,17 +4,21 @@ use proc_macro2::TokenStream as TokenStream2;
 use derive_utils::{syn, Spanned, Result};
 use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
 use syn_ext::{IdentExt, syn_to_diag};
+use {ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 
 mod uri;
 mod uri_parsing;
-
 
 crate fn prefix_last_segment(path: &mut Path, prefix: &str) {
     let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
     last_seg.value_mut().ident = last_seg.value().ident.prepend(prefix);
 }
 
-fn _prefixed_vec(prefix: &str, input: TokenStream, ty: &TokenStream2) -> Result<TokenStream2> {
+fn _prefixed_vec(
+    prefix: &str,
+    input: TokenStream,
+    ty: &TokenStream2
+) -> Result<TokenStream2> {
     // Parse a comma-separated list of paths.
     let mut paths = <Punctuated<Path, Comma>>::parse_terminated
         .parse(input)
@@ -41,13 +45,9 @@ fn prefixed_vec(prefix: &str, input: TokenStream, ty: TokenStream2) -> TokenStre
     }).into()
 }
 
-pub static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
-
 pub fn routes_macro(input: TokenStream) -> TokenStream {
     prefixed_vec(ROUTE_STRUCT_PREFIX, input, quote!(::rocket::Route))
 }
-
-pub static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
 
 pub fn catchers_macro(input: TokenStream) -> TokenStream {
     prefixed_vec(CATCH_STRUCT_PREFIX, input, quote!(::rocket::Catcher))

@@ -16,11 +16,11 @@ const CATCH: &str = "Catcher";
 //~^ HELP #[catch(404)]
 fn e1(_request: &Request) { }
 
-#[catch(code = "404")] //~ ERROR unexpected named parameter
+#[catch(code = "404")] //~ ERROR unexpected parameter
 //~^ HELP #[catch(404)]
 fn e2(_request: &Request) { }
 
-#[catch(code = 404)] //~ ERROR unexpected named parameter
+#[catch(code = 404)] //~ ERROR unexpected parameter
 //~^ HELP #[catch(404)]
 fn e3(_request: &Request) { }
 

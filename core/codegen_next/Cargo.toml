@@ -20,11 +20,14 @@ proc-macro = true
 indexmap = "1.0"
 quote = "0.6.1"
 rocket_http = { version = "0.4.0-dev", path = "../http/" }
+indexmap = "1"
 
 [dependencies.derive_utils]
-git = "https://github.com/SergioBenitez/derive-utils"
-rev = "87ad56ba"
+path = "/Users/sbenitez/Sync/Data/Projects/Snippets/derive-utils/lib"
+# git = "https://github.com/SergioBenitez/derive-utils"
+# rev = "87ad56ba"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
+rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 compiletest_rs = "0.3.14"

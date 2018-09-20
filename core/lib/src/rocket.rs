@@ -185,8 +185,8 @@ impl Rocket {
         if is_form && req.method() == Method::Post && data_len >= min_len {
             if let Ok(form) = from_utf8(&data.peek()[..min(data_len, max_len)]) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
-                    .filter(|&(key, _)| key.as_str() == "_method")
-                    .map(|(_, value)| value.parse())
+                    .filter(|item| item.key.as_str() == "_method")
+                    .map(|item| item.value.parse())
                     .next();
 
                 if let Some(Ok(method)) = method {
@@ -455,8 +455,7 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
@@ -497,11 +496,6 @@ impl Rocket {
               Paint::purple("Mounting"),
               Paint::blue(base));
 
-        if base.contains('<') || base.contains('>') {
-            error_!("Mount point '{}' contains dynamic paramters.", base);
-            panic!("Invalid mount point.");
-        }
-
         let base_uri = Origin::parse(base)
             .unwrap_or_else(|e| {
                 error_!("Invalid origin URI '{}' used as mount point.", base);
@@ -513,22 +507,12 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        if !base_uri.is_normalized() {
-            error_!("Mount point '{}' is not normalized.", base_uri);
-            info_!("Expected: '{}'.", base_uri.to_normalized());
-            panic!("Invalid mount point.");
-        }
-
         for mut route in routes.into() {
-            let complete_uri = format!("{}/{}", base_uri, route.uri);
-            let uri = Origin::parse_route(&complete_uri)
-                .unwrap_or_else(|e| {
-                    error_!("Invalid route URI: {}", base);
-                    panic!("Error: {}", e)
-                });
-
-            route.set_base(base_uri.clone());
-            route.set_uri(uri.to_normalized());
+            let path = route.uri.clone();
+            if let Err(e) = route.set_uri(base_uri.clone(), path) {
+                error_!("{}", e);
+                panic!("Invalid route URI.");
+            }
 
             info_!("{}", route);
             self.router.add(route);
@@ -542,11 +526,8 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(plugin, decl_macro, proc_macro_non_items)]
-    /// #![plugin(rocket_codegen)]
-    ///
-    /// #[macro_use] extern crate rocket;
-    ///
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Request;
     ///
     /// #[catch(500)]
@@ -601,8 +582,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
@@ -639,9 +619,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
@@ -756,8 +735,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro, proc_macro_non_items)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -813,9 +791,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///

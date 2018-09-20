@@ -209,13 +209,15 @@ pub fn init(level: LoggingLevel) -> bool {
     try_init(level, true)
 }
 
-// This method exists as a shim for the log macros that need to be called from
-// an end user's code. It was added as part of the work to support database
-// connection pools via procedural macros.
-#[doc(hidden)]
-pub fn log_err(indented: bool, msg: &str) {
-    match indented {
-        true => error_!("{}", msg),
-        false => error!("{}", msg),
-    }
+// Expose logging macros as (hidden) funcions for use by core/contrib codegen.
+macro_rules! external_log_function {
+    ($fn_name:ident: $macro_name:ident) => (
+        #[doc(hidden)] #[inline(always)]
+        pub fn $fn_name(msg: &str) { $macro_name!("{}", msg); }
+    )
 }
+
+external_log_function!(log_error: error);
+external_log_function!(log_error_: error_);
+external_log_function!(log_warn: warn);
+external_log_function!(log_warn_: warn_);

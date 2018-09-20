@@ -45,6 +45,16 @@ impl<'a, T: ?Sized + ToOwned + 'a, C: Into<Cow<'a, T>>> From<C> for Indexed<'a, 
 }
 
 impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
+    /// Panics if `self` is not an `Indexed`.
+    #[inline(always)]
+    pub fn indices(self) -> (usize, usize) {
+        match self {
+            Indexed::Indexed(a, b) => (a, b),
+            _ => panic!("cannot convert indexed T to U unless indexed")
+        }
+    }
+
+    /// Panics if `self` is not an `Indexed`.
     #[inline(always)]
     pub fn coerce<U: ?Sized + ToOwned>(self) -> Indexed<'a, U> {
         match self {
@@ -53,6 +63,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
         }
     }
 
+    /// Panics if `self` is not an `Indexed`.
     #[inline(always)]
     pub fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
         match self {

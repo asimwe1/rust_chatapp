@@ -44,7 +44,7 @@ use uncased::UncasedStr;
 ///
 /// [`FromParam`]: /rocket/request/trait.FromParam.html
 /// [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
 
@@ -154,10 +154,49 @@ impl RawStr {
     /// assert_eq!(decoded, Ok("Hello, world!".to_string()));
     /// ```
     pub fn url_decode(&self) -> Result<String, Utf8Error> {
+        // TODO: Make this more efficient!
         let replaced = self.replace("+", " ");
         RawStr::from_str(replaced.as_str())
             .percent_decode()
             .map(|cow| cow.into_owned())
+    }
+
+    /// Returns a URL-decoded version of the string.
+    ///
+    /// Any invalid UTF-8 percent-encoded byte sequences will be replaced �
+    /// U+FFFD, the replacement character. This is identical to lossy percent
+    /// decoding except that `+` characters are converted into spaces. This is
+    /// the encoding used by form values.
+    ///
+    /// # Example
+    ///
+    /// With a valid string:
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str: &RawStr = "Hello%2C+world%21".into();
+    /// let decoded = raw_str.url_decode_lossy();
+    /// assert_eq!(decoded, "Hello, world!");
+    /// ```
+    ///
+    /// With an invalid string:
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// let bad_str = unsafe { ::std::str::from_utf8_unchecked(b"a+b=\xff") };
+    /// let bad_raw_str = RawStr::from_str(bad_str);
+    /// assert_eq!(bad_raw_str.url_decode_lossy(), "a b=�");
+    /// ```
+    pub fn url_decode_lossy(&self) -> String {
+        let replaced = self.replace("+", " ");
+        RawStr::from_str(replaced.as_str())
+            .percent_decode_lossy()
+            .into_owned()
     }
 
     /// Returns an HTML escaped version of `self`. Allocates only when

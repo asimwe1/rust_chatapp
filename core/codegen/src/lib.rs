@@ -1,8 +1,4 @@
 #![crate_type = "dylib"]
-#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
-#![feature(custom_attribute)]
-#![allow(unused_attributes)]
-#![allow(deprecated)]
 
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
@@ -389,51 +385,3 @@
 //! ```
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
-
-extern crate syntax;
-extern crate syntax_ext;
-extern crate syntax_pos;
-extern crate rustc_plugin;
-extern crate rocket_http;
-extern crate indexmap;
-
-#[macro_use] mod utils;
-mod parser;
-mod decorators;
-
-use rustc_plugin::Registry;
-use syntax::ext::base::SyntaxExtension;
-use syntax::symbol::Symbol;
-
-const DEBUG_ENV_VAR: &str = "ROCKET_CODEGEN_DEBUG";
-
-const PARAM_PREFIX: &str = "rocket_param_";
-const ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
-const ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
-const URI_INFO_MACRO_PREFIX: &str = "rocket_uri_for_";
-
-const ROUTE_ATTR: &str = "rocket_route";
-const ROUTE_INFO_ATTR: &str = "rocket_route_info";
-
-macro_rules! register_decorators {
-    ($registry:expr, $($name:expr => $func:ident),+) => (
-        $($registry.register_syntax_extension(Symbol::intern($name),
-                SyntaxExtension::MultiModifier(Box::new(decorators::$func)));
-         )+
-    )
-}
-
-/// Compiler hook for Rust to register plugins.
-#[plugin_registrar]
-pub fn plugin_registrar(reg: &mut Registry) {
-    register_decorators!(reg,
-        "route" => route_decorator,
-        "get" => get_decorator,
-        "put" => put_decorator,
-        "post" => post_decorator,
-        "delete" => delete_decorator,
-        "head" => head_decorator,
-        "patch" => patch_decorator,
-        "options" => options_decorator
-    );
-}

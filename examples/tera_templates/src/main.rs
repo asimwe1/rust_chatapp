@@ -1,10 +1,10 @@
-#![feature(plugin, decl_macro, proc_macro_non_items)]
+#![feature(plugin, proc_macro_non_items, proc_macro_gen, decl_macro)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket_contrib;
 #[macro_use] extern crate rocket;
-extern crate serde_json;
 #[macro_use] extern crate serde_derive;
+extern crate serde_json;
+extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 

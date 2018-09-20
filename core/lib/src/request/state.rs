@@ -21,8 +21,7 @@ use http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, proc_macro_non_items)]
-/// # #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
@@ -123,7 +122,7 @@ impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
 
     #[inline(always)]
     fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
-        match req.get_state::<T>() {
+        match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
                 error_!("Attempted to retrieve unmanaged state!");

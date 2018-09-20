@@ -130,8 +130,7 @@ pub type Transformed<'a, T> =
 /// if the guard returns successfully.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = ::rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
@@ -177,9 +176,8 @@ pub type Transformed<'a, T> =
 /// `String` (an `&str`).
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # #[derive(Debug)]
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
 /// use std::io::{self, Read};
@@ -424,8 +422,7 @@ impl<'f> FromData<'f> for Data {
 /// that you can retrieve it directly from a client's request body:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # type Person = ::rocket::data::Data;
 /// #[post("/person", data = "<person>")]
@@ -437,11 +434,8 @@ impl<'f> FromData<'f> for Data {
 /// A `FromDataSimple` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![allow(unused_attributes)]
-/// # #![allow(unused_variables)]
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]
 /// # struct Person { name: String, age: u16 }

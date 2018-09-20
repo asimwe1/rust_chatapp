@@ -7,7 +7,7 @@ mod lenient;
 mod error;
 mod form;
 
-pub use self::form_items::FormItems;
+pub use self::form_items::{FormItems, FormItem};
 pub use self::from_form::FromForm;
 pub use self::from_form_value::FromFormValue;
 pub use self::form::Form;

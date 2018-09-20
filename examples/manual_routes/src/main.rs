@@ -30,10 +30,9 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    let param = req.uri()
-        .path()
-        .split_at(6)
-        .1;
+    let param = req.get_param::<&RawStr>(1)
+        .and_then(|res| res.ok())
+        .into_outcome(Status::BadRequest)?;
 
     Outcome::from(req, RawStr::from_str(param).url_decode())
 }
@@ -92,7 +91,7 @@ fn rocket() -> rocket::Rocket {
     let always_forward = Route::ranked(1, Get, "/", forward);
     let hello = Route::ranked(2, Get, "/", hi);
 
-    let echo = Route::new(Get, "/echo:<str>", echo_url);
+    let echo = Route::new(Get, "/echo/<str>", echo_url);
     let name = Route::new(Get, "/<name>", name);
     let post_upload = Route::new(Post, "/", upload);
     let get_upload = Route::new(Get, "/", get_upload);

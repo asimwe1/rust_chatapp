@@ -7,4 +7,3 @@ edition = "2018"
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }

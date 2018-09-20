@@ -19,9 +19,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
 /// # let _id = id;
@@ -55,9 +54,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// parameter as follows:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::http::RawStr;
 /// #[get("/<id>")]
 /// fn hello(id: Result<usize, &RawStr>) -> String {
@@ -168,9 +166,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
 /// # use rocket::http::RawStr;
 /// # #[allow(dead_code)]
@@ -284,12 +281,14 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 ///
 /// # Provided Implementations
 ///
-/// Rocket implements `FromParam` for `PathBuf`. The `PathBuf` implementation
-/// constructs a path from the segments iterator. Each segment is
-/// percent-decoded. If a segment equals ".." before or after decoding, the
-/// previous segment (if any) is omitted. For security purposes, any other
-/// segments that begin with "*" or "." are ignored.  If a percent-decoded
-/// segment results in invalid UTF8, an `Err` is returned with the `Utf8Error`.
+/// **`PathBuf`**
+///
+/// The `PathBuf` implementation constructs a path from the segments iterator.
+/// Each segment is percent-decoded. If a segment equals ".." before or after
+/// decoding, the previous segment (if any) is omitted. For security purposes,
+/// any other segments that begin with "*" or "." are ignored.  If a
+/// percent-decoded segment results in invalid UTF8, an `Err` is returned with
+/// the `Utf8Error`.
 pub trait FromSegments<'a>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error: Debug;

@@ -7,27 +7,18 @@ use std::str;
 use yansi::Paint;
 use state::{Container, Storage};
 
-use super::{FromParam, FromSegments, FromRequest, Outcome};
+use request::{FromParam, FromSegments, FromRequest, Outcome};
+use request::{FromFormValue, FormItems, FormItem};
 
 use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
 use http::uri::{Origin, Segments};
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
-use http::{RawStr, ContentType, Accept, MediaType};
+use http::{RawStr, ContentType, Accept, MediaType, Indexed, SmallVec};
 use http::hyper;
 
-#[derive(Clone)]
-struct RequestState<'r> {
-    config: &'r Config,
-    managed: &'r Container,
-    params: RefCell<Vec<(usize, usize)>>,
-    route: Cell<Option<&'r Route>>,
-    cookies: RefCell<CookieJar>,
-    accept: Storage<Option<Accept>>,
-    content_type: Storage<Option<ContentType>>,
-    cache: Rc<Container>,
-}
+type Indices = (usize, usize);
 
 /// The type of an incoming web request.
 ///
@@ -42,7 +33,27 @@ pub struct Request<'r> {
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
-    state: RequestState<'r>,
+    crate state: RequestState<'r>,
+}
+
+#[derive(Clone)]
+crate struct RequestState<'r> {
+    crate config: &'r Config,
+    crate managed: &'r Container,
+    crate path_segments: SmallVec<[Indices; 12]>,
+    crate query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
+    crate route: Cell<Option<&'r Route>>,
+    crate cookies: RefCell<CookieJar>,
+    crate accept: Storage<Option<Accept>>,
+    crate content_type: Storage<Option<ContentType>>,
+    crate cache: Rc<Container>,
+}
+
+#[derive(Clone)]
+crate struct IndexedFormItem {
+    raw: Indices,
+    key: Indices,
+    value: Indices
 }
 
 impl<'r> Request<'r> {
@@ -53,31 +64,26 @@ impl<'r> Request<'r> {
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
-        Request {
+        let mut request = Request {
             method: Cell::new(method),
             uri: uri,
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
+                path_segments: SmallVec::new(),
+                query_items: None,
                 config: &rocket.config,
                 managed: &rocket.state,
                 route: Cell::new(None),
-                params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Rc::new(Container::new()),
             }
-        }
-    }
+        };
 
-    // Only used by doc-tests!
-    #[doc(hidden)]
-    pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::development().unwrap());
-        let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(&rocket, method, uri);
-        f(&mut request);
+        request.update_cached_uri_info();
+        request
     }
 
     /// Retrieve the method from `self`.
@@ -145,16 +151,14 @@ impl<'r> Request<'r> {
     /// # use rocket::http::Method;
     /// # Request::example(Method::Get, "/uri", |mut request| {
     /// let uri = Origin::parse("/hello/Sergio?type=greeting").unwrap();
-    ///
     /// request.set_uri(uri);
     /// assert_eq!(request.uri().path(), "/hello/Sergio");
     /// assert_eq!(request.uri().query(), Some("type=greeting"));
     /// # });
     /// ```
-    #[inline(always)]
     pub fn set_uri<'u: 'r>(&mut self, uri: Origin<'u>) {
         self.uri = uri;
-        *self.state.params.borrow_mut() = Vec::new();
+        self.update_cached_uri_info();
     }
 
     /// Returns the address of the remote connection that initiated this
@@ -265,6 +269,40 @@ impl<'r> Request<'r> {
         self.real_ip().or_else(|| self.remote().map(|r| r.ip()))
     }
 
+    /// Returns a wrapped borrow to the cookies in `self`.
+    ///
+    /// [`Cookies`](/rocket/http/enum.Cookies.html) implements internal
+    /// mutability, so this method allows you to get _and_ add/remove cookies in
+    /// `self`.
+    ///
+    /// # Example
+    ///
+    /// Add a new cookie to a request's cookies:
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::Cookie;
+    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// request.cookies().add(Cookie::new("key", "val"));
+    /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
+    /// # });
+    /// ```
+    pub fn cookies(&self) -> Cookies {
+        // FIXME: Can we do better? This is disappointing.
+        match self.state.cookies.try_borrow_mut() {
+            Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
+            Err(_) => {
+                error_!("Multiple `Cookies` instances are active at once.");
+                info_!("An instance of `Cookies` must be dropped before another \
+                       can be retrieved.");
+                warn_!("The retrieved `Cookies` instance will be empty.");
+                Cookies::empty()
+            }
+        }
+    }
+
     /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
     /// the headers in `self`.
     ///
@@ -334,40 +372,6 @@ impl<'r> Request<'r> {
         self.headers.replace(header.into());
     }
 
-    /// Returns a wrapped borrow to the cookies in `self`.
-    ///
-    /// [`Cookies`](/rocket/http/enum.Cookies.html) implements internal
-    /// mutability, so this method allows you to get _and_ add/remove cookies in
-    /// `self`.
-    ///
-    /// # Example
-    ///
-    /// Add a new cookie to a request's cookies:
-    ///
-    /// ```rust
-    /// # use rocket::Request;
-    /// # use rocket::http::Method;
-    /// use rocket::http::Cookie;
-    ///
-    /// # Request::example(Method::Get, "/uri", |mut request| {
-    /// request.cookies().add(Cookie::new("key", "val"));
-    /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
-    /// # });
-    /// ```
-    pub fn cookies(&self) -> Cookies {
-        // FIXME: Can we do better? This is disappointing.
-        match self.state.cookies.try_borrow_mut() {
-            Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
-            Err(_) => {
-                error_!("Multiple `Cookies` instances are active at once.");
-                info_!("An instance of `Cookies` must be dropped before another \
-                       can be retrieved.");
-                warn_!("The retrieved `Cookies` instance will be empty.");
-                Cookies::empty()
-            }
-        }
-    }
-
     /// Returns the Content-Type header of `self`. If the header is not present,
     /// returns `None`. The Content-Type header is cached after the first call
     /// to this function. As a result, subsequent calls will always return the
@@ -424,12 +428,11 @@ impl<'r> Request<'r> {
         }).as_ref()
     }
 
-    /// Returns the media type "format" of the request.
+    /// Returns the media type "format" of the request if it is present.
     ///
     /// The "format" of a request is either the Content-Type, if the request
     /// methods indicates support for a payload, or the preferred media type in
-    /// the Accept header otherwise. If the method indicates no payload and no
-    /// Accept header is specified, a media type of `Any` is returned.
+    /// the Accept header otherwise.
     ///
     /// The media type returned from this method is used to match against the
     /// `format` route attribute.
@@ -452,16 +455,13 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn format(&self) -> Option<&MediaType> {
-        static ANY: MediaType = MediaType::Any;
         if self.method().supports_payload() {
             self.content_type().map(|ct| ct.media_type())
         } else {
             // FIXME: Should we be using `accept_first` or `preferred`? Or
             // should we be checking neither and instead pass things through
             // where the client accepts the thing at all?
-            self.accept()
-                .map(|accept| accept.preferred().media_type())
-                .or(Some(&ANY))
+            self.accept().map(|accept| accept.preferred().media_type())
         }
     }
 
@@ -552,8 +552,8 @@ impl<'r> Request<'r> {
             })
     }
 
-    /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
-    /// the request. Returns `None` if `n` is greater than the number of params.
+    /// Retrieves and parses into `T` the 0-indexed `n`th segment from the
+    /// request. Returns `None` if `n` is greater than the number of segments.
     /// Returns `Some(Err(T::Error))` if the parameter type `T` failed to be
     /// parsed from the `n`th dynamic parameter.
     ///
@@ -562,119 +562,219 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Retrieve parameter `0`, which is expected to be a `String`, in a manual
-    /// route:
-    ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// # use rocket::{Request, http::Method};
+    /// use rocket::http::{RawStr, uri::Origin};
     ///
-    /// # #[allow(dead_code)]
-    /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     let string = req.get_param::<String>(0)
-    ///         .and_then(|res| res.ok())
-    ///         .unwrap_or_else(|| "unnamed".into());
+    /// # Request::example(Method::Get, "/", |req| {
+    /// fn string<'s>(req: &'s mut Request, uri: &'static str, n: usize) -> &'s RawStr {
+    ///     req.set_uri(Origin::parse(uri).unwrap());
     ///
-    ///     Outcome::from(req, string)
+    ///     req.get_param(n)
+    ///         .and_then(|r| r.ok())
+    ///         .unwrap_or("unnamed".into())
     /// }
+    ///
+    /// assert_eq!(string(req, "/", 0).as_str(), "unnamed");
+    /// assert_eq!(string(req, "/a/b/this_one", 0).as_str(), "a");
+    /// assert_eq!(string(req, "/a/b/this_one", 1).as_str(), "b");
+    /// assert_eq!(string(req, "/a/b/this_one", 2).as_str(), "this_one");
+    /// assert_eq!(string(req, "/a/b/this_one", 3).as_str(), "unnamed");
+    /// assert_eq!(string(req, "/a/b/c/d/e/f/g/h", 7).as_str(), "h");
+    /// # });
     /// ```
+    #[inline]
     pub fn get_param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
         where T: FromParam<'a>
     {
-        Some(T::from_param(self.get_param_str(n)?))
-    }
-
-    /// Get the `n`th path parameter as a string, if it exists. This is used by
-    /// codegen.
-    #[doc(hidden)]
-    pub fn get_param_str(&self, n: usize) -> Option<&RawStr> {
-        let params = self.state.params.borrow();
-        if n >= params.len() {
-            debug!("{} is >= param count {}", n, params.len());
-            return None;
-        }
-
-        let (i, j) = params[n];
-        let path = self.uri.path();
-        if j > path.len() {
-            error!("Couldn't retrieve parameter: internal count incorrect.");
-            return None;
-        }
-
-        Some(path[i..j].into())
+        Some(T::from_param(self.raw_segment_str(n)?))
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request
-    /// URI beginning at the 0-indexed `n`th dynamic parameter. `T` must
-    /// implement [FromSegments](/rocket/request/trait.FromSegments.html), which
-    /// is used to parse the segments.
+    /// URI beginning and including the 0-indexed `n`th non-empty segment. `T`
+    /// must implement [FromSegments](/rocket/request/trait.FromSegments.html),
+    /// which is used to parse the segments.
     ///
     /// This method exists only to be used by manual routing. To retrieve
     /// segments from a request, use Rocket's code generation facilities.
     ///
     /// # Error
     ///
-    /// If there are less than `n` segments, returns `None`. If parsing the
-    /// segments failed, returns `Some(Err(T:Error))`.
+    /// If there are fewer than `n` non-empty segments, returns `None`. If
+    /// parsing the segments failed, returns `Some(Err(T:Error))`.
     ///
     /// # Example
     ///
-    /// If the request URI is `"/hello/there/i/am/here"`, and the matched route
-    /// path for this request is `"/hello/<name>/i/<segs..>"`, then
-    /// `request.get_segments::<T>(1)` will attempt to parse the segments
-    /// `"am/here"` as type `T`.
+    /// ```rust
+    /// # use rocket::{Request, http::Method};
+    /// use std::path::PathBuf;
+    ///
+    /// use rocket::http::uri::Origin;
+    ///
+    /// # Request::example(Method::Get, "/", |req| {
+    /// fn path<'s>(req: &'s mut Request, uri: &'static str, n: usize) -> PathBuf {
+    ///     req.set_uri(Origin::parse(uri).unwrap());
+    ///
+    ///     req.get_segments(n)
+    ///         .and_then(|r| r.ok())
+    ///         .unwrap_or_else(|| "whoops".into())
+    /// }
+    ///
+    /// assert_eq!(path(req, "/", 0), PathBuf::from("whoops"));
+    /// assert_eq!(path(req, "/a/", 0), PathBuf::from("a"));
+    /// assert_eq!(path(req, "/a/b/c", 0), PathBuf::from("a/b/c"));
+    /// assert_eq!(path(req, "/a/b/c", 1), PathBuf::from("b/c"));
+    /// assert_eq!(path(req, "/a/b/c", 2), PathBuf::from("c"));
+    /// assert_eq!(path(req, "/a/b/c", 6), PathBuf::from("whoops"));
+    /// # });
+    /// ```
+    #[inline]
     pub fn get_segments<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
         where T: FromSegments<'a>
     {
-        Some(T::from_segments(self.get_raw_segments(n)?))
+        Some(T::from_segments(self.raw_segments(n)?))
     }
 
-    /// Get the segments beginning at the `n`th dynamic parameter, if they
-    /// exist. Used by codegen.
-    #[doc(hidden)]
-    pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
-        let params = self.state.params.borrow();
-        if n >= params.len() {
-            debug!("{} is >= param (segments) count {}", n, params.len());
-            return None;
-        }
+    /// Retrieves and parses into `T` the query value with key `key`. `T` must
+    /// implement [`FromFormValue`], which is used to parse the query's value.
+    /// Key matching is performed case-sensitively. If there are multiple pairs
+    /// with key `key`, the _last_ one is returned.
+    ///
+    /// This method exists only to be used by manual routing. To retrieve
+    /// query values from a request, use Rocket's code generation facilities.
+    ///
+    /// # Error
+    ///
+    /// If a query segment with key `key` isn't present, returns `None`. If
+    /// parsing the value fails, returns `Some(Err(T:Error))`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::{Request, http::Method};
+    /// use std::path::PathBuf;
+    /// use rocket::http::{RawStr, uri::Origin};
+    ///
+    /// # Request::example(Method::Get, "/", |req| {
+    /// fn value<'s>(req: &'s mut Request, uri: &'static str, key: &str) -> &'s RawStr {
+    ///     req.set_uri(Origin::parse(uri).unwrap());
+    ///
+    ///     req.get_query_value(key)
+    ///         .and_then(|r| r.ok())
+    ///         .unwrap_or("n/a".into())
+    /// }
+    ///
+    /// assert_eq!(value(req, "/?a=apple&z=zebra", "a").as_str(), "apple");
+    /// assert_eq!(value(req, "/?a=apple&z=zebra", "z").as_str(), "zebra");
+    /// assert_eq!(value(req, "/?a=apple&z=zebra", "A").as_str(), "n/a");
+    /// assert_eq!(value(req, "/?a=apple&z=zebra&a=argon", "a").as_str(), "argon");
+    /// assert_eq!(value(req, "/?a=1&a=2&a=3&b=4", "a").as_str(), "3");
+    /// assert_eq!(value(req, "/?a=apple&z=zebra", "apple").as_str(), "n/a");
+    /// # });
+    /// ```
+    /// # Example
+    ///
+    /// If the request query is `"/?apple=value_for_a&z=zebra"`, then
+    /// `request.get_query_value::<T>("z")` will attempt to parse `"zebra"` as
+    /// type `T`.
+    #[inline]
+    pub fn get_query_value<'a, T>(&'a self, key: &str) -> Option<Result<T, T::Error>>
+        where T: FromFormValue<'a>
+    {
+        self.raw_query_items()?
+            .rev()
+            .find(|item| item.key.as_str() == key)
+            .map(|item| T::from_form_value(item.value))
+    }
+}
 
-        let (i, j) = params[n];
+// All of these methods only exist for internal, including codegen, purposes.
+// They _are not_ part of the stable API.
+#[doc(hidden)]
+impl<'r> Request<'r> {
+    // Only used by doc-tests! Needs to be `pub` because doc-test are external.
+    pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
+        let rocket = Rocket::custom(Config::development().unwrap());
+        let uri = Origin::parse(uri).expect("invalid URI in example");
+        let mut request = Request::new(&rocket, method, uri);
+        f(&mut request);
+    }
+
+    // Updates the cached `path_segments` and `query_items` in `self.state`.
+    // MUST be called whenever a new URI is set or updated.
+    #[inline]
+    fn update_cached_uri_info(&mut self) {
+        let path_segments = Segments(self.uri.path())
+            .map(|s| indices(s, self.uri.path()))
+            .collect();
+
+        let query_items = self.uri.query()
+            .map(|query_str| FormItems::from(query_str)
+                 .map(|item| IndexedFormItem::from(query_str, item))
+                 .collect()
+            );
+
+        self.state.path_segments = path_segments;
+        self.state.query_items = query_items;
+    }
+
+    /// Get the `n`th path segment, 0-indexed, after the mount point for the
+    /// currently matched route, as a string, if it exists. Used by codegen.
+    #[inline]
+    pub fn raw_segment_str(&self, n: usize) -> Option<&RawStr> {
+        self.routed_path_segment(n)
+            .map(|(i, j)| self.uri.path()[i..j].into())
+    }
+
+    /// Get the segments beginning at the `n`th, 0-indexed, after the mount
+    /// point for the currently matched route, if they exist. Used by codegen.
+    #[inline]
+    pub fn raw_segments(&self, n: usize) -> Option<Segments> {
+        self.routed_path_segment(n)
+            .map(|(i, _)| Segments(&self.uri.path()[i..]) )
+    }
+
+    // Returns an iterator over the raw segments of the path URI. Does not take
+    // into account the current route. This is used during routing.
+    #[inline]
+    crate fn raw_path_segments(&self) -> impl Iterator<Item = &RawStr> {
         let path = self.uri.path();
-        if j > path.len() {
-            error!("Couldn't retrieve segments: internal count incorrect.");
-            return None;
-        }
+        self.state.path_segments.iter().cloned()
+            .map(move |(i, j)| path[i..j].into())
+    }
 
-        Some(Segments(&path[i..j]))
+    #[inline]
+    fn routed_path_segment(&self, n: usize) -> Option<(usize, usize)> {
+        let mount_segments = self.route()
+            .map(|r| r.base.segment_count())
+            .unwrap_or(0);
+
+        self.state.path_segments.get(mount_segments + n).map(|(i, j)| (*i, *j))
+    }
+
+    // Retrieves the pre-parsed query items. Used by matching and codegen.
+    #[inline]
+    pub fn raw_query_items(
+        &self
+    ) -> Option<impl Iterator<Item = FormItem> + DoubleEndedIterator + Clone> {
+        let query = self.uri.query()?;
+        self.state.query_items.as_ref().map(move |items| {
+            items.iter().map(move |item| item.convert(query))
+        })
     }
 
     /// Set `self`'s parameters given that the route used to reach this request
-    /// was `route`. This should only be used internally by `Rocket` as improper
-    /// use may result in out of bounds indexing.
-    /// TODO: Figure out the mount path from here.
-    #[inline]
+    /// was `route`. Use during routing when attempting a given route.
+    #[inline(always)]
     crate fn set_route(&self, route: &'r Route) {
         self.state.route.set(Some(route));
-        *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
-    /// Set the method of `self`, even when `self` is a shared reference.
+    /// Set the method of `self`, even when `self` is a shared reference. Used
+    /// during routing to override methods for re-routing.
     #[inline(always)]
     crate fn _set_method(&self, method: Method) {
         self.method.set(method);
-    }
-
-    /// Replace all of the cookies in `self` with those in `jar`.
-    #[inline]
-    crate fn set_cookies(&mut self, jar: CookieJar) {
-        self.state.cookies = RefCell::new(jar);
-    }
-
-    /// Get the managed state T, if it exists. For internal use only!
-    #[inline(always)]
-    crate fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
-        self.state.managed.try_get()
     }
 
     /// Convert from Hyper types into a Rocket Request.
@@ -720,7 +820,7 @@ impl<'r> Request<'r> {
                 }
             }
 
-            request.set_cookies(cookie_jar);
+            request.state.cookies = RefCell::new(cookie_jar);
         }
 
         // Set the rest of the headers.
@@ -765,4 +865,27 @@ impl<'r> fmt::Display for Request<'r> {
 
         Ok(())
     }
+}
+
+impl IndexedFormItem {
+    #[inline(always)]
+    fn from(s: &str, i: FormItem) -> Self {
+        let (r, k, v) = (indices(i.raw, s), indices(i.key, s), indices(i.value, s));
+        IndexedFormItem { raw: r, key: k, value: v }
+    }
+
+    #[inline(always)]
+    fn convert<'s>(&self, source: &'s str) -> FormItem<'s> {
+        FormItem {
+            raw: source[self.raw.0..self.raw.1].into(),
+            key: source[self.key.0..self.key.1].into(),
+            value: source[self.value.0..self.value.1].into(),
+        }
+    }
+}
+
+fn indices(needle: &str, haystack: &str) -> (usize, usize) {
+    Indexed::checked_from(needle, haystack)
+        .expect("segments inside of path/query")
+        .indices()
 }

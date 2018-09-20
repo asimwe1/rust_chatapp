@@ -5,6 +5,7 @@ mod param;
 mod form;
 mod from_request;
 mod state;
+mod query;
 
 #[cfg(test)]
 mod tests;
@@ -12,9 +13,10 @@ mod tests;
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::param::{FromParam, FromSegments};
-pub use self::form::{Form, LenientForm, FormItems};
+pub use self::form::{Form, LenientForm, FormItems, FormItem};
 pub use self::form::{FromForm, FormError, FromFormValue, FormParseError, FormDataError};
 pub use self::state::State;
+pub use self::query::{Query, FromQuery};
 
 #[doc(inline)]
 pub use response::flash::FlashMessage;

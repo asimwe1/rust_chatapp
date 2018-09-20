@@ -1,36 +1,31 @@
-#![feature(plugin, decl_macro, proc_macro_non_items)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 
 #[macro_use] extern crate rocket;
-extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
+extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
 use rocket_contrib::MsgPack;
 
 #[derive(Serialize, Deserialize)]
-struct Message {
+struct Message<'r> {
     id: usize,
-    contents: String
+    contents: &'r str
 }
 
 #[get("/<id>", format = "msgpack")]
-fn get(id: usize) -> MsgPack<Message> {
-    MsgPack(Message {
-        id: id,
-        contents: "Hello, world!".to_string(),
-    })
+fn get(id: usize) -> MsgPack<Message<'static>> {
+    MsgPack(Message { id: id, contents: "Hello, world!", })
 }
 
 #[post("/", data = "<data>", format = "msgpack")]
-fn create(data: MsgPack<Message>) -> Result<String, ()> {
-    Ok(data.into_inner().contents)
+fn create(data: MsgPack<Message>) -> String {
+    data.contents.to_string()
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
-        .mount("/message", routes![get, create])
+    rocket::ignite().mount("/message", routes![get, create])
 }
 
 fn main() {

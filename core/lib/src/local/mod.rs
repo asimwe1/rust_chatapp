@@ -67,10 +67,9 @@
 //! consider the following complete "Hello, world!" application, with testing.
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro)]
-//! #![plugin(rocket_codegen)]
+//! #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //!
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
 //!
 //! #[get("/")]
 //! fn hello() -> &'static str {

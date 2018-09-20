@@ -151,9 +151,8 @@ use request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]
 /// # struct Person { name: String, age: u16 }

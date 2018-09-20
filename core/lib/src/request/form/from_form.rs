@@ -14,8 +14,7 @@ use request::FormItems;
 /// validation.
 ///
 /// ```rust
-/// #![feature(plugin, decl_macro)]
-/// #![plugin(rocket_codegen)]
+/// #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 ///
 /// #[macro_use] extern crate rocket;
@@ -34,9 +33,8 @@ use request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # #[derive(FromForm)]
@@ -81,10 +79,10 @@ use request::FormItems;
 ///     fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Item, ()> {
 ///         let mut field = None;
 ///
-///         for (key, value) in items {
-///             match key.as_str() {
+///         for item in items {
+///             match item.key.as_str() {
 ///                 "balloon" | "space" if field.is_none() => {
-///                     let decoded = value.url_decode().map_err(|_| ())?;
+///                     let decoded = item.value.url_decode().map_err(|_| ())?;
 ///                     field = Some(decoded);
 ///                 }
 ///                 _ if strict => return Err(()),
@@ -113,16 +111,6 @@ pub trait FromForm<'f>: Sized {
     /// When `strict` is `true` and unexpected, extra fields are present in
     /// `it`, an instance of `Self::Error` will be returned.
     fn from_form(it: &mut FormItems<'f>, strict: bool) -> Result<Self, Self::Error>;
-}
-
-/// This implementation should only be used during debugging!
-impl<'f> FromForm<'f> for &'f str {
-    type Error = !;
-
-    fn from_form(items: &mut FormItems<'f>, _: bool) -> Result<Self, !> {
-        items.mark_complete();
-        Ok(items.inner_str())
-    }
 }
 
 impl<'f, T: FromForm<'f>> FromForm<'f> for Option<T> {

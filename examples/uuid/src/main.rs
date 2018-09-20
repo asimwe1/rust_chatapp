@@ -1,17 +1,14 @@
-#![feature(plugin, decl_macro, proc_macro_non_items)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 
-#[macro_use]
-extern crate lazy_static;
-extern crate uuid;
 #[macro_use] extern crate rocket;
+#[macro_use] extern crate lazy_static;
+extern crate uuid;
 extern crate rocket_contrib;
 
 use std::collections::HashMap;
 use rocket_contrib::Uuid;
 
-#[cfg(test)]
-mod tests;
+#[cfg(test)] mod tests;
 
 lazy_static! {
     // A small people lookup table for the sake of this example. In a real
@@ -39,8 +36,7 @@ fn people(id: Uuid) -> Result<String, String> {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
-        .mount("/", routes![people])
+    rocket::ignite().mount("/", routes![people])
 }
 
 fn main() {

@@ -3,7 +3,7 @@ use std::ops::Deref;
 use outcome::Outcome::*;
 use request::{Request, form::{FromForm, FormItems, FormDataError}};
 use data::{Outcome, Transform, Transformed, Data, FromData};
-use http::Status;
+use http::{Status, uri::FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
@@ -42,9 +42,8 @@ use http::Status;
 /// can access fields of `T` transparently through a `Form<T>`:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
 /// use rocket::http::RawStr;
@@ -72,9 +71,8 @@ use http::Status;
 /// A handler that handles a form of this type can similarly by written:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # #[derive(FromForm)]
@@ -119,7 +117,7 @@ use http::Status;
 /// forms = 524288
 /// ```
 #[derive(Debug)]
-pub struct Form<T>(T);
+pub struct Form<T>(crate T);
 
 impl<T> Form<T> {
     /// Consumes `self` and returns the parsed value.
@@ -127,8 +125,7 @@ impl<T> Form<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///
@@ -225,5 +222,14 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
 
     fn from_data(_: &Request, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
         <Form<T>>::from_data(o.borrowed()?, true).map(Form)
+    }
+}
+
+impl<'f, A, T: FromUriParam<A> + FromForm<'f>> FromUriParam<A> for Form<T> {
+    type Target = T::Target;
+
+    #[inline(always)]
+    fn from_uri_param(param: A) -> Self::Target {
+        T::from_uri_param(param)
     }
 }

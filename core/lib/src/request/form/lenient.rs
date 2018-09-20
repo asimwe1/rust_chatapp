@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use request::{Request, form::{Form, FormDataError, FromForm}};
 use data::{Data, Transform, Transformed, FromData, Outcome};
+use http::uri::FromUriParam;
 
 /// A data gaurd for parsing [`FromForm`] types leniently.
 ///
@@ -30,9 +31,8 @@ use data::{Data, Transform, Transformed, FromData, Outcome};
 /// handler:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::LenientForm;
 ///
@@ -60,7 +60,7 @@ use data::{Data, Transform, Transformed, FromData, Outcome};
 /// forms = 524288
 /// ```
 #[derive(Debug)]
-pub struct LenientForm<T>(T);
+pub struct LenientForm<T>(crate T);
 
 impl<T> LenientForm<T> {
     /// Consumes `self` and returns the parsed value.
@@ -68,8 +68,7 @@ impl<T> LenientForm<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
@@ -108,5 +107,14 @@ impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
 
     fn from_data(_: &Request, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
         <Form<T>>::from_data(o.borrowed()?, false).map(LenientForm)
+    }
+}
+
+impl<'f, A, T: FromUriParam<A> + FromForm<'f>> FromUriParam<A> for LenientForm<T> {
+    type Target = T::Target;
+
+    #[inline(always)]
+    fn from_uri_param(param: A) -> Self::Target {
+        T::from_uri_param(param)
     }
 }

@@ -57,19 +57,20 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro)]
-//! # #![allow(unused_attributes)]
-//! #![plugin(rocket_codegen)]
+//! #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //!
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
+//! #
+//! # #[get("/")]
+//! # fn hello() { }
+//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
 //! ```
 //!
 //! See the [guide](https://rocket.rs/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro, proc_macro_non_items)]
-//! #![plugin(rocket_codegen)]
+//! #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //!
 //! #[macro_use] extern crate rocket;
 //!
