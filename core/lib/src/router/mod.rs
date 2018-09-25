@@ -4,7 +4,6 @@ mod route;
 use std::collections::hash_map::HashMap;
 
 pub use self::route::Route;
-use self::collider::Collider;
 
 use request::Request;
 use http::Method;
@@ -38,7 +37,7 @@ impl Router {
         // Note that routes are presorted by rank on each `add`.
         let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
             routes.iter()
-                .filter(|r| r.collides_with(req))
+                .filter(|r| r.matches(req))
                 .collect()
         });
 

@@ -4,11 +4,68 @@ use http::uri::Origin;
 use http::MediaType;
 use request::Request;
 
-/// The Collider trait is used to determine if two items that can be routed on
-/// can match against a given request. That is, if two items `collide`, they
-/// will both match against _some_ request.
-pub trait Collider<T: ?Sized = Self> {
-    fn collides_with(&self, other: &T) -> bool;
+impl Route {
+    /// Determines if two routes can match against some request. That is, if two
+    /// routes `collide`, there exists a request that can match against both
+    /// routes.
+    ///
+    /// This implementation is used at initialization to check if two user
+    /// routes collide before launching. Format collisions works like this:
+    ///
+    ///   * If route specifies a format, it only gets requests for that format.
+    ///   * If route doesn't specify a format, it gets requests for any format.
+    ///
+    /// Query collisions work like this:
+    ///
+    ///   * If routes specify a query, they only gets request that have queries.
+    ///   * If routes don't specify a query, requests with queries also match.
+    ///
+    /// As a result, as long as everything else collides, whether a route has a
+    /// query or not is irrelevant: it will collide.
+    pub fn collides_with(&self, other: &Route) -> bool {
+        self.method == other.method
+            && self.rank == other.rank
+            && paths_collide(&self.uri, &other.uri)
+            && match (self.format.as_ref(), other.format.as_ref()) {
+                (Some(a), Some(b)) => media_types_collide(a, b),
+                (Some(_), None) => true,
+                (None, Some(_)) => true,
+                (None, None) => true
+            }
+    }
+
+    /// Determines if this route matches against the given request. This means
+    /// that:
+    ///
+    ///   * The route's method matches that of the incoming request.
+    ///   * The route's format (if any) matches that of the incoming request.
+    ///     - If route specifies format, it only gets requests for that format.
+    ///     - If route doesn't specify format, it gets requests for any format.
+    ///   * All static components in the route's path match the corresponding
+    ///     components in the same position in the incoming request.
+    ///   * If the route specifies a query, the request must have a query as
+    ///     well. If the route doesn't specify a query, requests with and
+    ///     without queries match.
+    ///
+    /// In the future, query handling will work as follows:
+    ///
+    ///   * All static components in the route's query string are also in the
+    ///     request query string, though in any position, and there exists a
+    ///     query parameter named exactly like each non-multi dynamic component
+    ///     in the route's query that wasn't matched against a static component.
+    ///     - If no query in route, requests with/without queries match.
+    pub fn matches(&self, req: &Request) -> bool {
+        self.method == req.method()
+            && paths_collide(&self.uri, req.uri())
+            && queries_collide(self, req)
+            && match self.format {
+                Some(ref a) => match req.format() {
+                    Some(ref b) => media_types_collide(a, b),
+                    None => false
+                },
+                None => true
+            }
+    }
 }
 
 #[inline(always)]
@@ -27,95 +84,45 @@ fn iters_match_until<A, B>(break_c: u8, mut a: A, mut b: B) -> bool
     }
 }
 
-impl<'a> Collider<str> for &'a str {
-    #[inline(always)]
-    fn collides_with(&self, other: &str) -> bool {
-        let a_iter = self.as_bytes().iter().cloned();
-        let b_iter = other.as_bytes().iter().cloned();
-        iters_match_until(b'<', a_iter.clone(), b_iter.clone())
-            && iters_match_until(b'>', a_iter.rev(), b_iter.rev())
-    }
+fn segments_collide(first: &str, other: &str) -> bool {
+    let a_iter = first.as_bytes().iter().cloned();
+    let b_iter = other.as_bytes().iter().cloned();
+    iters_match_until(b'<', a_iter.clone(), b_iter.clone())
+        && iters_match_until(b'>', a_iter.rev(), b_iter.rev())
 }
 
-// This _only_ checks the `path` component of the URI.
-impl<'a, 'b> Collider<Origin<'b>> for Origin<'a> {
-    fn collides_with(&self, other: &Origin<'b>) -> bool {
-        for (seg_a, seg_b) in self.segments().zip(other.segments()) {
-            if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
-                return true;
-            }
-
-            if !seg_a.collides_with(seg_b) {
-                return false;
-            }
+fn paths_collide(first: &Origin, other: &Origin) -> bool {
+    for (seg_a, seg_b) in first.segments().zip(other.segments()) {
+        if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
+            return true;
         }
 
-        if self.segment_count() != other.segment_count() {
+        if !segments_collide(seg_a, seg_b) {
             return false;
         }
-
-        true
     }
+
+    if first.segment_count() != other.segment_count() {
+        return false;
+    }
+
+    true
 }
 
-impl Collider for MediaType  {
-    #[inline(always)]
-    fn collides_with(&self, other: &MediaType) -> bool {
-        let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(self.top(), other.top()) && collide(self.sub(), other.sub())
-    }
+fn queries_collide(route: &Route, req: &Request) -> bool {
+    route.uri.query().map_or(true, |_| req.uri().query().is_some())
 }
 
-// This implementation is used at initialization to check if two user routes
-// collide before launching. Format collisions works like this:
-//   * If route specifies a format, it only gets requests for that format.
-//   * If route doesn't specify a format, it gets requests for any format.
-// Query collisions work like this:
-//   * If routes specify a query, they only gets request that have queries.
-//   * If routes don't specify a query, requests with and without queries match.
-// As a result, as long as everything else collides, whether a route has a query
-// or not is irrelevant: it will collide.
-impl Collider for Route {
-    fn collides_with(&self, b: &Route) -> bool {
-        self.method == b.method
-            && self.rank == b.rank
-            && self.uri.collides_with(&b.uri)
-            && match (self.format.as_ref(), b.format.as_ref()) {
-                (Some(mt_a), Some(mt_b)) => mt_a.collides_with(mt_b),
-                (Some(_), None) => true,
-                (None, Some(_)) => true,
-                (None, None) => true
-            }
-    }
-}
-
-// This implementation is used at runtime to check if a given request is
-// intended for this Route. Format collisions works like this:
-//   * If route specifies format, it only gets requests for that format.
-//   * If route doesn't specify format, it gets requests for any format.
-// Query collisions work like this:
-//   * If route specifies a query, it only gets request that have queries.
-//   * If route doesn't specify query, requests with & without queries collide.
-impl<'r> Collider<Request<'r>> for Route {
-    fn collides_with(&self, req: &Request<'r>) -> bool {
-        self.method == req.method()
-            && self.uri.collides_with(req.uri())
-            && self.uri.query().map_or(true, |_| req.uri().query().is_some())
-            && match self.format {
-                Some(ref mt_a) => match req.format() {
-                    Some(ref mt_b) => mt_a.collides_with(mt_b),
-                    None => false
-                },
-                None => true
-            }
-    }
+fn media_types_collide(first: &MediaType, other: &MediaType) -> bool {
+    let collide = |a, b| a == "*" || b == "*" || a == b;
+    collide(first.top(), other.top()) && collide(first.sub(), other.sub())
 }
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
-    use super::Collider;
+    use super::*;
     use rocket::Rocket;
     use config::Config;
     use request::Request;
@@ -139,8 +146,9 @@ mod tests {
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        Origin::parse_route(a).unwrap()
-            .collides_with(&Origin::parse_route(b).unwrap())
+        let a = Origin::parse_route(a).unwrap();
+        let b = Origin::parse_route(b).unwrap();
+        paths_collide(&a, &b)
     }
 
     #[test]
@@ -306,7 +314,7 @@ mod tests {
     fn mt_mt_collide(mt1: &str, mt2: &str) -> bool {
         let mt_a = MediaType::from_str(mt1).expect(mt1);
         let mt_b = MediaType::from_str(mt2).expect(mt2);
-        mt_a.collides_with(&mt_b)
+        media_types_collide(&mt_a, &mt_b)
     }
 
     #[test]
@@ -382,7 +390,7 @@ mod tests {
             route.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
-        route.collides_with(&req)
+        route.matches(&req)
     }
 
     #[test]
@@ -428,7 +436,7 @@ mod tests {
         let rocket = Rocket::custom(Config::development().unwrap());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
-        route.collides_with(&req)
+        route.matches(&req)
     }
 
     #[test]
