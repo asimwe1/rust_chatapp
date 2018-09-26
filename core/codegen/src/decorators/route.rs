@@ -86,7 +86,7 @@ impl RouteParams {
         ).expect("form statement"))
     }
 
-    fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
+    fn generate_data_statements(&self, ecx: &ExtCtxt) -> Option<(Stmt, Stmt)> {
         let param = self.data_param.as_ref().map(|p| &p.value)?;
         let arg = self.annotated_fn.find_input(&param.node.name);
         if arg.is_none() {
@@ -97,18 +97,43 @@ impl RouteParams {
         let arg = arg.unwrap();
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
-        Some(quote_stmt!(ecx,
+
+        let transform_stmt = quote_stmt!(ecx,
+            let __transform = <$ty as ::rocket::data::FromData>::transform(__req, __data);
+        ).expect("data statement");
+
+        let data_stmt = quote_stmt!(ecx,
             #[allow(non_snake_case, unreachable_patterns)]
-            let $name: $ty =
-                match ::rocket::data::FromData::from_data(__req, __data) {
+            let $name: $ty = {
+                let __outcome = match __transform {
+                    ::rocket::data::Transform::Owned(::rocket::Outcome::Success(__v)) => {
+                        ::rocket::data::Transform::Owned(::rocket::Outcome::Success(__v))
+                    }
+                    ::rocket::data::Transform::Borrowed(::rocket::Outcome::Success(ref v)) => {
+                        let borrow = ::std::borrow::Borrow::borrow(v);
+                        ::rocket::data::Transform::Borrowed(::rocket::Outcome::Success(borrow))
+                    }
+                    ::rocket::data::Transform::Owned(inner) => {
+                        ::rocket::data::Transform::Owned(inner)
+                    }
+                    ::rocket::data::Transform::Borrowed(inner) => {
+                        ::rocket::data::Transform::Borrowed(inner.map(|_| unreachable!()))
+                    }
+                };
+
+                match <$ty as ::rocket::data::FromData>::from_data(__req, __outcome) {
                     ::rocket::Outcome::Success(d) => d,
-                    ::rocket::Outcome::Forward(d) =>
-                        return ::rocket::Outcome::Forward(d),
+                    ::rocket::Outcome::Forward(d) => {
+                        return ::rocket::Outcome::Forward(d);
+                    }
                     ::rocket::Outcome::Failure((code, _)) => {
                         return ::rocket::Outcome::Failure(code);
                     }
-                };
-        ).expect("data statement"))
+                }
+            };
+        ).expect("data statement");
+
+        Some((transform_stmt, data_stmt))
     }
 
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
@@ -285,9 +310,11 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
 
     let param_statements = route.generate_param_statements(ecx);
     let query_statement = route.generate_query_statement(ecx);
-    let data_statement = route.generate_data_statement(ecx);
     let fn_arguments = route.generate_fn_arguments(ecx);
     let uri_macro = route.generate_uri_macro(ecx);
+    let (transform_statement, data_statement) = route.generate_data_statements(ecx)
+        .map(|(a, b)| (Some(a), Some(b)))
+        .unwrap_or((None, None));
 
     // Generate and emit the wrapping function with the Rocket handler signature.
     let user_fn_name = route.annotated_fn.ident();
@@ -300,6 +327,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                 -> ::rocket::handler::Outcome<'_b> {
              $param_statements
              $query_statement
+             $transform_statement
              $data_statement
              let responder = $user_fn_name($fn_arguments);
             ::rocket::handler::Outcome::from(__req, responder)

@@ -1,3 +1,4 @@
+use std::io;
 use http::RawStr;
 
 /// Error returned by the [`FromForm`] derive on form parsing errors.
@@ -8,7 +9,7 @@ use http::RawStr;
 ///   * `BadValue` or `Unknown` in incoming form string field order
 ///   * `Missing` in lexical field order
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum FormError<'f> {
+pub enum FormParseError<'f> {
     /// The field named `.0` with value `.1` failed to parse or validate.
     BadValue(&'f RawStr, &'f RawStr),
     /// The parse was strict and the field named `.0` with value `.1` appeared
@@ -19,3 +20,14 @@ pub enum FormError<'f> {
     /// The field named `.0` was expected but is missing in the incoming form.
     Missing(&'f RawStr),
 }
+
+/// Error returned by the [`FromData`] implementations of [`Form`] and
+/// [`LenientForm`].
+#[derive(Debug)]
+pub enum FormDataError<'f, E> {
+    Io(io::Error),
+    Malformed(&'f str),
+    Parse(E, &'f str)
+}
+
+pub type FormError<'f> = FormDataError<'f, FormParseError<'f>>;

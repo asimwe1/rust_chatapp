@@ -6,6 +6,7 @@
 #![feature(proc_macro_non_items)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
+#![feature(label_break_value)]
 
 #![recursion_limit="256"]
 

@@ -37,7 +37,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 
 #[post("/login", data = "<login>")]
 fn login(mut cookies: Cookies, login: Form<Login>) -> Result<Redirect, Flash<Redirect>> {
-    if login.get().username == "Sergio" && login.get().password == "password" {
+    if login.username == "Sergio" && login.password == "password" {
         cookies.add_private(Cookie::new("user_id", 1.to_string()));
         Ok(Redirect::to(uri!(index)))
     } else {

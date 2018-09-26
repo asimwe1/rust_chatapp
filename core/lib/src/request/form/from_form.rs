@@ -43,7 +43,7 @@ use request::FormItems;
 /// # struct TodoTask { description: String, completed: bool }
 /// #[post("/submit", data = "<task>")]
 /// fn submit_task(task: Form<TodoTask>) -> String {
-///     format!("New task: {}", task.get().description)
+///     format!("New task: {}", task.description)
 /// }
 /// # fn main() {  }
 /// ```

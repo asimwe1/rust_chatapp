@@ -3,14 +3,14 @@ extern crate rmp_serde;
 use std::ops::{Deref, DerefMut};
 use std::io::{Cursor, Read};
 
-use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
-use rocket::data::{self, Data, FromData};
+use rocket::outcome::Outcome::*;
+use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
 use rocket::response::{self, Responder, Response};
-use rocket::http::{ContentType, Status};
+use rocket::http::Status;
 
 use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::de::Deserialize;
 
 pub use self::rmp_serde::decode::Error as MsgPackError;
 
@@ -23,8 +23,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// route arguments and ensure the type of the parameter is a `MsgPack<T>`,
 /// where `T` is some type you'd like to parse from MessagePack. `T` must
 /// implement `Deserialize` or `DeserializeOwned` from
-/// [Serde](https://github.com/serde-rs/serde). The data is parsed from the HTTP
-/// request body.
+/// [`serde`](https://github.com/serde-rs/serde). The data is parsed from the
+/// HTTP request body.
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]
@@ -45,9 +45,7 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// You don't _need_ to use `format = "msgpack"`, but it _may_ be what you want.
 /// Using `format = msgpack` means that any request that doesn't specify
 /// "application/msgpack" as its first `Content-Type:` header parameter will not
-/// be routed to this handler. By default, Rocket will accept a Content-Type of
-/// any of the following for MessagePack data: `application/msgpack`,
-/// `application/x-msgpack`, `bin/msgpack`, or `bin/x-msgpack`.
+/// be routed to this handler.
 ///
 /// ## Sending MessagePack
 ///
@@ -110,34 +108,36 @@ impl<T> MsgPack<T> {
 /// Default limit for MessagePack is 1MB.
 const LIMIT: u64 = 1 << 20;
 
-/// Accepted content types are: `application/msgpack`, `application/x-msgpack`,
-/// `bin/msgpack`, and `bin/x-msgpack`.
-#[inline(always)]
-fn is_msgpack_content_type(ct: &ContentType) -> bool {
-    (ct.top() == "application" || ct.top() == "bin")
-        && (ct.sub() == "msgpack" || ct.sub() == "x-msgpack")
-}
-
-impl<T: DeserializeOwned> FromData for MsgPack<T> {
+impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
     type Error = MsgPackError;
+    type Owned = Vec<u8>;
+    type Borrowed = [u8];
 
-    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        if !request.content_type().map_or(false, |ct| is_msgpack_content_type(&ct)) {
-            error_!("Content-Type is not MessagePack.");
-            return Outcome::Forward(data);
-        }
-
+    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         let mut buf = Vec::new();
-        let size_limit = request.limits().get("msgpack").unwrap_or(LIMIT);
-        if let Err(e) = data.open().take(size_limit).read_to_end(&mut buf) {
-            let e = MsgPackError::InvalidDataRead(e);
-            error_!("Couldn't read request data: {:?}", e);
-            return Outcome::Failure((Status::BadRequest, e));
-        };
+        let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
+        match d.open().take(size_limit).read_to_end(&mut buf) {
+            Ok(_) => Borrowed(Success(buf)),
+            Err(e) => Borrowed(Failure((Status::BadRequest, MsgPackError::InvalidDataRead(e))))
+        }
+    }
 
-        rmp_serde::from_slice(&buf).map(MsgPack)
-            .map_err(|e| { error_!("Couldn't parse MessagePack body: {:?}", e); e })
-            .into_outcome(Status::BadRequest)
+    fn from_data(_: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+        use self::MsgPackError::*;
+
+        let buf = o.borrowed()?;
+        match rmp_serde::from_slice(&buf) {
+            Ok(val) => Success(MsgPack(val)),
+            Err(e) => {
+                error_!("Couldn't parse MessagePack body: {:?}", e);
+                match e {
+                    TypeMismatch(_) | OutOfRange | LengthMismatch(_) => {
+                        Failure((Status::UnprocessableEntity, e))
+                    }
+                    _ => Failure((Status::BadRequest, e))
+                }
+            }
+        }
     }
 }
 

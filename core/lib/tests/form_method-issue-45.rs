@@ -12,7 +12,7 @@ struct FormData {
 
 #[patch("/", data = "<form_data>")]
 fn bug(form_data: Form<FormData>) -> &'static str {
-    assert_eq!("Form data", &form_data.get().form_data);
+    assert_eq!("Form data", form_data.form_data);
     "OK"
 }
 

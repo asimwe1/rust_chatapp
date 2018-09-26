@@ -21,9 +21,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
     }
 }
 
-use rocket::data::{self, FromData};
+use rocket::data::{self, FromDataSimple};
 
-impl FromData for HasContentType {
+impl FromDataSimple for HasContentType {
     type Error = ();
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, ()> {

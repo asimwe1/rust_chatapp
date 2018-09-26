@@ -1,10 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::request::{FromForm, FormItems, FormError};
+use rocket::request::{FromForm, FormItems, FormParseError};
 use rocket::http::RawStr;
 
-fn parse<'f, T>(string: &'f str, strict: bool) -> Result<T, FormError<'f>>
-    where T: FromForm<'f, Error = FormError<'f>>
+fn parse<'f, T>(string: &'f str, strict: bool) -> Result<T, FormParseError<'f>>
+    where T: FromForm<'f, Error = FormParseError<'f>>
 {
     let mut items = FormItems::from(string);
     let result = T::from_form(items.by_ref(), strict);
@@ -15,14 +15,14 @@ fn parse<'f, T>(string: &'f str, strict: bool) -> Result<T, FormError<'f>>
     result
 }
 
-fn strict<'f, T>(string: &'f str) -> Result<T, FormError<'f>>
-    where T: FromForm<'f, Error = FormError<'f>>
+fn strict<'f, T>(string: &'f str) -> Result<T, FormParseError<'f>>
+    where T: FromForm<'f, Error = FormParseError<'f>>
 {
     parse(string, true)
 }
 
-fn lenient<'f, T>(string: &'f str) -> Result<T, FormError<'f>>
-    where T: FromForm<'f, Error = FormError<'f>>
+fn lenient<'f, T>(string: &'f str) -> Result<T, FormParseError<'f>>
+    where T: FromForm<'f, Error = FormParseError<'f>>
 {
     parse(string, false)
 }
@@ -297,23 +297,23 @@ fn form_errors() {
     assert_eq!(form, Ok(WhoopsForm { complete: true, other: 781 }));
 
     let form: Result<WhoopsForm, _> = strict("complete=true&other=unknown");
-    assert_eq!(form, Err(FormError::BadValue("other".into(), "unknown".into())));
+    assert_eq!(form, Err(FormParseError::BadValue("other".into(), "unknown".into())));
 
     let form: Result<WhoopsForm, _> = strict("complete=unknown&other=unknown");
-    assert_eq!(form, Err(FormError::BadValue("complete".into(), "unknown".into())));
+    assert_eq!(form, Err(FormParseError::BadValue("complete".into(), "unknown".into())));
 
     let form: Result<WhoopsForm, _> = strict("complete=true&other=1&extra=foo");
-    assert_eq!(form, Err(FormError::Unknown("extra".into(), "foo".into())));
+    assert_eq!(form, Err(FormParseError::Unknown("extra".into(), "foo".into())));
 
     // Bad values take highest precedence.
     let form: Result<WhoopsForm, _> = strict("complete=unknown&unknown=foo");
-    assert_eq!(form, Err(FormError::BadValue("complete".into(), "unknown".into())));
+    assert_eq!(form, Err(FormParseError::BadValue("complete".into(), "unknown".into())));
 
     // Then unknown key/values for strict parses.
     let form: Result<WhoopsForm, _> = strict("complete=true&unknown=foo");
-    assert_eq!(form, Err(FormError::Unknown("unknown".into(), "foo".into())));
+    assert_eq!(form, Err(FormParseError::Unknown("unknown".into(), "foo".into())));
 
     // Finally, missing.
     let form: Result<WhoopsForm, _> = strict("complete=true");
-    assert_eq!(form, Err(FormError::Missing("other".into())));
+    assert_eq!(form, Err(FormParseError::Missing("other".into())));
 }

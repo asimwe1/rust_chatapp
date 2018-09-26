@@ -71,7 +71,7 @@ fn no_uri_display_okay(id: i32, form: Form<Second>) -> &'static str {
 fn complex<'r>(
     name: &RawStr,
     query: User<'r>,
-    user: Form<'r, User<'r>>,
+    user: Form<User<'r>>,
     cookies: Cookies
 ) -> &'static str { "" }
 

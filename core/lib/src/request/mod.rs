@@ -12,7 +12,8 @@ mod tests;
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::param::{FromParam, FromSegments};
-pub use self::form::{Form, FormError, LenientForm, FromForm, FromFormValue, FormItems};
+pub use self::form::{Form, LenientForm, FormItems};
+pub use self::form::{FromForm, FormError, FromFormValue, FormParseError, FormDataError};
 pub use self::state::State;
 
 #[doc(inline)]

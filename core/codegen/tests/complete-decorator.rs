@@ -13,13 +13,13 @@ struct User<'a> {
 }
 
 #[post("/<_name>?<_query>", format = "application/json", data = "<user>", rank = 2)]
-fn get<'r>(
+fn get(
     _name: &RawStr,
-    _query: User<'r>,
-    user: Form<'r, User<'r>>,
+    _query: User,
+    user: Form<User>,
     _cookies: Cookies
 ) -> String {
-    format!("{}:{}", user.get().name, user.get().nickname)
+    format!("{}:{}", user.name, user.nickname)
 }
 
 #[test]

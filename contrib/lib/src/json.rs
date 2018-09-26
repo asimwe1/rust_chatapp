@@ -1,14 +1,14 @@
 use std::ops::{Deref, DerefMut};
 use std::io::{self, Read};
 
-use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
-use rocket::data::{self, Data, FromData};
+use rocket::outcome::Outcome::*;
+use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
 use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+use serde::de::{Deserialize, Deserializer};
 use serde_json;
 
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
@@ -19,20 +19,20 @@ use serde_json;
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement `Deserialize` or
-/// `DeserializeOwned` from [Serde](https://github.com/serde-rs/json). The data
-/// is parsed from the HTTP request body.
+/// `DeserializeOwned` from [`serde`](https://github.com/serde-rs/json). The
+/// data is parsed from the HTTP request body.
 ///
 /// ```rust,ignore
-/// #[post("/users/", format = "application/json", data = "<user>")]
+/// #[post("/users/", format = "json", data = "<user>")]
 /// fn new_user(user: Json<User>) {
 ///     ...
 /// }
 /// ```
 ///
-/// You don't _need_ to use `format = "application/json"`, but it _may_ be what
-/// you want. Using `format = application/json` means that any request that
-/// doesn't specify "application/json" as its `Content-Type` header value will
-/// not be routed to the handler.
+/// You don't _need_ to use `format = "json"`, but it _may_ be what you want.
+/// Using `format = json` means that any request that doesn't specify
+/// "application/json" as its `Content-Type` header value will not be routed to
+/// the handler.
 ///
 /// ## Sending JSON
 ///
@@ -52,7 +52,7 @@ use serde_json;
 /// ## Incoming Data Limits
 ///
 /// The default size limit for incoming JSON data is 1MiB. Setting a limit
-/// protects your application from denial of service (DOS) attacks and from
+/// protects your application from denial of service (DoS) attacks and from
 /// resource exhaustion through high memory consumption. The limit can be
 /// increased by setting the `limits.json` configuration parameter. For
 /// instance, to increase the JSON limit to 5MiB for all environments, you may
@@ -81,49 +81,50 @@ impl<T> Json<T> {
     }
 }
 
-/// Like [`from_reader`] but eagerly reads the content of the reader to a string
-/// and delegates to `from_str`.
-///
-/// [`from_reader`]: https://docs.serde.rs/serde_json/fn.from_reader.html
-fn from_reader_eager<R, T>(mut reader: R) -> Result<T, JsonError>
-    where R: Read, T: DeserializeOwned
-{
-    let mut s = String::with_capacity(512);
-    reader.read_to_string(&mut s).map_err(JsonError::Io)?;
-
-    serde_json::from_str(&s).map_err(|e| JsonError::Parse(s, e))
-}
-
 /// Default limit for JSON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
 /// An error returned by the [`Json`] data guard when incoming data fails to
 /// serialize as JSON.
 #[derive(Debug)]
-pub enum JsonError {
+pub enum JsonError<'a> {
     /// An I/O error occurred while reading the incoming request data.
     Io(io::Error),
+
     /// The client's data was received successfully but failed to parse as valid
-    /// JSON or as the requested type. The `String` value in `.0` is the raw
-    /// data received from the user, while the `Error` in `.1` is the
-    /// deserialization error from `serde`.
-    Parse(String, serde_json::error::Error),
+    /// JSON or as the requested type. The `&str` value in `.0` is the raw data
+    /// received from the user, while the `Error` in `.1` is the deserialization
+    /// error from `serde`.
+    Parse(&'a str, serde_json::error::Error),
 }
 
-impl<T: DeserializeOwned> FromData for Json<T> {
-    type Error = JsonError;
+impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
+    type Error = JsonError<'a>;
+    type Owned = String;
+    type Borrowed = str;
 
-    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        if !request.content_type().map_or(false, |ct| ct.is_json()) {
-            error_!("Content-Type is not JSON.");
-            return Outcome::Forward(data);
+    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+        let size_limit = r.limits().get("json").unwrap_or(LIMIT);
+        let mut s = String::with_capacity(512);
+        match d.open().take(size_limit).read_to_string(&mut s) {
+            Ok(_) => Borrowed(Success(s)),
+            Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
         }
+    }
 
-        let size_limit = request.limits().get("json").unwrap_or(LIMIT);
-        from_reader_eager(data.open().take(size_limit))
-            .map(Json)
-            .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
-            .into_outcome(Status::BadRequest)
+    fn from_data(_: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+        let string = o.borrowed()?;
+        match serde_json::from_str(&string) {
+            Ok(v) => Success(Json(v)),
+            Err(e) => {
+                error_!("Couldn't parse JSON body: {:?}", e);
+                if e.is_data() {
+                    Failure((Status::UnprocessableEntity, JsonError::Parse(string, e)))
+                } else {
+                    Failure((Status::BadRequest, JsonError::Parse(string, e)))
+                }
+            }
+        }
     }
 }
 
