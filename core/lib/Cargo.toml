@@ -22,7 +22,7 @@ rocket_codegen_next = { version = "0.4.0-dev", path = "../codegen_next" }
 rocket_http = { version = "0.4.0-dev", path = "../http" }
 yansi = "0.4"
 log = "0.4"
-toml = "0.4.2"
+toml = "0.4.7"
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.1"

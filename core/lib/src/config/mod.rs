@@ -1085,7 +1085,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            1.2.3 = 2
+            1. = 2
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
