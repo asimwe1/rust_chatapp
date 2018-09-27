@@ -1,4 +1,3 @@
-use std::io::{self, Read};
 use std::borrow::Borrow;
 
 use outcome::{self, IntoOutcome};
@@ -289,6 +288,9 @@ pub type Transformed<'a, T> =
 ///
 ///   * **String**
 ///
+///     **Note:** _An implementation of `FromData` for `String` is only available
+///     when compiling in debug mode!_
+///
 ///     Reads the entire request body into a `String`. If reading fails, returns
 ///     a `Failure` with the corresponding `io::Error`.
 ///
@@ -299,6 +301,9 @@ pub type Transformed<'a, T> =
 ///
 ///   * **Vec&lt;u8>**
 ///
+///     **Note:** _An implementation of `FromData` for `Vec<u8>` is only
+///     available when compiling in debug mode!_
+///
 ///     Reads the entire request body into a `Vec<u8>`. If reading fails,
 ///     returns a `Failure` with the corresponding `io::Error`.
 ///
@@ -307,7 +312,7 @@ pub type Transformed<'a, T> =
 ///     memory; since the user controls the size of the body, this is an obvious
 ///     vector for a denial of service attack.
 ///
-/// # Simple `FromData`
+/// # Simplified `FromData`
 ///
 /// For an example of a type that wouldn't require transformation, see the
 /// [`FromDataSimple`] documentation.
@@ -398,15 +403,15 @@ impl<'f> FromData<'f> for Data {
 /// A simple, less complex variant of [`FromData`].
 ///
 /// When transformation of incoming data isn't required, data guards should
-/// implement this trait instead of [`FromData`]. For a description of data
-/// guards, see the [`FromData`] documentation.
+/// implement this trait instead of [`FromData`]. Any type that implements
+/// `FromDataSimple` automatically implements `FromData`. For a description of
+/// data guards, see the [`FromData`] documentation.
 ///
 /// # Example
 ///
 /// Say that you have a custom type, `Person`:
 ///
 /// ```rust
-/// # #[allow(dead_code)]
 /// struct Person {
 ///     name: String,
 ///     age: u16
@@ -555,6 +560,9 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Option<T> {
         }
     }
 }
+
+#[cfg(debug_assertions)]
+use std::io::{self, Read};
 
 #[cfg(debug_assertions)]
 impl FromDataSimple for String {
