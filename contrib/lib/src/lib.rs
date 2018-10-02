@@ -54,3 +54,12 @@
 
 #[cfg(feature="databases")] extern crate rocket_contrib_codegen;
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;
+
+#[cfg(any(feature="brotli_compression", feature="gzip_compression"))]
+pub mod compression;
+
+#[cfg(feature="brotli_compression")]
+extern crate brotli;
+
+#[cfg(feature="gzip_compression")]
+extern crate flate2;

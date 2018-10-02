@@ -23,6 +23,9 @@ tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
 serve = []
+compression = ["brotli_compression", "gzip_compression"]
+brotli_compression = ["brotli"]
+gzip_compression = ["flate2"]
 
 # The barage of user-facing database features.
 diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]
@@ -75,6 +78,10 @@ r2d2-memcache = { version = "0.3", optional = true }
 
 # SpaceHelmet dependencies
 time = { version = "0.1.40", optional = true }
+
+# Compression dependencies
+brotli = { version = "2.5", optional = true }
+flate2 = { version = "1.0", optional = true }
 
 [target.'cfg(debug_assertions)'.dependencies]
 notify = { version = "^4.0.6" }
