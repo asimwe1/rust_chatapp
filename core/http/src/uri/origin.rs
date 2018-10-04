@@ -127,7 +127,7 @@ impl<'a> Origin<'a> {
 
     // Used mostly for testing and to construct known good URIs from other parts
     // of Rocket. This should _really_ not be used outside of Rocket because the
-    // resulting `Origin's` may not be valid origin URIs!
+    // resulting `Origin's` are not guaranteed to be valid origin URIs!
     #[doc(hidden)]
     pub fn new<P, Q>(path: P, query: Option<Q>) -> Origin<'a>
         where P: Into<Cow<'a, str>>, Q: Into<Cow<'a, str>>

@@ -6,29 +6,21 @@ use proc_macro::{Span, Diagnostic};
 use http::route::RouteSegment;
 use proc_macro_ext::{SpanExt, Diagnostics, PResult, DResult};
 
-pub use http::route::{Error, Kind, Source};
+crate use http::route::{Error, Kind, Source};
 
 #[derive(Debug, Clone)]
-pub struct Segment {
-    pub span: Span,
-    pub kind: Kind,
-    pub source: Source,
-    pub name: String,
-    pub index: Option<usize>,
+crate struct Segment {
+    crate span: Span,
+    crate kind: Kind,
+    crate source: Source,
+    crate name: String,
+    crate index: Option<usize>,
 }
 
 impl Segment {
     fn from(segment: RouteSegment, span: Span) -> Segment {
         let (kind, source, index) = (segment.kind, segment.source, segment.index);
         Segment { span, kind, source, index, name: segment.name.into_owned() }
-    }
-
-    crate fn to_route_segment<'a>(&'a self) -> String {
-        match (self.source, self.kind) {
-            (_, Kind::Single) => format!("<{}>", self.name),
-            (_, Kind::Multi) => format!("<{}..>", self.name),
-            (_, Kind::Static) => self.name.clone()
-        }
     }
 }
 
@@ -58,18 +50,18 @@ impl Hash for Segment {
     }
 }
 
-pub fn subspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
+fn subspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
     let remaining = haystack.len() - (index + needle.len());
     span.trimmed(index, remaining)
 }
 
-pub fn trailspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
+fn trailspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
     span.trimmed(index - 1, 0)
 }
 
-pub fn into_diagnostic(
+fn into_diagnostic(
     segment: &str, // The segment that failed.
     source: &str,  // The haystack where `segment` can be found.
     span: Span,    // The `Span` of `Source`.
@@ -111,13 +103,13 @@ pub fn into_diagnostic(
     }
 }
 
-pub fn parse_segment(segment: &str, span: Span) -> PResult<Segment> {
+crate fn parse_segment(segment: &str, span: Span) -> PResult<Segment> {
     RouteSegment::parse_one(segment)
         .map(|segment| Segment::from(segment, span))
         .map_err(|e| into_diagnostic(segment, segment, span, &e))
 }
 
-pub fn parse_segments(
+crate fn parse_segments(
     string: &str,
     sep: char,
     source: Source,

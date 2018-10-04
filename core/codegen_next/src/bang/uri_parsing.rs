@@ -9,6 +9,7 @@ use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
 use self::syn::parse::{self, Parse, ParseStream};
 use self::syn::punctuated::Punctuated;
 
+use http::{uri::Origin, ext::IntoOwned};
 use indexmap::IndexMap;
 
 #[derive(Debug)]
@@ -30,7 +31,7 @@ pub enum Args {
 //                      uri_params.route_path
 #[derive(Debug)]
 pub struct UriParams {
-    pub mount_point: Option<LitStr>,
+    pub mount_point: Option<Origin<'static>>,
     pub route_path: Path,
     pub arguments: Args,
 }
@@ -62,11 +63,11 @@ pub enum Validation<'a> {
 // `uri` is the full URI used in the origin route's attribute.
 //
 //  internal_uri!("/<first>/<second>", (first: ty, second: ty), $($tt)*);
-//                ^-----------------|  ^-----------|---------|  ^-----|
-//                                 uri          fn_args          uri_params
+//                ^--------|---------  ^-----------|---------|  ^-----|
+//                      route_uri               fn_args          uri_params
 #[derive(Debug)]
 pub struct InternalUriParams {
-    pub uri: String,
+    pub route_uri: Origin<'static>,
     pub fn_args: Vec<FnArg>,
     pub uri_params: UriParams,
 }
@@ -100,12 +101,11 @@ impl Parse for UriParams {
         // Parse the mount point and suffixing ',', if any.
         let mount_point = if input.peek(LitStr) {
             let string = input.parse::<LitStr>()?;
-            let value = string.value();
-            if value.contains('<') || !value.starts_with('/') {
-                // TODO(proc_macro): add example as a help, not in error
-                return err(string.span().unstable(), "invalid mount point; \
-                    mount points must be static, absolute URIs: `/example`");
-            }
+            let mount_point = Origin::parse_owned(string.value()).map_err(|_| {
+                // TODO(proc_macro): use error, add example as a help
+                parse::Error::new(string.span(), "invalid mount point; \
+                    mount points must be static, absolute URIs: `/example`")
+            })?;
 
             if !input.peek(Token![,]) && input.cursor().eof() {
                 return err(string.span().unstable(), "unexpected end of input: \
@@ -113,7 +113,7 @@ impl Parse for UriParams {
             }
 
             input.parse::<Token![,]>()?;
-            Some(string)
+            Some(mount_point)
         } else {
             None
         };
@@ -171,8 +171,14 @@ impl Parse for FnArg {
 
 impl Parse for InternalUriParams {
     fn parse(input: ParseStream) -> parse::Result<InternalUriParams> {
-        let uri = input.parse::<LitStr>()?.value();
+        let route_uri_str = input.parse::<LitStr>()?;
         input.parse::<Token![,]>()?;
+
+        // Validation should always succeed since this macro can only be called
+        // if the route attribute succeeded, implying a valid route URI.
+        let route_uri = Origin::parse_route(&route_uri_str.value())
+            .map(|o| o.to_normalized().into_owned())
+            .map_err(|_| input.error("internal error: invalid route URI"))?;
 
         let content;
         syn::parenthesized!(content in input);
@@ -181,7 +187,7 @@ impl Parse for InternalUriParams {
 
         input.parse::<Token![,]>()?;
         let uri_params = input.parse::<UriParams>()?;
-        Ok(InternalUriParams { uri, fn_args, uri_params })
+        Ok(InternalUriParams { route_uri, fn_args, uri_params })
     }
 }
 

@@ -11,12 +11,7 @@ keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
 build = "build.rs"
 
-[lib]
-plugin = true
-
 [dependencies]
-rocket_http = { version = "0.4.0-dev", path = "../http" }
-indexmap = "1.0"
 
 [dev-dependencies]
 compiletest_rs = "0.3.14"

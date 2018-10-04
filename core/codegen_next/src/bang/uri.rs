@@ -1,17 +1,17 @@
+use std::fmt::Display;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use std::fmt::Display;
 
 use derive_utils::{syn, Result};
-use syn_ext::{IdentExt, syn_to_diag};
+use derive_utils::syn::{Expr, Ident, Type, spanned::Spanned};
+use http::{uri::Origin, ext::IntoOwned};
+use http::route::{RouteSegment, Kind, Source};
 
-use self::syn::{Expr, Ident, Type};
-use self::syn::spanned::Spanned as SynSpanned;
+use http_codegen::Optional;
+use syn_ext::{IdentExt, syn_to_diag};
 use bang::{prefix_last_segment, uri_parsing::*};
 
-use rocket_http::{uri::Origin, ext::IntoOwned};
-
-const URI_INFO_MACRO_PREFIX: &str = "rocket_uri_for_";
+use URI_MACRO_PREFIX;
 
 macro_rules! p {
     (@go $num:expr, $singular:expr, $plural:expr) => (
@@ -26,7 +26,7 @@ macro_rules! p {
 crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
     let input2: TokenStream2 = input.clone().into();
     let mut params = syn::parse::<UriParams>(input).map_err(syn_to_diag)?;
-    prefix_last_segment(&mut params.route_path, URI_INFO_MACRO_PREFIX);
+    prefix_last_segment(&mut params.route_path, URI_MACRO_PREFIX);
 
     let path = &params.route_path;
     Ok(quote!(#path!(#input2)).into())
@@ -80,21 +80,25 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
     }
 }
 
-// Validates the mount path and the URI and returns a single Origin URI with
-// both paths concatinated. Validation should always succeed since this macro
-// can only be called if the route attribute succeed, which implies that the
-// route URI was valid.
-fn extract_origin(internal: &InternalUriParams) -> Result<Origin<'static>> {
-    let base_uri = match internal.uri_params.mount_point {
-        Some(ref base) => Origin::parse(&base.value())
-            .map_err(|_| base.span().unstable().error("invalid path URI"))?
-            .into_owned(),
-        None => Origin::dummy()
-    };
+// Returns an Origin URI with the mount point and route path concatinated. The
+// query string is mangled by replacing single dynamic parameters in query parts
+// (`<param>`) with `param=<param>`.
+fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
+    let mount_point = internal.uri_params.mount_point.as_ref()
+        .map(|origin| origin.path())
+        .unwrap_or("");
 
-    Origin::parse_route(&format!("{}/{}", base_uri, internal.uri))
-        .map(|o| o.to_normalized().into_owned())
-        .map_err(|_| internal.uri.span().unstable().error("invalid route URI"))
+    let path = format!("{}/{}", mount_point, internal.route_uri.path());
+    let query = RouteSegment::parse_query(&internal.route_uri).map(|segments| {
+        segments.map(|r| r.expect("invalid query segment")).map(|seg| {
+            match (seg.source, seg.kind) {
+                (Source::Query, Kind::Single) => format!("{k}=<{k}>", k = seg.name),
+                _ => seg.string.into_owned()
+            }
+        }).collect::<Vec<_>>().join("&")
+    });
+
+    Origin::new(path, query).to_normalized().into_owned()
 }
 
 fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
@@ -102,9 +106,7 @@ fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
 {
     // Generate the statements to typecheck each parameter.
     // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
-    let mut let_bindings = vec![];
-    let mut fmt_exprs = vec![];
-
+    let (mut let_bindings, mut fmt_exprs) = (vec![], vec![]);
     for (mut ident, ty, expr) in items {
         let (span, expr) = (expr.span(), expr);
         let ident_tmp = ident.prepend("tmp_");
@@ -143,31 +145,22 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     // Parse the internal invocation and the user's URI param expressions.
     let internal = syn::parse::<InternalUriParams>(input).map_err(syn_to_diag)?;
     let exprs = extract_exprs(&internal)?;
-    let origin = extract_origin(&internal)?;
-
-    // Determine how many parameters there are in the URI path.
-    let path_param_count = origin.path().matches('<').count();
 
     // Create an iterator over the `ident`, `ty`, and `expr` triple.
     let mut arguments = internal.fn_args.iter()
         .zip(exprs.iter())
         .map(|(FnArg { ident, ty }, &expr)| (ident, ty, expr));
 
-    // Generate an expression for both the path and query.
+    // Generate an expression for the path and query.
+    let origin = build_origin(&internal);
+    let path_param_count = origin.path().matches('<').count();
     let path = explode(origin.path(), arguments.by_ref().take(path_param_count));
-
-    // FIXME: Use Optional.
-    // let query = Optional(origin.query().map(|q| explode(q, arguments)));
-    let query = if let Some(expr) = origin.query().map(|q| explode(q, arguments)) {
-        quote!({ Some(#expr) })
-    } else {
-        quote!({ None })
-    };
+    let query = Optional(origin.query().map(|q| explode(q, arguments)));
 
     Ok(quote!({
         ::rocket::http::uri::Origin::new::<
-                                   ::std::borrow::Cow<'static, str>,
-                                   ::std::borrow::Cow<'static, str>,
-                                 >(#path, #query)
+            ::std::borrow::Cow<'static, str>,
+            ::std::borrow::Cow<'static, str>,
+        >(#path, #query)
     }).into())
 }

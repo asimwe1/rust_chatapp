@@ -7,31 +7,31 @@ use attribute::segments::{parse_segments, parse_segment, Segment, Kind, Source};
 use proc_macro_ext::SpanExt;
 
 #[derive(Debug)]
-pub struct ContentType(pub http::ContentType);
+crate struct ContentType(crate http::ContentType);
 
 #[derive(Debug)]
-pub struct Status(pub http::Status);
+crate struct Status(crate http::Status);
 
 #[derive(Debug)]
-pub struct MediaType(pub http::MediaType);
+crate struct MediaType(crate http::MediaType);
 
 #[derive(Debug)]
-pub struct Method(pub http::Method);
+crate struct Method(crate http::Method);
 
 #[derive(Debug)]
-pub struct Origin(pub http::uri::Origin<'static>);
+crate struct Origin(crate http::uri::Origin<'static>);
 
 #[derive(Clone, Debug)]
-pub struct DataSegment(pub Segment);
+crate struct DataSegment(crate Segment);
 
 #[derive(Clone, Debug)]
-pub struct Optional<T>(pub Option<T>);
+crate struct Optional<T>(crate Option<T>);
 
 #[derive(Debug)]
-pub struct RoutePath {
-    pub origin: Origin,
-    pub path: Vec<Segment>,
-    pub query: Option<Vec<Segment>>,
+crate struct RoutePath {
+    crate origin: Origin,
+    crate path: Vec<Segment>,
+    crate query: Option<Vec<Segment>>,
 }
 
 impl FromMeta for Status {
