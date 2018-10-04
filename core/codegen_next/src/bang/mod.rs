@@ -8,6 +8,12 @@ use syn_ext::{IdentExt, syn_to_diag};
 mod uri;
 mod uri_parsing;
 
+
+crate fn prefix_last_segment(path: &mut Path, prefix: &str) {
+    let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
+    last_seg.value_mut().ident = last_seg.value().ident.prepend(prefix);
+}
+
 fn _prefixed_vec(prefix: &str, input: TokenStream, ty: &TokenStream2) -> Result<TokenStream2> {
     // Parse a comma-separated list of paths.
     let mut paths = <Punctuated<Path, Comma>>::parse_terminated
@@ -15,10 +21,7 @@ fn _prefixed_vec(prefix: &str, input: TokenStream, ty: &TokenStream2) -> Result<
         .map_err(syn_to_diag)?;
 
     // Prefix the last segment in each path with `prefix`.
-    for path in paths.iter_mut() {
-        let mut last_seg = path.segments.last_mut().expect("last path segment");
-        last_seg.value_mut().ident = last_seg.value().ident.prepend(prefix);
-    }
+    paths.iter_mut().for_each(|p| prefix_last_segment(p, prefix));
 
     // Return a `vec!` of the prefixed, mapped paths.
     let prefixed_mapped_paths = paths.iter()

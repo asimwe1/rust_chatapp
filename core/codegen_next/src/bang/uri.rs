@@ -3,60 +3,43 @@ use proc_macro2::TokenStream as TokenStream2;
 use std::fmt::Display;
 
 use derive_utils::{syn, Result};
-use quote::ToTokens;
 use syn_ext::{IdentExt, syn_to_diag};
 
 use self::syn::{Expr, Ident, Type};
 use self::syn::spanned::Spanned as SynSpanned;
-use super::uri_parsing::*;
+use bang::{prefix_last_segment, uri_parsing::*};
 
-use rocket_http::uri::Origin;
-use rocket_http::ext::IntoOwned;
+use rocket_http::{uri::Origin, ext::IntoOwned};
 
 const URI_INFO_MACRO_PREFIX: &str = "rocket_uri_for_";
 
-crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
-    let args: TokenStream2 = input.clone().into();
-
-    let params = match syn::parse::<UriParams>(input) {
-        Ok(p) => p,
-        Err(e) => return Err(syn_to_diag(e)),
-    };
-    let mut path = params.route_path;
-    {
-        let mut last_seg = path.segments.last_mut().expect("last path segment");
-        last_seg.value_mut().ident = last_seg.value().ident.prepend(URI_INFO_MACRO_PREFIX);
-    }
-
-    // It's incredibly important we use this span as the Span for the generated
-    // code so that errors from the `internal` call show up on the user's code.
-    Ok(quote_spanned!(args.span().into() => {
-        #path!(#args)
-    }).into())
-}
-
 macro_rules! p {
-    ("parameter", $num:expr) => (
-        if $num == 1 { "parameter" } else { "parameters" }
+    (@go $num:expr, $singular:expr, $plural:expr) => (
+        if $num == 1 { $singular.into() } else { $plural }
     );
 
-    ($num:expr, "was") => (
-        if $num == 1 { "1 was".into() } else { format!("{} were", $num) }
-    );
-
-    ($num:expr, "parameter") => (
-        if $num == 1 { "1 parameter".into() } else { format!("{} parameters", $num) }
-    )
+    ("parameter", $n:expr) => (p!(@go $n, "parameter", "parameters"));
+    ($n:expr, "was") => (p!(@go $n, "1 was", format!("{} were", $n)));
+    ($n:expr, "parameter") => (p!(@go $n, "1 parameter", format!("{} parameters", $n)));
 }
 
-fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<Expr>> {
+crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
+    let input2: TokenStream2 = input.clone().into();
+    let mut params = syn::parse::<UriParams>(input).map_err(syn_to_diag)?;
+    prefix_last_segment(&mut params.route_path, URI_INFO_MACRO_PREFIX);
+
+    let path = &params.route_path;
+    Ok(quote!(#path!(#input2)).into())
+}
+
+fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
     let route_name = &internal.uri_params.route_path;
     match internal.validate() {
         Validation::Ok(exprs) => Ok(exprs),
         Validation::Unnamed(expected, actual) => {
             let mut diag = internal.uri_params.args_span().error(
-                format!("`{}` route uri expects {} but {} supplied",
-                         route_name.clone().into_token_stream(), p!(expected, "parameter"), p!(actual, "was")));
+                format!("`{}` route uri expects {} but {} supplied", quote!(#route_name),
+                         p!(expected, "parameter"), p!(actual, "was")));
 
             if expected > 0 {
                 let ps = p!("parameter", expected);
@@ -66,9 +49,9 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<Expr>> {
             Err(diag)
         }
         Validation::Named(missing, extra, dup) => {
-            let e = format!("invalid parameters for `{}` route uri", route_name.clone().into_token_stream());
-            let mut diag = internal.uri_params.args_span().error(e);
-            diag = diag.note(format!("uri parameters are: {}", internal.fn_args_str()));
+            let e = format!("invalid parameters for `{}` route uri", quote!(#route_name));
+            let mut diag = internal.uri_params.args_span().error(e)
+                .note(format!("uri parameters are: {}", internal.fn_args_str()));
 
             fn join<S: Display, T: Iterator<Item = S>>(iter: T) -> (&'static str, String) {
                 let items: Vec<_> = iter.map(|i| format!("`{}`", i)).collect();
@@ -114,8 +97,8 @@ fn extract_origin(internal: &InternalUriParams) -> Result<Origin<'static>> {
         .map_err(|_| internal.uri.span().unstable().error("invalid route URI"))
 }
 
-fn explode<I>(route_str: &str, items: I) -> TokenStream2
-    where I: Iterator<Item = (Ident, Type, Expr)>
+fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
+    where I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>
 {
     // Generate the statements to typecheck each parameter.
     // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
@@ -123,16 +106,18 @@ fn explode<I>(route_str: &str, items: I) -> TokenStream2
     let mut fmt_exprs = vec![];
 
     for (mut ident, ty, expr) in items {
-        let (span, mut expr) = (expr.span(), expr.clone());
-        ident.set_span(span);
-        let ident_tmp = ident.prepend("tmp");
+        let (span, expr) = (expr.span(), expr);
+        let ident_tmp = ident.prepend("tmp_");
 
         let_bindings.push(quote_spanned!(span =>
-            let #ident_tmp = #expr; let #ident = <#ty as ::rocket::http::uri::FromUriParam<_>>::from_uri_param(#ident_tmp);
+            let #ident_tmp = #expr;
+            let #ident = <#ty as ::rocket::http::uri::FromUriParam<_>>::from_uri_param(#ident_tmp);
         ));
 
         // generating: arg tokens for format string
-        fmt_exprs.push(quote_spanned!(span => { &#ident as &::rocket::http::uri::UriDisplay }));
+        fmt_exprs.push(quote_spanned! { span =>
+            &#ident as &::rocket::http::uri::UriDisplay
+        });
     }
 
     // Convert all of the '<...>' into '{}'.
@@ -164,13 +149,15 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let path_param_count = origin.path().matches('<').count();
 
     // Create an iterator over the `ident`, `ty`, and `expr` triple.
-    let mut arguments = internal.fn_args
-        .into_iter()
-        .zip(exprs.into_iter())
-        .map(|(FnArg { ident, ty }, expr)| (ident, ty, expr));
+    let mut arguments = internal.fn_args.iter()
+        .zip(exprs.iter())
+        .map(|(FnArg { ident, ty }, &expr)| (ident, ty, expr));
 
     // Generate an expression for both the path and query.
     let path = explode(origin.path(), arguments.by_ref().take(path_param_count));
+
+    // FIXME: Use Optional.
+    // let query = Optional(origin.query().map(|q| explode(q, arguments)));
     let query = if let Some(expr) = origin.query().map(|q| explode(q, arguments)) {
         quote!({ Some(#expr) })
     } else {

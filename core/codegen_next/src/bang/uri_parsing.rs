@@ -1,26 +1,26 @@
 use proc_macro::Span;
 
-use derive_utils::syn;
+use derive_utils::{syn, Spanned};
+use derive_utils::proc_macro2::TokenStream as TokenStream2;
 use derive_utils::ext::TypeExt;
 use quote::ToTokens;
 
 use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
-use self::syn::spanned::Spanned as SynSpanned;
 use self::syn::parse::{self, Parse, ParseStream};
 use self::syn::punctuated::Punctuated;
 
 use indexmap::IndexMap;
 
 #[derive(Debug)]
-enum Arg {
+pub enum Arg {
     Unnamed(Expr),
-    Named(Ident, Expr),
+    Named(Ident, Token![=], Expr),
 }
 
 #[derive(Debug)]
 pub enum Args {
-    Unnamed(Vec<Expr>),
-    Named(Vec<(Ident, Expr)>),
+    Unnamed(Punctuated<Arg, Token![,]>),
+    Named(Punctuated<Arg, Token![,]>),
 }
 
 // For an invocation that looks like:
@@ -28,12 +28,11 @@ pub enum Args {
 //       ^-------------| ^----------| ^---------|
 //           uri_params.mount_point |    uri_params.arguments
 //                      uri_params.route_path
-//
 #[derive(Debug)]
 pub struct UriParams {
     pub mount_point: Option<LitStr>,
     pub route_path: Path,
-    pub arguments: Option<Args>,
+    pub arguments: Args,
 }
 
 #[derive(Debug)]
@@ -42,18 +41,29 @@ pub struct FnArg {
     pub ty: Type,
 }
 
-pub enum Validation {
+pub enum Validation<'a> {
     // Number expected, what we actually got.
     Unnamed(usize, usize),
     // (Missing, Extra, Duplicate)
-    Named(Vec<Ident>, Vec<Ident>, Vec<Ident>),
-    // Everything is okay.
-    Ok(Vec<Expr>)
+    Named(Vec<&'a Ident>, Vec<&'a Ident>, Vec<&'a Ident>),
+    // Everything is okay; here are the expressions in the route decl order.
+    Ok(Vec<&'a Expr>)
 }
 
+// This is invoked by Rocket itself. The `uri!` macro expands to a call to a
+// route-specific macro which in-turn expands to a call to `internal_uri!`,
+// passing along the user's parameters from the original `uri!` call. This is
+// necessary so that we can converge the type information in the route (from the
+// route-specific macro) with the user's parameters (by forwarding them to the
+// internal_uri! call).
+//
 // `fn_args` are the URI arguments (excluding guards) from the original route's
 // handler in the order they were declared in the URI (`<first>/<second>`).
-// `uri` is the full URI used in the origin route's attribute
+// `uri` is the full URI used in the origin route's attribute.
+//
+//  internal_uri!("/<first>/<second>", (first: ty, second: ty), $($tt)*);
+//                ^-----------------|  ^-----------|---------|  ^-----|
+//                                 uri          fn_args          uri_params
 #[derive(Debug)]
 pub struct InternalUriParams {
     pub uri: String,
@@ -61,68 +71,23 @@ pub struct InternalUriParams {
     pub uri_params: UriParams,
 }
 
-impl Arg {
-    fn is_named(&self) -> bool {
-        match *self {
-            Arg::Named(..) => true,
-            Arg::Unnamed(_) => false,
-        }
-    }
-
-    fn unnamed(self) -> Expr {
-        match self {
-            Arg::Unnamed(expr) => expr,
-            _ => panic!("Called Arg::unnamed() on an Arg::named!"),
-        }
-    }
-
-    fn named(self) -> (Ident, Expr) {
-        match self {
-            Arg::Named(ident, expr) => (ident, expr),
-            _ => panic!("Called Arg::named() on an Arg::Unnamed!"),
-        }
-    }
-}
-
-impl UriParams {
-    /// The Span to use when referring to all of the arguments.
-    pub fn args_span(&self) -> Span {
-        match self.arguments {
-            Some(ref args) => {
-                let (first, last) = match args {
-                    Args::Unnamed(ref exprs) => {
-                        (
-                            exprs.first().unwrap().span().unstable(),
-                            exprs.last().unwrap().span().unstable()
-                        )
-                    },
-                    Args::Named(ref pairs) => {
-                        (
-                            pairs.first().unwrap().0.span().unstable(),
-                            pairs.last().unwrap().1.span().unstable()
-                        )
-                    },
-                };
-                first.join(last).expect("join spans")
-            },
-            None => self.route_path.span().unstable(),
-        }
-    }
-}
-
 impl Parse for Arg {
     fn parse(input: ParseStream) -> parse::Result<Self> {
         let has_key = input.peek2(Token![=]);
         if has_key {
             let ident = input.parse::<Ident>()?;
-            input.parse::<Token![=]>()?;
+            let eq_token = input.parse::<Token![=]>()?;
             let expr = input.parse::<Expr>()?;
-            Ok(Arg::Named(ident, expr))
+            Ok(Arg::Named(ident, eq_token, expr))
         } else {
             let expr = input.parse::<Expr>()?;
             Ok(Arg::Unnamed(expr))
         }
     }
+}
+
+fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
+    Err(parse::Error::new(span.into(), s.as_ref()))
 }
 
 impl Parse for UriParams {
@@ -137,8 +102,16 @@ impl Parse for UriParams {
             let string = input.parse::<LitStr>()?;
             let value = string.value();
             if value.contains('<') || !value.starts_with('/') {
-                return Err(parse::Error::new(string.span(), "invalid mount point; mount points must be static, absolute URIs: `/example`"));
+                // TODO(proc_macro): add example as a help, not in error
+                return err(string.span().unstable(), "invalid mount point; \
+                    mount points must be static, absolute URIs: `/example`");
             }
+
+            if !input.peek(Token![,]) && input.cursor().eof() {
+                return err(string.span().unstable(), "unexpected end of input: \
+                    expected ',' followed by route path");
+            }
+
             input.parse::<Token![,]>()?;
             Some(string)
         } else {
@@ -149,20 +122,18 @@ impl Parse for UriParams {
         let route_path = input.parse::<Path>()?;
 
         // If there are no arguments, finish early.
-        if !input.peek(Token![:]) {
-            let arguments = None;
+        if !input.peek(Token![:]) && input.cursor().eof() {
+            let arguments = Args::Unnamed(Punctuated::new());
             return Ok(Self { mount_point, route_path, arguments });
         }
 
-        let colon = input.parse::<Token![:]>()?;
-
         // Parse arguments
-        let args_start = input.cursor();
+        let colon = input.parse::<Token![:]>()?;
         let arguments: Punctuated<Arg, Token![,]> = input.parse_terminated(Arg::parse)?;
 
         // A 'colon' was used but there are no arguments.
         if arguments.is_empty() {
-            return Err(parse::Error::new(colon.span(), "expected argument list after `:`"));
+            return err(colon.span(), "expected argument list after `:`");
         }
 
         // Ensure that both types of arguments were not used at once.
@@ -175,18 +146,15 @@ impl Parse for UriParams {
         }
 
         if !homogeneous_args {
-            // TODO: This error isn't showing up with the right span.
-            return Err(parse::Error::new(args_start.token_stream().span(), "named and unnamed parameters cannot be mixed"));
+            return err(arguments.span(), "named and unnamed parameters cannot be mixed");
         }
 
-        // Create the `Args` enum, which properly types one-kind-of-argument-ness.
-        let args = if prev_named.unwrap() {
-            Args::Named(arguments.into_iter().map(|arg| arg.named()).collect())
-        } else {
-            Args::Unnamed(arguments.into_iter().map(|arg| arg.unnamed()).collect())
+        // Create the `Args` enum, which properly record one-kind-of-argument-ness.
+        let arguments = match prev_named {
+            Some(true) => Args::Named(arguments),
+            _ => Args::Unnamed(arguments)
         };
 
-        let arguments = Some(args);
         Ok(Self { mount_point, route_path, arguments })
     }
 }
@@ -204,7 +172,6 @@ impl Parse for FnArg {
 impl Parse for InternalUriParams {
     fn parse(input: ParseStream) -> parse::Result<InternalUriParams> {
         let uri = input.parse::<LitStr>()?.value();
-        //let uri = parser.prev_span.wrap(uri_str);
         input.parse::<Token![,]>()?;
 
         let content;
@@ -221,32 +188,30 @@ impl Parse for InternalUriParams {
 impl InternalUriParams {
     pub fn fn_args_str(&self) -> String {
         self.fn_args.iter()
-            .map(|&FnArg { ref ident, ref ty }| format!("{}: {}", ident, ty.clone().into_token_stream().to_string().trim()))
+            .map(|FnArg { ident, ty }| format!("{}: {}", ident, quote!(#ty).to_string().trim()))
             .collect::<Vec<_>>()
             .join(", ")
     }
 
     pub fn validate(&self) -> Validation {
-        let unnamed = |args: &Vec<Expr>| -> Validation {
-            let (expected, actual) = (self.fn_args.len(), args.len());
-            if expected != actual { Validation::Unnamed(expected, actual) }
-            else { Validation::Ok(args.clone()) }
-        };
-
-        match self.uri_params.arguments {
-            None => unnamed(&vec![]),
-            Some(Args::Unnamed(ref args)) => unnamed(args),
-            Some(Args::Named(ref args)) => {
-                let mut params: IndexMap<Ident, Option<Expr>> = self.fn_args.iter()
-                    .map(|&FnArg { ref ident, .. }| (ident.clone(), None))
+        let args = &self.uri_params.arguments;
+        match args {
+            Args::Unnamed(inner) => {
+                let (expected, actual) = (self.fn_args.len(), inner.len());
+                if expected != actual { Validation::Unnamed(expected, actual) }
+                else { Validation::Ok(args.unnamed().unwrap().collect()) }
+            },
+            Args::Named(_) => {
+                let mut params: IndexMap<&Ident, Option<&Expr>> = self.fn_args.iter()
+                    .map(|FnArg { ident, .. }| (ident, None))
                     .collect();
 
                 let (mut extra, mut dup) = (vec![], vec![]);
-                for &(ref ident, ref expr) in args {
+                for (ident, expr) in args.named().unwrap() {
                     match params.get_mut(ident) {
-                        Some(ref entry) if entry.is_some() => dup.push(ident.clone()),
-                        Some(entry) => *entry = Some(expr.clone()),
-                        None => extra.push(ident.clone()),
+                        Some(ref entry) if entry.is_some() => dup.push(ident),
+                        Some(entry) => *entry = Some(expr),
+                        None => extra.push(ident),
                     }
                 }
 
@@ -268,3 +233,75 @@ impl InternalUriParams {
     }
 }
 
+impl UriParams {
+    /// The Span to use when referring to all of the arguments.
+    pub fn args_span(&self) -> Span {
+        match self.arguments.num() {
+            0 => self.route_path.span(),
+            _ => self.arguments.span()
+        }
+    }
+}
+
+impl Arg {
+    fn is_named(&self) -> bool {
+        match *self {
+            Arg::Named(..) => true,
+            Arg::Unnamed(_) => false,
+        }
+    }
+
+    fn unnamed(&self) -> &Expr {
+        match self {
+            Arg::Unnamed(expr) => expr,
+            _ => panic!("Called Arg::unnamed() on an Arg::named!"),
+        }
+    }
+
+    fn named(&self) -> (&Ident, &Expr) {
+        match self {
+            Arg::Named(ident, _, expr) => (ident, expr),
+            _ => panic!("Called Arg::named() on an Arg::Unnamed!"),
+        }
+    }
+}
+
+impl Args {
+    fn num(&self) -> usize {
+        match self {
+            Args::Named(inner) | Args::Unnamed(inner) => inner.len(),
+        }
+    }
+
+    fn named(&self) -> Option<impl Iterator<Item = (&Ident, &Expr)>> {
+        match self {
+            Args::Named(args) => Some(args.iter().map(|arg| arg.named())),
+            _ => None
+        }
+    }
+
+    fn unnamed(&self) -> Option<impl Iterator<Item = &Expr>> {
+        match self {
+            Args::Unnamed(args) => Some(args.iter().map(|arg| arg.unnamed())),
+            _ => None
+        }
+    }
+}
+
+
+impl ToTokens for Arg {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            Arg::Unnamed(e) => e.to_tokens(tokens),
+            Arg::Named(ident, eq, expr) => tokens.extend(quote!(#ident #eq #expr))
+        }
+    }
+}
+
+impl ToTokens for Args {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens)
+        }
+    }
+}
