@@ -1,5 +1,4 @@
-#![feature(plugin, proc_macro_non_items, proc_macro_gen, decl_macro)]
-
+#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 #![allow(dead_code, unused_variables)]
 
 #[macro_use] extern crate rocket;
@@ -42,47 +41,56 @@ struct Second {
 }
 
 #[post("/<id>")]
-fn simple(id: i32) -> &'static str { "" }
+fn simple(id: i32) { }
 
 #[post("/<id>/<name>")]
-fn simple2(id: i32, name: String) -> &'static str { "" }
+fn simple2(id: i32, name: String) { }
 
 #[post("/<id>/<name>")]
-fn simple2_flipped(name: String, id: i32) -> &'static str { "" }
+fn simple2_flipped(name: String, id: i32) { }
+
+#[post("/?<id>")]
+fn simple3(id: i32) { }
+
+#[post("/?<id>&<name>")]
+fn simple4(id: i32, name: String) { }
+
+#[post("/?<id>&<name>")]
+fn simple4_flipped(name: String, id: i32) { }
 
 #[post("/<used>/<_unused>")]
-fn unused_param(used: i32, _unused: i32) -> &'static str { "" }
+fn unused_param(used: i32, _unused: i32) { }
 
 #[post("/<id>")]
-fn guard_1(cookies: Cookies, id: i32) -> &'static str { "" }
+fn guard_1(cookies: Cookies, id: i32) { }
 
 #[post("/<id>/<name>")]
-fn guard_2(name: String, cookies: Cookies, id: i32) -> &'static str { "" }
+fn guard_2(name: String, cookies: Cookies, id: i32) { }
 
 #[post("/a/<id>/hi/<name>/hey")]
-fn guard_3(id: i32, name: String, cookies: Cookies) -> &'static str { "" }
+fn guard_3(id: i32, name: String, cookies: Cookies) { }
 
 #[post("/<id>", data = "<form>")]
-fn no_uri_display_okay(id: i32, form: Form<Second>) -> &'static str {
-    "Typed URI testing."
-}
+fn no_uri_display_okay(id: i32, form: Form<Second>) { }
 
-#[post("/<name>?<query..>", data = "<user>", rank = 2)]
+#[post("/name/<name>?<foo>&bar=10&<bar>&<query..>", data = "<user>", rank = 2)]
 fn complex<'r>(
+    foo: usize,
     name: &RawStr,
     query: Form<User<'r>>,
     user: Form<User<'r>>,
+    bar: &RawStr,
     cookies: Cookies
-) -> &'static str { "" }
+) {  }
 
 #[post("/a/<path..>")]
-fn segments(path: PathBuf) -> &'static str { "" }
+fn segments(path: PathBuf) { }
 
 #[post("/a/<id>/then/<path..>")]
-fn param_and_segments(path: PathBuf, id: usize) -> &'static str { "" }
+fn param_and_segments(path: PathBuf, id: usize) { }
 
 #[post("/a/<id>/then/<path..>")]
-fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) -> &'static str { "" }
+fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) { }
 
 macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
     $(assert_eq!($uri, Origin::parse($expected).expect("valid origin URI"));)+
@@ -114,6 +122,16 @@ fn check_simple_unnamed() {
     assert_uri_eq! {
         uri!(simple2: 100, "hello there") => "/100/hello%20there",
         uri!(simple2_flipped: 100, "hello there") => "/100/hello%20there",
+    }
+
+    // Ensure that query parameters are handled properly.
+    assert_uri_eq! {
+        uri!(simple3: 100) => "/?id=100",
+        uri!(simple3: 1349) => "/?id=1349",
+        uri!(simple4: 100, "bob") => "/?id=100&name=bob",
+        uri!(simple4: 1349, "Bob Anderson") => "/?id=1349&name=Bob%20Anderson",
+        uri!(simple4_flipped: 100, "bob") => "/?id=100&name=bob",
+        uri!(simple4_flipped: 1349, "Bob Anderson") => "/?id=1349&name=Bob%20Anderson",
     }
 }
 
@@ -148,6 +166,17 @@ fn check_simple_named() {
         uri!(simple2: name = "hello there", id = 100) => "/100/hello%20there",
         uri!(simple2_flipped: id = 100, name = "hello there") => "/100/hello%20there",
         uri!(simple2_flipped: name = "hello there", id = 100) => "/100/hello%20there",
+    }
+
+    // Ensure that query parameters are handled properly.
+    assert_uri_eq! {
+        uri!(simple3: id = 100) => "/?id=100",
+        uri!(simple3: id = 1349) => "/?id=1349",
+        uri!(simple4: id = 100, name = "bob") => "/?id=100&name=bob",
+        uri!(simple4: id = 1349, name = "Bob A") => "/?id=1349&name=Bob%20A",
+        uri!(simple4: name = "Bob A", id = 1349) => "/?id=1349&name=Bob%20A",
+        uri!(simple4_flipped: id = 1349, name = "Bob A") => "/?id=1349&name=Bob%20A",
+        uri!(simple4_flipped: name = "Bob A", id = 1349) => "/?id=1349&name=Bob%20A",
     }
 }
 
@@ -214,32 +243,43 @@ fn check_with_segments() {
 #[test]
 fn check_complex() {
     assert_uri_eq! {
-        uri!(complex: "no idea", ("A B C", "a c")) => "/no%20idea?name=A+B+C&nickname=a+c",
-        uri!(complex: "Bob", User { name: "Robert".into(), nickname: "Bob".into() })
-            => "/Bob?name=Robert&nickname=Bob",
-        uri!(complex: "Bob", &User { name: "Robert".into(), nickname: "Bob".into() })
-            => "/Bob?name=Robert&nickname=Bob",
-        uri!(complex: "no idea", User { name: "Robert Mike".into(), nickname: "Bob".into() })
-            => "/no%20idea?name=Robert+Mike&nickname=Bob",
-        uri!("/some/path", complex: "no idea", ("A B C", "a c"))
-            => "/some/path/no%20idea?name=A+B+C&nickname=a+c",
-        uri!(complex: name = "Bob", query = &User { name: "Robert".into(), nickname: "Bob".into() })
-            => "/Bob?name=Robert&nickname=Bob",
-        uri!(complex: query = User { name: "Robert".into(), nickname: "Bob".into() }, name = "Bob")
-            => "/Bob?name=Robert&nickname=Bob",
-        uri!(complex: name = "no idea", query = ("A B C", "a c"))
-            => "/no%20idea?name=A+B+C&nickname=a+c",
-        uri!(complex: query = ("A B C", "a c"), name = "no idea")
-            => "/no%20idea?name=A+B+C&nickname=a+c",
-        uri!("/hey", complex: name = "no idea", query = ("A B C", "a c"))
-            => "/hey/no%20idea?name=A+B+C&nickname=a+c",
+        uri!(complex: "no idea", 10, "high", ("A B C", "a c")) =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: "Bob", 248, "?", User { name: "Robert".into(), nickname: "Bob".into() }) =>
+            "/name/Bob?foo=248&bar=10&bar=%3F&name=Robert&nickname=Bob",
+        uri!(complex: "Bob", 248, "a a", &User { name: "Robert".into(), nickname: "B".into() }) =>
+            "/name/Bob?foo=248&bar=10&bar=a%20a&name=Robert&nickname=B",
+        uri!(complex: "no idea", 248, "", &User { name: "A B".into(), nickname: "A".into() }) =>
+            "/name/no%20idea?foo=248&bar=10&bar=&name=A+B&nickname=A",
+        uri!(complex: "hi", 3, "b", &User { name: "A B C".into(), nickname: "a b".into() }) =>
+            "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
+        uri!(complex: name = "no idea", foo = 10, bar = "high", query = ("A B C", "a c")) =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: foo = 10, name = "no idea", bar = "high", query = ("A B C", "a c")) =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high", ) =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: query = *&("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+        uri!(complex: foo = 3, name = "hi", bar = "b",
+                query = &User { name: "A B C".into(), nickname: "a b".into() }) =>
+                "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
+        uri!(complex: query = &User { name: "A B C".into(), nickname: "a b".into() },
+                 foo = 3, name = "hi", bar = "b") =>
+                "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
     }
 
     // Ensure variables are correctly processed.
     let user = User { name: "Robert".into(), nickname: "Bob".into() };
     assert_uri_eq! {
-        uri!(complex: "complex", &user) => "/complex?name=Robert&nickname=Bob",
-        uri!(complex: "complex", user) => "/complex?name=Robert&nickname=Bob",
+        uri!(complex: "complex", 0, "high", &user) =>
+            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
+        uri!(complex: "complex", 0, "high", &user) =>
+            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
+        uri!(complex: "complex", 0, "high", user) =>
+            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
     }
 }
 
@@ -293,7 +333,7 @@ mod typed_uris {
     use super::assert_uri_eq;
 
     #[post("/typed_uris/<id>")]
-    fn simple(id: i32) -> &'static str { "" }
+    fn simple(id: i32) { }
 
     #[test]
     fn check_simple_scoped() {
@@ -309,7 +349,7 @@ mod typed_uris {
         use super::assert_uri_eq;
 
         #[post("/typed_uris/deeper/<id>")]
-        fn simple(id: i32) -> &'static str { "" }
+        fn simple(id: i32) { }
 
         #[test]
         fn check_deep_scoped() {

@@ -68,9 +68,6 @@ r2d2_redis = { version = "0.8", optional = true }
 # Contrib codegen dependencies
 rocket_contrib_codegen = { path = "../codegen", optional = true }
 
-[dev-dependencies]
-rocket_codegen = { version = "0.4.0-dev", path = "../../core/codegen" }
-
 [target.'cfg(debug_assertions)'.dependencies]
 notify = { version = "^4.0" }
 

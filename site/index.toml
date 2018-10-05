@@ -44,10 +44,9 @@ margin = 9
 [[sections]]
 title = "Hello, Rocket!"
 code = '''
-  #![feature(plugin)]
-  #![plugin(rocket_codegen)]
+  #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 
-  extern crate rocket;
+  #[macro_use] extern crate rocket;
 
   #[get("/hello/<name>/<age>")]
   fn hello(name: String, age: u8) -> String {

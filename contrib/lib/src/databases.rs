@@ -74,10 +74,9 @@
 //! Whenever a connection to the database is needed:
 //!
 //! ```rust
-//! # #![feature(plugin, decl_macro)]
-//! # #![plugin(rocket_codegen)]
+//! # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //! #
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # extern crate rocket_contrib;
 //! #
 //! # use rocket_contrib::databases::{database, diesel};
@@ -263,10 +262,9 @@
 //! connection to a given database:
 //!
 //! ```rust
-//! # #![feature(plugin, decl_macro)]
-//! # #![plugin(rocket_codegen)]
+//! # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //! #
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # extern crate rocket_contrib;
 //! # use rocket_contrib::databases::{database, diesel};
 //! #[database("my_db")]
@@ -285,10 +283,9 @@
 //! connection type:
 //!
 //! ```rust
-//! # #![feature(plugin, decl_macro)]
-//! # #![plugin(rocket_codegen)]
+//! # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 //! #
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # extern crate rocket_contrib;
 //! # use rocket_contrib::databases::{database, diesel};
 //! #

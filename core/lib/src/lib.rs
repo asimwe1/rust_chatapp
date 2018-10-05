@@ -1,5 +1,5 @@
 #![feature(specialization)]
-#![feature(plugin, decl_macro)]
+#![feature(decl_macro)]
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
@@ -30,12 +30,10 @@
 //!
 //! ## Libraries
 //!
-//! Rocket's functionality is split into three crates:
+//! Rocket's functionality is split into two crates:
 //!
 //!   1. [Core](/rocket) - The core library. Needed by every Rocket application.
-//!   2. [Codegen](/rocket_codegen) - Core code generation plugin. Should always
-//!      be used alongside `rocket`, though it's not necessary.
-//!   3. [Contrib](/rocket_contrib) - Provides useful functionality for many
+//!   2. [Contrib](/rocket_contrib) - Provides useful functionality for many
 //!      Rocket applications. Completely optional.
 //!
 //! ## Usage
@@ -48,7 +46,6 @@
 //! ```rust,ignore
 //! [dependencies]
 //! rocket = "*"
-//! rocket_codegen = "*"
 //! ```
 //!
 //! If you'll be deploying your project to [crates.io](https://crates.io),

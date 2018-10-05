@@ -23,9 +23,8 @@ rocket_http = { version = "0.4.0-dev", path = "../http/" }
 
 [dependencies.derive_utils]
 git = "https://github.com/SergioBenitez/derive-utils"
-rev = "f14fb4bc855"
+rev = "62f361f"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
-rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 compiletest_rs = "0.3.14"

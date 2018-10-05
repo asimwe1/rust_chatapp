@@ -27,10 +27,10 @@ fn msgpack() -> &'static str { "msgpack" }
 #[get("/", format = "plain")]
 fn plain() -> &'static str { "plain" }
 
-#[get("/", format = "binary")]
+#[get("/", format = "binary", rank = 2)]
 fn binary() -> &'static str { "binary" }
 
-#[get("/", rank = 2)]
+#[get("/", rank = 3)]
 fn other() -> &'static str { "other" }
 
 #[test]
@@ -57,10 +57,13 @@ fn test_formats() {
     assert_eq!(response.body_string().unwrap(), "binary");
 
     let mut response = client.get("/").header(ContentType::JSON).dispatch();
-    assert_eq!(response.body_string().unwrap(), "other");
+    assert_eq!(response.body_string().unwrap(), "plain");
 
     let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string().unwrap(), "other");
+    assert_eq!(response.body_string().unwrap(), "plain");
+
+    let response = client.put("/").header(ContentType::HTML).dispatch();
+    assert_eq!(response.status(), Status::NotFound);
 }
 
 // Test custom formats.
@@ -71,7 +74,7 @@ fn get_foo() -> &'static str { "get_foo" }
 #[post("/", format = "application/foo")]
 fn post_foo() -> &'static str { "post_foo" }
 
-#[get("/", format = "bar/baz")]
+#[get("/", format = "bar/baz", rank = 2)]
 fn get_bar_baz() -> &'static str { "get_bar_baz" }
 
 #[put("/", format = "bar/baz")]
@@ -101,6 +104,12 @@ fn test_custom_formats() {
     let mut response = client.put("/").header(bar_baz_ct).dispatch();
     assert_eq!(response.body_string().unwrap(), "put_bar_baz");
 
-    let response = client.get("/").dispatch();
+    let mut response = client.get("/").dispatch();
+    assert_eq!(response.body_string().unwrap(), "get_foo");
+
+    let response = client.put("/").header(ContentType::HTML).dispatch();
+    assert_eq!(response.status(), Status::NotFound);
+
+    let response = client.post("/").header(ContentType::HTML).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 }

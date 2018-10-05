@@ -30,9 +30,8 @@ use super::ContextManager;
 /// can be used as a request guard in any request handler.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// # fn main() {  }
 /// #

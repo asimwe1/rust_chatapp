@@ -1,9 +1,9 @@
 use proc_macro::{TokenStream, Span};
 use proc_macro2::TokenStream as TokenStream2;
-use derive_utils::{syn, Spanned, Result, FromMeta, ext::TypeExt};
+use derive_utils::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
 use indexmap::IndexSet;
 
-use proc_macro_ext::Diagnostics;
+use proc_macro_ext::{Diagnostics, SpanExt};
 use syn_ext::{syn_to_diag, IdentExt};
 use self::syn::{Attribute, parse::Parser};
 
@@ -15,9 +15,9 @@ use {ROUTE_FN_PREFIX, ROUTE_STRUCT_PREFIX, URI_MACRO_PREFIX, ROCKET_PARAM_PREFIX
 #[derive(Debug, FromMeta)]
 struct RouteAttribute {
     #[meta(naked)]
-    method: Method,
+    method: SpanWrapped<Method>,
     path: RoutePath,
-    data: Option<DataSegment>,
+    data: Option<SpanWrapped<DataSegment>>,
     format: Option<MediaType>,
     rank: Option<isize>,
 }
@@ -27,7 +27,7 @@ struct RouteAttribute {
 struct MethodRouteAttribute {
     #[meta(naked)]
     path: RoutePath,
-    data: Option<DataSegment>,
+    data: Option<SpanWrapped<DataSegment>>,
     format: Option<MediaType>,
     rank: Option<isize>,
 }
@@ -51,6 +51,16 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     // Gather diagnostics as we proceed.
     let mut diags = Diagnostics::new();
 
+    // Emit a warning if a `data` param was supplied for non-payload methods.
+    if let Some(ref data) = attr.data {
+        if !attr.method.0.supports_payload() {
+            let msg = format!("'{}' does not typically support payloads", attr.method.0);
+            data.full_span.warning("`data` used with non-payload-supporting method")
+                .span_note(attr.method.span, msg)
+                .emit()
+        }
+    }
+
     // Collect all of the dynamic segments in an `IndexSet`, checking for dups.
     let mut segments: IndexSet<Segment> = IndexSet::new();
     fn dup_check<I>(set: &mut IndexSet<Segment>, iter: I, diags: &mut Diagnostics)
@@ -67,7 +77,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
 
     dup_check(&mut segments, attr.path.path.iter().cloned(), &mut diags);
     attr.path.query.as_ref().map(|q| dup_check(&mut segments, q.iter().cloned(), &mut diags));
-    dup_check(&mut segments, attr.data.clone().map(|s| s.0).into_iter(), &mut diags);
+    dup_check(&mut segments, attr.data.clone().map(|s| s.value.0).into_iter(), &mut diags);
 
     // Check the validity of function arguments.
     let mut inputs = vec![];
@@ -100,7 +110,11 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     }
 
     // Check that all of the declared parameters are function inputs.
-    let span = function.decl.inputs.span();
+    let span = match function.decl.inputs.is_empty() {
+        false => function.decl.inputs.span(),
+        true => function.span()
+    };
+
     for missing in segments.difference(&fn_segments) {
         diags.push(missing.span.error("unused dynamic parameter")
             .span_note(span, format!("expected argument named `{}` here", missing.name)))
@@ -210,13 +224,16 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
         let matcher = match segment.kind {
             Kind::Single => quote_spanned! { span =>
                 (_, #name, __v) => {
-                    #ident = Some(match <#ty as FromFormValue>::from_form_value(__v) {
+                    #[allow(unreachable_patterns, unreachable_code)]
+                    let __v = match <#ty as FromFormValue>::from_form_value(__v) {
                         Ok(__v) => __v,
                         Err(__e) => {
                             log_warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
                             return Outcome::Forward(__data);
                         }
-                    });
+                    };
+
+                    #ident = Some(__v);
                 }
             },
             Kind::Static => quote! {
@@ -408,7 +425,9 @@ fn incomplete_route(
     input: TokenStream
 ) -> Result<TokenStream> {
     let method_str = method.to_string().to_lowercase();
-    let method_ident = syn::Ident::new(&method_str, args.span().into());
+    // FIXME(proc_macro): there should be a way to get this `Span`.
+    let method_span = Span::call_site().subspan(2..2 + method_str.len()).unwrap();
+    let method_ident = syn::Ident::new(&method_str, method_span.into());
 
     let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
@@ -421,7 +440,9 @@ fn incomplete_route(
     };
 
     let attribute = RouteAttribute {
-        method: Method(method),
+        method: SpanWrapped {
+            full_span: method_span, span: method_span, value: Method(method)
+        },
         path: method_attribute.path,
         data: method_attribute.data,
         format: method_attribute.format,

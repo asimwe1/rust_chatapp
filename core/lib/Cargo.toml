@@ -34,7 +34,6 @@ isatty = "0.1"
 [dev-dependencies]
 # TODO: Find a way to not depend on this.
 lazy_static = "1.0"
-rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 
 [build-dependencies]
 yansi = "0.4"

@@ -34,7 +34,7 @@ shift
 shopt -s nullglob
 
 while [[ "$1" != "" ]]; do
-    for EXT in "stderr" "stdout" "fixed"; do
+    for EXT in "stderr" "fixed"; do
         for OUT_NAME in $BUILD_DIR/${1%.rs}.*$EXT; do
             OUT_DIR=`dirname "$1"`
             OUT_BASE=`basename "$OUT_NAME"`

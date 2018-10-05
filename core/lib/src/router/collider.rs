@@ -21,10 +21,7 @@ impl Route {
         self.method == other.method
             && self.rank == other.rank
             && paths_collide(self, other)
-            && match (self.format.as_ref(), other.format.as_ref()) {
-                (Some(a), Some(b)) => media_types_collide(a, b),
-                _ => true
-            }
+            && formats_collide(self, other)
     }
 
     /// Determines if this route matches against the given request. This means
@@ -43,13 +40,7 @@ impl Route {
         self.method == req.method()
             && paths_match(self, req)
             && queries_match(self, req)
-            && match self.format {
-                Some(ref a) => match req.format() {
-                    Some(ref b) => media_types_collide(a, b),
-                    None => false
-                },
-                None => true
-            }
+            && formats_match(self, req)
     }
 }
 
@@ -114,6 +105,40 @@ fn queries_match(route: &Route, request: &Request) -> bool {
     }
 
     true
+}
+
+fn formats_collide(route: &Route, other: &Route) -> bool {
+    // When matching against the `Accept` header, the client can always provide
+    // a media type that will cause a collision through non-specificity.
+    if !route.method.supports_payload() {
+        return true;
+    }
+
+    // When matching against the `Content-Type` header, we'll only consider
+    // requests as having a `Content-Type` if they're fully specified. If a
+    // route doesn't have a `format`, it accepts all `Content-Type`s. If a
+    // request doesn't have a format, it only matches routes without a format.
+    match (route.format.as_ref(), other.format.as_ref()) {
+        (Some(a), Some(b)) => media_types_collide(a, b),
+        _ => true
+    }
+}
+
+fn formats_match(route: &Route, request: &Request) -> bool {
+    if !route.method.supports_payload() {
+        route.format.as_ref()
+            .and_then(|a| request.format().map(|b| (a, b)))
+            .map(|(a, b)| media_types_collide(a, b))
+            .unwrap_or(true)
+    } else {
+        match route.format.as_ref() {
+            Some(a) => match request.format() {
+                Some(b) if b.specificity() == 2 => media_types_collide(a, b),
+                _ => false
+            }
+            None => true
+        }
+    }
 }
 
 fn media_types_collide(first: &MediaType, other: &MediaType) -> bool {
@@ -313,15 +338,15 @@ mod tests {
         assert!(!mt_mt_collide("something/*", "random/else"));
     }
 
-    fn r_mt_mt_collide<S1, S2>(m1: Method, mt1: S1, m2: Method, mt2: S2) -> bool
+    fn r_mt_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let mut route_a = Route::new(m1, "/", dummy_handler);
+        let mut route_a = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt1.into() {
             route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
-        let mut route_b = Route::new(m2, "/", dummy_handler);
+        let mut route_b = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt2.into() {
             route_b.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
@@ -331,23 +356,44 @@ mod tests {
 
     #[test]
     fn test_route_content_type_colliions() {
-        assert!(r_mt_mt_collide(Get, "application/json", Get, "application/json"));
-        assert!(r_mt_mt_collide(Get, "*/json", Get, "application/json"));
-        assert!(r_mt_mt_collide(Get, "*/json", Get, "application/*"));
-        assert!(r_mt_mt_collide(Get, "text/html", Get, "text/*"));
-        assert!(r_mt_mt_collide(Get, "any/thing", Get, "*/*"));
+        // non-payload bearing routes always collide
+        assert!(r_mt_mt_collide(Get, "application/json", "application/json"));
+        assert!(r_mt_mt_collide(Get, "*/json", "application/json"));
+        assert!(r_mt_mt_collide(Get, "*/json", "application/*"));
+        assert!(r_mt_mt_collide(Get, "text/html", "text/*"));
+        assert!(r_mt_mt_collide(Get, "any/thing", "*/*"));
 
-        assert!(r_mt_mt_collide(Get, None, Get, "text/*"));
-        assert!(r_mt_mt_collide(Get, None, Get, "text/html"));
-        assert!(r_mt_mt_collide(Get, None, Get, "*/*"));
-        assert!(r_mt_mt_collide(Get, "text/html", Get, None));
-        assert!(r_mt_mt_collide(Get, "*/*", Get, None));
-        assert!(r_mt_mt_collide(Get, "application/json", Get, None));
+        assert!(r_mt_mt_collide(Get, None, "text/*"));
+        assert!(r_mt_mt_collide(Get, None, "text/html"));
+        assert!(r_mt_mt_collide(Get, None, "*/*"));
+        assert!(r_mt_mt_collide(Get, "text/html", None));
+        assert!(r_mt_mt_collide(Get, "*/*", None));
+        assert!(r_mt_mt_collide(Get, "application/json", None));
 
-        assert!(!r_mt_mt_collide(Get, "text/html", Get, "application/*"));
-        assert!(!r_mt_mt_collide(Get, "application/html", Get, "text/*"));
-        assert!(!r_mt_mt_collide(Get, "*/json", Get, "text/html"));
-        assert!(!r_mt_mt_collide(Get, "text/html", Get, "text/css"));
+        assert!(r_mt_mt_collide(Get, "application/*", "text/*"));
+        assert!(r_mt_mt_collide(Get, "application/json", "text/*"));
+        assert!(r_mt_mt_collide(Get, "application/json", "text/html"));
+        assert!(r_mt_mt_collide(Get, "text/html", "text/html"));
+
+        // payload bearing routes collide if the media types collide
+        assert!(r_mt_mt_collide(Post, "application/json", "application/json"));
+        assert!(r_mt_mt_collide(Post, "*/json", "application/json"));
+        assert!(r_mt_mt_collide(Post, "*/json", "application/*"));
+        assert!(r_mt_mt_collide(Post, "text/html", "text/*"));
+        assert!(r_mt_mt_collide(Post, "any/thing", "*/*"));
+
+        assert!(r_mt_mt_collide(Post, None, "text/*"));
+        assert!(r_mt_mt_collide(Post, None, "text/html"));
+        assert!(r_mt_mt_collide(Post, None, "*/*"));
+        assert!(r_mt_mt_collide(Post, "text/html", None));
+        assert!(r_mt_mt_collide(Post, "*/*", None));
+        assert!(r_mt_mt_collide(Post, "application/json", None));
+
+        assert!(!r_mt_mt_collide(Post, "text/html", "application/*"));
+        assert!(!r_mt_mt_collide(Post, "application/html", "text/*"));
+        assert!(!r_mt_mt_collide(Post, "*/json", "text/html"));
+        assert!(!r_mt_mt_collide(Post, "text/html", "text/css"));
+        assert!(!r_mt_mt_collide(Post, "other/html", "text/html"));
     }
 
     fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
@@ -381,8 +427,9 @@ mod tests {
         assert!(req_route_mt_collide(Get, "application/json", "application/json"));
         assert!(req_route_mt_collide(Get, "text/html", "text/html"));
         assert!(req_route_mt_collide(Get, "text/html", "*/*"));
-        assert!(req_route_mt_collide(Get, None, "text/html"));
         assert!(req_route_mt_collide(Get, None, "*/*"));
+        assert!(req_route_mt_collide(Get, None, "text/*"));
+        assert!(req_route_mt_collide(Get, None, "text/html"));
         assert!(req_route_mt_collide(Get, None, "application/json"));
 
         assert!(req_route_mt_collide(Post, "text/html", None));
@@ -394,9 +441,18 @@ mod tests {
         assert!(req_route_mt_collide(Get, "application/json", None));
         assert!(req_route_mt_collide(Get, "x-custom/anything", None));
         assert!(req_route_mt_collide(Get, None, None));
+        assert!(req_route_mt_collide(Get, None, "text/html"));
+        assert!(req_route_mt_collide(Get, None, "application/json"));
 
         assert!(req_route_mt_collide(Get, "text/html, text/plain", "text/html"));
         assert!(req_route_mt_collide(Get, "text/html; q=0.5, text/xml", "text/xml"));
+
+        assert!(!req_route_mt_collide(Post, None, "text/html"));
+        assert!(!req_route_mt_collide(Post, None, "text/*"));
+        assert!(!req_route_mt_collide(Post, None, "*/text"));
+        assert!(!req_route_mt_collide(Post, None, "*/*"));
+        assert!(!req_route_mt_collide(Post, None, "text/html"));
+        assert!(!req_route_mt_collide(Post, None, "application/json"));
 
         assert!(!req_route_mt_collide(Post, "application/json", "text/html"));
         assert!(!req_route_mt_collide(Post, "application/json", "text/*"));
@@ -406,7 +462,6 @@ mod tests {
         assert!(!req_route_mt_collide(Get, "application/json", "*/xml"));
 
         assert!(!req_route_mt_collide(Post, None, "text/html"));
-        assert!(!req_route_mt_collide(Post, None, "*/*"));
         assert!(!req_route_mt_collide(Post, None, "application/json"));
     }
 

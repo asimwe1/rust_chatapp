@@ -138,10 +138,9 @@ We typically call `launch` from the `main` function. Our complete _Hello,
 world!_ application thus looks like:
 
 ```rust
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[get("/world")]
 fn world() -> &'static str {
@@ -153,11 +152,11 @@ fn main() {
 }
 ```
 
-Note that we've added the `#![feature(plugin, decl_macro)]` and
-`#![plugin(rocket_codegen)]` lines to tell Rust that we'll be using Rocket's
-code generation plugin. We've also imported the `rocket` crate into our
-namespace via `extern crate rocket`. Finally, we call the `launch` method in the
-`main` function.
+Note the `#![feature]` line: this tells Rust that we're opting in to compiler
+features vailable in the nightly release channel. This line must be in the crate
+root, typically `main.rs`. We've also imported the `rocket` crate and all of its
+macros into our namespace via `#[macro_use] extern crate rocket`. Finally, we
+call the `launch` method in the `main` function.
 
 Running the application, the console shows:
 

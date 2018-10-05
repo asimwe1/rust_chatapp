@@ -1,3 +1,5 @@
+use std::ops::{Bound, RangeBounds};
+
 use proc_macro::{Span, Diagnostic, /* MultiSpan */};
 use syntax_pos::{Span as InnerSpan, Pos, BytePos};
 
@@ -61,37 +63,40 @@ impl From<Vec<Diagnostic>> for Diagnostics {
 }
 
 pub trait SpanExt {
-    fn trimmed(&self, left: usize, right: usize) -> Option<Span>;
+    fn subspan<R: RangeBounds<usize>>(self, range: R) -> Option<Span>;
 }
 
 impl SpanExt for Span {
-    /// Trim the span on the left by `left` characters and on the right by
-    /// `right` characters.
-    fn trimmed(&self, left: usize, right: usize) -> Option<Span> {
-        let inner: InnerSpan = unsafe { ::std::mem::transmute(*self) };
-        if left > u32::max_value() as usize || right > u32::max_value() as usize {
+    /// Create a `subspan` from `start` to `end`.
+    fn subspan<R: RangeBounds<usize>>(self, range: R) -> Option<Span> {
+        let inner: InnerSpan = unsafe { ::std::mem::transmute(self) };
+        let length = inner.hi().to_usize() - inner.lo().to_usize();
+
+        let start = match range.start_bound() {
+            Bound::Included(&lo) => lo,
+            Bound::Excluded(&lo) => lo + 1,
+            Bound::Unbounded => 0,
+        };
+
+        let end = match range.end_bound() {
+            Bound::Included(&hi) => hi + 1,
+            Bound::Excluded(&hi) => hi,
+            Bound::Unbounded => length,
+        };
+
+        // Bounds check the values, preventing addition overflow and OOB spans.
+        if start > u32::max_value() as usize
+            || end > u32::max_value() as usize
+            || (u32::max_value() - start as u32) < inner.lo().to_u32()
+            || (u32::max_value() - end as u32) < inner.lo().to_u32()
+            || start >= end
+            || end > length
+        {
             return None;
         }
 
-        // Ensure that the addition won't overflow.
-        let (left, right) = (left as u32, right as u32);
-        if u32::max_value() - left < inner.lo().to_u32() {
-            return None;
-        }
-
-        // Ensure that the subtraction won't underflow.
-        if right > inner.hi().to_u32() {
-            return None;
-        }
-
-        let new_lo = inner.lo() + BytePos(left);
-        let new_hi = inner.hi() - BytePos(right);
-
-        // Ensure we're still inside the old `Span` and didn't cross paths.
-        if new_lo >= new_hi {
-            return None;
-        }
-
+        let new_lo = inner.lo() + BytePos(start as u32);
+        let new_hi = inner.lo() + BytePos(end as u32);
         let new_inner = inner.with_lo(new_lo).with_hi(new_hi);
         Some(unsafe { ::std::mem::transmute(new_inner) })
     }

@@ -108,7 +108,8 @@ impl<'a> RouteSegment<'a> {
             return Ok(RouteSegment { string, source, name, kind, index });
         } else if segment.is_empty() {
             return Err(Empty);
-        } else if segment.starts_with('<') && segment.len() > 1 {
+        } else if segment.starts_with('<') && segment.len() > 1
+                && !segment[1..].contains('<') && !segment[1..].contains('>') {
             return Err(MissingClose);
         } else if segment.contains('>') || segment.contains('<') {
             return Err(Malformed);

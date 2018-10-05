@@ -70,9 +70,16 @@ impl ToTokens for ContentType {
 
 impl FromMeta for MediaType {
     fn from_meta(meta: MetaItem) -> Result<Self> {
-        http::MediaType::parse_flexible(&String::from_meta(meta)?)
-            .map(MediaType)
-            .ok_or(meta.value_span().error("invalid or unknown media type"))
+        let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
+            .ok_or(meta.value_span().error("invalid or unknown media type"))?;
+
+        if !mt.is_known() {
+            meta.value_span()
+                .warning(format!("'{}' is not a known media type", mt))
+                .emit();
+        }
+
+        Ok(MediaType(mt))
     }
 }
 
@@ -158,7 +165,7 @@ impl FromMeta for Origin {
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
                 let span = e.index()
-                    .map(|i| span.trimmed(i + 1, 0).unwrap())
+                    .map(|i| span.subspan(i + 1..).expect("origin"))
                     .unwrap_or(span);
 
                 span.error(format!("invalid path URI: {}", e))
@@ -178,7 +185,9 @@ impl FromMeta for Origin {
 impl FromMeta for Segment {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let string = String::from_meta(meta)?;
-        let span = meta.value_span().trimmed(1, 1).unwrap();
+        let span = meta.value_span()
+            .subspan(1..(string.len() + 1))
+            .expect("segment");
 
         let segment = parse_segment(&string, span)?;
         if segment.kind != Kind::Single {
@@ -201,20 +210,18 @@ impl FromMeta for DataSegment {
 
 impl FromMeta for RoutePath {
     fn from_meta(meta: MetaItem) -> Result<Self> {
-        let origin = Origin::from_meta(meta)?;
-
-        let span = meta.value_span().trimmed(1, 1).unwrap();
-        let query_len = origin.0.query().map(|q| q.len() + 1).unwrap_or(0);
-        let path_span = span.trimmed(0, query_len).unwrap();
+        let (origin, span) = (Origin::from_meta(meta)?, meta.value_span());
+        let path_span = span.subspan(1..origin.0.path().len() + 1).expect("path");
         let path = parse_segments(origin.0.path(), '/', Source::Path, path_span);
 
         let query = origin.0.query()
             .map(|q| {
-                let len_to_q = origin.0.path().len() + 1;
-                let query_span = span.trimmed(len_to_q, 0).unwrap();
+                let len_to_q = 1 + origin.0.path().len() + 1;
+                let end_of_q = len_to_q + q.len();
+                let query_span = span.subspan(len_to_q..end_of_q).expect("query");
                 if q.starts_with('&') || q.contains("&&") || q.ends_with('&') {
                     // TODO: Show a help message with what's expected.
-                    Err(query_span.error("query cannot contain empty components").into())
+                    Err(query_span.error("query cannot contain empty segments").into())
                 } else {
                     parse_segments(q, '&', Source::Query, query_span)
                 }

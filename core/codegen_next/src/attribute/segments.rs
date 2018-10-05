@@ -52,13 +52,16 @@ impl Hash for Segment {
 
 fn subspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
-    let remaining = haystack.len() - (index + needle.len());
-    span.trimmed(index, remaining)
+    span.subspan(index..index + needle.len())
 }
 
 fn trailspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
-    span.trimmed(index - 1, 0)
+    if needle.as_ptr() as usize > haystack.as_ptr() as usize {
+        span.subspan((index - 1)..)
+    } else {
+        span.subspan(index..)
+    }
 }
 
 fn into_diagnostic(
@@ -67,7 +70,7 @@ fn into_diagnostic(
     span: Span,    // The `Span` of `Source`.
     error: &Error,  // The error.
 ) -> Diagnostic {
-    let seg_span = subspan(segment, source, span).unwrap();
+    let seg_span = subspan(segment, source, span).expect("seg_span");
     match error {
         Error::Empty => {
             seg_span.error("parameter names cannot be empty")
@@ -94,8 +97,8 @@ fn into_diagnostic(
                 .note("components cannot contain '%' and '+' characters")
         }
         Error::Trailing(multi) => {
-            let multi_span = subspan(multi, source, span).unwrap();
-            trailspan(segment, source, span).unwrap()
+            let multi_span = subspan(multi, source, span).expect("mutli_span");
+            trailspan(segment, source, span).expect("trailspan")
                 .error("unexpected trailing text after a '..' param")
                 .help("a multi-segment param must be the final component")
                 .span_note(multi_span, "multi-segment param is here")
@@ -125,7 +128,7 @@ crate fn parse_segments(
                 break;
             }
         } else if let Ok(segment) = result {
-            let seg_span = subspan(&segment.string, string, span).unwrap();
+            let seg_span = subspan(&segment.string, string, span).expect("seg");
             segments.push(Segment::from(segment, seg_span));
         }
     }

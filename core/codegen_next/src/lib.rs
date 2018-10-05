@@ -14,11 +14,15 @@
 //! ## **Table of Contents**
 //!
 //!   1. [Custom Attributes](#custom-attributes)
+//!       * [`route`, `get`, `put`, ...](#route-attributes)
+//!       * [`catch`](#catch-attribute)
 //!   2. [Custom Derives](#custom-derives)
 //!       * [`FromForm`](#fromform)
 //!       * [`FromFormValue`](#fromformvalue)
 //!       * [`Responder`](#responder)
 //!   3. [Procedural Macros](#procedural-macros)
+//!       * [`routes`, `catchers`](#routes-and-catchers)
+//!       * [`uri`](#typed-uris-uri)
 //!   4. [Debugging Generated Code](#debugging-codegen)
 //!
 //! ## Custom Attributes
@@ -35,11 +39,13 @@
 //!   * **options**
 //!   * **catch**
 //!
+//! ### Route Attributes
+//!
 //! The grammar for all _route_ attributes, including **route**, **get**,
 //! **put**, **post**, **delete**, **head**, **patch**, and **options** is
 //! defined as:
 //!
-//! <pre>
+//! ```text
 //! route := METHOD? '(' ('path' '=')? path (',' kv_param)* ')'
 //!
 //! path := URI_SEG
@@ -58,26 +64,34 @@
 //!
 //! URI_SEG := valid HTTP URI Segment
 //! DYNAMIC_PARAM := '<' IDENT '..'? '>' (string literal)
-//! </pre>
+//! ```
 //!
 //! Note that the **route** attribute takes a method as its first argument,
 //! while the remaining do not. That is, **route** looks like:
 //!
-//!     #[route(GET, path = "/hello")]
+//! ```rust,ignore
+//! #[route(GET, path = "/hello")]
+//! ```
 //!
 //! while the equivalent using **get** looks like:
 //!
-//!     #[get("/hello")]
+//! ```rust,ignore
+//! #[get("/hello")]
+//! ```
+//!
+//! ### Catch Attribute
 //!
 //! The syntax for the **catch** attribute is:
 //!
-//! <pre>
+//! ```text
 //! catch := INTEGER
-//! </pre>
+//! ```
 //!
 //! A use of the `catch` attribute looks like:
 //!
-//!     #[catch(404)]
+//! ```rust,ignore
+//! #[catch(404)]
+//! ```
 //!
 //! ## Custom Derives
 //!
@@ -87,37 +101,43 @@
 //!   * **FromFormValue**
 //!   * **Responder**
 //!
-//! <small>* In reality, all of these custom derives are currently implemented
-//! by the `rocket_codegen_next` crate. Nonetheless, they are documented
-//! here.</small>
+//! <small>
+//!   * In reality, all of these custom derives are currently implemented by the
+//!   `rocket_codegen_next` crate. Nonetheless, they are documented here.
+//! </small>
+//!
 //! ### `FromForm`
 //!
 //! The [`FromForm`] derive can be applied to structures with named fields:
 //!
-//!     #[derive(FromForm)]
-//!     struct MyStruct {
-//!         field: usize,
-//!         other: String
-//!     }
+//! ```rust,ignore
+//! #[derive(FromForm)]
+//! struct MyStruct {
+//!     field: usize,
+//!     other: String
+//! }
+//! ```
 //!
 //! Each field's type is required to implement [`FromFormValue`].
 //!
 //! The derive accepts one field attribute: `form`, with the following syntax:
 //!
-//! <pre>
+//! ```text
 //! form := 'field' '=' '"' IDENT '"'
 //!
 //! IDENT := valid identifier, as defined by Rust
-//! </pre>
+//! ```
 //!
 //! When applied, the attribute looks as follows:
 //!
-//!     #[derive(FromForm)]
-//!     struct MyStruct {
-//!         field: usize,
-//!         #[form(field = "renamed_field")]
-//!         other: String
-//!     }
+//! ```rust,ignore
+//! #[derive(FromForm)]
+//! struct MyStruct {
+//!     field: usize,
+//!     #[form(field = "renamed_field")]
+//!     other: String
+//! }
+//! ```
 //!
 //! The derive generates an implementation for the [`FromForm`] trait. The
 //! implementation parses a form whose field names match the field names of the
@@ -137,12 +157,14 @@
 //! The [`FromFormValue`] derive can be applied to enums with nullary
 //! (zero-length) fields:
 //!
-//!     #[derive(FromFormValue)]
-//!     enum MyValue {
-//!         First,
-//!         Second,
-//!         Third,
-//!     }
+//! ```rust,ignore
+//! #[derive(FromFormValue)]
+//! enum MyValue {
+//!     First,
+//!     Second,
+//!     Third,
+//! }
+//! ```
 //!
 //! The derive generates an implementation of the [`FromFormValue`] trait for
 //! the decorated `enum`. The implementation returns successfully when the form
@@ -157,21 +179,23 @@
 //! The `form` field attribute can be used to change the string that is compared
 //! against for a given variant:
 //!
-//!     #[derive(FromFormValue)]
-//!     enum MyValue {
-//!         First,
-//!         Second,
-//!         #[form(value = "fourth")]
-//!         Third,
-//!     }
+//! ```rust,ignore
+//! #[derive(FromFormValue)]
+//! enum MyValue {
+//!     First,
+//!     Second,
+//!     #[form(value = "fourth")]
+//!     Third,
+//! }
+//! ```
 //!
 //! The attribute's grammar is:
 //!
-//! <pre>
+//! ```text
 //! form := 'field' '=' STRING_LIT
 //!
 //! STRING_LIT := any valid string literal, as defined by Rust
-//! </pre>
+//! ```
 //!
 //! The attribute accepts a single string parameter of name `value`
 //! corresponding to the string to use to match against for the decorated
@@ -184,17 +208,19 @@
 //! applied to enums, variants must have at least one field. When applied to
 //! structs, the struct must have at least one field.
 //!
-//!     #[derive(Responder)]
-//!     enum MyResponder {
-//!         A(String),
-//!         B(OtherResponse, ContentType),
-//!     }
+//! ```rust,ignore
+//! #[derive(Responder)]
+//! enum MyResponder {
+//!     A(String),
+//!     B(OtherResponse, ContentType),
+//! }
 //!
-//!     #[derive(Responder)]
-//!     struct MyResponder {
-//!         inner: OtherResponder,
-//!         header: ContentType,
-//!     }
+//! #[derive(Responder)]
+//! struct MyResponder {
+//!     inner: OtherResponder,
+//!     header: ContentType,
+//! }
+//! ```
 //!
 //! The derive generates an implementation of the [`Responder`] trait for the
 //! decorated enum or structure. The derive uses the _first_ field of a variant
@@ -207,19 +233,21 @@
 //! Except for the first field, fields decorated with `#[response(ignore)]` are
 //! ignored by the derive:
 //!
-//!     #[derive(Responder)]
-//!     enum MyResponder {
-//!         A(String),
-//!         B(OtherResponse, ContentType, #[response(ignore)] Other),
-//!     }
+//! ```rust,ignore
+//! #[derive(Responder)]
+//! enum MyResponder {
+//!     A(String),
+//!     B(OtherResponse, ContentType, #[response(ignore)] Other),
+//! }
 //!
-//!     #[derive(Responder)]
-//!     struct MyResponder {
-//!         inner: InnerResponder,
-//!         header: ContentType,
-//!         #[response(ignore)]
-//!         other: Other,
-//!     }
+//! #[derive(Responder)]
+//! struct MyResponder {
+//!     inner: InnerResponder,
+//!     header: ContentType,
+//!     #[response(ignore)]
+//!     other: Other,
+//! }
+//! ```
 //!
 //! Decorating the first field with `#[response(ignore)]` has no effect.
 //!
@@ -228,7 +256,7 @@
 //! produced by the generated implementation. The `response` attribute used in
 //! these positions has the following grammar:
 //!
-//! <pre>
+//! ```text
 //! response := parameter (',' parameter)?
 //!
 //! parameter := 'status' '=' STATUS
@@ -237,26 +265,28 @@
 //! STATUS := unsigned integer >= 100 and < 600
 //! CONTENT_TYPE := string literal, as defined by Rust, identifying a valid
 //!                 Content-Type, as defined by Rocket
-//! </pre>
+//! ```
 //!
 //! It can be used as follows:
 //!
-//!     #[derive(Responder)]
-//!     enum Error {
-//!         #[response(status = 500, content_type = "json")]
-//!         A(String),
-//!         #[response(status = 404)]
-//!         B(OtherResponse, ContentType),
-//!     }
+//! ```rust,ignore
+//! #[derive(Responder)]
+//! enum Error {
+//!     #[response(status = 500, content_type = "json")]
+//!     A(String),
+//!     #[response(status = 404)]
+//!     B(OtherResponse, ContentType),
+//! }
 //!
-//!     #[derive(Responder)]
-//!     #[response(status = 400)]
-//!     struct MyResponder {
-//!         inner: InnerResponder,
-//!         header: ContentType,
-//!         #[response(ignore)]
-//!         other: Other,
-//!     }
+//! #[derive(Responder)]
+//! #[response(status = 400)]
+//! struct MyResponder {
+//!     inner: InnerResponder,
+//!     header: ContentType,
+//!     #[response(ignore)]
+//!     other: Other,
+//! }
+//! ```
 //!
 //! The attribute accepts two key/value pairs: `status` and `content_type`. The
 //! value of `status` must be an unsigned integer representing a valid status
@@ -288,13 +318,15 @@
 //!   * **catchers**
 //!   * **uri**
 //!
+//! ## Routes and Catchers
+//!
 //! The syntax for `routes!` and `catchers!` is defined as:
 //!
-//! <pre>
+//! ```text
 //! macro := PATH (',' PATH)*
 //!
 //! PATH := a path, as defined by Rust
-//! </pre>
+//! ```
 //!
 //! ### Typed URIs: `uri!`
 //!
@@ -330,7 +362,7 @@
 //!
 //! The grammar for the `uri!` macro is as follows:
 //!
-//! <pre>
+//! ```text
 //! uri := (mount ',')? PATH (':' params)?
 //!
 //! mount = STRING
@@ -342,7 +374,7 @@
 //! IDENT := a valid Rust identifier (examples: `name`, `age`)
 //! STRING := an uncooked string literal, as defined by Rust (example: `"hi"`)
 //! PATH := a path, as defined by Rust (examples: `route`, `my_mod::route`)
-//! </pre>
+//! ```
 //!
 //! #### Semantics
 //!
@@ -361,7 +393,7 @@
 //! implementation, provided by Rocket, allows an `&str` to be used in a `uri!`
 //! invocation for route URI parameters declared as `String`:
 //!
-//! ```
+//! ```rust,ignore
 //! impl<'a> FromUriParam<&'a str> for String
 //! ```
 //!
@@ -383,7 +415,7 @@
 //! might run the following to build a Rocket application with codegen logging
 //! enabled:
 //!
-//! ```
+//! ```sh
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
 
@@ -413,11 +445,25 @@ crate static ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
 crate static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
 crate static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
+macro_rules! emit {
+    ($tokens:expr) => ({
+        let tokens = $tokens;
+        if ::std::env::var_os("ROCKET_CODEGEN_DEBUG").is_some() {
+            ::proc_macro::Span::call_site()
+                .note("emitting Rocket code generation debug output")
+                .note(tokens.to_string())
+                .emit()
+        }
+
+        tokens
+    })
+}
+
 macro_rules! route_attribute {
     ($name:ident => $method:expr) => (
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
-            attribute::route::route_attribute($method, args, input)
+            emit!(attribute::route::route_attribute($method, args, input))
         }
     )
 }
@@ -433,40 +479,41 @@ route_attribute!(options => Method::Options);
 
 #[proc_macro_derive(FromFormValue, attributes(form))]
 pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
-    derive::from_form_value::derive_from_form_value(input)
+    emit!(derive::from_form_value::derive_from_form_value(input))
 }
 
 #[proc_macro_derive(FromForm, attributes(form))]
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
-    derive::from_form::derive_from_form(input)
+    emit!(derive::from_form::derive_from_form(input))
 }
 
 #[proc_macro_derive(Responder, attributes(response))]
 pub fn derive_responder(input: TokenStream) -> TokenStream {
-    derive::responder::derive_responder(input)
+    emit!(derive::responder::derive_responder(input))
 }
 
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
-    attribute::catch::catch_attribute(args, input)
+    emit!(attribute::catch::catch_attribute(args, input))
 }
 
 #[proc_macro]
 pub fn routes(input: TokenStream) -> TokenStream {
-    bang::routes_macro(input)
+    emit!(bang::routes_macro(input))
 }
 
 #[proc_macro]
 pub fn catchers(input: TokenStream) -> TokenStream {
-    bang::catchers_macro(input)
+    emit!(bang::catchers_macro(input))
 }
 
 #[proc_macro]
 pub fn uri(input: TokenStream) -> TokenStream {
-    bang::uri_macro(input)
+    emit!(bang::uri_macro(input))
 }
 
+#[doc(hidden)]
 #[proc_macro]
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
-    bang::uri_internal_macro(input)
+    emit!(bang::uri_internal_macro(input))
 }

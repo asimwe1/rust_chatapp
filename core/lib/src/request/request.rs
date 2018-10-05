@@ -428,11 +428,12 @@ impl<'r> Request<'r> {
         }).as_ref()
     }
 
-    /// Returns the media type "format" of the request if it is present.
+    /// Returns the media type "format" of the request.
     ///
     /// The "format" of a request is either the Content-Type, if the request
     /// methods indicates support for a payload, or the preferred media type in
-    /// the Accept header otherwise.
+    /// the Accept header otherwise. If the method indicates no payload and no
+    /// Accept header is specified, a media type of `Any` is returned.
     ///
     /// The media type returned from this method is used to match against the
     /// `format` route attribute.
@@ -455,13 +456,16 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn format(&self) -> Option<&MediaType> {
+        static ANY: MediaType = MediaType::Any;
         if self.method().supports_payload() {
             self.content_type().map(|ct| ct.media_type())
         } else {
             // FIXME: Should we be using `accept_first` or `preferred`? Or
             // should we be checking neither and instead pass things through
             // where the client accepts the thing at all?
-            self.accept().map(|accept| accept.preferred().media_type())
+            self.accept()
+                .map(|accept| accept.preferred().media_type())
+                .or(Some(&ANY))
         }
     }
 

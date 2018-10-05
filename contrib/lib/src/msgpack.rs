@@ -27,9 +27,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// HTTP request body.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
 /// # fn main() {  }
@@ -55,9 +54,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// is set to `application/msgpack` automatically.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
 /// # fn main() {  }

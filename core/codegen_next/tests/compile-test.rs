@@ -90,7 +90,6 @@ fn run_mode(mode: &'static str, path: &'static str) {
     config.target_rustcflags = Some([
         link_flag("-L", "crate", &[]),
         link_flag("-L", "dependency", &["deps"]),
-        extern_dep("rocket_codegen_next", Kind::Dynamic).expect("find codegen dep"),
         extern_dep("rocket_http", Kind::Static).expect("find http dep"),
         extern_dep("rocket", Kind::Static).expect("find core dep"),
     ].join(" "));

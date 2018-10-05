@@ -105,8 +105,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// dynamic parameter type.
 ///
 /// ```rust
-/// # #![feature(plugin, proc_macro_non_items, proc_macro_gen, decl_macro)]
-/// # #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # fn main() {  }
 /// use rocket::http::RawStr;
@@ -229,7 +228,9 @@ macro_rules! impl_with_display {
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 impl_with_display! {
-    i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
+    i8, i16, i32, i64, i128, isize,
+    u8, u16, u32, u64, u128, usize,
+    f32, f64, bool,
     IpAddr, Ipv4Addr, Ipv6Addr
 }
 

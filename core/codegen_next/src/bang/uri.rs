@@ -54,8 +54,14 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
                 .note(format!("uri parameters are: {}", internal.fn_args_str()));
 
             fn join<S: Display, T: Iterator<Item = S>>(iter: T) -> (&'static str, String) {
-                let items: Vec<_> = iter.map(|i| format!("`{}`", i)).collect();
+                let mut items: Vec<_> = iter.map(|i| format!("`{}`", i)).collect();
+                items.dedup();
                 (p!("parameter", items.len()), items.join(", "))
+            }
+
+            if !missing.is_empty() {
+                let (ps, msg) = join(missing.iter());
+                diag = diag.help(format!("missing {}: {}", ps, msg));
             }
 
             if !extra.is_empty() {
@@ -68,11 +74,6 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
                 let (ps, msg) = join(dup.iter());
                 let spans: Vec<_> = dup.iter().map(|ident| ident.span().unstable()).collect();
                 diag = diag.span_help(spans, format!("duplicate {}: {}", ps, msg));
-            }
-
-            if !missing.is_empty() {
-                let (ps, msg) = join(missing.iter());
-                diag = diag.help(format!("missing {}: {}", ps, msg));
             }
 
             Err(diag)

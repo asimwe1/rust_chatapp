@@ -5,13 +5,11 @@ use request::FormItems;
 ///
 /// # Deriving
 ///
-/// This trait can be automatically derived via the
-/// [rocket_codegen](/rocket_codegen) plugin. When deriving `FromForm`, every
-/// field in the structure must implement
-/// [FromFormValue](trait.FromFormValue.html). Rocket validates each field in
-/// the structure by calling its `FromFormValue` implementation. You may wish to
-/// implement `FromFormValue` for your own types for custom, automatic
-/// validation.
+/// This trait can be automatically derived. When deriving `FromForm`, every
+/// field in the structure must implement [`FromFormValue`]. Rocket validates
+/// each field in the structure by calling its `FromFormValue` implementation.
+/// You may wish to implement `FromFormValue` for your own types for custom,
+/// automatic validation.
 ///
 /// ```rust
 /// #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
