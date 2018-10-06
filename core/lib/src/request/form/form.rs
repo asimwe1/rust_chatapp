@@ -42,7 +42,7 @@ use http::{Status, uri::FromUriParam};
 /// can access fields of `T` transparently through a `Form<T>`:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
@@ -71,7 +71,7 @@ use http::{Status, uri::FromUriParam};
 /// A handler that handles a form of this type can similarly by written:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
@@ -125,7 +125,7 @@ impl<T> Form<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///

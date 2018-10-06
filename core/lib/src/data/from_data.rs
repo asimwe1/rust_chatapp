@@ -130,7 +130,7 @@ pub type Transformed<'a, T> =
 /// if the guard returns successfully.
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = ::rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
@@ -176,7 +176,7 @@ pub type Transformed<'a, T> =
 /// `String` (an `&str`).
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # #[derive(Debug)]
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
@@ -422,7 +422,7 @@ impl<'f> FromData<'f> for Data {
 /// that you can retrieve it directly from a client's request body:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # type Person = ::rocket::data::Data;
 /// #[post("/person", data = "<person>")]
@@ -434,7 +434,7 @@ impl<'f> FromData<'f> for Data {
 /// A `FromDataSimple` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]

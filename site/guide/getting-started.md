@@ -61,7 +61,7 @@ Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
 program, reproduced below:
 
 ```rust
-#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 

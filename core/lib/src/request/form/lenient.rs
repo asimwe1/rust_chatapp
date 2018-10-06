@@ -31,7 +31,7 @@ use http::uri::FromUriParam;
 /// handler:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::LenientForm;
@@ -68,7 +68,7 @@ impl<T> LenientForm<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///

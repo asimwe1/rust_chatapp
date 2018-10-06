@@ -19,7 +19,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
@@ -54,7 +54,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// parameter as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::http::RawStr;
 /// #[get("/<id>")]
@@ -166,7 +166,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
 /// # use rocket::http::RawStr;

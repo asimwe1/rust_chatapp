@@ -138,7 +138,7 @@ We typically call `launch` from the `main` function. Our complete _Hello,
 world!_ application thus looks like:
 
 ```rust
-#![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 

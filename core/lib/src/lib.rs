@@ -3,7 +3,7 @@
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
-#![feature(proc_macro_non_items)]
+#![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 #![feature(label_break_value)]
@@ -54,7 +54,7 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+//! #![feature(proc_macro_hygiene, decl_macro)]
 //!
 //! #[macro_use] extern crate rocket;
 //! #
@@ -67,7 +67,7 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+//! #![feature(proc_macro_hygiene, decl_macro)]
 //!
 //! #[macro_use] extern crate rocket;
 //!

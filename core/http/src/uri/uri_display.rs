@@ -105,7 +105,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// dynamic parameter type.
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # fn main() {  }
 /// use rocket::http::RawStr;

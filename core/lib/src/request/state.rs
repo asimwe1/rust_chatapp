@@ -21,7 +21,7 @@ use http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(proc_macro_non_items, proc_macro_gen, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
