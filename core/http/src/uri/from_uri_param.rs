@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use {RawStr, uri::UriDisplay};
+use RawStr;
+use uri::UriDisplay;
 
-/// Conversion trait for parameters used in `uri!` invocations.
+/// Conversion trait for parameters used in [`uri!`] invocations.
 ///
 /// This trait is invoked once per expression passed into a [`uri!`] invocation.
 /// In particular, for a route URI parameter of type `T` and a user-supplied
@@ -19,15 +20,14 @@ use {RawStr, uri::UriDisplay};
 /// impl<'a> FromUriParam<&'a str> for String { type Target = &'a str; }
 /// ```
 ///
-/// Because the `Target` type is the same as the input type, the conversion is a
-/// no-op and free of cost, allowing an `&str` to be used in place of a
-/// `String` without penalty. A similar no-op conversion exists for [`&RawStr`]:
+/// Because the [`FromUriParam::Target`] type is the same as the input type, the
+/// conversion is a no-op and free of cost, allowing an `&str` to be used in
+/// place of a `String` without penalty. A similar no-op conversion exists for
+/// [`&RawStr`](RawStr):
 ///
 /// ```rust,ignore
 /// impl<'a, 'b> FromUriParam<&'a str> for &'b RawStr { type Target = &'a str; }
 /// ```
-///
-/// [`&RawStr`]: /rocket/http/struct.RawStr.html
 ///
 /// # Implementing
 ///
@@ -46,8 +46,8 @@ use {RawStr, uri::UriDisplay};
 /// case, it's desirable to allow an `&str` to be used in place of a `String`.
 ///
 /// When implementing `FromUriParam`, be aware that Rocket will use the
-/// [`UriDisplay`] implementation of `Target`, _not_ of the source type.
-/// Incorrect implementations can result in creating unsafe URIs.
+/// [`UriDisplay`] implementation of [`FromUriParam::Target`], _not_ of the
+/// source type. Incorrect implementations can result in creating unsafe URIs.
 ///
 /// # Example
 ///
@@ -96,16 +96,16 @@ use {RawStr, uri::UriDisplay};
 /// // => "/hey?name=Robert+Mike&nickname=Bob"
 /// ```
 ///
-/// [`uri!`]: /rocket_codegen/#typed-uris-uri
-/// [`UriDisplay`]: /rocket/http/uri/trait.UriDisplay.html
+/// [`uri!`]: ::rocket_codegen::uri
+/// [`UriDisplay`]: uri::UriDisplay
+/// [`FromUriParam::Target`]: uri::FromUriParam::Target
 pub trait FromUriParam<T> {
     /// The resulting type of this conversion.
     type Target: UriDisplay;
 
     /// Converts a value of type `T` into a value of type `Self::Target`. The
     /// resulting value of type `Self::Target` will be rendered into a URI using
-    /// its [`UriDisplay`](/rocket/http/uri/trait.UriDisplay.html)
-    /// implementation.
+    /// its [`UriDisplay`](uri::UriDisplay) implementation.
     fn from_uri_param(param: T) -> Self::Target;
 }
 

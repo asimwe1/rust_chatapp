@@ -18,7 +18,7 @@ use uri::{Origin, Authority, Absolute, Error};
 ///
 /// Nevertheless, the `Uri` type is typically enountered as a conversion target.
 /// In particular, you will likely see generic bounds of the form: `T:
-/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::response::Redirect)
+/// TryInto<Uri>` (for instance, in [`Redirect`](::rocket::response::Redirect)
 /// methods). This means that you can provide any type `T` that implements
 /// `TryInto<Uri>`, or, equivalently, any type `U` for which `Uri` implements
 /// `TryFrom<U>` or `From<U>`. These include `&str` and `String`, [`Origin`],
@@ -37,15 +37,23 @@ use uri::{Origin, Authority, Absolute, Error};
 /// ## Percent Encoding/Decoding
 ///
 /// This type also provides the following percent encoding/decoding helper
-/// methods: [`Uri::percent_encode`], [`Uri::percent_decode`], and
-/// [`Uri::percent_decode_lossy`].
+/// methods: [`Uri::percent_encode()`], [`Uri::percent_decode()`], and
+/// [`Uri::percent_decode_lossy()`].
+///
+/// [`Origin`]: uri::Origin
+/// [`Authority`]: uri::Authority
+/// [`Absolute`]: uri::Absolute
+/// [`Uri::parse()`]: uri::Uri::parse()
+/// [`Uri::percent_encode()`]: uri::Uri::percent_encode()
+/// [`Uri::percent_decode()`]: uri::Uri::percent_decode()
+/// [`Uri::percent_decode_lossy()`]: uri::Uri::percent_decode_lossy()
 #[derive(Debug, PartialEq, Clone)]
 pub enum Uri<'a> {
-    /// An [`Origin`] URI.
+    /// An origin URI.
     Origin(Origin<'a>),
-    /// An [`Authority`] URI.
+    /// An authority URI.
     Authority(Authority<'a>),
-    /// An [`Absolute`] URI.
+    /// An absolute URI.
     Absolute(Absolute<'a>),
     /// An asterisk: exactly `*`.
     Asterisk,

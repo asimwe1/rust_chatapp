@@ -35,8 +35,7 @@ impl ConfigBuilder {
     /// the given `environment`. The root configuration directory is set to the
     /// current working directory.
     ///
-    /// This method is typically called indirectly via
-    /// [Config::build](/rocket/config/struct.Config.html#method.build).
+    /// This method is typically called indirectly via [`Config::build()`].
     ///
     /// # Panics
     ///

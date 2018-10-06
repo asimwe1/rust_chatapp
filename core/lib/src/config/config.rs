@@ -16,9 +16,8 @@ use http::Key;
 ///
 /// # Usage
 ///
-/// A `Config` structure is typically built using the [build](#method.build)
-/// method and [ConfigBuilder](/rocket/config/struct.ConfigBuilder.html)
-/// methods:
+/// A `Config` structure is typically built using [`Config::build()`] and
+/// builder methods on the returned [`ConfigBuilder`] structure:
 ///
 /// ```rust
 /// use rocket::config::{Config, Environment};
@@ -33,10 +32,8 @@ use http::Key;
 ///
 /// ## General Configuration
 ///
-/// For more information about Rocket's configuration, see the [`config`] module
-/// documentation.
-///
-/// [`config`]: /rocket/config/index.html
+/// For more information about Rocket's configuration, see the
+/// [`config`](::config) module documentation.
 #[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
@@ -909,11 +906,10 @@ impl Config {
         }
     }
 
-    /// If `path` is a relative path, `path` is appended to the [`root`] at
-    /// which the configuration file for `self` is stored and the new path is
-    /// returned. If `path` is absolute, `path` is returned unaltered.
-    ///
-    /// [`root`]: /rocket/struct.Config.html#method.root
+    /// If `path` is a relative path, `path` is appended to the
+    /// [`Config::root()`] at which the configuration file for `self` is stored
+    /// and the new path is returned. If `path` is absolute, `path` is returned
+    /// unaltered.
     ///
     /// # Example
     ///

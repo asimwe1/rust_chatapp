@@ -4,7 +4,7 @@ use std::str::FromStr;
 use http::RawStr;
 
 /// Trait to create instance of some type from a form value; expected from field
-/// types in structs deriving `FromForm`.
+/// types in structs deriving [`FromForm`](::request::FromForm).
 ///
 /// When deriving the `FromForm` trait, Rocket uses the `FromFormValue`
 /// implementation of each field's type to validate the form input. To
@@ -67,7 +67,7 @@ use http::RawStr;
 ///     `"false"`, `"off"`, or not present. In any other case, the raw form
 ///     value is returned in the `Err` value.
 ///
-///   * **&[RawStr](/rocket/http/struct.RawStr.html)**
+///   * **[`&RawStr`](RawStr)**
 ///
 ///     _This implementation always returns successfully._
 ///

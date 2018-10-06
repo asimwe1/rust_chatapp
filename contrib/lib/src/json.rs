@@ -164,8 +164,8 @@ impl<T> DerefMut for Json<T> {
 /// this type implements [`Responder`], allowing a value of this type to be
 /// returned directly from a handler.
 ///
-/// [`Value`]: https://docs.rs/serde_json/1.0.2/serde_json/value/enum.Value.html
-/// [`Responder`]: /rocket/response/trait.Responder.html
+/// [`Value`]: serde_json::value
+/// [`Responder`]: rocket::response::Responder
 ///
 /// # `Responder`
 ///
@@ -175,16 +175,18 @@ impl<T> DerefMut for Json<T> {
 ///
 /// # Usage
 ///
-/// A value of this type is constructed via the
-/// [`json!`](/rocket_contrib/macro.json.html) macro. The macro and this type
-/// are typically used to construct JSON values in an ad-hoc fashion during
-/// request handling. This looks something like:
+/// A value of this type is constructed via the [`json!`](json) macro. The macro
+/// and this type are typically used to construct JSON values in an ad-hoc
+/// fashion during request handling. This looks something like:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::JsonValue;
 ///
-/// #[get("/item")]
-/// fn get_item() -> JsonValue {
+/// #[get("/json")]
+/// fn get_json() -> JsonValue {
 ///     json!({
 ///         "id": 83,
 ///         "values": [1, 2, 3, 4]
@@ -259,15 +261,17 @@ impl<'a> Responder<'a> for JsonValue {
 /// To import the macro, add the `#[macro_use]` attribute to the `extern crate
 /// rocket_contrib` invocation:
 ///
-/// ```rust,ignore
+/// ```rust
 /// #[macro_use] extern crate rocket_contrib;
 /// ```
 ///
-/// The return type of a `json!` invocation is
-/// [`JsonValue`](/rocket_contrib/struct.JsonValue.html). A value created with
-/// this macro can be returned from a handler as follows:
+/// The return type of a `json!` invocation is [`JsonValue`]. A value created
+/// with this macro can be returned from a handler as follows:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::JsonValue;
 ///
 /// #[get("/json")]

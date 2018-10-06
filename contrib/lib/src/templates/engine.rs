@@ -40,8 +40,8 @@ pub trait Engine: Send + Sync + 'static {
 /// });
 /// ```
 ///
-/// [`tera::Value`]: https://docs.rs/tera/0.10.10/tera/enum.Value.html
-/// [`tera::Result`]: https://docs.rs/tera/0.10.10/tera/type.Result.html
+/// [`tera::Value`]: ::tera::Value
+/// [`tera::Result`]: ::tera::Result
 pub struct Engines {
     #[cfg(feature = "tera_templates")]
     /// A [`Tera`] structure. This field is only available when the
@@ -49,15 +49,14 @@ pub struct Engines {
     /// instance, ensure you use types imported from `rocket_contrib::tera` to
     /// avoid version mismatches.
     ///
-    /// [`Tera`]: https://docs.rs/tera/0.10.10/tera/struct.Tera.html
+    /// [`Tera`]: tera::Tera
     pub tera: Tera,
     /// A [`Handlebars`] structure. This field is only available when the
     /// `handlebars_templates` feature is enabled. When calling methods on the
     /// `Tera` instance, ensure you use types
     /// imported from `rocket_contrib::handlebars` to avoid version mismatches.
     ///
-    /// [`Handlebars`]:
-    ///     https://docs.rs/handlebars/0.29.1/handlebars/struct.Handlebars.html
+    /// [`Handlebars`]: handlebars::Handlebars
     #[cfg(feature = "handlebars_templates")]
     pub handlebars: Handlebars,
 }

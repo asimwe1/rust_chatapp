@@ -26,9 +26,6 @@
 //! support can be easily extended by implementing the [`Poolable`] trait. See
 //! [Extending](#extending) for more.
 //!
-//! [`r2d2`]: https://crates.io/crates/r2d2
-//! [request guards]: [rocket::FromRequest]
-//!
 //! ## Example
 //!
 //! Before using this library, the feature corresponding to your database type
@@ -204,8 +201,6 @@
 //! generates an implementation of the [`Deref`](::std::ops::Deref) trait with
 //! the internal `Poolable` type as the target.
 //!
-//! [`FromRequest`]: /rocket/request/trait.FromRequest.html
-//!
 //! The macro will also generate two inherent methods on the decorated type:
 //!
 //!   * `fn fairing() -> impl Fairing`
@@ -316,14 +311,14 @@
 //! The list below includes all presently supported database adapters and their
 //! corresponding [`Poolable`] type.
 //!
-//! | Kind     | Driver                | [`Poolable`] Type              | Feature                |
+//! | Kind     | Driver                | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | MySQL    | [`rust-mysql-simple`] | [`mysql::conn`]                | `mysql_pool`           |
+//! | MySQL    | [`rust-mysql-simple`] | [`mysql::Conn`]                | `mysql_pool`           |
 //! | Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
 //! | Postgres | [Rust-Postgres]       | [`postgres::Connection`]       | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Sqlite   | [Rustqlite]           | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 //! | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
 //!
@@ -338,7 +333,7 @@
 //! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 //! [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
 //! [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
-//! [`Rustqlite`]: https://github.com/jgallagher/rusqlite
+//! [Rustqlite]: https://github.com/jgallagher/rusqlite
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
@@ -355,6 +350,10 @@
 //! database-like struct that can be pooled by `r2d2`) is as easy as
 //! implementing the [`Poolable`] trait. See the documentation for [`Poolable`]
 //! for more details on how to implement it.
+//!
+//! [`FromRequest`]: rocket::FromRequest
+//! [request guards]: rocket::FromRequest
+//! [`Poolable`]: databases::Poolable
 
 pub extern crate r2d2;
 
@@ -455,7 +454,7 @@ pub enum DatabaseConfigError {
     /// configuration.
     MissingKey,
     /// The configuration associated with the key isn't a
-    /// [Table](/rocket/config/type.Table.html).
+    /// [Table](::rocket::config::Table).
     MalformedConfiguration,
     /// The required `url` key is missing.
     MissingUrl,
@@ -612,9 +611,6 @@ impl<'a> Display for DatabaseConfigError {
 ///     `foo::ConnectionManager`
 ///   * `foo::Error`, errors resulting from manager instantiation
 ///
-/// [`r2d2`]: https://crates.io/crates/r2d2
-/// [`r2d2::ManageConnection`]: http://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html
-///
 /// In order for Rocket to generate the required code to automatically provision
 /// a r2d2 connection pool into application state, the `Poolable` trait needs to
 /// be implemented for the connection type. The following example implements
@@ -622,10 +618,9 @@ impl<'a> Display for DatabaseConfigError {
 ///
 /// ```rust
 /// use rocket_contrib::databases::{r2d2, DbError, DatabaseConfig, Poolable};
-///
 /// # mod foo {
-/// #     use rocket_contrib::databases::r2d2;
 /// #     use std::fmt;
+/// #     use rocket_contrib::databases::r2d2;
 /// #     #[derive(Debug)] pub struct Error;
 /// #     impl ::std::error::Error for Error {  }
 /// #     impl fmt::Display for Error {
@@ -636,6 +631,10 @@ impl<'a> Display for DatabaseConfigError {
 /// #     pub struct ConnectionManager;
 /// #
 /// #     type Result<T> = ::std::result::Result<T, Error>;
+/// #
+/// #     impl ConnectionManager {
+/// #         pub fn new(url: &str) -> Result<Self> { Err(Error) }
+/// #     }
 /// #
 /// #     impl self::r2d2::ManageConnection for ConnectionManager {
 /// #          type Connection = Connection;
@@ -651,7 +650,6 @@ impl<'a> Display for DatabaseConfigError {
 ///     type Error = DbError<foo::Error>;
 ///
 ///     fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-///         # let _ = config; /*
 ///         let manager = foo::ConnectionManager::new(config.url)
 ///             .map_err(DbError::Custom)?;
 ///
@@ -659,8 +657,6 @@ impl<'a> Display for DatabaseConfigError {
 ///             .max_size(config.pool_size)
 ///             .build(manager)
 ///             .map_err(DbError::PoolError)
-///         # */
-///         # Err(DbError::Custom(foo::Error))
 ///     }
 /// }
 /// ```

@@ -1,8 +1,9 @@
 //! Types and traits to build and send responses.
 //!
 //! The return type of a Rocket handler can be any type that implements the
-//! [Responder](trait.Responder.html) trait. Among other things, this module
-//! contains several such types.
+//! [`Responder`](::response::Responder) trait, which means that the type knows
+//! how to generate a [`Response`]. Among other things, this module contains
+//! several such types.
 //!
 //! # Composing
 //!
@@ -15,9 +16,9 @@
 //!
 //! # Contrib
 //!
-//! The [`contrib` crate](/rocket_contrib) contains several useful `Responder`s
-//! including [`Template`](/rocket_contrib/struct.Template.html) and
-//! [`Json`](/rocket_contrib/struct.Json.html).
+//! The [`contrib` crate](rocket_contrib) contains several useful `Responder`s
+//! including [`Template`](rocket_contrib::Template) and
+//! [`Json`](rocket_contrib::Json).
 
 mod responder;
 mod redirect;

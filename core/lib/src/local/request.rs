@@ -56,7 +56,7 @@ use local::Client;
 /// same request needs to be dispatched multiple times, the request can first be
 /// cloned and then dispatched: `request.clone().dispatch()`.
 ///
-/// [`Client`]: /rocket/local/struct.Client.html
+/// [`Client`]: ::local::Client
 /// [`header`]: #method.header
 /// [`add_header`]: #method.add_header
 /// [`cookie`]: #method.cookie
@@ -159,8 +159,8 @@ impl<'c> LocalRequest<'c> {
     /// Any type that implements `Into<Header>` can be used here. Among others,
     /// this includes [`ContentType`] and [`Accept`].
     ///
-    /// [`ContentType`]: /rocket/http/struct.ContentType.html
-    /// [`Accept`]: /rocket/http/struct.Accept.html
+    /// [`ContentType`]: ::http::ContentType
+    /// [`Accept`]: ::http::Accept
     ///
     /// # Examples
     ///
@@ -266,7 +266,7 @@ impl<'c> LocalRequest<'c> {
 
     /// Add a [private cookie] to this request.
     ///
-    /// [private cookie]: /rocket/http/enum.Cookies.html#private-cookies
+    /// [private cookie]: ::http::Cookies::add_private()
     ///
     /// # Examples
     ///
@@ -438,12 +438,10 @@ impl<'c> fmt::Debug for LocalRequest<'c> {
 /// A structure representing a response from dispatching a local request.
 ///
 /// This structure is a thin wrapper around [`Response`]. It implements no
-/// methods of its own; all functionality is exposed via the `Deref` and
-/// `DerefMut` implementations with a target of `Response`. In other words, when
-/// invoking methods, a `LocalResponse` can be treated exactly as if it were a
-/// `Response`.
-///
-/// [`Response`]: /rocket/struct.Response.html
+/// methods of its own; all functionality is exposed via the [`Deref`] and
+/// [`DerefMut`] implementations with a target of `Response`. In other words,
+/// when invoking methods, a `LocalResponse` can be treated exactly as if it
+/// were a `Response`.
 pub struct LocalResponse<'c> {
     _request: Rc<Request<'c>>,
     response: Response<'c>,

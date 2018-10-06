@@ -16,18 +16,18 @@ use Header;
 /// # Usage
 ///
 /// A type of `Cookies` can be retrieved via its `FromRequest` implementation as
-/// a request guard or via the [`Request::cookies`] method. Individual cookies
-/// can be retrieved via the [`get`] and [`get_private`] methods. Cookies can be
-/// added or removed via the [`add`], [`add_private`], [`remove`], and
-/// [`remove_private`] methods.
+/// a request guard or via the [`Request::cookies()`] method. Individual cookies
+/// can be retrieved via the [`get()`] and [`get_private()`] methods. Cookies
+/// can be added or removed via the [`add()`], [`add_private()`], [`remove()`],
+/// and [`remove_private()`] methods.
 ///
-/// [`get`]: /rocket/http/enum.Cookies.html#method.get
-/// [`get_private`]: /rocket/http/enum.Cookies.html#method.get_private
-/// [`add`]: /rocket/http/enum.Cookies.html#method.add
-/// [`add_private`]: /rocket/http/enum.Cookies.html#method.add_private
-/// [`remove`]: /rocket/http/enum.Cookies.html#method.remove
-/// [`remove_private`]: /rocket/http/enum.Cookies.html#method.remove_private
-/// [`Request::cookies`]: /rocket/struct.Request.html#method.cookies
+/// [`Request::cookies()`]: ::rocket::Request::cookies()
+/// [`get()`]: #method.get
+/// [`get_private()`]: #method.get_private
+/// [`add()`]: #method.add
+/// [`add_private()`]: #method.add_private
+/// [`remove()`]: #method.remove
+/// [`remove_private()`]: #method.remove_private
 ///
 /// ## Examples
 ///
@@ -52,7 +52,7 @@ use Header;
 /// as an integer, a `User` structure is validated. Otherwise, the guard
 /// forwards.
 ///
-/// [private cookie]: /rocket/http/enum.Cookies.html#private-cookies
+/// [private cookie]: Cookies::add_private()
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro, never_type)]
@@ -89,8 +89,8 @@ use Header;
 /// being signed and encrypted.
 ///
 /// Private cookies can be retrieved, added, and removed from a `Cookies`
-/// collection via the [`get_private`], [`add_private`], and [`remove_private`]
-/// methods.
+/// collection via the [`get_private()`], [`add_private()`], and
+/// [`remove_private()`] methods.
 ///
 /// ## Encryption Key
 ///

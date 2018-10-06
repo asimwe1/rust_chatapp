@@ -4,13 +4,13 @@ use rocket::request::{self, FromRequest};
 
 use super::ContextManager;
 
-/// The `TemplateMetadata` type: implements `FromRequest`, allowing dynamic
-/// queries about template metadata.
+/// Implements [`FromRequest`] for dynamiclly querying template metadata.
 ///
 /// # Usage
 ///
-/// First, ensure that the template [fairing](`rocket::fairing`),
-/// [`Template::fairing()`] is attached to your Rocket application:
+/// First, ensure that the template [fairing](rocket::fairing),
+/// [`Template::fairing()`](::Template::fairing()) is attached to your Rocket
+/// application:
 ///
 /// ```rust
 /// # extern crate rocket;

@@ -41,17 +41,17 @@ use http::RawStr;
 /// associated key/value pairs of the form item, either directly access them via
 /// the [`key`](FormItem.key) and [`value`](FormItem.value) fields, use the
 /// [`FormItem::key_value()`] method to get a tuple of the _raw_ `(key, value)`,
-/// or use the [`FormItems::key_value_decoded()`] method to get a tuple of the
-/// decoded (`key`, `value`).
+/// or use the [`key_value_decoded()`](FormItem::key_value_decoded()) method to
+/// get a tuple of the decoded (`key`, `value`).
 ///
 /// # Completion
 ///
 /// The iterator keeps track of whether the form string was parsed to completion
 /// to determine if the form string was malformed. The iterator can be queried
-/// for completion via the [completed](#method.completed) method, which returns
-/// `true` if the iterator parsed the entire string that was passed to it. The
-/// iterator can also attempt to parse any remaining contents via
-/// [exhaust](#method.exhaust); this method returns `true` if exhaustion
+/// for completion via the [`completed()`](#method.completed) method, which
+/// returns `true` if the iterator parsed the entire string that was passed to
+/// it. The iterator can also attempt to parse any remaining contents via
+/// [`exhaust()`](#method.exhaust); this method returns `true` if exhaustion
 /// succeeded.
 ///
 /// This iterator guarantees that all valid form strings are parsed to
@@ -123,13 +123,13 @@ pub struct FormItem<'f> {
     ///
     /// **Note:** The key is _not_ URL decoded. To URL decode the raw strings,
     /// use the [`RawStr::url_decode()`] method or access key-value pairs with
-    /// [`FromItem::key_value_decoded()`].
+    /// [`key_value_decoded()`](FormItem::key_value_decoded()).
     pub key: &'f RawStr,
     /// The value for the item, which may be empty if `key` is nonempty.
     ///
     /// **Note:** The value is _not_ URL decoded. To URL decode the raw strings,
     /// use the [`RawStr::url_decode()`] method or access key-value pairs with
-    /// [`FromItem::key_value_decoded()`].
+    /// [`key_value_decoded()`](FormItem::key_value_decoded()).
     pub value: &'f RawStr
 }
 

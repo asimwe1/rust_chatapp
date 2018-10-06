@@ -10,28 +10,26 @@
 //!
 //! These libraries are always kept in-sync with the core Rocket library. They
 //! provide common, but not fundamental, abstractions to be used by Rocket
-//! applications. In particular, contributor libraries typically export types
-//! implementing a combination of the `FromRequest`, `FromParam`, and
-//! `Responder` traits.
+//! applications.
 //!
 //! Each module in this library is held behind a feature flag, with the most
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [json*](struct.Json.html)
+//! * [json*](Json)
 //! * [static_files*](static_files)
-//! * [msgpack](struct.MsgPack.html)
-//! * [handlebars_templates](struct.Template.html)
-//! * [tera_templates](struct.Template.html)
-//! * [uuid](struct.Uuid.html)
-//! * [${database}_pool](databases/index.html)
+//! * [msgpack](MsgPack)
+//! * [handlebars_templates](Template)
+//! * [tera_templates](Template)
+//! * [uuid](Uuid)
+//! * [${database}_pool](databases)
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
 //! `Cargo.toml` file, setting `default-features` to false, and specifying
 //! features manually. For example, to use the JSON module, you would add:
 //!
-//! ```toml,ignore
+//! ```toml
 //! [dependencies.rocket_contrib]
 //! version = "*"
 //! default-features = false

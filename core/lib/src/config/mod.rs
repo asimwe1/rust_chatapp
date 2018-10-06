@@ -31,30 +31,30 @@
 //! not used by Rocket itself but can be used by external libraries. The
 //! standard configuration parameters are:
 //!
-//!   * **address**: _[string]_ an IP address or host the application will
+//!   * **address**: _string_ an IP address or host the application will
 //!     listen on
 //!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
-//!   * **port**: _[integer]_ a port number to listen on
+//!   * **port**: _integer_ a port number to listen on
 //!     * examples: `"8000"`, `"80"`, `"4242"`
-//!   * **workers**: _[integer]_ the number of concurrent workers to use
+//!   * **workers**: _integer_ the number of concurrent workers to use
 //!     * examples: `12`, `1`, `4`
-//!   * **keep_alive**: _[integer, 'false', or 'none']_ timeout, in seconds, for
+//!   * **keep_alive**: _integer, 'false', or 'none'_ timeout, in seconds, for
 //!     HTTP keep-alive. disabled on 'false' or 'none'
 //!     * examples: `5`, `60`, `false`, `"none"`
-//!   * **log**: _[string]_ how much information to log; one of `"off"`,
+//!   * **log**: _string_ how much information to log; one of `"off"`,
 //!     `"normal"`, `"debug"`, or `"critical"`
-//!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
+//!   * **secret_key**: _string_ a 256-bit base64 encoded string (44
 //!     characters) to use as the secret key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
-//!   * **tls**: _[table]_ a table with two keys:
-//!     1. `certs`: _[string]_ a path to a certificate chain in PEM format
-//!     2. `key`: _[string]_ a path to a private key file in PEM format for the
+//!   * **tls**: _table_ a table with two keys:
+//!     1. `certs`: _string_ a path to a certificate chain in PEM format
+//!     2. `key`: _string_ a path to a private key file in PEM format for the
 //!        certificate in `certs`
 //!
 //!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
-//!   * **limits**: _[table]_ a table where each key (_[string]_) corresponds to
-//!   a data type and the value (_[u64]_) corresponds to the maximum size in
-//!   bytes Rocket should accept for that type.
+//!   * **limits**: _table_ a table where each key (_string_) corresponds to a
+//!   data type and the value (`u64`) corresponds to the maximum size in bytes
+//!   Rocket should accept for that type.
 //!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
 //!
 //! ### Rocket.toml
@@ -166,14 +166,13 @@
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [config](/rocket/struct.Rocket.html#method.config)
-//! method on an instance of `Rocket` and `get_` methods on the
-//! [Config](struct.Config.html) structure.
+//! can be retrieved via the [`Rocket::config()`] `Rocket` and `get_` methods on
+//! [`Config`] structure.
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
-//! a [launch fairing](/rocket/fairing/trait.Fairing.html). If information about
-//! the configuraiton is needed later in the program, an attach fairing can be
-//! used to store the information as managed state. As an example of the latter,
+//! a [launch fairing](::fairing::Fairing). If information about the
+//! configuraiton is needed later in the program, an attach fairing can be used
+//! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
 //! parameter and stores the value or a default in a `Token` managed state
 //! value:
@@ -230,8 +229,7 @@ const GLOBAL_ENV_NAME: &str = "global";
 const ENV_VAR_PREFIX: &str = "ROCKET_";
 const PREHANDLED_VARS: [&str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
 
-/// Wraps `std::result` with the error type of
-/// [ConfigError](enum.ConfigError.html).
+/// Wraps `std::result` with the error type of [`ConfigError`].
 pub type Result<T> = ::std::result::Result<T, ConfigError>;
 
 #[doc(hidden)]

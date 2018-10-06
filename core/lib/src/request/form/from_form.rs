@@ -1,22 +1,21 @@
 use request::FormItems;
 
 /// Trait to create an instance of some type from an HTTP form.
-/// [Form](struct.Form.html) requires its generic type to implement this trait.
+/// [`Form`](::request::Form) requires its generic type to implement this trait.
 ///
 /// # Deriving
 ///
 /// This trait can be automatically derived. When deriving `FromForm`, every
-/// field in the structure must implement [`FromFormValue`]. Rocket validates
-/// each field in the structure by calling its `FromFormValue` implementation.
-/// You may wish to implement `FromFormValue` for your own types for custom,
-/// automatic validation.
+/// field in the structure must implement
+/// [`FromFormValue`](::request::FromFormValue). Rocket validates each field in
+/// the structure by calling its `FromFormValue` implementation. You may wish to
+/// implement `FromFormValue` for your own types for custom, automatic
+/// validation.
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
-///
-/// #[macro_use] extern crate rocket;
-///
+/// # #[macro_use] extern crate rocket;
 /// #[derive(FromForm)]
 /// struct TodoTask {
 ///     description: String,
@@ -49,11 +48,11 @@ use request::FormItems;
 /// Implementing `FromForm` should be a rare occurrence. Prefer instead to use
 /// Rocket's built-in derivation.
 ///
-/// When implementing `FromForm`, use the [FormItems](struct.FormItems.html)
-/// iterator to iterate through the raw form key/value pairs. Be aware that form
-/// fields that are typically hidden from your application, such as `_method`,
-/// will be present while iterating. Ensure that you adhere to the properties of
-/// the `strict` parameter, as detailed in the documentation below.
+/// When implementing `FromForm`, use the [`FormItems`] iterator to iterate
+/// through the raw form key/value pairs. Be aware that form fields that are
+/// typically hidden from your application, such as `_method`, will be present
+/// while iterating. Ensure that you adhere to the properties of the `strict`
+/// parameter, as detailed in the documentation below.
 ///
 /// ## Example
 ///

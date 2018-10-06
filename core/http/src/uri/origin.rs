@@ -63,8 +63,8 @@ use state::Storage;
 /// # }
 /// ```
 ///
-/// The [`Origin::to_normalized()`] method can be used to normalize any
-/// `Origin`:
+/// The [`Origin::to_normalized()`](uri::Origin::to_normalized()) method can be
+/// used to normalize any `Origin`:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -178,9 +178,9 @@ impl<'a> Origin<'a> {
     }
 
     /// Parses the string `string` into an `Origin`. Parsing will never
-    /// allocate. This method should be used instead of [`Origin::parse()`] when
-    /// the source URI is already a `String`. Returns an `Error` if `string` is
-    /// not a valid origin URI.
+    /// allocate. This method should be used instead of
+    /// [`Origin::parse()`](uri::Origin::parse()) when the source URI is already
+    /// a `String`. Returns an `Error` if `string` is not a valid origin URI.
     ///
     /// # Example
     ///

@@ -9,14 +9,18 @@ use request::Request;
 /// Trait implemented by types that generate responses for clients.
 ///
 /// Types that implement this trait can be used as the return type of a handler,
-/// as illustrated below:
+/// as illustrated below with `T`:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # type T = ();
+/// #
 /// #[get("/")]
-/// fn index() -> T { ... }
+/// fn index() -> T { /* ... */ }
 /// ```
 ///
-/// In this example, `T` can be any type that implements `Responder`.
+/// In this example, `T` can be any type, as long as it implements `Responder`.
 ///
 /// # Return Value
 ///
@@ -66,8 +70,7 @@ use request::Request;
 ///
 ///     Responds with a streamed body containing the data in the `File`. No
 ///     `Content-Type` is set. To automatically have a `Content-Type` set based
-///     on the file's extension, use
-///     [`NamedFile`](/rocket/response/struct.NamedFile.html).
+///     on the file's extension, use [`NamedFile`](::response::NamedFile).
 ///
 ///   * **()**
 ///
@@ -107,10 +110,9 @@ use request::Request;
 /// ## Joining and Merging
 ///
 /// When chaining/wrapping other `Responder`s, use the
-/// [merge](/rocket/struct.Response.html#method.merge) or
-/// [join](/rocket/struct.Response.html#method.join) methods on the `Response`
-/// or `ResponseBuilder` struct. Ensure that you document the merging or joining
-/// behavior appropriately.
+/// [`merge()`](Response::merge()) or [`join()`](Response::join()) methods on
+/// the `Response` or `ResponseBuilder` struct. Ensure that you document the
+/// merging or joining behavior appropriately.
 ///
 /// ## Inspecting Requests
 ///

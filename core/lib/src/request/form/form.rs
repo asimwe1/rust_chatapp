@@ -7,7 +7,7 @@ use http::{Status, uri::FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
-/// This type implements the [`FromData]` trait. It provides a generic means to
+/// This type implements the [`FromData`] trait. It provides a generic means to
 /// parse arbitrary structures from incoming form data.
 ///
 /// # Strictness
@@ -17,7 +17,7 @@ use http::{Status, uri::FromUriParam};
 /// error on missing and/or extra fields. For instance, if an incoming form
 /// contains the fields "a", "b", and "c" while `T` only contains "a" and "c",
 /// the form _will not_ parse as `Form<T>`. If you would like to admit extra
-/// fields without error, see [`LenientForm`].
+/// fields without error, see [`LenientForm`](::request::LenientForm).
 ///
 /// # Usage
 ///
@@ -96,9 +96,9 @@ use http::{Status, uri::FromUriParam};
 /// depends on your use case. The primary question to answer is: _Can the input
 /// contain characters that must be URL encoded?_ Note that this includes
 /// common characters such as spaces. If so, then you must use `String`, whose
-/// [`FromFormValue`] implementation automatically URL decodes strings. Because
-/// the `&RawStr` references will refer directly to the underlying form data,
-/// they will be raw and URL encoded.
+/// [`FromFormValue`](::request::FromFormValue) implementation automatically URL
+/// decodes strings. Because the `&RawStr` references will refer directly to the
+/// underlying form data, they will be raw and URL encoded.
 ///
 /// If your string values will not contain URL encoded characters, using
 /// `&RawStr` will result in fewer allocation and is thus preferred.

@@ -95,10 +95,8 @@
 //! }
 //! ```
 //!
-//! [`Client`]: /rocket/local/struct.Client.html
-//! [`LocalRequest`]: /rocket/local/struct.LocalRequest.html
-//! [`Rocket`]: /rocket/struct.Rocket.html
-//!
+//! [`Client`]: local::Client
+//! [`LocalRequest`]: local::LocalRequest
 
 mod request;
 mod client;

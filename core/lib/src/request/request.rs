@@ -23,8 +23,7 @@ type Indices = (usize, usize);
 /// The type of an incoming web request.
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
-/// should likely only be used when writing
-/// [FromRequest](/rocket/request/trait.FromRequest.html) implementations. It
+/// should likely only be used when writing [`FromRequest`] implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 #[derive(Clone)]
@@ -124,7 +123,7 @@ impl<'r> Request<'r> {
         self._set_method(method);
     }
 
-    /// Borrow the `Origin` URI from `self`.
+    /// Borrow the [`Origin`] URI from `self`.
     ///
     /// # Example
     ///
@@ -271,9 +270,8 @@ impl<'r> Request<'r> {
 
     /// Returns a wrapped borrow to the cookies in `self`.
     ///
-    /// [`Cookies`](/rocket/http/enum.Cookies.html) implements internal
-    /// mutability, so this method allows you to get _and_ add/remove cookies in
-    /// `self`.
+    /// [`Cookies`] implements internal mutability, so this method allows you to
+    /// get _and_ add/remove cookies in `self`.
     ///
     /// # Example
     ///
@@ -303,8 +301,7 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
-    /// the headers in `self`.
+    /// Returns a [`HeaderMap`] of all of the headers in `self`.
     ///
     /// # Example
     ///
@@ -323,8 +320,7 @@ impl<'r> Request<'r> {
 
     /// Add `header` to `self`'s headers. The type of `header` can be any type
     /// that implements the `Into<Header>` trait. This includes common types
-    /// such as [`ContentType`](/rocket/http/struct.ContentType.html) and
-    /// [`Accept`](/rocket/http/struct.Accept.html).
+    /// such as [`ContentType`] and [`Accept`].
     ///
     /// # Example
     ///
@@ -509,16 +505,26 @@ impl<'r> Request<'r> {
     ///
     /// Assuming a `User` request guard exists, invoke it:
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # type User = Method;
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// let outcome = request.guard::<User>();
+    /// # });
     /// ```
     ///
     /// Retrieve managed state inside of a guard implementation:
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
     /// use rocket::State;
     ///
-    /// let pool = request.guard::<State<Pool>>()?;
+    /// # type Pool = usize;
+    /// # Request::example(Method::Get, "/uri", |request| {
+    /// let pool = request.guard::<State<Pool>>();
+    /// # });
     /// ```
     #[inline(always)]
     pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
@@ -535,10 +541,9 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # use rocket::http::Method;
     /// # use rocket::Request;
-    /// # struct User;
+    /// # type User = ();
     /// fn current_user(request: &Request) -> User {
     ///     // Validate request for a given user, load from database, etc.
-    ///     # User
     /// }
     ///
     /// # Request::example(Method::Get, "/uri", |request| {
@@ -596,8 +601,7 @@ impl<'r> Request<'r> {
 
     /// Retrieves and parses into `T` all of the path segments in the request
     /// URI beginning and including the 0-indexed `n`th non-empty segment. `T`
-    /// must implement [FromSegments](/rocket/request/trait.FromSegments.html),
-    /// which is used to parse the segments.
+    /// must implement [`FromSegments`], which is used to parse the segments.
     ///
     /// This method exists only to be used by manual routing. To retrieve
     /// segments from a request, use Rocket's code generation facilities.
@@ -676,11 +680,6 @@ impl<'r> Request<'r> {
     /// assert_eq!(value(req, "/?a=apple&z=zebra", "apple").as_str(), "n/a");
     /// # });
     /// ```
-    /// # Example
-    ///
-    /// If the request query is `"/?apple=value_for_a&z=zebra"`, then
-    /// `request.get_query_value::<T>("z")` will attempt to parse `"zebra"` as
-    /// type `T`.
     #[inline]
     pub fn get_query_value<'a, T>(&'a self, key: &str) -> Option<Result<T, T::Error>>
         where T: FromFormValue<'a>

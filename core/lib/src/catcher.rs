@@ -10,8 +10,9 @@ use yansi::Color::*;
 ///
 /// Catchers are routes that run when errors occur. They correspond directly
 /// with the HTTP error status code they will be handling and are registered
-/// with Rocket via the [`Rocket::register()`] method. For example, to handle
-/// "404 not found" errors, a catcher for the "404" status code is registered.
+/// with Rocket via [`Rocket::register()`](::Rocket::register()). For example,
+/// to handle "404 not found" errors, a catcher for the "404" status code is
+/// registered.
 ///
 /// Because error handlers are only called when all routes are exhausted, they
 /// should not fail nor forward. If an error catcher fails, the user will
@@ -57,7 +58,7 @@ use yansi::Color::*;
 /// ```
 ///
 /// A function decorated with `catch` must take exactly zero or one arguments.
-/// If the catcher takes an argument, it must be of type `&Request`.
+/// If the catcher takes an argument, it must be of type [`&Request`](Request).
 pub struct Catcher {
     /// The HTTP status code to match against.
     pub code: u16,

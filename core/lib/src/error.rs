@@ -27,9 +27,8 @@ pub enum LaunchErrorKind {
 
 /// An error that occurs during launch.
 ///
-/// A `LaunchError` is returned by
-/// [rocket::launch](/rocket/struct.Rocket.html#method.launch) when launching an
-/// application fails for some reason.
+/// A `LaunchError` is returned by [`launch()`](::Rocket::launch()) when
+/// launching an application fails.
 ///
 /// # Panics
 ///

@@ -12,6 +12,7 @@ fi
 
 today=$(date "+%b %d, %Y")
 
+find . -name "lib.rs" | xargs sed -i.bak "s/${1}/${2}/g"
 find . -name "*.toml" | xargs sed -i.bak "s/${1}/${2}/g"
 find site/ -name "*.md" | xargs sed -i.bak "s/${1}/${2}/g"
 sed -i.bak "s/^date.*/date = \"$today\"/" site/index.toml

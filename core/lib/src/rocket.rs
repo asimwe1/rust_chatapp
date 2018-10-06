@@ -330,11 +330,11 @@ impl Rocket {
 
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
-    /// reading the file, the defaults are used. See the
-    /// [config](/rocket/config/index.html) documentation for more information
-    /// on defaults.
+    /// reading the file, the defaults are used. See the [`config`]
+    /// documentation for more information on defaults.
     ///
-    /// This method is typically called through the `rocket::ignite` alias.
+    /// This method is typically called through the
+    /// [`rocket::ignite()`](::ignite) alias.
     ///
     /// # Panics
     ///
@@ -570,10 +570,9 @@ impl Rocket {
     /// refers to a different `T`.
     ///
     /// Managed state can be retrieved by any request handler via the
-    /// [State](/rocket/struct.State.html) request guard. In particular, if a
-    /// value of type `T` is managed by Rocket, adding `State<T>` to the list of
-    /// arguments in a request handler instructs Rocket to retrieve the managed
-    /// value.
+    /// [`State`](::State) request guard. In particular, if a value of type `T`
+    /// is managed by Rocket, adding `State<T>` to the list of arguments in a
+    /// request handler instructs Rocket to retrieve the managed value.
     ///
     /// # Panics
     ///
@@ -669,8 +668,6 @@ impl Rocket {
     /// returned. Note that a value of type `LaunchError` panics if dropped
     /// without first being inspected. See the [`LaunchError`] documentation for
     /// more information.
-    ///
-    /// [`LaunchError`]: /rocket/error/struct.LaunchError.html
     ///
     /// # Example
     ///

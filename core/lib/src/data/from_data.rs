@@ -120,7 +120,7 @@ pub type Transformed<'a, T> =
 /// Data guards are used as the target of the `data` route attribute parameter.
 /// A handler can have at most one data guard.
 ///
-/// [request guard]: /rocket/request/trait.FromRequest.html
+/// [request guard]: ::request::FromRequest
 ///
 /// ## Example
 ///
@@ -235,26 +235,26 @@ pub type Transformed<'a, T> =
 ///
 /// # Outcomes
 ///
-/// The returned [Outcome](/rocket/outcome/index.html) of a `from_data` call
-/// determines how the incoming request will be processed.
+/// The returned [`Outcome`] of a `from_data` call determines how the incoming
+/// request will be processed.
 ///
 /// * **Success**(S)
 ///
-///   If the `Outcome` is `Success`, then the `Success` value will be used as
+///   If the `Outcome` is [`Success`], then the `Success` value will be used as
 ///   the value for the data parameter.  As long as all other parsed types
 ///   succeed, the request will be handled by the requesting handler.
 ///
 /// * **Failure**(Status, E)
 ///
-///   If the `Outcome` is `Failure`, the request will fail with the given status
-///   code and error. The designated error
-///   [Catcher](/rocket/struct.Catcher.html) will be used to respond to the
-///   request. Note that users can request types of `Result<S, E>` and
-///   `Option<S>` to catch `Failure`s and retrieve the error value.
+///   If the `Outcome` is [`Failure`], the request will fail with the given
+///   status code and error. The designated error [`Catcher`](::Catcher) will be
+///   used to respond to the request. Note that users can request types of
+///   `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the error
+///   value.
 ///
 /// * **Forward**(Data)
 ///
-///   If the `Outcome` is `Forward`, the request will be forwarded to the next
+///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
 ///   matching request. This requires that no data has been read from the `Data`
 ///   parameter. Note that users can request an `Option<S>` to catch `Forward`s.
 ///
@@ -265,7 +265,7 @@ pub type Transformed<'a, T> =
 ///
 ///   * **Data**
 ///
-///     The identity implementation; simply returns `Data` directly.
+///     The identity implementation; simply returns [`Data`] directly.
 ///
 ///     _This implementation always returns successfully._
 ///

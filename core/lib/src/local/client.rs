@@ -15,8 +15,7 @@ use error::LaunchError;
 /// constructed, the [`LocalRequest`] constructor methods ([`get`], [`put`],
 /// [`post`], and so on) can be used to create a `LocalRequest` for dispatching.
 ///
-/// See the [top-level documentation](/rocket/local/index.html) for more usage
-/// information.
+/// See the [top-level documentation](::local) for more usage information.
 ///
 /// ## Cookie Tracking
 ///
@@ -49,7 +48,6 @@ use error::LaunchError;
 ///
 /// [`new`]: #method.new
 /// [`untracked`]: #method.untracked
-/// [`LocalRequest`]: /rocket/local/struct.LocalRequest.html
 /// [`get`]: #method.get
 /// [`put`]: #method.put
 /// [`post`]: #method.post
@@ -152,9 +150,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -173,9 +170,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -194,9 +190,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -219,9 +214,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -242,9 +236,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -265,9 +258,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -288,9 +280,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -311,9 +302,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///

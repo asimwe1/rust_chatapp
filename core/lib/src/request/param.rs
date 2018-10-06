@@ -79,7 +79,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 ///     type returns successfully. Otherwise, the raw path segment is returned
 ///     in the `Err` value.
 ///
-///   * **&[`RawStr`](/rocket/http/struct.RawStr.html)**
+///   * **[`&RawStr`](RawStr)**
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -116,7 +116,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 ///
 /// Say you want to parse a segment of the form:
 ///
-/// ```ignore
+/// ```text
 /// [a-zA-Z]+:[0-9]+
 /// ```
 ///
@@ -271,13 +271,11 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 
 /// Trait to convert _many_ dynamic path segment strings to a concrete value.
 ///
-/// This is the `..` analog to [FromParam](trait.FromParam.html), and its
-/// functionality is identical to it with one exception: this trait applies to
-/// segment parameters of the form `<param..>`, where `param` is of some type
-/// `T` that implements `FromSegments`. `T::from_segments` is called to convert
-/// the matched segments (via the
-/// [Segments](/rocket/http/uri/struct.Segments.html) iterator) into the
-/// implementing type.
+/// This is the `..` analog to [`FromParam`], and its functionality is identical
+/// to it with one exception: this trait applies to segment parameters of the
+/// form `<param..>`, where `param` is of some type `T` that implements
+/// `FromSegments`. `T::from_segments` is called to convert the matched segments
+/// (via the [`Segments`] iterator) into the implementing type.
 ///
 /// # Provided Implementations
 ///

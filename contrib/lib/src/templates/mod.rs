@@ -69,14 +69,13 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// Template discovery is actualized by the template fairing, which itself is
 /// created via the [`Template::fairing()`] or [`Template::custom()`] method. In
 /// order for _any_ templates to be rendered, the template fairing _must_ be
-/// [attached](/rocket/struct.Rocket.html#method.attach) to the running Rocket
-/// instance. Failure to do so will result in an error.
+/// [attached](rocket::Rocket::attach()) to the running Rocket instance. Failure
+/// to do so will result in an error.
 ///
 /// Templates are rendered with the `render` method. The method takes in the
 /// name of a template and a context to render the template with. The context
-/// can be any type that implements `Serialize` from
-/// [Serde](https://github.com/serde-rs/json) and would serialize to an `Object`
-/// value.
+/// can be any type that implements [`Serialize`] from [`serde`] and would
+/// serialize to an `Object` value.
 ///
 /// In debug mode (without the `--release` flag passed to `cargo`), templates
 /// will be automatically reloaded from disk if any changes have been made to
@@ -89,15 +88,15 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// feature, or both, to the `rocket_contrib` dependencies section of your
 /// `Cargo.toml`:
 ///
-/// ```toml,ignore
+/// ```toml
 /// [dependencies.rocket_contrib]
 /// version = "*"
 /// default-features = false
 /// features = ["handlebars_templates", "tera_templates"]
 /// ```
 ///
-/// Then, ensure that the template [fairing](/rocket/fairing/) is attached to
-/// your Rocket application:
+/// Then, ensure that the template [`Fairing`] is attached to your Rocket
+/// application:
 ///
 /// ```rust
 /// extern crate rocket;
@@ -114,7 +113,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// }
 /// ```
 ///
-/// The `Template` type implements Rocket's `Responder` trait, so it can be
+/// The `Template` type implements Rocket's [`Responder`] trait, so it can be
 /// returned from a request handler directly:
 ///
 /// ```rust,ignore
@@ -130,9 +129,6 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// You can use the [`Template::custom()`] method to construct a fairing with
 /// customized templating engines. Among other things, this method allows you to
 /// register template helpers and register templates from strings.
-///
-/// [`Template::custom()`]: /rocket_contrib/struct.Template.html#method.custom
-/// [`Template::fairing()`]: /rocket_contrib/struct.Template.html#method.fairing
 #[derive(Debug)]
 pub struct Template {
     name: Cow<'static, str>,
@@ -160,8 +156,6 @@ impl Template {
     ///
     /// If you wish to customize the internal templating engines, use
     /// [`Template::custom()`] instead.
-    ///
-    /// [`Template::custom()`]: /rocket_contrib/struct.Template.html#method.custom
     ///
     /// # Example
     ///
@@ -191,8 +185,6 @@ impl Template {
     /// Unlike [`Template::fairing()`], this method allows you to configure
     /// templating engines via the parameter `f`. Note that only the enabled
     /// templating engines will be accessible from the `Engines` type.
-    ///
-    /// [`Template::fairing()`]: /rocket_contrib/struct.Template.html#method.fairing
     ///
     /// # Example
     ///

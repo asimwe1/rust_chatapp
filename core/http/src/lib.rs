@@ -8,9 +8,9 @@
 //!
 //! This module exports types that map to HTTP concepts or to the underlying
 //! HTTP library when needed. Because the underlying HTTP library is likely to
-//! change (see <a
-//! href="https://github.com/SergioBenitez/Rocket/issues/17">#17</a>), types in
-//! [hyper](hyper/index.html) should be considered unstable.
+//! change (see [#17]), types in [`hyper`] should be considered unstable.
+//!
+//! [#17]: https://github.com/SergioBenitez/Rocket/issues/17
 
 #[macro_use]
 extern crate pear;

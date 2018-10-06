@@ -1,7 +1,8 @@
 use std::io;
 use http::RawStr;
 
-/// Error returned by the [`FromForm`] derive on form parsing errors.
+/// Error returned by the [`FromForm`](::request::FromForm) derive on form
+/// parsing errors.
 ///
 /// If multiple errors occur while parsing a form, the first error in the
 /// following precedence, from highest to lowest, is returned:
@@ -21,8 +22,8 @@ pub enum FormParseError<'f> {
     Missing(&'f RawStr),
 }
 
-/// Error returned by the [`FromData`] implementations of [`Form`] and
-/// [`LenientForm`].
+/// Error returned by the [`FromData`](::data::FromData) implementations of
+/// [`Form`](::request::Form) and [`LenientForm`](::request::LenientForm).
 #[derive(Debug)]
 pub enum FormDataError<'f, E> {
     Io(io::Error),

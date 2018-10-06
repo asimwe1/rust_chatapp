@@ -19,21 +19,26 @@ use uncased::UncasedStr;
 /// An `&RawStr` should be converted into one of the validated string input
 /// types through methods on `RawStr`. These methods are summarized below:
 ///
-///   * **[`url_decode`]** - used to decode a raw string in a form value context
-///   * **[`percent_decode`], [`percent_decode_lossy`]** - used to
-///   percent-decode a raw string, typically in a URL context
-///   * **[`html_escape`]** - used to decode a string for use in HTML templates
-///   * **[`as_str`]** - used when the `RawStr` is known to be safe in the
-///   context of its intended use. Use sparingly and with care!
-///   * **[`as_uncased_str`]** - used when the `RawStr` is known to be safe in
-///   the context of its intended, uncased use
+///   * **[`url_decode()`]** - used to decode a raw string in a form value
+///     context
+///   * **[`percent_decode()`], [`percent_decode_lossy()`]** - used to
+///     percent-decode a raw string, typically in a URL context
+///   * **[`html_escape()`]** - used to decode a string for use in HTML
+///     templates
+///   * **[`as_str()`]** - used when the `RawStr` is known to be safe in the
+///     context of its intended use. Use sparingly and with care!
+///   * **[`as_uncased_str()`]** - used when the `RawStr` is known to be safe in
+///     the context of its intended, uncased use
 ///
-/// [`as_str`]: /rocket/http/struct.RawStr.html#method.as_str
-/// [`as_uncased_str`]: /rocket/http/struct.RawStr.html#method.as_uncased_str
-/// [`url_decode`]: /rocket/http/struct.RawStr.html#method.url_decode
-/// [`html_escape`]: /rocket/http/struct.RawStr.html#method.html_escape
-/// [`percent_decode`]: /rocket/http/struct.RawStr.html#method.percent_decode
-/// [`percent_decode_lossy`]: /rocket/http/struct.RawStr.html#method.percent_decode_lossy
+/// **Note:** Template engines like Tera and Handlebars all functions like
+/// [`html_escape()`] on all rendered template outputs by default.
+///
+/// [`as_str()`]: RawStr::as_str()
+/// [`as_uncased_str()`]: RawStr::as_uncased_str()
+/// [`url_decode()`]: RawStr::url_decode()
+/// [`html_escape()`]: RawStr::html_escape()
+/// [`percent_decode()`]: RawStr::percent_decode()
+/// [`percent_decode_lossy()`]: RawStr::percent_decode_lossy()
 ///
 /// # Usage
 ///
@@ -42,8 +47,8 @@ use uncased::UncasedStr;
 /// encounter an `&RawStr` as a parameter via [`FromParam`] or as a form value
 /// via [`FromFormValue`].
 ///
-/// [`FromParam`]: /rocket/request/trait.FromParam.html
-/// [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
+/// [`FromParam`]: ::rocket::request::FromParam
+/// [`FromFormValue`]: ::rocket::request::FromFormValue
 #[repr(transparent)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);

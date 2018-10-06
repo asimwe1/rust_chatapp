@@ -12,44 +12,43 @@
 
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
+#![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 //! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!
 //!
 //! This API documentation is highly technical and is purely a reference.
-//! There's an [overview](https://rocket.rs/overview) of Rocket on the main site
-//! as well as a [full, detailed guide](https://rocket.rs/guide). If you'd like
-//! pointers on getting started, see the
-//! [quickstart](https://rocket.rs/guide/quickstart) or [getting
-//! started](https://rocket.rs/guide/getting-started) chapters of the guide.
+//! There's an [overview] of Rocket on the main site as well as a [full,
+//! detailed guide]. If you'd like pointers on getting started, see the
+//! [quickstart] or [getting started] chapters of the guide.
 //!
-//! You may also be interested in looking at the [contrib API
-//! documentation](/rocket_contrib), which contains JSON and templating
-//! support, among other features.
+//! You may also be interested in looking at the [`rocket_contrib`]
+//! documentation, which contains automatic JSON (de)serialiazation, templating
+//! support, static file serving, and other useful features.
+//!
+//! [overview]: https://rocket.rs/overview
+//! [full, detailed guide]: https://rocket.rs/guide
+//! [quickstart]: https://rocket.rs/guide/quickstart
+//! [getting started]: https://rocket.rs/guide/getting-started
 //!
 //! ## Libraries
 //!
 //! Rocket's functionality is split into two crates:
 //!
-//!   1. [Core](/rocket) - The core library. Needed by every Rocket application.
-//!   2. [Contrib](/rocket_contrib) - Provides useful functionality for many
+//!   1. Core - This core library. Needed by every Rocket application.
+//!   2. [Contrib](rocket_contrib) - Provides useful functionality for many
 //!      Rocket applications. Completely optional.
 //!
 //! ## Usage
 //!
-//! The sanctioned way to use Rocket is via the code generation plugin. This
-//! makes Rocket easier and safer to use and allows a somewhat stable API as
-//! Rocket matures. To use Rocket with the code generation plugin in your
-//! Cargo-based project, add the following to `Cargo.toml`:
+//! First, depend on `rocket` in `Cargo.toml`:
 //!
-//! ```rust,ignore
+//! ```toml
 //! [dependencies]
-//! rocket = "*"
+//! rocket = "0.4.0-dev"
 //! ```
-//!
-//! If you'll be deploying your project to [crates.io](https://crates.io),
-//! you'll need to change the "*" to the current version of Rocket.
 //!
 //! Then, add the following to the top of your `main.rs` file:
 //!
@@ -57,9 +56,7 @@
 //! #![feature(proc_macro_hygiene, decl_macro)]
 //!
 //! #[macro_use] extern crate rocket;
-//! #
-//! # #[get("/")]
-//! # fn hello() { }
+//! # #[get("/")] fn hello() { }
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
 //! ```
 //!
@@ -87,16 +84,19 @@
 //!
 //! Rocket and Rocket libraries are configured via the `Rocket.toml` file and/or
 //! `ROCKET_{PARAM}` environment variables. For more information on how to
-//! configure Rocket, see the [configuration
-//! section](https://rocket.rs/guide/configuration/) of the guide as well as the
-//! [config](/rocket/config) module documentation.
+//! configure Rocket, see the [configuration section] of the guide as well as
+//! the [`config`] module documentation.
+//!
+//! [configuration section]: https://rocket.rs/guide/configuration/
 //!
 //! ## Testing
 //!
-//! The [local](/rocket/local) module contains structures that facilitate unit
-//! and integration testing of a Rocket application. The [top-level `local`
-//! module documentation](/rocket/local) and the [testing chapter of the
-//! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
+//! The [`local`] module contains structures that facilitate unit and
+//! integration testing of a Rocket application. The top-level [`local`] module
+//! documentation and the [testing chapter of the guide] include detailed
+//! examples.
+//!
+//! [testing chapter of the guide]: https://rocket.rs/guide/testing/#testing
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen_next;
 #[doc(hidden)] pub use rocket_codegen_next::*;
@@ -154,14 +154,13 @@ pub use request::{Request, State};
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 
-/// Alias to [Rocket::ignite()](/rocket/struct.Rocket.html#method.ignite).
-/// Creates a new instance of `Rocket`.
+/// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {
     Rocket::ignite()
 }
 
-/// Alias to [Rocket::custom()](/rocket/struct.Rocket.html#method.custom).
-/// Creates a new instance of `Rocket` with a custom configuration.
+/// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
+/// custom configuration.
 pub fn custom(config: config::Config) -> Rocket {
     Rocket::custom(config)
 }

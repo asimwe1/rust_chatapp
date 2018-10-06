@@ -9,10 +9,10 @@ use http::Status;
 /// This type can be used as a request guard to retrieve the state Rocket is
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
-/// registered to be managed by Rocket via the
-/// [manage](/rocket/struct.Rocket.html#method.manage) method. The type being
-/// managed must be thread safe and sendable across thread boundaries. In other
-/// words, it must implement `Send + Sync + 'static`.
+/// registered to be managed by Rocket via
+/// [`Rocket::manage()`](::Rocket::manage()). The type being managed must be
+/// thread safe and sendable across thread boundaries. In other words, it must
+/// implement [`Send`] + [`Sync`] + 'static`.
 ///
 /// # Example
 ///
@@ -59,10 +59,8 @@ use http::Status;
 ///
 /// Because `State` is itself a request guard, managed state can be retrieved
 /// from another request guard's implementation. In the following code example,
-/// `Item` retrieves the `MyConfig` managed state in its `FromRequest`
+/// `Item` retrieves the `MyConfig` managed state in its [`FromRequest`]
 /// implementation using the [`Request::guard()`] method.
-///
-/// [`Request::guard()`]: /rocket/struct.Request.html#method.guard
 ///
 /// ```rust
 /// use rocket::State;
@@ -86,10 +84,10 @@ pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// Retrieve a borrow to the underlying value with a lifetime of `'r`.
     ///
-    /// Using this method is typically unnecessary as `State` implements `Deref`
-    /// with a `Target` of `T`. This means Rocket will automatically coerce a
-    /// `State<T>` to an `&T` as required. This method should only be used when
-    /// a longer lifetime is required.
+    /// Using this method is typically unnecessary as `State` implements
+    /// [`Deref`] with a [`Deref::Target`] of `T`. This means Rocket will
+    /// automatically coerce a `State<T>` to an `&T` as required. This method
+    /// should only be used when a longer lifetime is required.
     ///
     /// # Example
     ///
@@ -116,7 +114,6 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     }
 }
 
-// TODO: Doc.
 impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
     type Error = ();
 

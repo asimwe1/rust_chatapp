@@ -74,7 +74,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///     The implementation of `UriDisplay` for these types is identical to the
 ///     `Display` implementation.
 ///
-///   * **[`&RawStr`](/rocket/http/struct.RawStr.html), `String`, `&str`,
+///   * **[`&RawStr`](RawStr), `String`, `&str`,
 ///     `Cow<str>`**
 ///
 ///     The string is percent encoded.
@@ -85,16 +85,17 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///
 /// # Implementing
 ///
-/// Implementing `UriDisplay` is similar to implementing `Display` with the
-/// caveat that extra care must be taken to ensure that the written string is
-/// URI-safe. As mentioned before, in practice, this means that the string must
-/// either be percent-encoded or consist only of characters that are
-/// alphanumeric, "-", ".", "_", or "~".
+/// Implementing `UriDisplay` is similar to implementing
+/// [`Display`](::std::fmt::Display) with the caveat that extra care must be
+/// taken to ensure that the written string is URI-safe. As mentioned before, in
+/// practice, this means that the string must either be percent-encoded or
+/// consist only of characters that are alphanumeric, "-", ".", "_", or "~".
 ///
 /// When manually implementing `UriDisplay` for your types, you should defer to
 /// existing implementations of `UriDisplay` as much as possible. In the example
 /// below, for instance, `Name`'s implementation defers to `String`'s
-/// implementation. To percent-encode a string, use [`Uri::percent_encode()`].
+/// implementation. To percent-encode a string, use
+/// [`Uri::percent_encode()`](uri::Uri::percent_encode()).
 ///
 /// ## Example
 ///

@@ -59,8 +59,7 @@ pub struct TlsConfig;
 ///
 /// # Defaults
 ///
-/// As documented in the [config module](/rocket/config/), the default limits
-/// are as follows:
+/// As documented in [`config`](::config), the default limits are as follows:
 ///
 ///   * **forms**: 32KiB
 ///

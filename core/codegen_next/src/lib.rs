@@ -149,8 +149,8 @@
 //! field name is expected. In this case, the `field` name in the attribute is
 //! used instead of the structure's actual field name when parsing a form.
 //!
-//! [`FromForm`]: /rocket/request/trait.FromForm.html
-//! [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
+//! [`FromForm`]: rocket::request::FromForm
+//! [`FromFormValue`]: rocket::request::FromFormValue
 //!
 //! ### `FromFormValue`
 //!
@@ -306,9 +306,9 @@
 //! The [`Response`] produced from the generated implementation will have its
 //! content-type overriden to this value.
 //!
-//! [`Responder`]: /rocket/response/trait.Responder.html
-//! [`Response`]: /rocket/struct.Response.html
-//! [`Response::set_header()`]: /rocket/struct.Response.html#method.set_header
+//! [`Responder`]: rocket::response::Responder
+//! [`Response`]: rocket::Response
+//! [`Response::set_header()`]: rocket::Response::set_header()
 //!
 //! ## Procedural Macros
 //!
@@ -404,9 +404,9 @@
 //! If a mount-point is provided, the mount-point is prepended to the route's
 //! URI.
 //!
-//! [`Uri`]: /rocket/http/uri/struct.URI.html
-//! [`FromUriParam`]: /rocket/http/uri/trait.FromUriParam.html
-//! [`UriDisplay`]: /rocket/http/uri/trait.UriDisplay.html
+//! [`Uri`]: http::uri::URI
+//! [`FromUriParam`]: http::uri::FromUriParam
+//! [`UriDisplay`]: http::uri::UriDisplay
 //!
 //! # Debugging Codegen
 //!
