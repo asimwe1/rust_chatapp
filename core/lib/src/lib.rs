@@ -10,8 +10,7 @@
 
 #![recursion_limit="256"]
 
-// TODO: Version URLs.
-#![doc(html_root_url = "https://api.rocket.rs")]
+#![doc(html_root_url = "https://api.rocket.rs/0.4.0-dev")]
 #![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
@@ -24,9 +23,10 @@
 //! detailed guide]. If you'd like pointers on getting started, see the
 //! [quickstart] or [getting started] chapters of the guide.
 //!
-//! You may also be interested in looking at the [`rocket_contrib`]
-//! documentation, which contains automatic JSON (de)serialiazation, templating
-//! support, static file serving, and other useful features.
+//! You may also be interested in looking at the
+//! [`rocket_contrib`](../rocket_contrib) documentation, which contains
+//! automatic JSON (de)serialiazation, templating support, static file serving,
+//! and other useful features.
 //!
 //! [overview]: https://rocket.rs/overview
 //! [full, detailed guide]: https://rocket.rs/guide
@@ -38,7 +38,7 @@
 //! Rocket's functionality is split into two crates:
 //!
 //!   1. Core - This core library. Needed by every Rocket application.
-//!   2. [Contrib](rocket_contrib) - Provides useful functionality for many
+//!   2. [Contrib](../rocket_contrib) - Provides useful functionality for many
 //!      Rocket applications. Completely optional.
 //!
 //! ## Usage

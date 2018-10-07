@@ -4,6 +4,10 @@
 #![feature(rustc_private)]
 #![recursion_limit="128"]
 
+#![doc(html_root_url = "https://api.rocket.rs/0.4.0-dev")]
+#![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
+
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes

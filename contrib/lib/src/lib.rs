@@ -2,8 +2,9 @@
 #![feature(never_type)]
 #![feature(doc_cfg)]
 
-// TODO: Version URLs.
-#![doc(html_root_url = "https://api.rocket.rs")]
+#![doc(html_root_url = "https://api.rocket.rs/0.4.0-dev")]
+#![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -31,7 +32,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "*"
+//! version = "0.4.0-dev"
 //! default-features = false
 //! features = ["json"]
 //! ```
