@@ -11,7 +11,7 @@ use rocket::outcome::IntoOutcome;
 use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, Cookies};
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
 struct Login {

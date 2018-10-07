@@ -3,7 +3,7 @@ extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::static_files::StaticFiles;
+use rocket_contrib::serve::StaticFiles;
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", StaticFiles::from("static"))

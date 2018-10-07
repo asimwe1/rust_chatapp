@@ -1,3 +1,6 @@
+extern crate serde;
+extern crate serde_json;
+
 use std::ops::{Deref, DerefMut};
 use std::io::{self, Read};
 
@@ -7,25 +10,32 @@ use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, Deserializer};
-use serde_json;
+use self::serde::{Serialize, Serializer};
+use self::serde::de::{Deserialize, Deserializer};
 
-/// The JSON type: implements `FromData` and `Responder`, allowing you to easily
-/// consume and respond with JSON.
+#[doc(hidden)]
+pub use self::serde_json::{json_internal, json_internal_vec};
+
+/// The JSON type: implements [`FromData`] and [`Responder`], allowing you to
+/// easily consume and respond with JSON.
 ///
 /// ## Receiving JSON
 ///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
-/// some type you'd like to parse from JSON. `T` must implement `Deserialize` or
-/// `DeserializeOwned` from [`serde`](https://github.com/serde-rs/json). The
-/// data is parsed from the HTTP request body.
+/// some type you'd like to parse from JSON. `T` must implement [`Deserialize`]
+/// or from [`serde`]. The data is parsed from the HTTP request body.
 ///
-/// ```rust,ignore
-/// #[post("/users/", format = "json", data = "<user>")]
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::json::Json;
+///
+/// #[post("/users", format = "json", data = "<user>")]
 /// fn new_user(user: Json<User>) {
-///     ...
+///     /* ... */
 /// }
 /// ```
 ///
@@ -37,14 +47,20 @@ use serde_json;
 /// ## Sending JSON
 ///
 /// If you're responding with JSON data, return a `Json<T>` type, where `T`
-/// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
-/// content type of the response is set to `application/json` automatically.
+/// implements [`Serialize`] from [`serde`]. The content type of the response is
+/// set to `application/json` automatically.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::json::Json;
+///
 /// #[get("/users/<id>")]
 /// fn user(id: usize) -> Json<User> {
 ///     let user_from_id = User::from(id);
-///     ...
+///     /* ... */
 ///     Json(user_from_id)
 /// }
 /// ```
@@ -70,7 +86,7 @@ impl<T> Json<T> {
     ///
     /// # Example
     /// ```rust
-    /// # use rocket_contrib::Json;
+    /// # use rocket_contrib::json::Json;
     /// let string = "Hello".to_string();
     /// let my_json = Json(string);
     /// assert_eq!(my_json.into_inner(), "Hello".to_string());
@@ -183,7 +199,7 @@ impl<T> DerefMut for Json<T> {
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
-/// use rocket_contrib::JsonValue;
+/// use rocket_contrib::json::JsonValue;
 ///
 /// #[get("/json")]
 /// fn get_json() -> JsonValue {
@@ -265,14 +281,14 @@ impl<'a> Responder<'a> for JsonValue {
 /// #[macro_use] extern crate rocket_contrib;
 /// ```
 ///
-/// The return type of a `json!` invocation is [`JsonValue`]. A value created
-/// with this macro can be returned from a handler as follows:
+/// The return type of a `json!` invocation is [`JsonValue`](json::JsonValue). A
+/// value created with this macro can be returned from a handler as follows:
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
-/// use rocket_contrib::JsonValue;
+/// use rocket_contrib::json::JsonValue;
 ///
 /// #[get("/json")]
 /// fn get_json() -> JsonValue {
@@ -283,9 +299,9 @@ impl<'a> Responder<'a> for JsonValue {
 /// }
 /// ```
 ///
-/// The `Responder` implementation for `JsonValue` serializes the value into a
-/// JSON string and sets it as the body of the response with a `Content-Type` of
-/// `application/json`.
+/// The [`Responder`](rocket::response::Responder) implementation for
+/// `JsonValue` serializes the value into a JSON string and sets it as the body
+/// of the response with a `Content-Type` of `application/json`.
 ///
 /// # Examples
 ///
@@ -358,6 +374,6 @@ impl<'a> Responder<'a> for JsonValue {
 #[macro_export]
 macro_rules! json {
     ($($json:tt)+) => {
-        $crate::JsonValue(json_internal!($($json)+))
+        $crate::json::JsonValue($crate::json::json_internal!($($json)+))
     };
 }

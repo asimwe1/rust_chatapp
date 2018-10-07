@@ -8,7 +8,7 @@ extern crate rocket_contrib;
 
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket_contrib::{Template, handlebars};
+use rocket_contrib::templates::{Template, handlebars};
 
 use handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
 

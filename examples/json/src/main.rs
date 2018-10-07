@@ -6,10 +6,11 @@
 
 #[cfg(test)] mod tests;
 
-use rocket::State;
-use rocket_contrib::{Json, JsonValue};
-use std::collections::HashMap;
 use std::sync::Mutex;
+use std::collections::HashMap;
+
+use rocket::State;
+use rocket_contrib::json::{Json, JsonValue};
 
 // The type to represent the ID of a message.
 type ID = usize;

@@ -1,3 +1,4 @@
+extern crate serde;
 extern crate rmp_serde;
 
 use std::ops::{Deref, DerefMut};
@@ -9,31 +10,28 @@ use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData
 use rocket::response::{self, Responder, Response};
 use rocket::http::Status;
 
-use serde::Serialize;
-use serde::de::Deserialize;
+use self::serde::Serialize;
+use self::serde::de::Deserialize;
 
-pub use self::rmp_serde::decode::Error as MsgPackError;
+pub use self::rmp_serde::decode::Error;
 
-/// The `MsgPack` type: implements `FromData` and `Responder`, allowing you to
-/// easily consume and respond with MessagePack data.
+/// The `MsgPack` type: implements [`FromData`] and [`Responder`], allowing you
+/// to easily consume and respond with MessagePack data.
 ///
 /// ## Receiving MessagePack
 ///
 /// If you're receiving MessagePack data, simply add a `data` parameter to your
 /// route arguments and ensure the type of the parameter is a `MsgPack<T>`,
 /// where `T` is some type you'd like to parse from MessagePack. `T` must
-/// implement `Deserialize` or `DeserializeOwned` from
-/// [`serde`](https://github.com/serde-rs/serde). The data is parsed from the
-/// HTTP request body.
+/// implement [`Deserialize`] from [`serde`]. The data is parsed from the HTTP
+/// request body.
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
-/// # fn main() {  }
-/// #
-/// use rocket_contrib::MsgPack;
+/// use rocket_contrib::msgpack::MsgPack;
 ///
 /// #[post("/users", format = "msgpack", data = "<user>")]
 /// fn new_user(user: MsgPack<User>) {
@@ -49,18 +47,15 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// ## Sending MessagePack
 ///
 /// If you're responding with MessagePack data, return a `MsgPack<T>` type,
-/// where `T` implements `Serialize` from
-/// [serde](https://github.com/serde-rs/serde). The content type of the response
-/// is set to `application/msgpack` automatically.
+/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
+/// response is set to `application/msgpack` automatically.
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
-/// # fn main() {  }
-/// #
-/// use rocket_contrib::MsgPack;
+/// use rocket_contrib::msgpack::MsgPack;
 ///
 /// #[get("/users/<id>")]
 /// fn user(id: usize) -> MsgPack<User> {
@@ -92,7 +87,7 @@ impl<T> MsgPack<T> {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_contrib::MsgPack;
+    /// # use rocket_contrib::msgpack::MsgPack;
     /// let string = "Hello".to_string();
     /// let my_msgpack = MsgPack(string);
     /// assert_eq!(my_msgpack.into_inner(), "Hello".to_string());
@@ -107,7 +102,7 @@ impl<T> MsgPack<T> {
 const LIMIT: u64 = 1 << 20;
 
 impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
-    type Error = MsgPackError;
+    type Error = Error;
     type Owned = Vec<u8>;
     type Borrowed = [u8];
 
@@ -116,12 +111,12 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
         let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
         match d.open().take(size_limit).read_to_end(&mut buf) {
             Ok(_) => Borrowed(Success(buf)),
-            Err(e) => Borrowed(Failure((Status::BadRequest, MsgPackError::InvalidDataRead(e))))
+            Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e))))
         }
     }
 
     fn from_data(_: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        use self::MsgPackError::*;
+        use self::Error::*;
 
         let buf = o.borrowed()?;
         match rmp_serde::from_slice(&buf) {

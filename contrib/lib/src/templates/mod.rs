@@ -2,7 +2,10 @@ extern crate serde;
 extern crate serde_json;
 extern crate glob;
 
+#[cfg(feature = "tera_templates")] pub extern crate tera;
 #[cfg(feature = "tera_templates")] mod tera_templates;
+
+#[cfg(feature = "handlebars_templates")] pub extern crate handlebars;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
 
 mod engine;
@@ -11,11 +14,12 @@ mod context;
 mod metadata;
 
 pub use self::engine::Engines;
-pub use self::metadata::TemplateMetadata;
+pub use self::metadata::Metadata;
+crate use self::context::Context;
+crate use self::fairing::ContextManager;
 
 use self::engine::Engine;
-use self::fairing::{TemplateFairing, ContextManager};
-use self::context::Context;
+use self::fairing::TemplateFairing;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
 use self::glob::glob;
@@ -99,14 +103,12 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// application:
 ///
 /// ```rust
-/// extern crate rocket;
-/// extern crate rocket_contrib;
-///
-/// use rocket_contrib::Template;
+/// # extern crate rocket;
+/// # extern crate rocket_contrib;
+/// use rocket_contrib::templates::Template;
 ///
 /// fn main() {
 ///     rocket::ignite()
-///         // ...
 ///         .attach(Template::fairing())
 ///         // ...
 ///     # ;
@@ -116,10 +118,16 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// The `Template` type implements Rocket's [`Responder`] trait, so it can be
 /// returned from a request handler directly:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
+/// # fn context() {  }
+/// use rocket_contrib::templates::Template;
+///
 /// #[get("/")]
 /// fn index() -> Template {
-///     let context = ...;
+///     let context = context();
 ///     Template::render("index", &context)
 /// }
 /// ```
@@ -136,7 +144,7 @@ pub struct Template {
 }
 
 #[derive(Debug)]
-pub struct TemplateInfo {
+crate struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template.
     path: PathBuf,
     /// The extension for the engine of this template.
@@ -166,7 +174,7 @@ impl Template {
     /// extern crate rocket;
     /// extern crate rocket_contrib;
     ///
-    /// use rocket_contrib::Template;
+    /// use rocket_contrib::templates::Template;
     ///
     /// fn main() {
     ///     rocket::ignite()
@@ -192,7 +200,7 @@ impl Template {
     /// extern crate rocket;
     /// extern crate rocket_contrib;
     ///
-    /// use rocket_contrib::Template;
+    /// use rocket_contrib::templates::Template;
     ///
     /// fn main() {
     ///     rocket::ignite()
@@ -218,7 +226,7 @@ impl Template {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket_contrib::Template;
+    /// use rocket_contrib::templates::Template;
     ///
     /// // Create a `context`. Here, just an empty `HashMap`.
     /// let mut context = HashMap::new();
@@ -235,9 +243,9 @@ impl Template {
 
     /// Render the template named `name` with the context `context` into a
     /// `String`. This method should **not** be used in any running Rocket
-    /// application. This method should only be used during testing to
-    /// validate `Template` responses. For other uses, use
-    /// [`render`](#method.render) instead.
+    /// application. This method should only be used during testing to validate
+    /// `Template` responses. For other uses, use [`render()`](#method.render)
+    /// instead.
     ///
     /// The `context` can be of any type that implements `Serialize`. This is
     /// typically a `HashMap` or a custom `struct`.
@@ -253,7 +261,7 @@ impl Template {
     /// # extern crate rocket_contrib;
     /// use std::collections::HashMap;
     ///
-    /// use rocket_contrib::Template;
+    /// use rocket_contrib::templates::Template;
     /// use rocket::local::Client;
     ///
     /// fn main() {

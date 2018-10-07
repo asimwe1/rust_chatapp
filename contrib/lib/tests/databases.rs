@@ -1,7 +1,7 @@
 extern crate rocket;
 extern crate rocket_contrib;
 
-#[cfg(feature = "databases")]
+#[cfg(all(feature = "diesel_sqlite_pool", feature = "diesel_postgres_pool"))]
 mod databases_tests {
     use rocket_contrib::databases::{database, diesel};
 

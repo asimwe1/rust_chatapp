@@ -85,7 +85,7 @@ if [ "$1" = "--contrib" ]; then
     msgpack
     tera_templates
     handlebars_templates
-    static_files
+    serve
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool

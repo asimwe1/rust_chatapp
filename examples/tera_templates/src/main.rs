@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 #[derive(Serialize)]
 struct TemplateContext {

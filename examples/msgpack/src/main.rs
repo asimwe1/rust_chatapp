@@ -6,7 +6,7 @@ extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::MsgPack;
+use rocket_contrib::msgpack::MsgPack;
 
 #[derive(Serialize, Deserialize)]
 struct Message<'r> {

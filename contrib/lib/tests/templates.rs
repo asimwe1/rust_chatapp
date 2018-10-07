@@ -1,6 +1,9 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
+#[cfg(feature = "templates")]
 #[macro_use] extern crate rocket;
+
+#[cfg(feature = "templates")]
 extern crate rocket_contrib;
 
 #[cfg(feature = "templates")]
@@ -9,10 +12,10 @@ mod templates_tests {
 
     use rocket::{Rocket, http::RawStr};
     use rocket::config::{Config, Environment};
-    use rocket_contrib::{Template, TemplateMetadata};
+    use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
-    fn template_check(md: TemplateMetadata, engine: &RawStr, name: &RawStr) -> Option<()> {
+    fn template_check(md: Metadata, engine: &RawStr, name: &RawStr) -> Option<()> {
         match md.contains_template(&format!("{}/{}", engine, name)) {
             true => Some(()),
             false => None

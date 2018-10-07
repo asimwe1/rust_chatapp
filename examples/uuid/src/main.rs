@@ -2,18 +2,18 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
-extern crate uuid;
 extern crate rocket_contrib;
+extern crate uuid;
 
 use std::collections::HashMap;
-use rocket_contrib::Uuid;
+use rocket_contrib::uuid::Uuid;
 
 #[cfg(test)] mod tests;
 
 lazy_static! {
     // A small people lookup table for the sake of this example. In a real
     // application this could be a database lookup. Notice that we use the
-    // uuid::Uuid type here and not the rocket_contrib::Uuid type.
+    // uuid::Uuid type here and not the rocket_contrib::uuid::Uuid type.
     static ref PEOPLE: HashMap<uuid::Uuid, &'static str> = {
         let mut m = HashMap::new();
         let lacy_id = uuid::Uuid::parse_str("7f205202-7ba1-4c39-b2fc-3e630722bf9f").unwrap();
@@ -29,7 +29,7 @@ lazy_static! {
 #[get("/people/<id>")]
 fn people(id: Uuid) -> Result<String, String> {
     // Because Uuid implements the Deref trait, we use Deref coercion to convert
-    // rocket_contrib::Uuid to uuid::Uuid.
+    // rocket_contrib::uuid::Uuid to uuid::Uuid.
     Ok(PEOPLE.get(&id)
         .map(|person| format!("We found: {}", person))
         .ok_or_else(|| format!("Person not found for UUID: {}", id))?)

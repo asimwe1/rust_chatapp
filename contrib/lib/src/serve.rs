@@ -46,7 +46,7 @@ impl Options {
     /// # Example
     ///
     /// ```rust
-    /// use rocket_contrib::static_files::Options;
+    /// use rocket_contrib::serve::Options;
     ///
     /// let index_request = Options::Index | Options::DotFiles;
     /// assert!(index_request.contains(Options::Index));
@@ -96,7 +96,7 @@ impl ::std::ops::BitOr for Options {
 /// ```rust
 /// # extern crate rocket;
 /// # extern crate rocket_contrib;
-/// use rocket_contrib::static_files::StaticFiles;
+/// use rocket_contrib::serve::StaticFiles;
 ///
 /// fn main() {
 /// # if false {
@@ -122,7 +122,7 @@ impl ::std::ops::BitOr for Options {
 /// ```rust
 /// # extern crate rocket;
 /// # extern crate rocket_contrib;
-/// use rocket_contrib::static_files::StaticFiles;
+/// use rocket_contrib::serve::StaticFiles;
 ///
 /// fn main() {
 /// # if false {
@@ -151,7 +151,7 @@ impl StaticFiles {
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
-    /// use rocket_contrib::static_files::StaticFiles;
+    /// use rocket_contrib::serve::StaticFiles;
     ///
     /// fn main() {
     /// # if false {
@@ -177,7 +177,7 @@ impl StaticFiles {
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
-    /// use rocket_contrib::static_files::{StaticFiles, Options};
+    /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
     /// fn main() {
     /// # if false {

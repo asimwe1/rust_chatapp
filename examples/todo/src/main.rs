@@ -14,7 +14,7 @@ use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{Template, databases::database, static_files::StaticFiles};
+use rocket_contrib::{templates::Template, databases::database, serve::StaticFiles};
 use diesel::SqliteConnection;
 
 use task::{Task, Todo};

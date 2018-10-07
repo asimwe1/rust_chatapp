@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket_contrib;
 #[macro_use] extern crate rocket;
+extern crate rocket_contrib;
 
 #[cfg(test)]
 mod tests;
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use rocket::request::Form;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, Cookies};
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
 struct Message {

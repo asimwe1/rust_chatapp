@@ -16,13 +16,13 @@
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [json*](Json)
-//! * [static_files*](static_files)
-//! * [msgpack](MsgPack)
-//! * [handlebars_templates](Template)
-//! * [tera_templates](Template)
-//! * [uuid](Uuid)
-//! * [${database}_pool](databases)
+//! * [json*](type@json) - JSON (de)serialization
+//! * [serve*](serve) - Static File Serving
+//! * [msgpack](msgpack) - MessagePack (de)serialization
+//! * [handlebars_templates](templates) - Handlebars Templating
+//! * [tera_templates](templates) - Tera Templating
+//! * [uuid](uuid) - UUID (de)serialization
+//! * [${database}_pool](databases) - Database Configuration and Pooling
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -42,59 +42,14 @@
 #[allow(unused_imports)] #[macro_use] extern crate log;
 #[allow(unused_imports)] #[macro_use] extern crate rocket;
 
-#[cfg(feature = "serde")]
-extern crate serde;
+#[cfg(feature="json")] #[macro_use] pub mod json;
+#[cfg(feature="serve")] pub mod serve;
+#[cfg(feature="msgpack")] pub mod msgpack;
+#[cfg(feature="templates")] pub mod templates;
+#[cfg(feature="uuid")] pub mod uuid;
+#[cfg(feature="databases")] pub mod databases;
 
-#[cfg(feature = "json")]
-extern crate serde_json;
-
-#[cfg(feature = "json")]
-pub use serde_json::{json_internal, json_internal_vec};
-
-#[cfg(feature = "handlebars_templates")]
-pub extern crate handlebars;
-
-#[cfg(feature = "tera_templates")]
-pub extern crate tera;
-
-#[cfg(feature = "json")]
-#[cfg_attr(feature = "json", macro_use)]
-#[doc(hidden)]
-pub mod json;
-
-#[cfg(feature = "json")]
-pub use json::{Json, JsonError, JsonValue};
-
-#[cfg(feature = "msgpack")]
-#[doc(hidden)]
-pub mod msgpack;
-
-#[cfg(feature = "msgpack")]
-pub use msgpack::{MsgPack, MsgPackError};
-
-#[cfg(feature = "templates")]
-mod templates;
-
-#[cfg(feature = "templates")]
-pub use templates::{Engines, Template, TemplateMetadata};
-
-#[cfg(feature = "uuid")]
-mod uuid;
-
-#[cfg(feature = "uuid")]
-pub use uuid::{Uuid, UuidParseError};
-
-#[cfg(feature = "static_files")]
-pub mod static_files;
-
-#[cfg(feature = "database_pool")]
-pub mod databases;
-
-#[cfg(feature = "database_pool_codegen")]
 #[allow(unused_imports)]
 #[macro_use]
+#[cfg(feature="databases")]
 extern crate rocket_contrib_codegen;
-
-#[cfg(feature = "database_pool_codegen")]
-#[doc(hidden)]
-pub use rocket_contrib_codegen::*;
