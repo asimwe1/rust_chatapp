@@ -50,21 +50,24 @@
 //! In your application's source code, one-time:
 //!
 //! ```rust
-//! # extern crate rocket;
-//! # extern crate rocket_contrib;
-//! #
-//! use rocket_contrib::databases::{database, diesel};
+//! #![feature(proc_macro_hygiene, decl_macro)]
+//!
+//! #[macro_use] extern crate rocket;
+//! #[macro_use] extern crate rocket_contrib;
+//!
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! use rocket_contrib::databases::diesel;
 //!
 //! #[database("sqlite_logs")]
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
 //! fn main() {
-//! # if false {
 //!     rocket::ignite()
 //!        .attach(LogsDbConn::fairing())
 //!        .launch();
-//! # }
 //! }
+//! # } fn main() {}
 //! ```
 //!
 //! Whenever a connection to the database is needed:
@@ -73,9 +76,11 @@
 //! # #![feature(proc_macro_hygiene, decl_macro)]
 //! #
 //! # #[macro_use] extern crate rocket;
-//! # extern crate rocket_contrib;
+//! # #[macro_use] extern crate rocket_contrib;
 //! #
-//! # use rocket_contrib::databases::{database, diesel};
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! # use rocket_contrib::databases::diesel;
 //! #
 //! # #[database("sqlite_logs")]
 //! # struct LogsDbConn(diesel::SqliteConnection);
@@ -90,6 +95,7 @@
 //! # */
 //! # Ok(())
 //! }
+//! # } fn main() {}
 //! ```
 //!
 //! # Usage
@@ -139,6 +145,8 @@
 //! ```rust
 //! extern crate rocket;
 //!
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
 //! use std::collections::HashMap;
 //! use rocket::config::{Config, Environment, Value};
 //!
@@ -156,10 +164,9 @@
 //!         .finalize()
 //!         .unwrap();
 //!
-//! # if false {
 //!     rocket::custom(config).launch();
-//! # }
 //! }
+//! # } fn main() {}
 //! ```
 //!
 //! ### Environment Variables
@@ -186,11 +193,14 @@
 //!
 //! ```rust
 //! # extern crate rocket;
-//! # extern crate rocket_contrib;
-//! use rocket_contrib::databases::{database, diesel};
+//! # #[macro_use] extern crate rocket_contrib;
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! use rocket_contrib::databases::diesel;
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
+//! # }
 //! ```
 //!
 //! The macro generates a [`FromRequest`] implementation for the decorated type,
@@ -219,12 +229,14 @@
 //!
 //! ```rust
 //! # extern crate rocket;
-//! # extern crate rocket_contrib;
+//! # #[macro_use] extern crate rocket_contrib;
 //! #
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
 //! # use std::collections::HashMap;
 //! # use rocket::config::{Config, Environment, Value};
 //! #
-//! use rocket_contrib::databases::{database, diesel};
+//! use rocket_contrib::databases::diesel;
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
@@ -242,12 +254,11 @@
 //! #         .finalize()
 //! #         .unwrap();
 //! #
-//! # if false {
 //!     rocket::custom(config)
 //!         .attach(MyDatabase::fairing())
 //!         .launch();
-//! # }
 //! }
+//! # } fn main() {}
 //! ```
 //!
 //! ## Handlers
@@ -259,18 +270,19 @@
 //! # #![feature(proc_macro_hygiene, decl_macro)]
 //! #
 //! # #[macro_use] extern crate rocket;
-//! # extern crate rocket_contrib;
-//! # use rocket_contrib::databases::{database, diesel};
+//! # #[macro_use] extern crate rocket_contrib;
+//! #
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! # use rocket_contrib::databases::diesel;
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
 //! #[get("/")]
 //! fn my_handler(conn: MyDatabase) {
-//! # /*
-//!     ...
-//! # */
+//!     // ...
 //! }
-//! # fn main() {  }
+//! # }
 //! ```
 //!
 //! The generated `Deref` implementation allows easy access to the inner
@@ -280,11 +292,12 @@
 //! # #![feature(proc_macro_hygiene, decl_macro)]
 //! #
 //! # #[macro_use] extern crate rocket;
-//! # extern crate rocket_contrib;
-//! # use rocket_contrib::databases::{database, diesel};
+//! # #[macro_use] extern crate rocket_contrib;
 //! #
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! # use rocket_contrib::databases::diesel;
 //! # type Data = ();
-//! #
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
@@ -297,7 +310,7 @@
 //! fn my_handler(conn: MyDatabase) -> Data {
 //!     load_from_db(&conn)
 //! }
-//! # fn main() {  }
+//! # }
 //! ```
 //!
 //! # Database Support

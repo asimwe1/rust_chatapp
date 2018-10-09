@@ -50,7 +50,5 @@
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
 
-#[allow(unused_imports)]
-#[macro_use]
-#[cfg(feature="databases")]
-extern crate rocket_contrib_codegen;
+#[cfg(feature="databases")] extern crate rocket_contrib_codegen;
+#[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;

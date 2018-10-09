@@ -5,7 +5,7 @@
 #[macro_use] extern crate diesel_migrations;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
-extern crate rocket_contrib;
+#[macro_use] extern crate rocket_contrib;
 
 mod task;
 #[cfg(test)] mod tests;
@@ -14,7 +14,7 @@ use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{templates::Template, databases::database, serve::StaticFiles};
+use rocket_contrib::{templates::Template, serve::StaticFiles};
 use diesel::SqliteConnection;
 
 use task::{Task, Todo};
