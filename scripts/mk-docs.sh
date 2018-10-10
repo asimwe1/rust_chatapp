@@ -9,10 +9,12 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/config.sh"
 
-# We need to clean-up beforehand so we don't get all of the dependencies.
-echo ":::: Cleaning up before documenting..."
-cargo clean
-cargo update
+if [ "${1}" != "-d" ]; then
+  # We need to clean-up beforehand so we don't get all of the dependencies.
+  echo ":::: Cleaning up before documenting..."
+  cargo clean
+  cargo update
+fi
 
 # Generate the rustdocs for all of the crates.
 echo ":::: Generating the docs..."
