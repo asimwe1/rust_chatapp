@@ -31,37 +31,25 @@
 //! not used by Rocket itself but can be used by external libraries. The
 //! standard configuration parameters are:
 //!
-//!   * **address**: _string_ an IP address or host the application will
-//!     listen on
-//!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
-//!   * **port**: _integer_ a port number to listen on
-//!     * examples: `"8000"`, `"80"`, `"4242"`
-//!   * **workers**: _integer_ the number of concurrent workers to use
-//!     * examples: `12`, `1`, `4`
-//!   * **keep_alive**: _integer, 'false', or 'none'_ timeout, in seconds, for
-//!     HTTP keep-alive. disabled on 'false' or 'none'
-//!     * examples: `5`, `60`, `false`, `"none"`
-//!   * **log**: _string_ how much information to log; one of `"off"`,
-//!     `"normal"`, `"debug"`, or `"critical"`
-//!   * **secret_key**: _string_ a 256-bit base64 encoded string (44
-//!     characters) to use as the secret key
-//!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
-//!   * **tls**: _table_ a table with two keys:
-//!     1. `certs`: _string_ a path to a certificate chain in PEM format
-//!     2. `key`: _string_ a path to a private key file in PEM format for the
-//!        certificate in `certs`
-//!
-//!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
-//!   * **limits**: _table_ a table where each key (_string_) corresponds to a
-//!   data type and the value (`u64`) corresponds to the maximum size in bytes
-//!   Rocket should accept for that type.
-//!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
+//! | name       | type           | description                                                 | examples                   |
+//! |------------|----------------|-------------------------------------------------------------|----------------------------|
+//! | address    | string         | ip address or host to listen on                             | `"localhost"`, `"1.2.3.4"` |
+//! | port       | integer        | port number to listen on                                    | `8000`, `80`               |
+//! | keep_alive | integer        | keep-alive timeout in seconds                               | `0` (disable), `10`        |
+//! | workers    | integer        | number of concurrent thread workers                         | `36`, `512`                |
+//! | log        | string         | max log level: `"off"`, `"normal"`, `"debug"`, `"critical"` | `"off"`, `"normal"`        |
+//! | secret_key | 256-bit base64 | secret key for private cookies                              | `"8Xui8SI..."` (44 chars)  |
+//! | tls        | table          | tls config table with two keys (`certs`, `key`)             | _see below_                |
+//! | tls.certs  | string         | path to certificate chain in PEM format                     | `"private/cert.pem"`       |
+//! | tls.key    | string         | path to private key for `tls.certs` in PEM format           | `"private/key.pem"`        |
+//! | limits     | table          | map from data type (string) to data limit (integer: bytes)  | `{ forms = 65536 }`        |
 //!
 //! ### Rocket.toml
 //!
-//! The `Rocket.toml` file is used to specify the configuration parameters for
-//! each environment. The file is optional. If it is not present, the default
-//! configuration parameters are used.
+//! `Rocket.toml` is a Rocket application's configuration file. It can
+//! optionally be used to specify the configuration parameters for each
+//! environment. If it is not present, the default configuration parameters or
+//! environment supplied parameters are used.
 //!
 //! The file must be a series of TOML tables, at most one for each environment,
 //! and an optional "global" table, where each table contains key-value pairs
@@ -603,7 +591,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            keep_alive = false
+            keep_alive = 0
             secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
@@ -615,7 +603,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .keep_alive(None)
+            .keep_alive(0)
             .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
@@ -919,23 +907,9 @@ mod test {
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          keep_alive = false
+                          keep_alive = 0
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
-                      });
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          keep_alive = "none"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
-                      });
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          keep_alive = "None"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
+                          default_config(Staging).keep_alive(0)
                       });
     }
 

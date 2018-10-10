@@ -32,7 +32,6 @@ use http::uri::FromUriParam;
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
-/// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::LenientForm;
 ///

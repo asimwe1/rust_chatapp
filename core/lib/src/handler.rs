@@ -151,6 +151,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 /// any type. Instead, implement `Clone`. All types that implement `Clone` and
 /// `Handler` automatically implement `Cloneable`.
 pub trait Cloneable {
+    /// Clones `self`.
     fn clone_handler(&self) -> Box<Handler>;
 }
 

@@ -54,15 +54,19 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// in the route attribute. This is why, for instance, `param` is not a request
 /// guard.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # use rocket::http::Method;
+/// # type A = Method; type B = Method; type C = Method; type T = ();
 /// #[get("/<param>")]
-/// fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
+/// fn index(param: isize, a: A, b: B, c: C) -> T { /* ... */ }
+/// # fn main() {}
 /// ```
 ///
 /// Request guards always fire in left-to-right declaration order. In the
-/// example above, for instance, the order will be `a` followed by `b` followed
-/// by `c`. Failure is short-circuiting; if one guard fails, the remaining are
-/// not attempted.
+/// example above, the order is `a` followed by `b` followed by `c`. Failure is
+/// short-circuiting; if one guard fails, the remaining are not attempted.
 ///
 /// # Outcomes
 ///

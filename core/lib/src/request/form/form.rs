@@ -26,30 +26,18 @@ use http::{Status, uri::FromUriParam};
 /// for more information on deriving or implementing the trait.
 ///
 /// Because `Form` implements `FromData`, it can be used directly as a target of
-/// the `data = "<param>"` route parameter. For instance, if some structure of
-/// type `T` implements the `FromForm` trait, an incoming form can be
-/// automatically parsed into the `T` structure with the following route and
-/// handler:
-///
-/// ```rust,ignore
-/// #[post("/form_submit", data = "<param>")]
-/// fn submit(form: Form<T>) ... { ... }
-/// ```
-///
-/// A type of `Form<T>` automatically dereferences into an `&T`, though you can
-/// also tranform a `Form<T>` into a `T` by calling
-/// [`into_inner()`](Form::into_inner()). Thanks automatic dereferencing, you
-/// can access fields of `T` transparently through a `Form<T>`:
+/// the `data = "<param>"` route parameter as long as its generic type
+/// implements the `FromForm` trait:
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
-/// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
 /// use rocket::http::RawStr;
 ///
 /// #[derive(FromForm)]
 /// struct UserInput<'f> {
+///     // The raw, undecoded value. You _probably_ want `String` instead.
 ///     value: &'f RawStr
 /// }
 ///
@@ -60,10 +48,17 @@ use http::{Status, uri::FromUriParam};
 /// # fn main() {  }
 /// ```
 ///
+/// A type of `Form<T>` automatically dereferences into an `&T`, though you can
+/// also transform a `Form<T>` into a `T` by calling
+/// [`into_inner()`](Form::into_inner()). Thanks to automatic dereferencing, you
+/// can access fields of `T` transparently through a `Form<T>`, as seen above
+/// with `user_input.value`.
+///
 /// For posterity, the owned analog of the `UserInput` type above is:
 ///
 /// ```rust
 /// struct OwnedUserInput {
+///     // The decoded value. You _probably_ want this.
 ///     value: String
 /// }
 /// ```
@@ -86,22 +81,21 @@ use http::{Status, uri::FromUriParam};
 /// # fn main() {  }
 /// ```
 ///
-/// Note that no lifetime annotations are required: Rust is able to infer the
-/// lifetime as `` `static``. Because the lifetime is `` `static``, the
-/// `into_inner` method can be used to directly retrieve the parsed value.
+/// Note that no lifetime annotations are required in either case.
 ///
-/// ## Performance and Correctness Considerations
+/// ## `&RawStr` vs. `String`
 ///
 /// Whether you should use a `&RawStr` or `String` in your `FromForm` type
 /// depends on your use case. The primary question to answer is: _Can the input
-/// contain characters that must be URL encoded?_ Note that this includes
-/// common characters such as spaces. If so, then you must use `String`, whose
+/// contain characters that must be URL encoded?_ Note that this includes common
+/// characters such as spaces. If so, then you must use `String`, whose
 /// [`FromFormValue`](::request::FromFormValue) implementation automatically URL
-/// decodes strings. Because the `&RawStr` references will refer directly to the
-/// underlying form data, they will be raw and URL encoded.
+/// decodes the value. Because the `&RawStr` references will refer directly to
+/// the underlying form data, they will be raw and URL encoded.
 ///
-/// If your string values will not contain URL encoded characters, using
-/// `&RawStr` will result in fewer allocation and is thus preferred.
+/// If it is known that string values will not contain URL encoded characters,
+/// or you wish to handle decoding and validation yourself, using `&RawStr` will
+/// result in fewer allocation and is thus preferred.
 ///
 /// ## Incoming Data Limits
 ///

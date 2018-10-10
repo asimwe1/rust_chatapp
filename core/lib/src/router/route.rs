@@ -6,9 +6,10 @@ use yansi::Color::*;
 use codegen::StaticRouteInfo;
 use handler::Handler;
 use http::{Method, MediaType};
-use http::route::{RouteSegment, Kind, Error as SegmentError};
+use http::route::{RouteSegment, Kind};
+use error::RouteUriError;
 use http::ext::IntoOwned;
-use http::uri::{self, Origin};
+use http::uri::Origin;
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -276,41 +277,6 @@ impl Route {
         self.update_metadata()?;
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub enum RouteUriError {
-    Segment,
-    Uri(uri::Error<'static>),
-    DynamicBase,
-}
-
-impl<'a> From<(&'a str, SegmentError<'a>)> for RouteUriError {
-    fn from(_: (&'a str, SegmentError<'a>)) -> Self {
-        RouteUriError::Segment
-    }
-}
-
-impl<'a> From<uri::Error<'a>> for RouteUriError {
-    fn from(error: uri::Error<'a>) -> Self {
-        RouteUriError::Uri(error.into_owned())
-    }
-}
-
-impl fmt::Display for RouteUriError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            RouteUriError::Segment => {
-                write!(f, "The URI contains malformed dynamic route path segments.")
-            }
-            RouteUriError::DynamicBase => {
-                write!(f, "The mount point contains dynamic parameters.")
-            }
-            RouteUriError::Uri(error) => {
-                write!(f, "Malformed URI: {}", error)
-            }
-        }
     }
 }
 

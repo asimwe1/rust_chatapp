@@ -305,7 +305,7 @@ impl Config {
     ///   * **address**: String
     ///   * **port**: Integer (16-bit unsigned)
     ///   * **workers**: Integer (16-bit unsigned)
-    ///   * **keep_alive**: Integer or Boolean (false) or String ('none')
+    ///   * **keep_alive**: Integer
     ///   * **log**: String
     ///   * **secret_key**: String (256-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
@@ -315,7 +315,7 @@ impl Config {
             address => (str, set_address, id),
             port => (u16, set_port, ok),
             workers => (u16, set_workers, ok),
-            keep_alive => (u32_option, set_keep_alive, ok),
+            keep_alive => (u32, set_keep_alive, ok),
             log => (log_level, set_log_level, ok),
             secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
@@ -422,7 +422,7 @@ impl Config {
         self.workers = workers;
     }
 
-    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `0`,
     /// keep-alive is disabled.
     ///
     /// # Example
@@ -438,13 +438,17 @@ impl Config {
     /// config.set_keep_alive(10);
     ///
     /// // Disable keep-alive.
-    /// config.set_keep_alive(None);
+    /// config.set_keep_alive(0);
     /// # Ok(())
     /// # }
     /// ```
     #[inline]
-    pub fn set_keep_alive<T: Into<Option<u32>>>(&mut self, timeout: T) {
-        self.keep_alive = timeout.into();
+    pub fn set_keep_alive(&mut self, timeout: u32) {
+        if timeout == 0 {
+            self.keep_alive = None;
+        } else {
+            self.keep_alive = Some(timeout);
+        }
     }
 
     /// Sets the `secret_key` in `self` to `key` which must be a 256-bit base64

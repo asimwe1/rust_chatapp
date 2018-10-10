@@ -190,11 +190,11 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// # fn main() {  }
 /// ```
 pub trait FromParam<'a>: Sized {
-    /// The associated error to be returned when parsing fails.
+    /// The associated error to be returned if parsing/validation fails.
     type Error: Debug;
 
-    /// Parses an instance of `Self` from a dynamic path parameter string or
-    /// returns an `Error` if one cannot be parsed.
+    /// Parses and validates an instance of `Self` from a path parameter string
+    /// or returns an `Error` if parsing or validation fails.
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error>;
 }
 

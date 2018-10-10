@@ -17,6 +17,7 @@ impl Route {
     ///
     /// Because query parsing is lenient, and dynamic query parameters can be
     /// missing, queries do not impact whether two routes collide.
+    #[doc(hidden)]
     pub fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
@@ -36,6 +37,7 @@ impl Route {
     ///   * All static components in the route's query string are also in the
     ///     request query string, though in any position.
     ///     - If no query in route, requests with/without queries match.
+    #[doc(hidden)]
     pub fn matches(&self, req: &Request) -> bool {
         self.method == req.method()
             && paths_match(self, req)

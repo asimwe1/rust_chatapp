@@ -104,10 +104,12 @@ use http::RawStr;
 /// ```
 #[derive(Debug)]
 pub enum FormItems<'f> {
+    #[doc(hidden)]
     Raw {
         string: &'f RawStr,
         next_index: usize
     },
+    #[doc(hidden)]
     Cooked {
         items: &'f [FormItem<'f>],
         next_index: usize
@@ -117,7 +119,7 @@ pub enum FormItems<'f> {
 /// A form items returned by the [`FormItems`] iterator.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FormItem<'f> {
-    /// The full, nonempty string for the item, not including delimiters.
+    /// The full, nonempty string for the item, not including `&` delimiters.
     pub raw: &'f RawStr,
     /// The key for the item, which may be empty if `value` is nonempty.
     ///
@@ -134,16 +136,75 @@ pub struct FormItem<'f> {
 }
 
 impl<'f> FormItem<'f> {
+    /// Extracts the raw `key` and `value` as a tuple.
+    ///
+    /// This is equivalent to `(item.key, item.value)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::FormItem;
+    ///
+    /// let item = FormItem {
+    ///     raw: "hello=%2C+world%21".into(),
+    ///     key: "hello".into(),
+    ///     value: "%2C+world%21".into(),
+    /// };
+    ///
+    /// let (key, value) = item.key_value();
+    /// assert_eq!(key, "hello");
+    /// assert_eq!(value, "%2C+world%21");
+    /// ```
     #[inline(always)]
     pub fn key_value(&self) -> (&'f RawStr, &'f RawStr) {
         (self.key, self.value)
     }
 
+    /// Extracts and lossy URL decodes the `key` and `value` as a tuple.
+    ///
+    /// This is equivalent to `(item.key.url_decode_lossy(),
+    /// item.value.url_decode_lossy)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::FormItem;
+    ///
+    /// let item = FormItem {
+    ///     raw: "hello=%2C+world%21".into(),
+    ///     key: "hello".into(),
+    ///     value: "%2C+world%21".into(),
+    /// };
+    ///
+    /// let (key, value) = item.key_value_decoded();
+    /// assert_eq!(key, "hello");
+    /// assert_eq!(value, ", world!");
+    /// ```
     #[inline(always)]
     pub fn key_value_decoded(&self) -> (String, String) {
         (self.key.url_decode_lossy(), self.value.url_decode_lossy())
     }
 
+    /// Extracts `raw` and the raw `key` and `value` as a triple.
+    ///
+    /// This is equivalent to `(item.raw, item.key, item.value)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::FormItem;
+    ///
+    /// let item = FormItem {
+    ///     raw: "hello=%2C+world%21".into(),
+    ///     key: "hello".into(),
+    ///     value: "%2C+world%21".into(),
+    /// };
+    ///
+    /// let (raw, key, value) = item.explode();
+    /// assert_eq!(raw, "hello=%2C+world%21");
+    /// assert_eq!(key, "hello");
+    /// assert_eq!(value, "%2C+world%21");
+    /// ```
     #[inline(always)]
     pub fn explode(&self) -> (&'f RawStr, &'f RawStr, &'f RawStr) {
         (self.raw, self.key, self.value)

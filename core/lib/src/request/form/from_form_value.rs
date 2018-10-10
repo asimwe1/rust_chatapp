@@ -3,14 +3,23 @@ use std::str::FromStr;
 
 use http::RawStr;
 
-/// Trait to create instance of some type from a form value; expected from field
-/// types in structs deriving [`FromForm`](::request::FromForm).
+/// Trait to parse a typed value from a form value.
+///
+/// This trait is used by Rocket's code generation in two places:
+///
+///   1. Fields in structs deriving [`FromForm`](::request::FromForm) are
+///      required to implement this trait.
+///   2. Types of dynamic query parameters (`?<param>`) are required to
+///      implement this trait.
+///
+/// # `FromForm` Fields
 ///
 /// When deriving the `FromForm` trait, Rocket uses the `FromFormValue`
 /// implementation of each field's type to validate the form input. To
 /// illustrate, consider the following structure:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate rocket;
 /// #[derive(FromForm)]
 /// struct Person {
 ///     name: String,
@@ -23,22 +32,37 @@ use http::RawStr;
 /// for the `age` field. The `Person` structure can only be created from a form
 /// if both calls return successfully.
 ///
-/// ## Catching Validation Errors
+/// # Dynamic Query Parameters
 ///
-/// Sometimes you want to be informed of validation errors. When this is
-/// desired, types of `Option<T>` or `Result<T, T::Error>` can be used. These
-/// types implement `FromFormValue` themselves. Their implementations always
-/// return successfully, so their validation never fails. They can be used to
-/// determine if the `from_form_value` call failed and to retrieve the error
-/// value from the failed call.
+/// Types of dynamic query parameters are required to implement this trait. The
+/// `FromFormValue` implementation is used to parse and validate each parameter
+/// according to its target type:
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # type Size = String;
+/// #[get("/item?<id>&<size>")]
+/// fn item(id: usize, size: Size) { /* ... */ }
+/// # fn main() { }
+/// ```
+///
+/// To generate values for `id` and `size`, Rocket calls
+/// `usize::from_form_value()` and `Size::from_form_value()`, respectively.
+///
+/// # Validation Errors
+///
+/// It is sometimes desired to prevent a validation error from forwarding a
+/// request to another route. The `FromFormValue` implementation for `Option<T>`
+/// and `Result<T, T::Error>` make this possible. Their implementations always
+/// return successfully, effectively "catching" the error.
 ///
 /// For instance, if we wanted to know if a user entered an invalid `age` in the
-/// form corresponding to the `Person` structure above, we could use the
-/// following structure:
+/// form corresponding to the `Person` structure in the first example, we could
+/// use the following structure:
 ///
 /// ```rust
 /// # use rocket::http::RawStr;
-/// # #[allow(dead_code)]
 /// struct Person<'r> {
 ///     name: String,
 ///     age: Result<u16, &'r RawStr>
@@ -124,7 +148,9 @@ use http::RawStr;
 ///
 /// The type can then be used in a `FromForm` struct as follows:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type AdultAge = usize;
 /// #[derive(FromForm)]
 /// struct Person {
 ///     name: String,

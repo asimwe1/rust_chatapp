@@ -15,7 +15,7 @@ pub struct ConfigBuilder {
     /// The number of workers to run in parallel.
     pub workers: u16,
     /// Keep-alive timeout in seconds or None if disabled.
-    pub keep_alive: Option<u32>,
+    pub keep_alive: u32,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
@@ -64,7 +64,7 @@ impl ConfigBuilder {
             address: config.address,
             port: config.port,
             workers: config.workers,
-            keep_alive: config.keep_alive,
+            keep_alive: config.keep_alive.unwrap_or(0),
             log_level: config.log_level,
             secret_key: None,
             tls: None,
@@ -130,7 +130,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `0`,
     /// keep-alive is disabled.
     ///
     /// # Example
@@ -145,14 +145,14 @@ impl ConfigBuilder {
     /// assert_eq!(config.keep_alive, Some(10));
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .keep_alive(None)
+    ///     .keep_alive(0)
     ///     .unwrap();
     ///
     /// assert_eq!(config.keep_alive, None);
     /// ```
     #[inline]
-    pub fn keep_alive<T: Into<Option<u32>>>(mut self, timeout: T) -> Self {
-        self.keep_alive = timeout.into();
+    pub fn keep_alive(mut self, timeout: u32) -> Self {
+        self.keep_alive = timeout;
         self
     }
 
@@ -311,7 +311,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .port(700)
     ///     .workers(12)
-    ///     .keep_alive(None)
+    ///     .keep_alive(0)
     ///     .finalize();
     ///
     /// assert!(config.is_ok());
