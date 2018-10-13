@@ -1,3 +1,5 @@
+//! UUID parameter and form value parsing support.
+
 pub extern crate uuid as uuid_crate;
 
 use std::fmt;
@@ -9,8 +11,7 @@ use rocket::http::RawStr;
 
 pub use self::uuid_crate::parser::ParseError;
 
-/// Implements [`FromParam`] and [`FromFormValue`] for accepting UUID values
-/// from the [`uuid`] crate.
+/// Implements [`FromParam`] and [`FromFormValue`] for accepting UUID values.
 ///
 /// # Usage
 ///

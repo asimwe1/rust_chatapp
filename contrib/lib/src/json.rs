@@ -1,3 +1,6 @@
+//! Automatic JSON (de)serialization support.
+//!
+//! See the [`Json`](json::Json) type for further details.
 extern crate serde;
 extern crate serde_json;
 

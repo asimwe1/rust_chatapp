@@ -1,3 +1,6 @@
+//! Automatic MessagePack (de)serialization support.
+//!
+//! See the [`MsgPack`](msgpack::MessagePack) type for further details.
 extern crate serde;
 extern crate rmp_serde;
 
