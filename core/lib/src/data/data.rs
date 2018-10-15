@@ -91,18 +91,9 @@ impl Data {
     }
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
-    crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
-        // Steal the internal, undecoded data buffer and net stream from Hyper.
-        let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
-        // This is only valid because we know that hyper's `cap` represents the
-        // actual length of the vector. As such, this is really only setting
-        // things up correctly for future use. See
-        // https://github.com/hyperium/hyper/commit/bbbce5f for confirmation.
-        unsafe { hyper_buf.set_len(cap); }
-        let hyper_net_stream = body.get_ref().get_ref();
-
-        #[cfg(feature = "tls")]
+    crate fn from_hyp(body: HyperBodyReader) -> Result<Data, &'static str> {
         #[inline(always)]
+        #[cfg(feature = "tls")]
         fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
@@ -112,30 +103,29 @@ impl Data {
                 })
         }
 
-        #[cfg(not(feature = "tls"))]
         #[inline(always)]
+        #[cfg(not(feature = "tls"))]
         fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
         }
 
         // Retrieve the underlying Http(s)Stream from Hyper.
+        let hyper_net_stream = body.get_ref().get_ref();
         let net_stream = match concrete_stream(hyper_net_stream) {
             Some(net_stream) => net_stream,
             None => return Err("Stream is not an HTTP(s) stream!")
         };
 
         // Set the read timeout to 5 seconds.
-        net_stream.set_read_timeout(Some(Duration::from_secs(5))).expect("timeout set");
+        let _ = net_stream.set_read_timeout(Some(Duration::from_secs(5)));
 
-        // TODO: Explain this.
-        trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
-
-        let mut cursor = Cursor::new(hyper_buf);
-        cursor.set_position(pos as u64);
+        // Steal the internal, undecoded data buffer and net stream from Hyper.
+        // Create an HTTP reader from the buffer + stream.
+        // FIXME(hyper): we really shouldn't need to allocate here.
+        let hyper_buf = body.get_ref().get_buf().to_vec();
+        let cursor = Cursor::new(hyper_buf);
         let inner_data = cursor.chain(net_stream);
-
-        // Create an HTTP reader from the stream.
         let http_stream = match body {
             SizedReader(_, n) => SizedReader(inner_data, n),
             EofReader(_) => EofReader(inner_data),
@@ -240,7 +230,7 @@ impl Data {
     // bytes can be read from `stream`.
     #[inline(always)]
     crate fn new(mut stream: BodyReader) -> Data {
-        trace_!("Date::new({:?})", stream);
+        trace_!("Data::new({:?})", stream);
         let mut peek_buf: Vec<u8> = vec![0; PEEK_BYTES];
 
         // Fill the buffer with as many bytes as possible. If we read less than
