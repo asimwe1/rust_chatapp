@@ -210,4 +210,4 @@ rocket::ignite()
     }));
 ```
 
-[`AdHoc`]: @api/rocket/fairing/enum.AdHoc.html
+[`AdHoc`]: @api/rocket/fairing/struct.AdHoc.html

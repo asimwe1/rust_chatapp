@@ -636,7 +636,7 @@ examples on GitHub provide further illustrations.
 ### JSON
 
 Handling JSON data is no harder: simply use the
-[`Json`](@api/rocket_contrib/struct.Json.html) type:
+[`Json`](@api/rocket_contrib/json/struct.Json.html) type:
 
 ```rust
 #[derive(Deserialize)]

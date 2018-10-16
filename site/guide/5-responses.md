@@ -208,7 +208,7 @@ fn stream() -> io::Result<Stream<UnixStream>> {
 
 ### JSON
 
-The [`JSON`] responder in [`rocket_contrib`] allows you to easily respond with
+The [`Json`] responder in [`rocket_contrib`] allows you to easily respond with
 well-formed JSON data: simply return a value of type `Json<T>` where `T` is the
 type of a structure to serialize into JSON. The type `T` must implement the
 [`Serialize`] trait from [`serde`], which can be automatically derived.
@@ -217,7 +217,7 @@ As an example, to respond with the JSON value of a `Task` structure, we might
 write:
 
 ```rust
-use rocket_contrib::Json;
+use rocket_contrib::json::Json;
 
 #[derive(Serialize)]
 struct Task { ... }
@@ -226,13 +226,13 @@ struct Task { ... }
 fn todo() -> Json<Task> { ... }
 ```
 
-The `JSON` type serializes the structure into JSON, sets the Content-Type to
+The `Json` type serializes the structure into JSON, sets the Content-Type to
 JSON, and emits the serialized data in a fixed-sized body. If serialization
 fails, a **500 - Internal Server Error** is returned.
 
 The [JSON example on GitHub] provides further illustration.
 
-[`JSON`]: @api/rocket_contrib/struct.Json.html
+[`Json`]: @api/rocket_contrib/json/struct.Json.html
 [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
 [`serde`]: https://docs.serde.rs/serde/
 [JSON example on GitHub]: @example/json
@@ -285,5 +285,5 @@ including how to customize a template engine to add custom helpers and filters.
 The [Handlebars Templates example on GitHub](@example/handlebars_templates) is a
 fully composed application that makes use of Handlebars templates.
 
-[`Template`]: @api/rocket_contrib/struct.Template.html
+[`Template`]: @api/rocket_contrib/templates/struct.Template.html
 [configurable]: ../configuration/#extras

@@ -36,7 +36,7 @@ instance. Usage is straightforward:
     let response = req.dispatch();
     ```
 
-[`local`]: @api/rocket/local/index.html
+[`local`]: @api/rocket/local/
 [`Client`]: @api/rocket/local/struct.Client.html
 [`LocalRequest`]: @api/rocket/local/struct.LocalRequest.html
 [`Rocket`]: @api/rocket/struct.Rocket.html
