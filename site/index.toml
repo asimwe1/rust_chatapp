@@ -12,21 +12,21 @@ title = "Type Safe"
 text = "From request to response Rocket ensures that your types mean something."
 image = "helmet"
 button = "Learn More"
-url = "/overview/#how-rocket-works"
+url = "overview/#how-rocket-works"
 
 [[top_features]]
 title = "Boilerplate Free"
 text = "Spend your time writing code that really matters, and let Rocket generate the rest."
 image = "robot-free"
 button = "See Examples"
-url = "/overview/#anatomy-of-a-rocket-application"
+url = "overview/#anatomy-of-a-rocket-application"
 
 [[top_features]]
 title = "Easy To Use"
 text = "Rocket makes extensive use of Rust's code generation tools to provide a clean API."
 image = "sun"
 button = "Get Started"
-url = "/guide"
+url = "guide"
 margin = 2
 
 [[top_features]]
@@ -34,7 +34,7 @@ title = "Extensible"
 text = "Easily create your own primitives that any Rocket application can use."
 image = "telescope"
 button = "See How"
-url = "/overview/#anatomy-of-a-rocket-application"
+url = "overview/#anatomy-of-a-rocket-application"
 margin = 9
 
 ###############################################################################
@@ -134,7 +134,7 @@ text = '''
 title = 'Templating'
 text = "Rocket makes rendering templates a breeze with built-in templating support."
 image = 'templating-icon'
-url = '/guide/responses/#templates'
+url = 'guide/responses/#templates'
 button = 'Learn More'
 color = 'blue'
 
@@ -142,7 +142,7 @@ color = 'blue'
 title = 'Cookies'
 text = "View, add, or remove cookies, with or without encryption, without hassle."
 image = 'cookies-icon'
-url = '/guide/requests/#cookies'
+url = 'guide/requests/#cookies'
 button = 'Learn More'
 color = 'purple'
 margin = -6
@@ -151,7 +151,7 @@ margin = -6
 title = 'Streams'
 text = "Rocket streams all incoming and outgoing data, so size isn't a concern."
 image = 'streams-icon'
-url = '/guide/requests/#streaming'
+url = 'guide/requests/#streaming'
 button = 'Learn More'
 color = 'red'
 margin = -29
@@ -160,7 +160,7 @@ margin = -29
 title = 'Config Environments'
 text = "Configure your application your way for development, staging, and production."
 image = 'config-icon'
-url = '/guide/configuration/#environment'
+url = 'guide/configuration/#environment'
 button = 'Learn More'
 color = 'yellow'
 margin = -3
@@ -169,7 +169,7 @@ margin = -3
 title = 'Query Strings'
 text = "Handling query strings and parameters is type-safe and easy in Rocket."
 image = 'query-icon'
-url = '/guide/requests/#query-strings'
+url = 'guide/requests/#query-strings'
 button = 'Learn More'
 color = 'orange'
 margin = -3
@@ -178,7 +178,7 @@ margin = -3
 title = 'Testing Library'
 text = "Unit test your applications with ease using the built-in testing library."
 image = 'testing-icon'
-url = '/guide/testing#testing'
+url = 'guide/testing#testing'
 button = 'Learn More'
 color = 'green'
 

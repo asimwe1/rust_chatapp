@@ -33,10 +33,10 @@ _unless_ the authentication or authorization applies to all or most of the
 application. On the other hand, you _should_ use a fairing to record timing and
 usage statistics or to enforce global security policies.
 
-[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
-[request guard]: /guide/requests/#request-guards
-[request guards]: /guide/requests/#request-guards
-[data guards]: /guide/requests/#body-data
+[`Fairing`]: @api/rocket/fairing/trait.Fairing.html
+[request guard]: ../requests/#request-guards
+[request guards]: ../requests/#request-guards
+[data guards]: ../requests/#body-data
 
 ### Attaching
 
@@ -52,8 +52,8 @@ rocket::ignite()
     .launch();
 ```
 
-[`attach`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.attach
-[`Rocket`]: https://api.rocket.rs/rocket/struct.Rocket.html
+[`attach`]: @api/rocket/struct.Rocket.html#method.attach
+[`Rocket`]: @api/rocket/struct.Rocket.html
 
 Fairings are executed in the order in which they are attached: the first
 attached fairing has its callbacks executed before all others. Because fairing
@@ -68,12 +68,11 @@ events is described below:
   * **Attach (`on_attach`)**
 
     An attach callback is called when a fairing is first attached via the
-    [`attach`](https://api.rocket.rs/rocket/struct.Rocket.html#method.attach)
-    method. An attach callback can arbitrarily modify the `Rocket` instance
-    being constructed and optionally abort launch. Attach fairings are commonly
-    used to parse and validate configuration values, aborting on bad
-    configurations, and inserting the parsed value into managed state for later
-    retrieval.
+    [`attach`](@api/rocket/struct.Rocket.html#method.attach) method. An attach
+    callback can arbitrarily modify the `Rocket` instance being constructed and
+    optionally abort launch. Attach fairings are commonly used to parse and
+    validate configuration values, aborting on bad configurations, and inserting
+    the parsed value into managed state for later retrieval.
 
   * **Launch (`on_launch`)**
 
@@ -108,12 +107,12 @@ fairing and determine the set of callbacks the fairing is registering for. A
 [`on_launch`], [`on_request`], and [`on_response`]. Each callback has a default
 implementation that does absolutely nothing.
 
-[`Info`]: https://api.rocket.rs/rocket/fairing/struct.Info.html
-[`info`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#tymethod.info
-[`on_attach`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_attach
-[`on_launch`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_launch
-[`on_request`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_request
-[`on_response`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#method.on_response
+[`Info`]: @api/rocket/fairing/struct.Info.html
+[`info`]: @api/rocket/fairing/trait.Fairing.html#tymethod.info
+[`on_attach`]: @api/rocket/fairing/trait.Fairing.html#method.on_attach
+[`on_launch`]: @api/rocket/fairing/trait.Fairing.html#method.on_launch
+[`on_request`]: @api/rocket/fairing/trait.Fairing.html#method.on_request
+[`on_response`]: @api/rocket/fairing/trait.Fairing.html#method.on_response
 
 ### Requirements
 
@@ -182,8 +181,7 @@ impl Fairing for Counter {
 ```
 
 For brevity, imports are not shown. The complete example can be found in the
-[`Fairing`
-documentation](https://api.rocket.rs/rocket/fairing/trait.Fairing.html#example).
+[`Fairing` documentation](@api/rocket/fairing/trait.Fairing.html#example).
 
 ## Ad-Hoc Fairings
 
@@ -212,4 +210,4 @@ rocket::ignite()
     }));
 ```
 
-[`AdHoc`]: https://api.rocket.rs/rocket/fairing/enum.AdHoc.html
+[`AdHoc`]: @api/rocket/fairing/enum.AdHoc.html

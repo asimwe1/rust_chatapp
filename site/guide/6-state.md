@@ -22,7 +22,7 @@ The process for using managed state is simple:
 ### Adding State
 
 To instruct Rocket to manage state for your application, call the
-[`manage`](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) method
+[`manage`](@api/rocket/struct.Rocket.html#method.manage) method
 on an instance of `Rocket`. For example, to ask Rocket to manage a `HitCount`
 structure with an internal `AtomicUsize` with an initial value of `0`, we can
 write the following:
@@ -48,8 +48,8 @@ rocket::ignite()
 ### Retrieving State
 
 State that is being managed by Rocket can be retrieved via the
-[`State`](https://api.rocket.rs/rocket/struct.State.html) type: a [request
-guard](/guide/requests/#request-guards) for managed state. To use the request
+[`State`](@api/rocket/struct.State.html) type: a [request
+guard](../requests/#request-guards) for managed state. To use the request
 guard, add a `State<T>` type to any request handler, where `T` is the type of
 the managed state. For example, we can retrieve and respond with the current
 `HitCount` in a `count` route as follows:
@@ -74,11 +74,9 @@ the offending route. Instead, Rocket will log an error message and return a
 **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
-example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/state) and
-learn more about the [`manage`
-method](https://api.rocket.rs/rocket/struct.Rocket.html#method.manage) and
-[`State` type](https://api.rocket.rs/rocket/struct.State.html) in the API docs.
+example on GitHub](@example/state) and learn more about the [`manage`
+method](@api/rocket/struct.Rocket.html#method.manage) and [`State`
+type](@api/rocket/struct.State.html) in the API docs.
 
 ### Within Guards
 
@@ -94,7 +92,7 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 }
 ```
 
-[`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
+[`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
 
 ### Request-Local State
 
@@ -142,8 +140,8 @@ request-local state to cache expensive authentication and authorization
 computations, and the [`Fairing`] documentation, which uses request-local state
 to implement request timing.
 
-[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.htmll#request-local-state
-[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html#request-local-state
+[`FromRequest`]: @api/rocket/request/trait.FromRequest.htmll#request-local-state
+[`Fairing`]: @api/rocket/fairing/trait.Fairing.html#request-local-state
 
 ## Databases
 
@@ -255,4 +253,4 @@ fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 For more on Rocket's built-in database support, see the
 [`rocket_contrib::databases`] module documentation.
 
-[`rocket_contrib::databases`]: https://api.rocket.rs/rocket_contrib/databases/index.html
+[`rocket_contrib::databases`]: @api/rocket_contrib/databases/index.html

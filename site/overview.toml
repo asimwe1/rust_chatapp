@@ -47,7 +47,7 @@ Each dynamic parameter (`name` and `age`) must have a type, here `&str` and
 `u8`, respectively. Rocket will attempt to parse the string in the parameter's
 position in the path into that type. The route will only be called if parsing
 succeeds. To parse the string, Rocket uses the
-[FromParam](https://api.rocket.rs/rocket/request/trait.FromParam.html) trait,
+[FromParam](@api/rocket/request/trait.FromParam.html) trait,
 which you can implement for your own types!
 '''
 
@@ -55,7 +55,7 @@ which you can implement for your own types!
 name = "Handling Data"
 content = '''
 Request body data is handled in a special way in Rocket: via the
-[FromData](https://api.rocket.rs/rocket/data/trait.FromData.html) trait. Any
+[FromData](@api/rocket/data/trait.FromData.html) trait. Any
 type that implements `FromData` can be derived from incoming body data. To tell
 Rocket that you're expecting request body data, the `data` route argument is
 used with the name of the parameter in the request handler:
@@ -69,13 +69,13 @@ fn login(user_form: Form<UserLogin>) -> String {
 
 The `login` route above says that it expects `data` of type `Form<UserLogin>` in
 the `user_form` parameter. The
-[Form](https://api.rocket.rs/rocket/request/struct.Form.html) type is a built-in
+[Form](@api/rocket/request/struct.Form.html) type is a built-in
 Rocket type that knows how to parse web forms into structures. Rocket will
 automatically attempt to parse the request body into the `Form` and call the
 `login` handler if parsing succeeds. Other built-in `FromData` types include
-[`Data`](https://api.rocket.rs/rocket/struct.Data.html),
-[`Json`](https://api.rocket.rs/rocket_contrib/struct.Json.html), and
-[`Flash`](https://api.rocket.rs/rocket/response/struct.Flash.html)
+[`Data`](@api/rocket/struct.Data.html),
+[`Json`](@api/rocket_contrib/struct.Json.html), and
+[`Flash`](@api/rocket/response/struct.Flash.html)
 '''
 
 [[panels]]
@@ -99,7 +99,7 @@ fn sensitive(key: ApiKey) -> &'static str { ... }
 `ApiKey` protects the `sensitive` handler from running incorrectly. In order for
 Rocket to call the `sensitive` handler, the `ApiKey` type needs to be derived
 through a
-[FromRequest](https://api.rocket.rs/rocket/request/trait.FromRequest.html)
+[FromRequest](@api/rocket/request/trait.FromRequest.html)
 implementation, which in this case, validates the API key header. Request guards
 are a powerful and unique Rocket concept; they centralize application policy and
 invariants through types.
@@ -109,7 +109,7 @@ invariants through types.
 name = "Responders"
 content = '''
 The return type of a request handler can be any type that implements
-[Responder](https://api.rocket.rs/rocket/response/trait.Responder.html):
+[Responder](@api/rocket/response/trait.Responder.html):
 
 ```rust
 #[get("/")]
@@ -119,12 +119,12 @@ fn route() -> T { ... }
 Above, T must implement `Responder`. Rocket implements `Responder` for many of
 the standard library types including `&str`, `String`, `File`, `Option`, and
 `Result`. Rocket also implements custom responders such as
-[Redirect](https://api.rocket.rs/rocket/response/struct.Redirect.html),
-[Flash](https://api.rocket.rs/rocket/response/struct.Flash.html), and
-[Template](https://api.rocket.rs/rocket_contrib/struct.Template.html).
+[Redirect](@api/rocket/response/struct.Redirect.html),
+[Flash](@api/rocket/response/struct.Flash.html), and
+[Template](@api/rocket_contrib/struct.Template.html).
 
 The task of a `Responder` is to generate a
-[`Response`](https://api.rocket.rs/rocket/response/struct.Response.html), if
+[`Response`](@api/rocket/response/struct.Response.html), if
 possible. `Responder`s can fail with a status code. When they do, Rocket calls
 the corresponding error catcher, a `catch` route, which can be declared as
 follows:

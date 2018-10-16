@@ -6,7 +6,7 @@ This is the official guide. It is designed to serve as a starting point to
 writing web applications with Rocket and Rust. The guide is also designed to be
 a reference for experienced Rocket developers. This guide is conversational in
 tone. For concise and purely technical documentation, see the [API
-documentation](https://api.rocket.rs).
+documentation](@api).
 
 The guide is split into several sections, each with a focus on a different
 aspect of Rocket. The sections are:

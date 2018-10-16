@@ -131,8 +131,8 @@ incoming JSON data. You should use the `limits` parameter for your application's
 data limits as well. Data limits can be retrieved at runtime via the
 [`Request::limits()`] method.
 
-[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
-[`Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html#incoming-data-limits
+[`Request::limits()`]: @api/rocket/struct.Request.html#method.limits
+[`Json`]: @api/rocket_contrib/struct.Json.html#incoming-data-limits
 
 ## Extras
 
@@ -140,7 +140,7 @@ In addition to overriding default configuration parameters, a configuration file
 can also define values for any number of _extra_ configuration parameters. While
 these parameters aren't used by Rocket directly, other libraries, or your own
 application, can use them as they wish. As an example, the
-[Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) type
+[Template](@api/rocket_contrib/struct.Template.html) type
 accepts a value for the `template_dir` configuration parameter. The parameter
 can be set in `Rocket.toml` as follows:
 
@@ -167,8 +167,8 @@ To retrieve a custom, extra configuration parameter in your application, we
 recommend using an [ad-hoc attach fairing] in combination with [managed state].
 For example, if your application makes use of a custom `assets_dir` parameter:
 
-[ad-hoc attach fairing]: /guide/fairings/#ad-hoc-fairings
-[managed state]: /guide/state/#managed-state
+[ad-hoc attach fairing]: ../fairings/#ad-hoc-fairings
+[managed state]: ../state/#managed-state
 
 ```toml
 [development]
