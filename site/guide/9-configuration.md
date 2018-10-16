@@ -237,9 +237,10 @@ ROCKET_ARRAY=[1,"b",3.14]
 ROCKET_DICT={key="abc",val=123}
 ```
 
-## rocket::custom
+## Custom Programmatic Configuration
 
-Rocket can also be configured using `rocket::custom` and passing configuration options like so:
+In addition to using environment variables or a config file, Rocket can also be
+configured using the [`rocket::custom()`] method and [`ConfigBuilder`]:
 
 ```rust
 use rocket::config::{Config, Environment};
@@ -252,7 +253,12 @@ let config = Config::build(Environment::Staging)
 let app = rocket::custom(config, false);
 ```
 
-If Rocket is launched through `rocket::custom` it will ignore `Rocket.toml` and any environment variables present, allowing you to use your own configuration loading code.
+Configuration via `rocket::custom()` replaces all configuration from
+`Rocket.toml` or environment variables. In other words, using `rocket::custom()`
+results in `Rocket.toml` and environment variables being ignored.
+
+[`rocket::custom()`]: @api/rocket/fn.custom.html
+[`ConfigBuilder`]: @api/rocket/config/struct.ConfigBuilder.html
 
 ## Configuring TLS
 
