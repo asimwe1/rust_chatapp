@@ -15,80 +15,12 @@
 //! here is purely technical. The code generation facilities are documented
 //! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
 //!
-//! ## Custom Attributes
-//!
-//! This crate implements the following custom attributes:
-//!
-//!   * **route**
-//!   * **get**
-//!   * **put**
-//!   * **post**
-//!   * **delete**
-//!   * **head**
-//!   * **patch**
-//!   * **options**
-//!   * **catch**
-//!
-//! ### Route Attributes
-//!
-//! The grammar for all _route_ attributes, including **route**, **get**,
-//! **put**, **post**, **delete**, **head**, **patch**, and **options** is
-//! defined as:
-//!
-//! ```text
-//! route := METHOD? '(' ('path' '=')? path (',' kv_param)* ')'
-//!
-//! path := URI_SEG
-//!       | DYNAMIC_PARAM
-//!       | '?' DYNAMIC_PARAM
-//!       | path '/' path
-//!       (string literal)
-//!
-//! kv_param := 'rank' '=' INTEGER
-//!           | 'format' '=' STRING
-//!           | 'data' '=' DYNAMIC_PARAM
-//!
-//! INTEGER := isize, as defined by Rust
-//! STRING := UTF-8 string literal, as defined by Rust
-//! IDENT := valid identifier, as defined by Rust
-//!
-//! URI_SEG := valid HTTP URI Segment
-//! DYNAMIC_PARAM := '<' IDENT '..'? '>' (string literal)
-//! ```
-//!
-//! Note that the **route** attribute takes a method as its first argument,
-//! while the remaining do not. That is, **route** looks like:
-//!
-//! ```rust,ignore
-//! #[route(GET, path = "/hello")]
-//! ```
-//!
-//! while the equivalent using **get** looks like:
-//!
-//! ```rust,ignore
-//! #[get("/hello")]
-//! ```
-//!
-//! ### Catch Attribute
-//!
-//! The syntax for the **catch** attribute is:
-//!
-//! ```text
-//! catch := INTEGER
-//! ```
-//!
-//! A use of the `catch` attribute looks like:
-//!
-//! ```rust,ignore
-//! #[catch(404)]
-//! ```
-//!
 //! # Debugging Codegen
 //!
-//! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate logs
-//! the items it has generated to the console at compile-time. For example, you
-//! might run the following to build a Rocket application with codegen logging
-//! enabled:
+//! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate
+//! logs, at compile-time and to the console, the items it generates. For
+//! example, you might run the following to build a Rocket application with
+//! codegen debug logging enabled:
 //!
 //! ```sh
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
@@ -136,6 +68,187 @@ macro_rules! emit {
 
 macro_rules! route_attribute {
     ($name:ident => $method:expr) => (
+        /// Attribute to generate a [`Route`] and associated metadata.
+        ///
+        /// This and all other route attributes can only be applied to free
+        /// functions:
+        ///
+        /// ```rust
+        /// # #![feature(proc_macro_hygiene, decl_macro)]
+        /// # #[macro_use] extern crate rocket;
+        /// #
+        /// #[get("/")]
+        /// fn index() -> &'static str {
+        ///     "Hello, world!"
+        /// }
+        /// ```
+        ///
+        /// There are 7 method-specific route attributes:
+        ///
+        ///   * [`#[get]`] - `GET` specific route
+        ///   * [`#[put]`] - `PUT` specific route
+        ///   * [`#[post]`] - `POST` specific route
+        ///   * [`#[delete]`] - `DELETE` specific route
+        ///   * [`#[head]`] - `HEAD` specific route
+        ///   * [`#[options]`] - `OPTIONS` specific route
+        ///   * [`#[patch]`] - `PATCH` specific route
+        ///
+        /// Additionally, [`#[route]`] allows the method and path to be
+        /// explicitly specified:
+        ///
+        /// ```rust
+        /// # #![feature(proc_macro_hygiene, decl_macro)]
+        /// # #[macro_use] extern crate rocket;
+        /// #
+        /// #[route(GET, path = "/")]
+        /// fn index() -> &'static str {
+        ///     "Hello, world!"
+        /// }
+        /// ```
+        ///
+        /// [`#[delete]`]: attr.delete.html
+        /// [`#[get]`]: attr.get.html
+        /// [`#[head]`]: attr.head.html
+        /// [`#[options]`]: attr.options.html
+        /// [`#[patch]`]: attr.patch.html
+        /// [`#[post]`]: attr.post.html
+        /// [`#[put]`]: attr.put.html
+        /// [`#[route]`]: attr.route.html
+        ///
+        /// # Grammar
+        ///
+        /// The grammar for all method-specific route attributes is defined as:
+        ///
+        /// ```text
+        /// route := '"' path ('?' query)? '"' (',' parameter)*
+        ///
+        /// path := ('/' segment)*
+        ///
+        /// query := segment ('&' segment)*
+        ///
+        /// segment := URI_SEG
+        ///          | SINGLE_PARAM
+        ///          | MULTI_PARAM
+        ///
+        /// parameter := 'rank' '=' INTEGER
+        ///            | 'format' '=' '"' MEDIA_TYPE '"'
+        ///            | 'data' '=' '"' SINGLE_PARAM '"'
+        ///
+        /// SINGLE_PARAM := '<' IDENT '>'
+        /// MULTI_PARAM := '<' IDENT '..>'
+        ///
+        /// URI_SEG := valid, non-percent-encoded HTTP URI segment
+        /// MEDIA_TYPE := valid HTTP media type or known shorthand
+        ///
+        /// INTEGER := unsigned integer, as defined by Rust
+        /// IDENT := valid identifier, as defined by Rust, except `_`
+        /// ```
+        ///
+        /// The generic route attribute is defined as:
+        ///
+        /// ```text
+        /// generic-route := METHOD ',' path = route
+        /// ```
+        ///
+        /// # Typing Requirements
+        ///
+        /// Every identifier that appears in a dynamic parameter (`SINGLE_PARAM`
+        /// or `MULTI_PARAM`) must appear as an argument to the function. For
+        /// example, the following route requires the decorated function to have
+        /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
+        ///
+        /// ```rust
+        /// # #![feature(proc_macro_hygiene, decl_macro)]
+        /// # #[macro_use] extern crate rocket;
+        /// # use rocket::request::Form;
+        /// # use std::path::PathBuf;
+        /// # #[derive(FromForm)] struct F { a: usize }
+        /// #[get("/<foo>/bar/<baz..>?<msg>&closed&<rest..>", data = "<form>")]
+        /// # fn f(foo: usize, baz: PathBuf, msg: String, rest: Form<F>, form: Form<F>) {  }
+        /// ```
+        ///
+        /// The type of each function argument corresponding to a dynamic
+        /// parameter is required to implement one of Rocket's guard traits. The
+        /// exact trait that is required to be implemented depends on the kind
+        /// of dynamic parameter (`SINGLE` or `MULTI`) and where in the route
+        /// attribute the parameter appears. The table below summarizes trait
+        /// requirements:
+        ///
+        /// | position | kind        | trait             |
+        /// |----------|-------------|-------------------|
+        /// | path     | `<ident>`   | [`FromParam`]     |
+        /// | path     | `<ident..>` | [`FromSegments`]  |
+        /// | query    | `<ident>`   | [`FromFormValue`] |
+        /// | query    | `<ident..>` | [`FromQuery`]     |
+        /// | data     | `<ident>`   | [`FromData`]      |
+        ///
+        /// The type of each function argument that _does not_ have a
+        /// corresponding dynamic parameter is required to implement the
+        /// [`FromRequest`] trait.
+        ///
+        /// The return type of the decorated function must implement the
+        /// [`Responder`] trait.
+        ///
+        /// [`FromParam`]: ../rocket/request/trait.FromParam.html
+        /// [`FromSegments`]: ../rocket/request/trait.FromSegments.html
+        /// [`FromFormValue`]: ../rocket/request/form/trait.FromFormValue.html
+        /// [`FromQuery`]: ../rocket/request/trait.FromQuery.html
+        /// [`FromData`]: ../rocket/data/trait.FromData.html
+        /// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
+        /// [`Route`]: ../rocket/struct.Route.html
+        /// [`Responder`]: ../rocket/response/trait.Responder.html
+        ///
+        /// # Semantics
+        ///
+        /// The attribute generates three items:
+        ///
+        ///   1. A route [`Handler`].
+        ///
+        ///      The generated handler validates and generates all arguments for
+        ///      the generated function according to the trait that their type
+        ///      must implement. The order in which arguments are processed is:
+        ///
+        ///         1. Request guards from left to right.
+        ///
+        ///            If a request guard fails, the request is forwarded if the
+        ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
+        ///            `Failure`. See [`FromRequest` Outcomes] for further
+        ///            detail.
+        ///
+        ///         2. Path and query parameters from left to right as declared
+        ///            in the function argument list.
+        ///
+        ///            If a path or query parameter guard fails, the request is
+        ///            forwarded.
+        ///
+        ///         3. Data parameter, if any.
+        ///
+        ///            If a data guard fails, the request is forwarded if the
+        ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
+        ///            `Failure`. See [`FromData` Outcomes] for further detail.
+        ///
+        ///      If all validation succeeds, the decorated function is called.
+        ///      The returned value is used to generate a [`Response`] via the
+        ///      type's [`Responder`] implementation.
+        ///
+        ///   2. A static structure used by [`routes!`] to generate a [`Route`].
+        ///
+        ///      The static structure (and resulting [`Route`]) is populated
+        ///      with the name (the function's name), path, query, rank, and
+        ///      format from the route attribute. The handler is set to the
+        ///      generated handler.
+        ///
+        ///   3. A macro used by [`uri!`] to type-check and generate an
+        ///      [`Origin`].
+        ///
+        /// [`Handler`]: ../rocket/trait.Handler.html
+        /// [`routes!`]: macro.routes.html
+        /// [`uri!`]: macro.uri.html
+        /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
+        /// [`Outcome`]: ../rocket/enum.Outcome.html
+        /// [`Response`]: ../rocket/struct.Response.html
+        /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
+        /// [`FromData` Outcomes]: ../rocket/data/trait.FromData.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -151,6 +264,68 @@ route_attribute!(delete => Method::Delete);
 route_attribute!(head => Method::Head);
 route_attribute!(patch => Method::Patch);
 route_attribute!(options => Method::Options);
+
+/// Attribute to generate a [`Catcher`] and associated metadata.
+///
+/// This attribute can only be applied to free functions:
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// #
+/// use rocket::Request;
+///
+/// #[catch(404)]
+/// fn not_found(req: &Request) -> String {
+///     format!("Sorry, {} does not exist.", req.uri())
+/// }
+/// ```
+///
+/// # Grammar
+///
+/// The grammar for the `#[catch]` attributes is defined as:
+///
+/// ```text
+/// catch := STATUS
+///
+/// STATUS := valid HTTP status code (integer in [200, 599])
+/// ```
+///
+/// # Typing Requirements
+///
+/// The decorated function must take exactly zero or one argument. If the
+/// decorated function takes an argument, the argument's type must be
+/// [`&Request`].
+///
+/// The return type of the decorated function must implement the [`Responder`]
+/// trait.
+///
+/// # Semantics
+///
+/// The attribute generates two items:
+///
+///   1. An [`ErrorHandler`].
+///
+///      The generated handler calls the decorated function, passing in the
+///      [`&Request`] value if requested. The returned value is used to generate
+///      a [`Response`] via the type's [`Responder`] implementation.
+///
+///   2. A static structure used by [`catchers!`] to generate a [`Catcher`].
+///
+///      The static structure (and resulting [`Catcher`]) is populated
+///      with the name (the function's name) and status code from the
+///      route attribute. The handler is set to the generated handler.
+///
+/// [`&Request`]: ../rocket/struct.Request.html
+/// [`ErrorHandler`]: ../rocket/type.ErrorHandler.html
+/// [`catchers!`]: macro.catchers.html
+/// [`Catcher`]: ../rocket/struct.Catcher.html
+/// [`Response`]: ../rocket/struct.Response.html
+/// [`Responder`]: ../rocket/response/trait.Responder.html
+#[proc_macro_attribute]
+pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::catch::catch_attribute(args, input))
+}
 
 /// Derive for the [`FromFormValue`] trait.
 ///
@@ -406,11 +581,6 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Responder, attributes(response))]
 pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))
-}
-
-#[proc_macro_attribute]
-pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
-    emit!(attribute::catch::catch_attribute(args, input))
 }
 
 /// Generates a [`Vec`] of [`Route`]s from a set of route paths.
