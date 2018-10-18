@@ -498,7 +498,7 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// #
 /// # #[catch(404)] fn not_found() { /* .. */ }
 /// # mod inner {
-/// #     #[catch(401)] pub fn unauthorized() { /* .. */ }
+/// #     #[catch(400)] pub fn unauthorized() { /* .. */ }
 /// # }
 /// #
 /// let my_catchers = catchers![not_found, inner::unauthorized];
@@ -508,7 +508,7 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// assert_eq!(not_found.code, 404);
 ///
 /// let unauthorized = &my_catchers[1];
-/// assert_eq!(unauthorized.code, 401);
+/// assert_eq!(unauthorized.code, 400);
 /// ```
 ///
 /// The grammar for `catchers!` is defined as:
