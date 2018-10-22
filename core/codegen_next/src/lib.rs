@@ -147,7 +147,7 @@ macro_rules! route_attribute {
         /// The generic route attribute is defined as:
         ///
         /// ```text
-        /// generic-route := METHOD ',' path = route
+        /// generic-route := METHOD ',' 'path' '=' route
         /// ```
         ///
         /// # Typing Requirements
