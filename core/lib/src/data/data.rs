@@ -91,10 +91,10 @@ impl Data {
     }
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
-    crate fn from_hyp(body: HyperBodyReader) -> Result<Data, &'static str> {
+    crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
         #[inline(always)]
         #[cfg(feature = "tls")]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
+        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {
@@ -105,14 +105,13 @@ impl Data {
 
         #[inline(always)]
         #[cfg(not(feature = "tls"))]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
+        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
         }
 
         // Retrieve the underlying Http(s)Stream from Hyper.
-        let hyper_net_stream = body.get_ref().get_ref();
-        let net_stream = match concrete_stream(hyper_net_stream) {
+        let net_stream = match concrete_stream(*body.get_mut().get_mut()) {
             Some(net_stream) => net_stream,
             None => return Err("Stream is not an HTTP(s) stream!")
         };
@@ -120,11 +119,13 @@ impl Data {
         // Set the read timeout to 5 seconds.
         let _ = net_stream.set_read_timeout(Some(Duration::from_secs(5)));
 
-        // Steal the internal, undecoded data buffer and net stream from Hyper.
+        // Steal the internal, undecoded data buffer from Hyper.
+        let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
+        hyper_buf.truncate(cap); // slow, but safe
+        let mut cursor = Cursor::new(hyper_buf);
+        cursor.set_position(pos as u64);
+
         // Create an HTTP reader from the buffer + stream.
-        // FIXME(hyper): we really shouldn't need to allocate here.
-        let hyper_buf = body.get_ref().get_buf().to_vec();
-        let cursor = Cursor::new(hyper_buf);
         let inner_data = cursor.chain(net_stream);
         let http_stream = match body {
             SizedReader(_, n) => SizedReader(inner_data, n),
