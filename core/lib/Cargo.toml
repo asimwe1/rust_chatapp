@@ -18,7 +18,7 @@ categories = ["web-programming::http-server"]
 tls = ["rocket_http/tls"]
 
 [dependencies]
-rocket_codegen_next = { version = "0.4.0-dev", path = "../codegen_next" }
+rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 rocket_http = { version = "0.4.0-dev", path = "../http" }
 yansi = "0.4"
 log = "0.4"
