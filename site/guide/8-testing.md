@@ -194,14 +194,20 @@ ROCKET_CODEGEN_DEBUG=1 cargo build
 During compilation, you should see output like:
 
 ```rust
-Emitting item:
-fn rocket_route_fn_hello<'_b>(
-    __req: &'_b ::rocket::Request,
-    __data: ::rocket::Data
-) -> ::rocket::handler::Outcome<'_b> {
-    let responder = hello();
-    ::rocket::handler::Outcome::from(__req, responder)
-}
+note: emitting Rocket code generation debug output
+ --> examples/hello_world/src/main.rs:7:1
+  |
+7 | #[get("/")]
+  | ^^^^^^^^^^^
+  |
+  = note:
+    fn rocket_route_fn_hello<'_b>(
+        __req: &'_b ::rocket::Request,
+        __data: ::rocket::Data
+    ) -> ::rocket::handler::Outcome<'_b> {
+        let responder = hello();
+        ::rocket::handler::Outcome::from(__req, responder)
+    }
 ```
 
 This corresponds to the facade request handler Rocket has generated for the

@@ -58,6 +58,8 @@ fn json() -> content::Json<&'static str> {
 }
 ```
 
+! warning: This is _not_ the same as the [`Json`] in [`rocket_contrib`]!
+
 [`Accepted`]: @api/rocket/response/status/struct.Accepted.html
 [`content::Json`]: @api/rocket/response/content/struct.Json.html
 
@@ -82,11 +84,53 @@ type. For instance, to forward to the catcher for **406 - Not Acceptable**, you
 would write:
 
 ```rust
+use rocket::response::Failure;
+
 #[get("/")]
 fn just_fail() -> Failure {
     Failure(Status::NotAcceptable)
 }
 ```
+
+## Custom Responders
+
+The [`Responder`] trait documentation details how to implement your own custom
+responders by explicitly implementing the trait. For most use cases, however,
+Rocket makes it possible to automatically derive an implementation of
+`Responder`. In particular, if your custom responder wraps an existing
+responder, headers, or sets a custom status or content-type, `Responder` can be
+automatically derived:
+
+```rust
+#[derive(Responder)]
+#[response(status = 500, content_type = "json")]
+struct MyResponder {
+    inner: OtherResponder,
+    header: SomeHeader,
+    more: YetAnotherHeader,
+    #[response(ignore)]
+    unrelated: MyType,
+}
+```
+
+For the example above, Rocket generates a `Responder` implementation that:
+
+  * Set the response's status to `500: Internal Server Error`.
+  * Sets the Content-Type to `application/json`.
+  * Adds the headers `self.header` and `self.more` to the response.
+  * Completes the response using `self.inner`.
+
+Note that the _first_ field is used as the inner responder while all remaining
+fields (unless ignored with `#[response(ignore)]`) are added as headers to the
+response. The optional `#[responder]` attribute can be used to customize the
+status and content-type of the response. Because `ContentType` and `Status` are
+themselves headers, you can also dynamically set the content-type and status by
+simply including fields of these types.
+
+For more on using the `Responder` derive, see the [`Responder` derive]
+documentation.
+
+[`Responder` derive]: @api/rocket_codegen/derive.Responder.html
 
 ## Implementations
 
@@ -170,7 +214,8 @@ returned to the client.
 ## Rocket Responders
 
 Some of Rocket's best features are implemented through responders. You can find
-many of these responders in the [`response`] module. Among these are:
+many of these responders in the [`response`] module and [`rocket_contrib`]
+library. Among these are:
 
   * [`Content`] - Used to override the Content-Type of a response.
   * [`NamedFile`] - Streams a file to the client; automatically sets the
@@ -179,6 +224,9 @@ many of these responders in the [`response`] module. Among these are:
   * [`Stream`] - Streams a response to a client from an arbitrary `Read`er type.
   * [`status`] - Contains types that override the status code of a response.
   * [`Flash`] - Sets a "flash" cookie that is removed when accessed.
+  * [`Json`] - Automatically serializes values into JSON.
+  * [`MsgPack`] - Automatically serializes values into MessagePack.
+  * [`Template`] - Renders a dynamic template using handlebars or Tera.
 
 [`status`]: @api/rocket/response/status/
 [`response`]: @api/rocket/response/
@@ -187,6 +235,7 @@ many of these responders in the [`response`] module. Among these are:
 [`Redirect`]: @api/rocket/response/struct.Redirect.html
 [`Stream`]: @api/rocket/response/struct.Stream.html
 [`Flash`]: @api/rocket/response/struct.Flash.html
+[`MsgPack`]: @api/rocket_contrib/msgpack/struct.MsgPack.html
 
 ### Streaming
 
@@ -287,3 +336,74 @@ fully composed application that makes use of Handlebars templates.
 
 [`Template`]: @api/rocket_contrib/templates/struct.Template.html
 [configurable]: ../configuration/#extras
+
+## Typed URIs
+
+Rocket's [`uri!`] macro allows you to build URIs routes in your application in a
+robust, type-safe, and URI-safe manner. Type or route parameter mismatches are
+caught at compile-time.
+
+The `uri!` returns an [`Origin`] structure with the URI of the supplied route
+interpolated with the given values. Note that `Origin` implements `Into<Uri>`
+(and by extension, `TryInto<Uri>`), so it can be converted into a [`Uri`] using
+`.into()` as needed and passed into methods such as [`Redirect::to()`].
+
+For example, given the following route:
+
+```rust
+#[get("/person/<name>/<age>")]
+fn person(name: String, age: u8) -> String {
+    format!("Hello {}! You're {} years old.", name, age)
+}
+```
+
+URIs to `person` can be created as follows:
+
+```rust
+// with unnamed parameters, in route path declaration order
+let mike = uri!(person: "Mike Smith", 28);
+assert_eq!(mike.path(), "/person/Mike%20Smith/28");
+
+// with named parameters, order irrelevant
+let mike = uri!(person: name = "Mike", age = 28);
+let mike = uri!(person: age = 28, name = "Mike");
+assert_eq!(mike.path(), "/person/Mike/28");
+
+// with a specific mount-point
+let mike = uri!("/api", person: name = "Mike", age = 28);
+assert_eq!(mike.path(), "/api/person/Mike/28");
+```
+
+Rocket informs you of any mismatched parameters at compile-time:
+
+```rust
+error: person route uri expects 2 parameter but 1 was supplied
+  --> src/main.rs:21:19
+   |
+21 |     uri!(person: "Mike Smith");
+   |                  ^^^^^^^^^^^^
+   |
+   = note: expected parameter: age: u8
+```
+
+Rocket also informs you of any type errors at compile-time:
+
+```rust
+error: the trait bound u8: rocket::http::uri::FromUriParam<&str> is not satisfied
+  --> src/main:25:23
+   |
+25 |     uri!(person: age = "ten", name = "Mike");
+   |                        ^^^^^ FromUriParam<&str> is not implemented for u8
+   |
+   = note: required by rocket::http::uri::FromUriParam::from_uri_param
+```
+
+We recommend that you use `uri!` exclusively when constructing URIs to your
+routes.
+
+See the [`uri!`] documentation for more usage details.
+
+[`Origin`]: @api/rocket/http/uri/struct.Origin.html
+[`Uri`]: @api/rocket/http/uri/enum.Uri.html
+[`Redirect::to()`]: @api/rocket/response/struct.Redirect.html#method.to
+[`uri!`]: @api/rocket_codegen/macro.uri.html

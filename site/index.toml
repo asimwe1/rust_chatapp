@@ -80,7 +80,7 @@ code = '''
 
   #[post("/", data = "<task>")]
   fn new(task: Form<Task>) -> Flash<Redirect> {
-      if task.get().description.is_empty() {
+      if task.description.is_empty() {
           Flash::error(Redirect::to("/"), "Cannot be empty.")
       } else {
           Flash::success(Redirect::to("/"), "Task added.")
@@ -106,9 +106,9 @@ code = '''
   }
 
   #[put("/<id>", data = "<message>")]
-  fn update(id: ID, message: Json<Message>) -> JsonValue {
-      if DB.contains_key(&id) {
-          DB.insert(id, &message.contents);
+  fn update(db: &Db, id: Id, message: Json<Message>) -> JsonValue {
+      if db.contains_key(&id) {
+          db.insert(id, &message.contents);
           json!({ "status": "ok" })
       } else {
           json!({ "status": "error" })
@@ -132,7 +132,7 @@ text = '''
 
 [[bottom_features]]
 title = 'Templating'
-text = "Rocket makes rendering templates a breeze with built-in templating support."
+text = "Rocket makes templating a breeze with built-in templating support."
 image = 'templating-icon'
 url = 'guide/responses/#templates'
 button = 'Learn More'
@@ -166,27 +166,35 @@ color = 'yellow'
 margin = -3
 
 [[bottom_features]]
-title = 'Query Strings'
-text = "Handling query strings and parameters is type-safe and easy in Rocket."
-image = 'query-icon'
-url = 'guide/requests/#query-strings'
-button = 'Learn More'
-color = 'orange'
-margin = -3
-
-[[bottom_features]]
 title = 'Testing Library'
 text = "Unit test your applications with ease using the built-in testing library."
 image = 'testing-icon'
 url = 'guide/testing#testing'
 button = 'Learn More'
-color = 'green'
+color = 'orange'
 
-# Blocked on Hyper/OpenSSL.
+[[bottom_features]]
+title = 'Typed URIs'
+text = "Rocket typechecks route URIs for you so you never mistype a URI again."
+image = 'ship-icon'
+url = 'guide/responses/#typed-uris'
+button = 'Learn More'
+color = 'green'
+margin = -20
+
 # [[bottom_features]]
-# title = 'Signed Sessions'
-# text = "Safe, secure, signed sessions are built-in to Rocket so your users can stay safe."
-# image = 'sessions-icon'
-# url = '/overview'
+# title = 'Query Strings'
+# text = "Handling query strings and parameters is type-safe and easy in Rocket."
+# image = 'query-icon'
+# url = 'guide/requests/#query-strings'
 # button = 'Learn More'
-# color = 'green'
+# color = 'red'
+# margin = -3
+
+# [[bottom_features]]
+# title = 'Private Cookies'
+# text = "Safe, secure, private cookies are built-in so your users can stay safe."
+# image = 'sessions-icon'
+# url = 'guide/requests/#private-cookies'
+# button = 'Learn More'
+# color = 'purple'

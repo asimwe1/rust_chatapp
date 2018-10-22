@@ -9,9 +9,9 @@ about incoming requests and outgoing responses.
 Any type that implements the [`Fairing`] trait is a _fairing_. Fairings hook
 into Rocket's request lifecycle, receiving callbacks for events such as incoming
 requests and outgoing responses. Rocket passes information about these events to
-the fairing, and the fairing can do what it wants with the information. This
-includes rewriting data when applicable, recording information about the event
-or data, or doing nothing at all.
+the fairing; the fairing can do what it wants with the information. This
+includes rewriting requests or responses, recording information about the event,
+or doing nothing at all.
 
 Rocket’s fairings are a lot like middleware from other frameworks, but they bear
 a few key distinctions:
@@ -26,12 +26,15 @@ reaching for fairings instinctively. Before doing so, remember that Rocket
 provides a rich set of mechanisms such as [request guards] and [data guards]
 that can be used to solve problems in a clean, composable, and robust manner.
 
-As a general rule of thumb, only _globally applicable_ actions should be
-effected through fairings. You should _not_ use a fairing to implement
-authentication or authorization (preferring to use a [request guard] instead)
-_unless_ the authentication or authorization applies to all or most of the
-application. On the other hand, you _should_ use a fairing to record timing and
-usage statistics or to enforce global security policies.
+! warning
+
+  As a general rule of thumb, only _globally applicable_ actions should be
+  effected through fairings. You should **_not_** use a fairing to implement
+  authentication or authorization (preferring to use a [request guard] instead)
+  _unless_ the authentication or authorization applies to all or the
+  overwhelming majority application. On the other hand, you _should_ use a
+  fairing to record timing and usage statistics or to enforce global security
+  policies.
 
 [`Fairing`]: @api/rocket/fairing/trait.Fairing.html
 [request guard]: ../requests/#request-guards

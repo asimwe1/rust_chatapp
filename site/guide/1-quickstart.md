@@ -22,3 +22,11 @@ cargo run
 
 There are numerous examples in the `examples/` directory. They can all be run
 with `cargo run`.
+
+! note
+
+  The examples' `Cargo.toml` files will point to the locally cloned `rocket`
+  libraries. When copying the examples for your own use, you should modify the
+  `Cargo.toml` files as explained in the [Getting Started] guide.
+
+[Getting Started]: ../getting-started

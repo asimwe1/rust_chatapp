@@ -35,12 +35,13 @@ $ sudo ROCKET_ENV=staging cargo run
     => address: 0.0.0.0
     => port: 8000
     => log: normal
-    => workers: [logical cores * 2]
+    => workers: 24
     => secret key: generated
     => limits: forms = 32KiB
+    => keep-alive: 5s
     => tls: disabled
 🛰  Mounting '/':
-    => GET /
+    => GET / (hello)
 🚀  Rocket has launched from http://0.0.0.0:8000
 ```
 
@@ -64,6 +65,7 @@ value:
 address = "localhost"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -72,6 +74,7 @@ limits = { forms = 32768 }
 address = "0.0.0.0"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -80,6 +83,7 @@ limits = { forms = 32768 }
 address = "0.0.0.0"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "critical"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -261,6 +265,9 @@ results in `Rocket.toml` and environment variables being ignored.
 [`ConfigBuilder`]: @api/rocket/config/struct.ConfigBuilder.html
 
 ## Configuring TLS
+
+! warning: Rocket's built-in TLS is **not** considered ready for production use.
+  It is intended for development use _only_.
 
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
 Security). In order for TLS support to be enabled, Rocket must be compiled with

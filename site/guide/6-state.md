@@ -19,6 +19,14 @@ The process for using managed state is simple:
   2. Add a `State<T>` type to any request handler, where `T` is the type of the
      value passed into `manage`.
 
+! note: All managed state must be thread-safe.
+
+  Because Rocket automatically multithreads your application, handlers can to
+  concurrently access managed state. As a result, managed state must be
+  thread-safe. Thanks to Rust, this condition is checked at compile-time by
+  ensuring that the type of values you store in managed state implement `Send` +
+  `Sync`.
+
 ### Adding State
 
 To instruct Rocket to manage state for your application, call the
@@ -28,6 +36,8 @@ structure with an internal `AtomicUsize` with an initial value of `0`, we can
 write the following:
 
 ```rust
+use std::sync::atomic::AtomicUsize;
+
 struct HitCount {
     count: AtomicUsize
 }
@@ -55,6 +65,8 @@ the managed state. For example, we can retrieve and respond with the current
 `HitCount` in a `count` route as follows:
 
 ```rust
+use rocket::State;
+
 #[get("/count")]
 fn count(hit_count: State<HitCount>) -> String {
     let current_count = hit_count.count.load(Ordering::Relaxed);
@@ -69,9 +81,11 @@ You can retrieve more than one `State` type in a single route as well:
 fn state(hit_count: State<HitCount>, config: State<Config>) -> T { ... }
 ```
 
-If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
-the offending route. Instead, Rocket will log an error message and return a
-**500** error to the client.
+! warning
+
+  If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
+  the offending route. Instead, Rocket will log an error message and return a
+  **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
 example on GitHub](@example/state) and learn more about the [`manage`
@@ -94,7 +108,7 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 
 [`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
 
-### Request-Local State
+## Request-Local State
 
 While managed state is *global* and available application-wide, request-local
 state is *local* to a given request, carried along with the request, and dropped
@@ -132,8 +146,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for RequestId {
 
 Note that, without request-local state, it would not be possible to:
 
-    1. Associate a piece of data, here an ID, directly with a request.
-    2. Ensure that a value is generated at most once per request.
+  1. Associate a piece of data, here an ID, directly with a request.
+  2. Ensure that a value is generated at most once per request.
 
 For more examples, see the [`FromRequest` request-local state] documentation,
 which uses request-local state to cache expensive authentication and

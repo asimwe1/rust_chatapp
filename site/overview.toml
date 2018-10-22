@@ -63,7 +63,7 @@ the parameter in the request handler:
 ```rust
 #[post("/login", data = "<user_form>")]
 fn login(user_form: Form<UserLogin>) -> String {
-   // Use `user_form`, return a String.
+   format!("Hello, {}!", user_form.name)
 }
 ```
 
@@ -143,7 +143,7 @@ look like:
 ```rust
 rocket::ignite()
    .mount("/base", routes![index, another])
-   .launch()
+   .launch();
 ```
 
 The `mount` call takes a base path and a set of routes via the `routes!` macro.
@@ -182,11 +182,11 @@ fn new_user(admin: AdminUser, new_user: Form<User>) -> T {
 For the `new_user` handler above to be called, the following conditions must
 hold:
 
-* The request method must be `POST`.
-* The request path must be `/user`.
-* The request must contain `data` in its body.
-* The request metadata must authenticate an `AdminUser`.
-* The request body must be a form that parses into a `User` struct.
+  * The request method must be `POST`.
+  * The request path must be `/user`.
+  * The request must contain `data` in its body.
+  * The request metadata must authenticate an `AdminUser`.
+  * The request body must be a form that parses into a `User` struct.
 '''
 
 [[steps]]
@@ -217,13 +217,13 @@ If the function above is used as a handler, for instance, then the type `T` must
 implement `Responder`. Rocket provides many useful responder types out of the
 box. They include:
 
- * `Json<T>`: Serializes the structure T into JSON and returns it to
-   the client.
- * `Template`: Renders a template file and returns it to the client.
- * `Redirect`: Returns a properly formatted HTTP redirect.
- * `NamedFile`: Streams a given file to the client with the
-   Content-Type taken from the file’s extension.
- * `Stream`: Streams data to the client from an arbitrary `Read` value.
- * Many Primitive Types: `String`, `&str`, `File`, `Option`, `Result`, and
-   others all implement the `Responder` trait.
+  * `Json<T>`: Serializes the structure T into JSON and returns it to
+    the client.
+  * `Template`: Renders a template file and returns it to the client.
+  * `Redirect`: Returns a properly formatted HTTP redirect.
+  * `NamedFile`: Streams a given file to the client with the
+    Content-Type taken from the file’s extension.
+  * `Stream`: Streams data to the client from an arbitrary `Read` value.
+  * Many Primitive Types: `String`, `&str`, `File`, `Option`, `Result`, and
+    others all implement the `Responder` trait.
 '''
