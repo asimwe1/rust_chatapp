@@ -35,7 +35,7 @@ $ sudo ROCKET_ENV=staging cargo run
     => address: 0.0.0.0
     => port: 8000
     => log: normal
-    => workers: 24
+    => workers: [logical cores * 2]
     => secret key: generated
     => limits: forms = 32KiB
     => keep-alive: 5s
