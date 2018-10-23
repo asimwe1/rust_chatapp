@@ -116,6 +116,7 @@ extern crate isatty;
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
+#[doc(hidden)] pub mod ext;
 pub mod local;
 pub mod request;
 pub mod response;
@@ -141,7 +142,6 @@ mod router;
 mod rocket;
 mod codegen;
 mod catcher;
-mod ext;
 
 #[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};

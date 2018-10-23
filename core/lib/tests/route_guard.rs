@@ -2,12 +2,13 @@
 
 #[macro_use] extern crate rocket;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use rocket::ext::Normalize;
 use rocket::Route;
 
 #[get("/<path..>")]
 fn files(route: &Route, path: PathBuf) -> String {
-    format!("{}/{}", route.base(), path.to_string_lossy())
+    Path::new(route.base()).join(path).normalized().to_string()
 }
 
 mod route_guard_tests {
