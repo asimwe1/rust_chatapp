@@ -3,7 +3,7 @@ extern crate rocket;
 #[cfg(test)]
 mod tests;
 
-use std::io;
+use std::{io, env};
 use std::fs::File;
 
 use rocket::{Request, Handler, Route, Data, Catcher};
@@ -43,7 +43,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
         return Outcome::failure(Status::BadRequest);
     }
 
-    let file = File::create("/tmp/upload.txt");
+    let file = File::create(env::temp_dir().join("upload.txt"));
     if let Ok(mut file) = file {
         if let Ok(n) = io::copy(&mut data.open(), &mut file) {
             return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
@@ -58,7 +58,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
 }
 
 fn get_upload<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    Outcome::from(req, File::open("/tmp/upload.txt").ok())
+    Outcome::from(req, File::open(env::temp_dir().join("upload.txt")).ok())
 }
 
 fn not_found_handler<'r>(req: &'r Request) -> response::Result<'r> {

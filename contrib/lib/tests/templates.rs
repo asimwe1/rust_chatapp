@@ -22,6 +22,11 @@ mod templates_tests {
         }
     }
 
+    #[get("/is_reloading")]
+    fn is_reloading(md: Metadata) -> Option<()> {
+        if md.reloading() { Some(()) } else { None }
+    }
+
     fn template_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("templates")
     }
@@ -32,7 +37,7 @@ mod templates_tests {
             .expect("valid configuration");
 
         ::rocket::custom(config).attach(Template::fairing())
-            .mount("/", routes![template_check])
+            .mount("/", routes![template_check, is_reloading])
     }
 
     #[cfg(feature = "tera_templates")]
@@ -142,8 +147,14 @@ mod templates_tests {
             let reload_path = template_root().join("hbs").join("reload.txt.hbs");
             write_file(&reload_path, INITIAL_TEXT);
 
-            // verify that the initial content is correct
+            // set up the client. if we can't reload templates, then just quit
             let client = Client::new(rocket()).unwrap();
+            let res = client.get("/is_reloading").dispatch();
+            if res.status() != Status::Ok {
+                return;
+            }
+
+            // verify that the initial content is correct
             let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 

@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::borrow::Cow;
 
-use {RawStr, uri::Uri};
+use {RawStr, uri::Uri, ext::Normalize};
 
 use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
@@ -203,21 +203,21 @@ impl UriDisplay for String {
     }
 }
 
-/// Percent-encodes each segment in the path.
+/// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay for PathBuf {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let string = self.to_string_lossy();
+        let string = self.normalized_str();
         let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
         write!(f, "{}", enc)
     }
 }
 
-/// Percent-encodes each segment in the path.
+/// Percent-encodes each segment in the and normalizes separators.
 impl UriDisplay for Path {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let string = self.to_string_lossy();
+        let string = self.normalized_str();
         let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
         write!(f, "{}", enc)
     }

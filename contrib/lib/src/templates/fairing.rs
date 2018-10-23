@@ -23,6 +23,10 @@ mod context {
         crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             &self.0
         }
+
+        crate fn is_reloading(&self) -> bool {
+            false
+        }
     }
 }
 
@@ -73,6 +77,10 @@ mod context {
 
         crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             self.context.read().unwrap()
+        }
+
+        crate fn is_reloading(&self) -> bool {
+            self.watcher.is_some()
         }
 
         fn context_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {

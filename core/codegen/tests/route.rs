@@ -6,6 +6,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use rocket::{Request, Outcome::*};
+use rocket::http::ext::Normalize;
 use rocket::local::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
@@ -48,7 +49,7 @@ fn post1(
     simple: Simple,
 ) -> String {
     let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.display(), simple.0);
+        sky, name, a, query.field, path.normalized_str(), simple.0);
 
     let uri = uri!(post2: a, name.url_decode_lossy(), path, sky, query.into_inner());
 
@@ -65,7 +66,7 @@ fn post2(
     simple: Simple,
 ) -> String {
     let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.display(), simple.0);
+        sky, name, a, query.field, path.normalized_str(), simple.0);
 
     let uri = uri!(post2: a, name.url_decode_lossy(), path, sky, query.into_inner());
 

@@ -927,7 +927,10 @@ impl Config {
     ///
     /// assert_eq!(config.root(), current_dir().unwrap());
     /// assert_eq!(config.root_relative("abc"), config.root().join("abc"));
+    /// # #[cfg(not(windows))]
     /// assert_eq!(config.root_relative("/abc"), Path::new("/abc"));
+    /// # #[cfg(windows)]
+    /// # assert_eq!(config.root_relative("C:\\abc"), Path::new("C:\\abc"));
     /// ```
     pub fn root_relative<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         let path = path.as_ref();

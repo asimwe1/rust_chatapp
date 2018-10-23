@@ -5,7 +5,9 @@ use std::{io, fs::Metadata, time::SystemTime};
 
 #[derive(Copy, Clone)]
 enum Kind {
-    Dynamic, Static
+    #[allow(dead_code)]
+    Dynamic,
+    Static
 }
 
 impl Kind {
@@ -16,11 +18,6 @@ impl Kind {
             #[cfg(all(unix, not(target_os = "macos")))] Kind::Dynamic => ".so",
             Kind::Static => ".rlib"
         }
-    }
-
-    fn prefix(self) -> &'static str {
-        #[cfg(windows)] { "" }
-        #[cfg(not(windows))] { "lib" }
     }
 }
 
@@ -52,7 +49,7 @@ fn best_time_for(metadata: &Metadata) -> SystemTime {
 
 fn extern_dep(name: &str, kind: Kind) -> io::Result<String> {
     let deps_root = target_path().join("deps");
-    let dep_name = format!("{}{}", kind.prefix(), name);
+    let dep_name = format!("lib{}", name);
 
     let mut dep_path: Option<PathBuf> = None;
     for entry in deps_root.read_dir().expect("read_dir call failed") {

@@ -4,12 +4,12 @@
 
 #[cfg(test)] mod tests;
 
-use std::io;
+use std::{io, env};
 use rocket::Data;
 
 #[post("/upload", format = "plain", data = "<data>")]
 fn upload(data: Data) -> io::Result<String> {
-    data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())
+    data.stream_to_file(env::temp_dir().join("upload.txt")).map(|n| n.to_string())
 }
 
 #[get("/")]

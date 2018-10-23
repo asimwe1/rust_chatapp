@@ -98,3 +98,21 @@ impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
         Cow::Owned(self.into_owned())
     }
 }
+
+use std::path::Path;
+
+pub trait Normalize {
+    fn normalized_str(&self) -> Cow<str>;
+}
+
+impl<T: AsRef<Path>> Normalize for T {
+    #[cfg(windows)]
+    fn normalized_str(&self) -> Cow<str> {
+        self.as_ref().to_string_lossy().replace('\\', "/").into()
+    }
+
+    #[cfg(not(windows))]
+    fn normalized_str(&self) -> Cow<str> {
+        self.as_ref().to_string_lossy()
+    }
+}

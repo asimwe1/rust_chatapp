@@ -46,8 +46,13 @@ impl<'a> Metadata<'a> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
+    /// # extern crate rocket_contrib;
+    /// #
     /// use rocket_contrib::templates::Metadata;
     ///
+    /// #[get("/")]
     /// fn handler(metadata: Metadata) {
     ///     // Returns `true` if the template with name `"name"` was loaded.
     ///     let loaded = metadata.contains_template("name");
@@ -55,6 +60,27 @@ impl<'a> Metadata<'a> {
     /// ```
     pub fn contains_template(&self, name: &str) -> bool {
         self.0.context().templates.contains_key(name)
+    }
+
+    /// Returns `true` if template reloading is enabled.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
+    /// # extern crate rocket_contrib;
+    /// #
+    /// use rocket_contrib::templates::Metadata;
+    ///
+    /// #[get("/")]
+    /// fn handler(metadata: Metadata) {
+    ///     // Returns `true` if template reloading is enabled.
+    ///     let reloading = metadata.reloading();
+    /// }
+    /// ```
+    pub fn reloading(&self) -> bool {
+        self.0.is_reloading()
     }
 }
 
