@@ -50,19 +50,19 @@ mod context {
     impl ContextManager {
         crate fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
+            let watcher = raw_watcher(tx).and_then(|mut watcher| {
+                watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
+                Ok(watcher)
+            });
 
-            let watcher = if let Ok(mut watcher) = raw_watcher(tx) {
-                if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
-                    Some(Mutex::new((watcher, rx)))
-                } else {
-                    warn!("Could not monitor the templates directory for changes.");
-                    warn_!("Live template reload will be unavailable");
+            let watcher = match watcher {
+                Ok(watcher) => Some(Mutex::new((watcher, rx))),
+                Err(e) => {
+                    warn!("Failed to enable live template reloading: {}", e);
+                    debug_!("Reload error: {:?}", e);
+                    warn_!("Live template reloading is unavailable.");
                     None
                 }
-            } else {
-                warn!("Could not instantiate a filesystem watcher.");
-                warn_!("Live template reload will be unavailable");
-                None
             };
 
             ContextManager {

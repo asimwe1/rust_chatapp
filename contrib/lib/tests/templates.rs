@@ -157,6 +157,7 @@ mod templates_tests {
                 // if the new content is correct, we are done
                 let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
+                    write_file(&reload_path, INITIAL_TEXT);
                     return;
                 }
 
