@@ -2,6 +2,7 @@
 
 mod uri;
 mod uri_display;
+mod formatter;
 mod from_uri_param;
 mod origin;
 mod authority;
@@ -15,5 +16,6 @@ pub use self::authority::*;
 pub use self::origin::*;
 pub use self::absolute::*;
 pub use self::uri_display::*;
+pub use self::formatter::*;
 pub use self::from_uri_param::*;
 pub use self::segments::*;

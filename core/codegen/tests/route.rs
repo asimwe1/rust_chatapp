@@ -10,7 +10,7 @@ use rocket::http::ext::Normalize;
 use rocket::local::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
-use rocket::http::{Status, RawStr, ContentType, uri::UriDisplay};
+use rocket::http::{Status, RawStr, ContentType, uri::{Formatter, UriDisplay}};
 
 // Use all of the code generation avaiable at once.
 
@@ -21,8 +21,8 @@ struct Inner<'r> {
 
 // TODO: Make this deriveable.
 impl<'a> UriDisplay for Inner<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "field={}", self.field)
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_named_value("field", &self.field)
     }
 }
 

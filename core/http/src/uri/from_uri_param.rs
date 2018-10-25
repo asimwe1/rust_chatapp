@@ -56,30 +56,28 @@ use uri::UriDisplay;
 /// `uri!` invocation where a `User` type is expected.
 ///
 /// ```rust
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// use std::fmt;
 ///
 /// use rocket::http::RawStr;
-/// use rocket::http::uri::{UriDisplay, FromUriParam};
+/// use rocket::http::uri::{Formatter, UriDisplay, FromUriParam};
 ///
-/// # /*
 /// #[derive(FromForm)]
-/// # */
 /// struct User<'a> {
 ///     name: &'a RawStr,
 ///     nickname: String,
 /// }
 ///
 /// impl<'a> UriDisplay for User<'a> {
-///     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-///         write!(f, "name={}&nickname={}",
-///                &self.name.replace(' ', "+") as &UriDisplay,
-///                &self.nickname.replace(' ', "+") as &UriDisplay)
+///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+///         f.write_named_value("name", &self.name)?;
+///         f.write_named_value("nickname", &self.nickname)
 ///     }
 /// }
 ///
 /// impl<'a, 'b> FromUriParam<(&'a str, &'b str)> for User<'a> {
 ///     type Target = User<'a>;
+///
 ///     fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
 ///         User { name: name.into(), nickname: nickname.to_string() }
 ///     }
@@ -88,12 +86,37 @@ use uri::UriDisplay;
 ///
 /// With these implementations, the following typechecks:
 ///
-/// ```rust,ignore
-/// #[post("/<name>?<query>")]
-/// fn some_route(name: &RawStr, query: User) -> T { .. }
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # use std::fmt;
+/// use rocket::http::RawStr;
+/// use rocket::request::Form;
+/// # use rocket::http::uri::{Formatter, UriDisplay, FromUriParam};
+/// #
+/// # #[derive(FromForm)]
+/// # struct User<'a> { name: &'a RawStr, nickname: String, }
+/// #
+/// # impl<'a> UriDisplay for User<'a> {
+/// #     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+/// #         f.write_named_value("name", &self.name)?;
+/// #         f.write_named_value("nickname", &self.nickname)
+/// #     }
+/// # }
+/// #
+/// # impl<'a, 'b> FromUriParam<(&'a str, &'b str)> for User<'a> {
+/// #     type Target = User<'a>;
+/// #     fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
+/// #         User { name: name.into(), nickname: nickname.to_string() }
+/// #     }
+/// # }
 ///
-/// uri!(some_route: name = "hey", query = ("Robert Mike", "Bob"));
-/// // => "/hey?name=Robert+Mike&nickname=Bob"
+/// #[post("/<name>?<user..>")]
+/// fn some_route(name: &RawStr, user: Form<User>)  { /* .. */ }
+///
+/// let uri = uri!(some_route: name = "hey", user = ("Robert Mike", "Bob"));
+/// assert_eq!(uri.path(), "/hey");
+/// assert_eq!(uri.query(), Some("name=Robert%20Mike&nickname=Bob"));
 /// ```
 ///
 /// [`uri!`]: ::rocket_codegen::uri

@@ -2,9 +2,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::borrow::Cow;
 
-use {RawStr, uri::Uri, ext::Normalize};
-
+use smallvec::SmallVec;
 use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+
+use {RawStr, uri::{Uri, Formatter}, ext::Normalize};
 
 mod priv_encode_set {
     /// This encode set is used for strings where '/' characters are known to be
@@ -83,8 +84,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///     The implementation of `UriDisplay` for these types is identical to the
 ///     `Display` implementation.
 ///
-///   * **[`&RawStr`](RawStr), `String`, `&str`,
-///     `Cow<str>`**
+///   * **[`&RawStr`](RawStr), `String`, `&str`, `Cow<str>`**
 ///
 ///     The string is percent encoded.
 ///
@@ -137,15 +137,15 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// }
 ///
 /// use std::fmt;
-/// use rocket::http::uri::UriDisplay;
+/// use rocket::http::uri::{Formatter, UriDisplay};
 /// use rocket::response::Redirect;
 ///
 /// impl UriDisplay for Name {
 ///     /// Delegates to the `UriDisplay` implementation for `String` to ensure
 ///     /// that the written string is URI-safe. In this case, the string will
 ///     /// be percent encoded.
-///     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-///         UriDisplay::fmt(&self.0, f)
+///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+///         f.write_value(&self.0)
 ///     }
 /// }
 ///
@@ -161,65 +161,71 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// ```
 pub trait UriDisplay {
     /// Formats `self` in a URI-safe manner using the given formatter.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result;
 }
 
 impl<'a> fmt::Display for &'a UriDisplay {
-    #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        UriDisplay::fmt(*self, f)
+        let mut formatter = Formatter {
+            prefixes: SmallVec::new(),
+            inner: f,
+            previous: false,
+            fresh: true,
+        };
+
+        UriDisplay::fmt(*self, &mut formatter)
     }
 }
 
 /// Percent-encodes the raw string.
 impl UriDisplay for RawStr {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode((*self).as_str()))
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_raw(&Uri::percent_encode(self.as_str()))
     }
 }
 
 /// Percent-encodes the raw string.
 impl UriDisplay for str {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self))
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_raw(&Uri::percent_encode(self))
     }
 }
 
 /// Percent-encodes the raw string.
 impl<'a> UriDisplay for Cow<'a, str> {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self))
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_raw(&Uri::percent_encode(self))
     }
 }
 
 /// Percent-encodes the raw string.
 impl UriDisplay for String {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", Uri::percent_encode(self.as_str()))
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_raw(&Uri::percent_encode(self.as_str()))
     }
 }
 
 /// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay for PathBuf {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let string = self.normalized_str();
         let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
-        write!(f, "{}", enc)
+        f.write_raw(&enc)
     }
 }
 
-/// Percent-encodes each segment in the and normalizes separators.
+/// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay for Path {
-    #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let string = self.normalized_str();
         let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
-        write!(f, "{}", enc)
+        f.write_raw(&enc)
     }
 }
 
@@ -228,8 +234,9 @@ macro_rules! impl_with_display {
         /// This implementation is identical to the `Display` implementation.
         impl UriDisplay for $T  {
             #[inline(always)]
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                fmt::Display::fmt(self, f)
+            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+                use std::fmt::Write;
+                write!(f, "{}", self)
             }
         }
     )+}
@@ -249,7 +256,7 @@ macro_rules! impl_for_ref {
         /// Uses the implementation of `UriDisplay` for `T`.
         impl<'a, T: UriDisplay + ?Sized> UriDisplay for $T {
             #[inline(always)]
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
                 UriDisplay::fmt(*self, f)
             }
         }

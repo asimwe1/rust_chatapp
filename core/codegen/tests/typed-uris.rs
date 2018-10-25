@@ -7,7 +7,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Origin, UriDisplay, FromUriParam};
+use rocket::http::uri::{Origin, Formatter, UriDisplay, FromUriParam};
 use rocket::request::Form;
 
 #[derive(FromForm)]
@@ -18,10 +18,9 @@ struct User<'a> {
 
 // TODO: Make this deriveable.
 impl<'a> UriDisplay for User<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "name={}&nickname={}",
-               &self.name.replace(' ', "+") as &UriDisplay,
-               &self.nickname.replace(' ', "+") as &UriDisplay)
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.write_named_value("name", &self.name)?;
+        f.write_named_value("nickname", &self.nickname)
     }
 }
 
@@ -244,31 +243,31 @@ fn check_with_segments() {
 fn check_complex() {
     assert_uri_eq! {
         uri!(complex: "no idea", 10, "high", ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: "Bob", 248, "?", User { name: "Robert".into(), nickname: "Bob".into() }) =>
             "/name/Bob?foo=248&bar=10&bar=%3F&name=Robert&nickname=Bob",
         uri!(complex: "Bob", 248, "a a", &User { name: "Robert".into(), nickname: "B".into() }) =>
             "/name/Bob?foo=248&bar=10&bar=a%20a&name=Robert&nickname=B",
         uri!(complex: "no idea", 248, "", &User { name: "A B".into(), nickname: "A".into() }) =>
-            "/name/no%20idea?foo=248&bar=10&bar=&name=A+B&nickname=A",
+            "/name/no%20idea?foo=248&bar=10&bar=&name=A%20B&nickname=A",
         uri!(complex: "hi", 3, "b", &User { name: "A B C".into(), nickname: "a b".into() }) =>
-            "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
+            "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
         uri!(complex: name = "no idea", foo = 10, bar = "high", query = ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: foo = 10, name = "no idea", bar = "high", query = ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high", ) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: query = *&("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A+B+C&nickname=a+c",
+            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: foo = 3, name = "hi", bar = "b",
                 query = &User { name: "A B C".into(), nickname: "a b".into() }) =>
-                "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
+                "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
         uri!(complex: query = &User { name: "A B C".into(), nickname: "a b".into() },
                  foo = 3, name = "hi", bar = "b") =>
-                "/name/hi?foo=3&bar=10&bar=b&name=A+B+C&nickname=a+b",
+                "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
     }
 
     // Ensure variables are correctly processed.
