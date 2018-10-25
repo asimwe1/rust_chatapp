@@ -2,7 +2,6 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::borrow::Cow;
 
-use smallvec::SmallVec;
 use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
 use {RawStr, uri::{Uri, Formatter}, ext::Normalize};
@@ -35,9 +34,8 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// # type T = ();
 /// #[get("/item/<id>?<track>")]
-/// fn get_item(id: i32, track: String) -> T { /* .. */ }
+/// fn get_item(id: i32, track: String) { /* .. */ }
 /// ```
 ///
 /// A URI for this route can be generated as follows:
@@ -47,7 +45,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// # #[get("/item/<id>?<track>")]
-/// # fn get_item(id: i32, track: String) -> T { /* .. */ }
+/// # fn get_item(id: i32, track: String) { /* .. */ }
 /// #
 /// // With unnamed parameters.
 /// uri!(get_item: 100, "inbound");
@@ -67,7 +65,7 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// format!("/item/{}?track={}", &100 as &UriDisplay, &"inbound" as &UriDisplay);
 /// ```
 ///
-/// For this expression  to typecheck, both `i32` and `Value` must implement
+/// For this expression to typecheck, both `i32` and `Value` must implement
 /// `UriDisplay`. As can be seen, the implementation will be used to display the
 /// value in a URI-safe manner.
 ///
@@ -92,6 +90,33 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 ///
 ///     Uses the implementation of `UriDisplay` for `T`.
 ///
+/// # Deriving
+///
+/// Manually implementing `UriDisplay` should be done with care. For most use
+/// cases, deriving `UriDisplay` will suffice:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # use rocket::http::uri::UriDisplay;
+/// #[derive(FromForm, UriDisplay)]
+/// struct User {
+///     name: String,
+///     age: usize,
+/// }
+///
+/// let user = User { name: "Michael Smith".into(), age: 31 };
+/// let uri_string = format!("{}", &user as &UriDisplay);
+/// assert_eq!(uri_string, "name=Michael%20Smith&age=31");
+/// ```
+///
+/// As long as every field in the structure (or enum) implements `UriDisplay`,
+/// the trait can be derived. The implementation calls
+/// [`Formatter::write_named_value()`] for every named field and
+/// [`Formatter::write_value()`] for every unnamed field. See the [`UriDisplay`
+/// derive] documentation for full details.
+///
+/// [`UriDisplay` derive]: ../../../rocket_codegen/derive.UriDisplay.html
+///
 /// # Implementing
 ///
 /// Implementing `UriDisplay` is similar to implementing
@@ -112,27 +137,33 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// `FromParam` and `UriDisplay`. The `FromParam` implementation allows `Name`
 /// to be used as the target type of a dynamic parameter, while the `UriDisplay`
 /// implementation allows URIs to be generated for routes with `Name` as a
-/// dynamic parameter type.
+/// dynamic parameter type. Note the custom parsing in the `FromParam`
+/// implementation; as a result of this, a custom (reflexive) `UriDisplay`
+/// implementation is required.
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// # fn main() {  }
 /// use rocket::http::RawStr;
 /// use rocket::request::FromParam;
 ///
 /// struct Name(String);
 ///
+/// const PREFIX: &str = "name:";
+///
 /// impl<'r> FromParam<'r> for Name {
 ///     type Error = &'r RawStr;
 ///
-///     /// Validates parameters that contain no spaces.
+///     /// Validates parameters that start with 'name:', extracting the text
+///     /// after 'name:' as long as there is at least one character.
 ///     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
 ///         let decoded = param.percent_decode().map_err(|_| param)?;
-///         match decoded.contains(' ') {
-///             false => Ok(Name(decoded.into_owned())),
-///             true => Err(param),
+///         if !decoded.starts_with(PREFIX) || decoded.len() < (PREFIX.len() + 1) {
+///             return Err(param);
 ///         }
+///
+///         let real_name = decoded[PREFIX.len()..].to_string();
+///         Ok(Name(real_name))
 ///     }
 /// }
 ///
@@ -143,9 +174,9 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// impl UriDisplay for Name {
 ///     /// Delegates to the `UriDisplay` implementation for `String` to ensure
 ///     /// that the written string is URI-safe. In this case, the string will
-///     /// be percent encoded.
+///     /// be percent encoded. Prefixes the inner name with `name:`.
 ///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-///         f.write_value(&self.0)
+///         f.write_value(&format!("name:{}", self.0))
 ///     }
 /// }
 ///
@@ -158,6 +189,9 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// fn real(name: Name) -> String {
 ///     format!("Hello, {}!", name.0)
 /// }
+///
+/// let uri = uri!(real: Name("Mike Smith".into()));
+/// assert_eq!(uri.path(), "/name:Mike%20Smith");
 /// ```
 pub trait UriDisplay {
     /// Formats `self` in a URI-safe manner using the given formatter.
@@ -166,14 +200,7 @@ pub trait UriDisplay {
 
 impl<'a> fmt::Display for &'a UriDisplay {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut formatter = Formatter {
-            prefixes: SmallVec::new(),
-            inner: f,
-            previous: false,
-            fresh: true,
-        };
-
-        UriDisplay::fmt(*self, &mut formatter)
+        UriDisplay::fmt(*self, &mut Formatter::new(f))
     }
 }
 

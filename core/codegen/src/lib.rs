@@ -583,7 +583,69 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))
 }
 
-#[proc_macro_derive(UriDisplay)]
+/// Derive for the [`UriDisplay`] trait.
+///
+/// The [`UriDisplay`] derive can be applied to enums and structs. When applied
+/// to enums, variants must have at least one field. When applied to structs,
+/// the struct must have at least one field.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(UriDisplay)]
+/// enum Kind {
+///     A(String),
+///     B(usize),
+/// }
+///
+/// #[derive(UriDisplay)]
+/// struct MyStruct {
+///     name: String,
+///     id: usize,
+///     kind: Kind,
+/// }
+/// ```
+///
+/// Each field's type is required to implement [`UriDisplay`].
+///
+/// The derive generates an implementation of the [`UriDisplay`] trait. The
+/// implementation calls [`Formatter::write_named_value()`] for every named
+/// field, using the field's name (unless overriden, explained next) as the
+/// `name` parameter, and [`Formatter::write_value()`] for every unnamed field
+/// in the order the fields are declared.
+///
+/// The derive accepts one field attribute: `form`, with the following syntax:
+///
+/// ```text
+/// form := 'field' '=' '"' IDENT '"'
+///
+/// IDENT := valid identifier, as defined by Rust
+/// ```
+///
+/// When applied, the attribute looks as follows:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[derive(UriDisplay)]
+/// # struct Kind(String);
+/// #[derive(UriDisplay)]
+/// struct MyStruct {
+///     name: String,
+///     id: usize,
+///     #[form(field = "type")]
+///     kind: Kind,
+/// }
+/// ```
+///
+/// The field attribute directs that a different field name be used when calling
+/// [`Formatter::write_named_value()`] for the given field. The value of the
+/// `field` attribute is used instead of the structure's actual field name. In
+/// the example above, the field `MyStruct::kind` is rendered with a name of
+/// `type`.
+///
+/// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
+/// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value
+/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+#[proc_macro_derive(UriDisplay, attributes(form))]
 pub fn derive_uri_display(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display(input))
 }

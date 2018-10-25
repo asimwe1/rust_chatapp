@@ -1,0 +1,74 @@
+error: fieldless structs or variants are not supported
+ --> $DIR/uri_display.rs:4:1
+  |
+4 | struct Foo1;
+  | ^^^^^^^^^^^^
+  |
+note: error occurred while deriving `UriDisplay`
+ --> $DIR/uri_display.rs:3:10
+  |
+3 | #[derive(UriDisplay)]
+  |          ^^^^^^^^^^
+
+error: fieldless structs or variants are not supported
+ --> $DIR/uri_display.rs:8:1
+  |
+8 | struct Foo2();
+  | ^^^^^^^^^^^^^^
+  |
+note: error occurred while deriving `UriDisplay`
+ --> $DIR/uri_display.rs:7:10
+  |
+7 | #[derive(UriDisplay)]
+  |          ^^^^^^^^^^
+
+error: empty enums are not supported
+  --> $DIR/uri_display.rs:12:1
+   |
+12 | enum Foo3 { }
+   | ^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:11:10
+   |
+11 | #[derive(UriDisplay)]
+   |          ^^^^^^^^^^
+
+error: fieldless structs or variants are not supported
+  --> $DIR/uri_display.rs:17:5
+   |
+17 |     Variant,
+   |     ^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:15:10
+   |
+15 | #[derive(UriDisplay)]
+   |          ^^^^^^^^^^
+
+error: tuple structs or variants must have exactly one field
+  --> $DIR/uri_display.rs:22:12
+   |
+22 | struct Foo5(String, String);
+   |            ^^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:21:10
+   |
+21 | #[derive(UriDisplay)]
+   |          ^^^^^^^^^^
+
+error: invalid value: expected string literal
+  --> $DIR/uri_display.rs:27:20
+   |
+27 |     #[form(field = 123)]
+   |                    ^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:25:10
+   |
+25 | #[derive(UriDisplay)]
+   |          ^^^^^^^^^^
+
+error: aborting due to 6 previous errors
+

@@ -1,9 +1,11 @@
 use proc_macro::{Span, TokenStream};
 use derive_utils::*;
 
-const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not allowed";
-const NO_NULLARY: &str = "nullary items are not allowed";
-const NO_EMPTY_ENUMS: &str = "empty enums are not allowed";
+use derive::from_form::Form;
+
+const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
+const NO_NULLARY: &str = "nullary items are not supported";
+const NO_EMPTY_ENUMS: &str = "empty enums are not supported";
 const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one field";
 
 fn validate_fields(fields: Fields, parent_span: Span) -> Result<()> {
@@ -47,15 +49,20 @@ pub fn derive_uri_display(input: TokenStream) -> TokenStream {
                 Ok(())
             }
         })
-        .map_field(|_, field| {
+        .try_map_field(|_, field| {
             let span = field.span().into();
             let accessor = field.accessor();
-            if let Some(ref ident) = field.ident {
-                let name = ident.to_string();
+            let tokens = if let Some(ref ident) = field.ident {
+                let name = Form::from_attrs("form", &field.attrs)
+                    .map(|result| result.map(|form| form.field.name))
+                    .unwrap_or_else(|| Ok(ident.to_string()))?;
+
                 quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
             } else {
                 quote_spanned!(span => f.write_value(&#accessor)?;)
-            }
+            };
+
+            Ok(tokens)
         })
         .to_tokens()
 }

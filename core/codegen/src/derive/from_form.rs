@@ -2,13 +2,13 @@ use proc_macro::{Span, TokenStream};
 use derive_utils::{*, ext::{TypeExt, Split3}};
 
 #[derive(FromMeta)]
-struct Form {
-    field: FormField,
+crate struct Form {
+    crate field: FormField,
 }
 
-struct FormField {
-    span: Span,
-    name: String
+crate struct FormField {
+    crate span: Span,
+    crate name: String
 }
 
 fn is_valid_field_name(s: &str) -> bool {
