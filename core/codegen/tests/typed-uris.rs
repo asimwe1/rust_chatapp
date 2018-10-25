@@ -3,25 +3,16 @@
 
 #[macro_use] extern crate rocket;
 
-use std::fmt;
 use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Origin, Formatter, UriDisplay, FromUriParam};
+use rocket::http::uri::{Origin, FromUriParam};
 use rocket::request::Form;
 
-#[derive(FromForm)]
+#[derive(FromForm, UriDisplay)]
 struct User<'a> {
     name: &'a RawStr,
     nickname: String,
-}
-
-// TODO: Make this deriveable.
-impl<'a> UriDisplay for User<'a> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.write_named_value("name", &self.name)?;
-        f.write_named_value("nickname", &self.nickname)
-    }
 }
 
 impl<'a, 'b> FromUriParam<(&'a str, &'b str)> for User<'a> {

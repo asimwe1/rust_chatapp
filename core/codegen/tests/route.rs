@@ -2,7 +2,6 @@
 
 #[macro_use] extern crate rocket;
 
-use std::fmt;
 use std::path::PathBuf;
 
 use rocket::{Request, Outcome::*};
@@ -10,20 +9,13 @@ use rocket::http::ext::Normalize;
 use rocket::local::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
-use rocket::http::{Status, RawStr, ContentType, uri::{Formatter, UriDisplay}};
+use rocket::http::{Status, RawStr, ContentType};
 
 // Use all of the code generation avaiable at once.
 
-#[derive(FromForm)]
+#[derive(FromForm, UriDisplay)]
 struct Inner<'r> {
     field: &'r RawStr
-}
-
-// TODO: Make this deriveable.
-impl<'a> UriDisplay for Inner<'a> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.write_named_value("field", &self.field)
-    }
 }
 
 struct Simple(String);

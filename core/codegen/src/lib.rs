@@ -583,6 +583,11 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))
 }
 
+#[proc_macro_derive(UriDisplay)]
+pub fn derive_uri_display(input: TokenStream) -> TokenStream {
+    emit!(derive::uri_display::derive_uri_display(input))
+}
+
 /// Generates a [`Vec`] of [`Route`]s from a set of route paths.
 ///
 /// The `routes!` macro expands a list of route paths into a [`Vec`] of their
