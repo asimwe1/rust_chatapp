@@ -23,7 +23,7 @@ url = "overview/#anatomy-of-a-rocket-application"
 
 [[top_features]]
 title = "Easy To Use"
-text = "Rocket makes extensive use of Rust's code generation tools to provide a clean API."
+text = "Simple, intuitive APIs make Rocket approachable, no matter your background."
 image = "sun"
 button = "Get Started"
 url = "guide"
@@ -31,7 +31,7 @@ margin = 2
 
 [[top_features]]
 title = "Extensible"
-text = "Easily create your own primitives that any Rocket application can use."
+text = "Create your own first-class primitives that any Rocket application can use."
 image = "telescope"
 button = "See How"
 url = "overview/#anatomy-of-a-rocket-application"
@@ -105,10 +105,10 @@ code = '''
      contents: String,
   }
 
-  #[put("/<id>", data = "<message>")]
-  fn update(db: &Db, id: Id, message: Json<Message>) -> JsonValue {
+  #[put("/<id>", data = "<msg>")]
+  fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
       if db.contains_key(&id) {
-          db.insert(id, &message.contents);
+          db.insert(id, &msg.contents);
           json!({ "status": "ok" })
       } else {
           json!({ "status": "error" })
