@@ -23,7 +23,9 @@ function relative() {
   fi
 }
 
+# Full and major version of Rocket
 ROCKET_VERSION="0.4.0-dev"
+ROCKET_MAJOR_VERSION="0.4"
 CURRENT_RELEASE=false
 
 # Root of workspace-like directories.
