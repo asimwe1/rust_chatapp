@@ -2,11 +2,6 @@
 # Top features: displayed in the header under the introductory text.
 ###############################################################################
 
-[release]
-url = "https://crates.io/crates/rocket"
-version = "0.4.0-dev"
-date = "Jul 14, 2017"
-
 [[top_features]]
 title = "Type Safe"
 text = "From request to response Rocket ensures that your types mean something."

@@ -305,21 +305,11 @@ a template and a context to render the template with. The context can be any
 type that implements `Serialize` and serializes into an `Object` value, such as
 structs, `HashMaps`, and others.
 
-Rocket searches for a template with the given name in the [configurable]
-`template_dir` directory. Templating support in Rocket is engine agnostic. The
-engine used to render a template depends on the template file's extension. For
-example, if a file ends with `.hbs`, Handlebars is used, while if a file ends
-with `.tera`, Tera is used.
-
-When your application is compiled in `debug` mode (without the `--release` flag
-passed to `cargo`), templates are automatically reloaded when they are modified.
-This means that you don't need to rebuild your application to observe template
-changes: simply refresh! In release builds, reloading is disabled.
-
-For templates to be properly registered, the template fairing must be attached
-to the instance of Rocket. The [Fairings](../fairings) sections of the guide
-provides more information on fairings. To attach the template fairing, simply
-call `.attach(Template::fairing())` on an instance of `Rocket` as follows:
+For a template to be renderable, it must first be registered. The `Template`
+fairing automatically registers all discoverable templates when attached.T he
+[Fairings](../fairings) sections of the guide provides more information on
+fairings. To attach the template fairing, simply call
+`.attach(Template::fairing())` on an instance of `Rocket` as follows:
 
 ```rust
 fn main() {
@@ -329,24 +319,44 @@ fn main() {
 }
 ```
 
+Rocket discovers templates in the [configurable] `template_dir` directory.
+Templating support in Rocket is engine agnostic. The engine used to render a
+template depends on the template file's extension. For example, if a file ends
+with `.hbs`, Handlebars is used, while if a file ends with `.tera`, Tera is
+used.
+
+! note: The name of the template _does not_ include its extension.
+
+  For a template file named `index.html.tera`, call `render("index")` and use
+  the name `"index"` in templates, i.e, `{% extends "index" %}` or `{% extends
+  "base" %}` for `base.html.tera`.
+
+When your application is compiled in `debug` mode (without the `--release` flag
+passed to `cargo`), templates are automatically reloaded when they are modified
+on supported platforms. This means that you don't need to rebuild your
+application to observe template changes: simply refresh! In release builds,
+reloading is disabled.
+
 The [`Template`] API documentation contains more information about templates,
 including how to customize a template engine to add custom helpers and filters.
-The [Handlebars Templates example on GitHub](@example/handlebars_templates) is a
-fully composed application that makes use of Handlebars templates.
+The [Handlebars templates example](@example/handlebars_templates) is a
+fully composed application that makes use of Handlebars templates, while the
+[Tera templates example](@example/tera_templates) does the same for Tera.
 
 [`Template`]: @api/rocket_contrib/templates/struct.Template.html
 [configurable]: ../configuration/#extras
 
 ## Typed URIs
 
-Rocket's [`uri!`] macro allows you to build URIs routes in your application in a
-robust, type-safe, and URI-safe manner. Type or route parameter mismatches are
-caught at compile-time.
+Rocket's [`uri!`] macro allows you to build URIs to routes in your application
+in a robust, type-safe, and URI-safe manner. Type or route parameter mismatches
+are caught at compile-time.
 
-The `uri!` returns an [`Origin`] structure with the URI of the supplied route
-interpolated with the given values. Note that `Origin` implements `Into<Uri>`
-(and by extension, `TryInto<Uri>`), so it can be converted into a [`Uri`] using
-`.into()` as needed and passed into methods such as [`Redirect::to()`].
+The `uri!` macro returns an [`Origin`] structure with the URI of the supplied
+route interpolated with the given values. Note that `Origin` implements
+`Into<Uri>` (and by extension, `TryInto<Uri>`), so it can be converted into a
+[`Uri`] using `.into()` as needed and passed into methods such as
+[`Redirect::to()`].
 
 For example, given the following route:
 
