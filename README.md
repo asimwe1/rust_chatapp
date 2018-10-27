@@ -39,11 +39,11 @@ Rocket is extensively documented:
   * [Guide]: A detailed guide and reference to Rocket.
   * [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/guide/quickstart
-[Getting Started]: https://rocket.rs/guide/getting-started
-[Overview]: https://rocket.rs/overview
-[Guide]: https://rocket.rs/guide
-[API Documentation]: https://api.rocket.rs/rocket
+[Quickstart]: https://rocket.rs/v0.4/guide/quickstart
+[Getting Started]: https://rocket.rs/v0.4/guide/getting-started
+[Overview]: https://rocket.rs/v0.4/overview
+[Guide]: https://rocket.rs/v0.4/guide
+[API Documentation]: https://api.rocket.rs/v0.4/rocket
 
 The official community support channels are the `#rocket` IRC channel on the
 [Mozilla IRC Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` and the
@@ -111,7 +111,7 @@ for information on how to write compiler tests.
 
 You can build the Rocket API documentation locally by running
 `./scripts/mk-docs.sh`. The resulting documentation is what gets uploaded to
-[api.rocket.rs](https://api.rocket.rs).
+[api.rocket.rs](https://api.rocket.rs/v0.4/).
 
 ## Contributing
 

@@ -57,8 +57,8 @@
 //! template directory is configured via the `template_dir` configuration
 //! parameter and defaults to `templates/`. The path set in `template_dir` is
 //! relative to the Rocket configuration file. See the [configuration
-//! chapter](https://rocket.rs/guide/configuration/#extras) of the guide for
-//! more information on configuration.
+//! chapter](https://rocket.rs/v0.4/guide/configuration/#extras) of the guide
+//! for more information on configuration.
 //!
 //! The corresponding templating engine used for a given template is based on a
 //! template's extension. At present, this library supports the following

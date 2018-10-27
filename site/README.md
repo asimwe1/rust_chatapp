@@ -13,7 +13,7 @@ This directory contains the following:
   * `news/*.md` - News articles linked to from `news/index.toml`.
   * `guide/*.md` - Guide pages linked to from `guide.md`.
 
-[Rocket Programming Guide]: https://rocket.rs/guide/
+[Rocket Programming Guide]: https://rocket.rs/v0.4/guide/
 
 ### Guide Links
 

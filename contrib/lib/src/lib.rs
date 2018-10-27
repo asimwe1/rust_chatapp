@@ -2,9 +2,9 @@
 #![feature(never_type)]
 #![feature(doc_cfg)]
 
-#![doc(html_root_url = "https://api.rocket.rs/0.4.0-dev")]
-#![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.4")]
+#![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.

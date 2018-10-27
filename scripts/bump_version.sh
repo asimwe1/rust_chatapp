@@ -19,11 +19,21 @@ if ! git grep -c "${1}" > /dev/null; then
   exit 1
 fi
 
-today=$(date "+%b %d, %Y")
+function major() {
+  echo "${1}" | cut -d'.' -f1-2
+}
 
-find "${PROJECT_ROOT}" -name "lib.rs" | xargs sed -i.bak "s/${1}/${2}/g"
-find "${PROJECT_ROOT}" -name "*.toml" | xargs sed -i.bak "s/${1}/${2}/g"
-find "${SITE_ROOT}" -name "*.md" | xargs sed -i.bak "s/${1}/${2}/g"
-sed -i.bak "s/^date.*/date = \"$today\"/" "${SITE_ROOT}/index.toml"
-sed -i.bak "s/${1}/${2}/g" "${SCRIPT_DIR}/config.sh"
+function do_replace() {
+  find "${PROJECT_ROOT}" -name "*.rs" | xargs sed -i.bak "s/${1}/${2}/g"
+  find "${PROJECT_ROOT}" -name "*.toml" | xargs sed -i.bak "s/${1}/${2}/g"
+  find "${SITE_ROOT}" -name "*.md" | xargs sed -i.bak "s/${1}/${2}/g"
+  sed -i.bak "s/${1}/${2}/g" "${SCRIPT_DIR}/config.sh"
+  sed -i.bak "s/${1}/${2}/g" "${PROJECT_ROOT}/README.md"
+}
+
+do_replace "v$(major ${1})" "v$(major ${2})"
+do_replace "${1}" "${2}"
+
+# today=$(date "+%b %d, %Y")
+# sed -i.bak "s/^date.*/date = \"$today\"/" "${SITE_ROOT}/index.toml"
 find ${PROJECT_ROOT} -name "*.bak" | xargs rm

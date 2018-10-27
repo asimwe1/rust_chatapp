@@ -4,16 +4,16 @@
 #![feature(rustc_private)]
 #![recursion_limit="128"]
 
-#![doc(html_root_url = "https://api.rocket.rs/0.4.0-dev")]
-#![doc(html_favicon_url = "https://rocket.rs/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.4")]
+#![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
 
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
 //! custom derives, custom attributes, and procedural macros. The documentation
 //! here is purely technical. The code generation facilities are documented
-//! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/v0.4/guide).
 //!
 //! # Debugging Codegen
 //!

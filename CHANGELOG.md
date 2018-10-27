@@ -278,7 +278,7 @@ This release includes the following new features:
   * [`Response::content_type()`] was added to easily retrieve the Content-Type
     header of a response.
   * Size limits on incoming data are [now
-    configurable](https://rocket.rs/guide/configuration/#data-limits).
+    configurable](https://rocket.rs/v0.3/guide/configuration/#data-limits).
   * [`Request::limits()`] was added to retrieve incoming data limits.
   * Responders may dynamically adjust their response based on the incoming
     request.
@@ -302,31 +302,31 @@ This release includes the following new features:
   * The [`NotFound`] responder was added for simple **404** response
     construction.
 
-[Fairings]: https://rocket.rs/guide/fairings/
-[Native TLS support]: https://rocket.rs/guide/configuration/#configuring-tls
-[Private cookies]: https://rocket.rs/guide/requests/#private-cookies
-[can be renamed]: https://rocket.rs/guide/requests/#field-renaming
-[`MsgPack`]: https://api.rocket.rs/rocket_contrib/struct.MsgPack.html
-[`Rocket::launch()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.launch
-[`LaunchError`]: https://api.rocket.rs/rocket/error/struct.LaunchError.html
-[Default rankings]: https://api.rocket.rs/rocket/struct.Route.html
-[`Route`]: https://api.rocket.rs/rocket/struct.Route.html
-[`Accept`]: https://api.rocket.rs/rocket/http/struct.Accept.html
-[`Request::accept()`]: https://api.rocket.rs/rocket/struct.Request.html#method.accept
-[`contrib`]: https://api.rocket.rs/rocket_contrib/
-[`Rocket::routes()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.routes
-[`Response::body_string()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_string
-[`Response::body_bytes()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_bytes
-[`Response::content_type()`]: https://api.rocket.rs/rocket/struct.Response.html#method.content_type
-[`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
-[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
-[`Request::route()`]: https://api.rocket.rs/rocket/struct.Request.html#method.route
-[`Config`]: https://api.rocket.rs/rocket/struct.Config.html
-[`Cookies`]: https://api.rocket.rs/rocket/http/enum.Cookies.html
-[`Config::get_datetime()`]: https://api.rocket.rs/rocket/struct.Config.html#method.get_datetime
-[`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
-[configuration parameters]: https://api.rocket.rs/rocket/config/index.html#environment-variables
-[`NotFound`]: https://api.rocket.rs/rocket/response/status/struct.NotFound.html
+[Fairings]: https://rocket.rs/v0.3/guide/fairings/
+[Native TLS support]: https://rocket.rs/v0.3/guide/configuration/#configuring-tls
+[Private cookies]: https://rocket.rs/v0.3/guide/requests/#private-cookies
+[can be renamed]: https://rocket.rs/v0.3/guide/requests/#field-renaming
+[`MsgPack`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.MsgPack.html
+[`Rocket::launch()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.launch
+[`LaunchError`]: https://api.rocket.rs/v0.3/rocket/error/struct.LaunchError.html
+[Default rankings]: https://api.rocket.rs/v0.3/rocket/struct.Route.html
+[`Route`]: https://api.rocket.rs/v0.3/rocket/struct.Route.html
+[`Accept`]: https://api.rocket.rs/v0.3/rocket/http/struct.Accept.html
+[`Request::accept()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.accept
+[`contrib`]: https://api.rocket.rs/v0.3/rocket_contrib/
+[`Rocket::routes()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.routes
+[`Response::body_string()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.body_string
+[`Response::body_bytes()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.body_bytes
+[`Response::content_type()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.content_type
+[`Request::guard()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.guard
+[`Request::limits()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.limits
+[`Request::route()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.route
+[`Config`]: https://api.rocket.rs/v0.3/rocket/struct.Config.html
+[`Cookies`]: https://api.rocket.rs/v0.3/rocket/http/enum.Cookies.html
+[`Config::get_datetime()`]: https://api.rocket.rs/v0.3/rocket/struct.Config.html#method.get_datetime
+[`LenientForm`]: https://api.rocket.rs/v0.3/rocket/request/struct.LenientForm.html
+[configuration parameters]: https://api.rocket.rs/v0.3/rocket/config/index.html#environment-variables
+[`NotFound`]: https://api.rocket.rs/v0.3/rocket/response/status/struct.NotFound.html
 
 ## Breaking Changes
 
@@ -462,18 +462,18 @@ applications.
     Use `Json`, `Xml`, `Html`, and `Css` instead of `JSON`, `XML`, `HTML`, and
     `CSS`, respectively.
 
-[`&RawStr`]: https://api.rocket.rs/rocket/http/struct.RawStr.html
-[`IntoOutcome`]: https://api.rocket.rs/rocket/outcome/trait.IntoOutcome.html
-[`local`]: https://api.rocket.rs/rocket/local/index.html
-[`Rocket::config()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.config
-[managed state]: https://rocket.rs/guide/state/
-[`Responder`]: https://api.rocket.rs/rocket/response/trait.Responder.html
-[`Template::show()`]: https://api.rocket.rs/rocket_contrib/struct.Template.html#method.show
-[`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
-[`ConfigError`]: https://api.rocket.rs/rocket/config/enum.ConfigError.html
-[`ContentType::from_extension()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.from_extension
-[`rocket_contrib::Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
-[`content`]: https://api.rocket.rs/rocket/response/content/index.html
+[`&RawStr`]: https://api.rocket.rs/v0.3/rocket/http/struct.RawStr.html
+[`IntoOutcome`]: https://api.rocket.rs/v0.3/rocket/outcome/trait.IntoOutcome.html
+[`local`]: https://api.rocket.rs/v0.3/rocket/local/index.html
+[`Rocket::config()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.config
+[managed state]: https://rocket.rs/v0.3/guide/state/
+[`Responder`]: https://api.rocket.rs/v0.3/rocket/response/trait.Responder.html
+[`Template::show()`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.Template.html#method.show
+[`FromForm`]: https://api.rocket.rs/v0.3/rocket/request/trait.FromForm.html
+[`ConfigError`]: https://api.rocket.rs/v0.3/rocket/config/enum.ConfigError.html
+[`ContentType::from_extension()`]: https://api.rocket.rs/v0.3/rocket/http/struct.ContentType.html#method.from_extension
+[`rocket_contrib::Json`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.Json.html
+[`content`]: https://api.rocket.rs/v0.3/rocket/response/content/index.html
 
 ## General Improvements
 
@@ -500,8 +500,8 @@ In addition to new features, Rocket saw the following improvements:
   * The format of a request is always logged when available.
 
 [`yansi`]: https://crates.io/crates/yansi
-[`Request`]: https://api.rocket.rs/rocket/struct.Request.html
-[`State`]: https://api.rocket.rs/rocket/struct.State.html
+[`Request`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html
+[`State`]: https://api.rocket.rs/v0.3/rocket/struct.State.html
 
 ## Infrastructure
 
@@ -606,7 +606,7 @@ In addition to new features, Rocket saw the following improvements:
 # Version 0.2.0 (Feb 06, 2017)
 
 Detailed release notes for v0.2 can also be found on
-[rocket.rs](https://rocket.rs/news/2017-02-06-version-0.2/).
+[rocket.rs](https://rocket.rs/v0.3/news/2017-02-06-version-0.2/).
 
 ## New Features
 

@@ -33,7 +33,7 @@ fn main() {
             print_version_err(&*version, &*date);
             eprintln!("{}{}{}",
                       Blue.paint("See the getting started guide ("),
-                      White.paint("https://rocket.rs/guide/getting-started/"),
+                      White.paint("https://rocket.rs/v0.4/guide/getting-started/"),
                       Blue.paint(") for more information."));
             panic!("Aborting compilation due to incompatible compiler.")
         }
