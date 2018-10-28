@@ -32,4 +32,4 @@ rev = "62f361f"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
-compiletest_rs = "0.3.14"
+compiletest_rs = { version = "0.3", features = ["stable"] }
