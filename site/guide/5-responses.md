@@ -250,7 +250,6 @@ to stream from a local Unix stream, we might write:
 fn stream() -> io::Result<Stream<UnixStream>> {
     UnixStream::connect("/path/to/my/socket").map(|s| Stream::from(s))
 }
-
 ```
 
 [`rocket_contrib`]: @api/rocket_contrib/
@@ -286,7 +285,7 @@ The [JSON example on GitHub] provides further illustration.
 [`serde`]: https://docs.serde.rs/serde/
 [JSON example on GitHub]: @example/json
 
-### Templates
+## Templates
 
 Rocket includes built-in templating support that works largely through a
 [`Template`] responder in `rocket_contrib`. To render a template named "index",
@@ -314,8 +313,8 @@ fairings. To attach the template fairing, simply call
 ```rust
 fn main() {
     rocket::ignite()
-      .mount("/", routes![...])
-      .attach(Template::fairing());
+        .mount("/", routes![...])
+        .attach(Template::fairing());
 }
 ```
 
@@ -330,6 +329,8 @@ used.
   For a template file named `index.html.tera`, call `render("index")` and use
   the name `"index"` in templates, i.e, `{% extends "index" %}` or `{% extends
   "base" %}` for `base.html.tera`.
+
+### Live Reloading
 
 When your application is compiled in `debug` mode (without the `--release` flag
 passed to `cargo`), templates are automatically reloaded when they are modified
