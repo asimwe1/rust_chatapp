@@ -15,6 +15,27 @@
 //! here is purely technical. The code generation facilities are documented
 //! thoroughly in the [Rocket programming guide](https://rocket.rs/v0.4/guide).
 //!
+//! # Usage
+//!
+//! You **_should not_** directly depend on this library. To use the macros,
+//! attributes, and derives in this crate, it suffices to depend on `rocket` in
+//! `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! rocket = "0.4.0-dev"
+//! ```
+//!
+//! And to import macros via `#[macro_use]` in the crate root:
+//!
+//! ```rust
+//! #![feature(proc_macro_hygiene, decl_macro)]
+//!
+//! #[macro_use] extern crate rocket;
+//! # #[get("/")] fn hello() { }
+//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
+//! ```
+//!
 //! # Debugging Codegen
 //!
 //! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate

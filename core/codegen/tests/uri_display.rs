@@ -3,7 +3,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::http::RawStr;
-use rocket::http::uri::{UriDisplay, Formatter};
+use rocket::http::uri::UriDisplay;
 
 macro_rules! assert_uri_display {
     ($v:expr, $s:expr) => (
