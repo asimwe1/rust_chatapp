@@ -34,6 +34,7 @@ function do_replace() {
 do_replace "v$(major ${1})" "v$(major ${2})"
 do_replace "${1}" "${2}"
 
-# today=$(date "+%b %d, %Y")
-# sed -i.bak "s/^date.*/date = \"$today\"/" "${SITE_ROOT}/index.toml"
+today=$(date "+%b %d, %Y")
+sed -i.bak "s/^date.*/date = \"$today\"/" "${SITE_ROOT}/index.toml"
+
 find ${PROJECT_ROOT} -name "*.bak" | xargs rm
