@@ -3,15 +3,13 @@ name = "rocket_contrib_codegen"
 version = "0.4.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket contrib libraries."
-documentation = "https://api.rocket.rs/v0.4/rocket_contrib_codegen/"
+documentation = "https://api.rocket.rs/v0.4/rocket_contrib/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
-readme = "../../../README.md"
+readme = "../../README.md"
 keywords = ["rocket", "contrib", "code", "generation", "proc-macro"]
 license = "MIT/Apache-2.0"
-
-# if publishing, add to config scripts
-publish = false
+build = "../../core/lib/build.rs"
 
 [features]
 database_attribute = []
@@ -22,3 +20,7 @@ proc-macro = true
 [dependencies]
 devise = "0.1"
 quote = "0.6"
+
+[build-dependencies]
+yansi = "0.4"
+version_check = "0.1.3"

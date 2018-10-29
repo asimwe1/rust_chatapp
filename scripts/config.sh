@@ -46,11 +46,11 @@ EXAMPLES_DIR=$(relative "examples") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
 ALL_PROJECT_DIRS=(
-    "${CORE_LIB_ROOT}"
-    "${CORE_CODEGEN_ROOT}"
     "${CORE_HTTP_ROOT}"
-    "${CONTRIB_LIB_ROOT}"
+    "${CORE_CODEGEN_ROOT}"
+    "${CORE_LIB_ROOT}"
     "${CONTRIB_CODEGEN_ROOT}"
+    "${CONTRIB_LIB_ROOT}"
 )
 
 if [ "${1}" = "-p" ]; then

@@ -11,9 +11,6 @@ keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
 build = "../lib/build.rs"
 
-# if publishing, add to config scripts
-publish = false
-
 [lib]
 proc-macro = true
 
