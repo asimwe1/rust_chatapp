@@ -180,9 +180,11 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
             Owned(Outcome::Success(__v)) => Owned(Outcome::Success(__v)),
             Borrowed(Outcome::Success(ref __v)) => {
                 Borrowed(Outcome::Success(::std::borrow::Borrow::borrow(__v)))
-            }
-            Borrowed(__o) => Borrowed(__o.map(|_| loop { /* unreachable */ })),
-            Owned(__o) => Owned(__o)
+            },
+            Borrowed(__o) => Borrowed(__o.map(|_| {
+                unreachable!("Borrowed(Success(..)) case handled in previous block")
+            })),
+            Owned(__o) => Owned(__o),
         };
 
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
