@@ -1,5 +1,5 @@
 use proc_macro::{Span, TokenStream};
-use derive_utils::*;
+use devise::*;
 
 use derive::from_form::Form;
 

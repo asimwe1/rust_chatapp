@@ -2,8 +2,8 @@ use std::fmt::Display;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 
-use derive_utils::{syn, Result};
-use derive_utils::syn::{Expr, Ident, Type, spanned::Spanned};
+use devise::{syn, Result};
+use devise::syn::{Expr, Ident, Type, spanned::Spanned};
 use http::{uri::Origin, ext::IntoOwned};
 use http::route::{RouteSegment, Kind, Source};
 

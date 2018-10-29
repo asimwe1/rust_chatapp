@@ -1,4 +1,4 @@
-use derive_utils::*;
+use devise::*;
 use proc_macro::TokenStream;
 
 #[derive(FromMeta)]

@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use derive_utils::syn;
+use devise::syn;
 use proc_macro::{Span, Diagnostic};
 
 use http::route::RouteSegment;

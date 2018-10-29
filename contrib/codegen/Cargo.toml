@@ -19,9 +19,6 @@ database_attribute = []
 [lib]
 proc-macro = true
 
-[dependencies.derive_utils]
-git = "https://github.com/SergioBenitez/derive-utils"
-rev = "62f361f"
-
 [dependencies]
+devise = "0.1"
 quote = "0.6"

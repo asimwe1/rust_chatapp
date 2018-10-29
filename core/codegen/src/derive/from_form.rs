@@ -1,5 +1,5 @@
 use proc_macro::{Span, TokenStream};
-use derive_utils::{*, ext::{TypeExt, Split3}};
+use devise::{*, ext::{TypeExt, Split3}};
 
 #[derive(FromMeta)]
 crate struct Form {

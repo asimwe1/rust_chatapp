@@ -1,6 +1,6 @@
 //! Extensions to `syn` types.
 
-use derive_utils::syn;
+use devise::syn;
 use proc_macro::Diagnostic;
 
 pub fn syn_to_diag(error: syn::parse::Error) -> Diagnostic {

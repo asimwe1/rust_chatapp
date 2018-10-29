@@ -1,6 +1,6 @@
 use proc_macro::{TokenStream, Span};
 use proc_macro2::TokenStream as TokenStream2;
-use derive_utils::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
+use devise::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
 use indexmap::IndexSet;
 
 use proc_macro_ext::{Diagnostics, SpanExt};

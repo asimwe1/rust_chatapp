@@ -1,6 +1,6 @@
 use quote::ToTokens;
 use proc_macro2::TokenStream as TokenStream2;
-use derive_utils::{FromMeta, MetaItem, Result, ext::Split2};
+use devise::{FromMeta, MetaItem, Result, ext::Split2};
 use http::{self, ext::IntoOwned};
 use attribute::segments::{parse_segments, parse_segment, Segment, Kind, Source};
 

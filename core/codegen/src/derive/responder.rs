@@ -1,7 +1,7 @@
 use quote::ToTokens;
 use proc_macro::TokenStream;
-use derive_utils::{*, ext::TypeExt};
-use derive_utils::proc_macro2::TokenStream as TokenStream2;
+use devise::{*, ext::TypeExt};
+use devise::proc_macro2::TokenStream as TokenStream2;
 
 use http_codegen::{ContentType, Status};
 

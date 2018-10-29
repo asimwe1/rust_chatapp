@@ -1,8 +1,8 @@
 use proc_macro::Span;
 
-use derive_utils::{syn, Spanned};
-use derive_utils::proc_macro2::TokenStream as TokenStream2;
-use derive_utils::ext::TypeExt;
+use devise::{syn, Spanned};
+use devise::proc_macro2::TokenStream as TokenStream2;
+use devise::ext::TypeExt;
 use quote::ToTokens;
 
 use self::syn::{Expr, Ident, LitStr, Path, Token, Type};

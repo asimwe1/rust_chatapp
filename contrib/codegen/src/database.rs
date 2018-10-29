@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use derive_utils::{Spanned, Result};
+use devise::{Spanned, Result};
 use syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
 
 #[derive(Debug)]

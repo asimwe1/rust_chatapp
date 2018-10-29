@@ -48,7 +48,7 @@
 //! ```
 
 #[macro_use] extern crate quote;
-#[macro_use] extern crate derive_utils;
+#[macro_use] extern crate devise;
 extern crate proc_macro;
 extern crate rocket_http as http;
 extern crate indexmap;
@@ -64,7 +64,7 @@ mod syn_ext;
 
 use http::Method;
 use proc_macro::TokenStream;
-crate use derive_utils::proc_macro2;
+crate use devise::proc_macro2;
 
 crate static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 crate static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";

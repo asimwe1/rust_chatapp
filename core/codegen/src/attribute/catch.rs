@@ -1,5 +1,5 @@
 use proc_macro::{TokenStream, Span};
-use derive_utils::{syn, Spanned, Result, FromMeta};
+use devise::{syn, Spanned, Result, FromMeta};
 use proc_macro2::TokenStream as TokenStream2;
 
 use http_codegen::Status;
