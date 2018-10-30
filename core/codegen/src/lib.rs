@@ -26,12 +26,24 @@
 //! rocket = "0.4.0-dev"
 //! ```
 //!
-//! And to import macros via `#[macro_use]` in the crate root:
+//! And to import all macros, attributes, and derives via `#[macro_use]` in the
+//! crate root:
 //!
 //! ```rust
 //! #![feature(proc_macro_hygiene, decl_macro)]
 //!
 //! #[macro_use] extern crate rocket;
+//! # #[get("/")] fn hello() { }
+//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
+//! ```
+//!
+//! Or, alternatively, selectively import from the top-level scope:
+//!
+//! ```rust
+//! #![feature(proc_macro_hygiene, decl_macro)]
+//! # extern crate rocket;
+//!
+//! use rocket::{get, routes};
 //! # #[get("/")] fn hello() { }
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
 //! ```
