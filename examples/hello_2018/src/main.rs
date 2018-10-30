@@ -1,8 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-
 #[cfg(test)] mod tests;
+
+use rocket::{get, routes};
 
 #[get("/")]
 fn hello() -> &'static str {

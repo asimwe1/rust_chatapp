@@ -114,12 +114,12 @@ fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
 
         let_bindings.push(quote_spanned!(span =>
             let #ident_tmp = #expr;
-            let #ident = <#ty as ::rocket::http::uri::FromUriParam<_>>::from_uri_param(#ident_tmp);
+            let #ident = <#ty as rocket::http::uri::FromUriParam<_>>::from_uri_param(#ident_tmp);
         ));
 
         // generating: arg tokens for format string
         fmt_exprs.push(quote_spanned! { span =>
-            &#ident as &::rocket::http::uri::UriDisplay
+            &#ident as &rocket::http::uri::UriDisplay
         });
     }
 
@@ -158,10 +158,11 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let path = explode(origin.path(), arguments.by_ref().take(path_param_count));
     let query = Optional(origin.query().map(|q| explode(q, arguments)));
 
-    Ok(quote!({
-        ::rocket::http::uri::Origin::new::<
-            ::std::borrow::Cow<'static, str>,
-            ::std::borrow::Cow<'static, str>,
+    let span = internal.uri_params.route_path.span();
+    Ok(quote_spanned!(span => {
+        rocket::http::uri::Origin::new::<
+            std::borrow::Cow<'static, str>,
+            std::borrow::Cow<'static, str>,
         >(#path, #query)
     }).into())
 }
