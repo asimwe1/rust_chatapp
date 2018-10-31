@@ -2,11 +2,11 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::response::{status, content};
+use rocket::{http::Status, response::content};
 
 #[get("/empty")]
-fn empty() -> status::NoContent {
-    status::NoContent
+fn empty() -> Status {
+    Status::NoContent
 }
 
 #[get("/")]
