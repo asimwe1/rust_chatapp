@@ -3,8 +3,8 @@
 ###############################################################################
 
 [release]
-version = "0.4.0-dev"
-date = "Oct 28, 2018"
+version = "0.4.0-rc.1"
+date = "Oct 31, 2018"
 
 ###############################################################################
 # Top features: displayed in the header under the introductory text.

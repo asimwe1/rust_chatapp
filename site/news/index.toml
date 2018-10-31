@@ -1,4 +1,24 @@
 [[articles]]
+title = "Rocket v0.4 Release Candidate"
+slug = "2018-10-31-version-0.4-rc"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "October 31, 2018"
+snippet = """
+I am delighted to announce that a release candidate for Rocket v0.4 is available
+today! This release brings over a year of features, improvements, and
+refinements, resolving some of the most called for requests and bringing Rocket
+measurably closer to stable compatibility.
+
+The release candidate is an opportunity to discover issues with Rocket v0.4 and
+its documentation before its general release. We encourage all users to migrate
+their applications to the release candidate and report any issues to the [GitHub
+issue tracker].
+
+[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+"""
+
+[[articles]]
 title = "Rocket v0.3: Fairings, TLS, Private Cookies"
 slug = "2017-07-14-version-0.3"
 author = "Sergio Benitez"

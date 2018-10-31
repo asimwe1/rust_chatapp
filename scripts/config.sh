@@ -24,9 +24,9 @@ function relative() {
 }
 
 # Full and major version of Rocket
-ROCKET_VERSION="0.4.0-dev"
+ROCKET_VERSION="0.4.0-rc.1"
 ROCKET_MAJOR_VERSION="0.4"
-CURRENT_RELEASE=false
+CURRENT_RELEASE=true
 
 # Root of workspace-like directories.
 PROJECT_ROOT=$(relative "") || exit $?

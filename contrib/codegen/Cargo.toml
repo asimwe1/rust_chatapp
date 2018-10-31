@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib_codegen"
-version = "0.4.0-dev"
+version = "0.4.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket contrib libraries."
 documentation = "https://api.rocket.rs/v0.4/rocket_contrib/"
@@ -9,7 +9,7 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "contrib", "code", "generation", "proc-macro"]
 license = "MIT/Apache-2.0"
-build = "../../core/lib/build.rs"
+build = "build.rs"
 
 [features]
 database_attribute = []

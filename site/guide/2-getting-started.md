@@ -50,7 +50,7 @@ Now, add Rocket as a dependency in your `Cargo.toml`:
 
 ```
 [dependencies]
-rocket = "0.4.0-dev"
+rocket = "0.4.0-rc.1"
 ```
 
 Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
