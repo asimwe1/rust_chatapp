@@ -59,6 +59,22 @@ pub enum Uri<'a> {
     Asterisk,
 }
 
+/// This encode set is used for strings where '/' characters are known to be
+/// safe; all other special path segment characters are encoded.
+define_encode_set! {
+    #[doc(hidden)]
+    pub UNSAFE_PATH_ENCODE_SET = [::percent_encoding::DEFAULT_ENCODE_SET] | {
+        '%', '[', '\\', ']', '^', '|'
+    }
+}
+
+/// This encode set should be used for path segments (components) of a
+/// `/`-separated path. It encodes as much as possible.
+define_encode_set! {
+    #[doc(hidden)]
+    pub DEFAULT_ENCODE_SET = [UNSAFE_PATH_ENCODE_SET] | { '/' }
+}
+
 impl<'a> Uri<'a> {
     #[inline]
     crate unsafe fn raw_absolute(
@@ -161,7 +177,7 @@ impl<'a> Uri<'a> {
 
     /// Returns a URL-encoded version of the string. Any characters outside of
     /// visible ASCII-range are encoded as well as ' ', '"', '#', '<', '>', '`',
-    /// '?', '{', '}', '%', and '/'.
+    /// '?', '{', '}', '%', '/', '[', '\\', ']', '^', and '|'.
     ///
     /// # Examples
     ///
@@ -173,8 +189,7 @@ impl<'a> Uri<'a> {
     /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
     pub fn percent_encode(string: &str) -> Cow<str> {
-        let set = ::percent_encoding::PATH_SEGMENT_ENCODE_SET;
-        ::percent_encoding::utf8_percent_encode(string, set).into()
+        ::percent_encoding::utf8_percent_encode(string, DEFAULT_ENCODE_SET).into()
     }
 
     /// Returns a URL-decoded version of the string. If the percent encoded

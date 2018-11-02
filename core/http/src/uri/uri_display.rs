@@ -2,17 +2,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::borrow::Cow;
 
-use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use percent_encoding::utf8_percent_encode;
 
-use {RawStr, uri::{Uri, Formatter}, ext::Normalize};
-
-mod priv_encode_set {
-    /// This encode set is used for strings where '/' characters are known to be
-    /// safe; all other special path segment characters are encoded.
-    define_encode_set! { pub PATH_ENCODE_SET = [super::DEFAULT_ENCODE_SET] | {'%'} }
-}
-
-use self::priv_encode_set::PATH_ENCODE_SET;
+use uri::{Uri, Formatter, UNSAFE_PATH_ENCODE_SET};
+use {RawStr, ext::Normalize};
 
 /// Trait implemented by types that can be displayed as part of a URI in `uri!`.
 ///
@@ -241,7 +234,7 @@ impl UriDisplay for PathBuf {
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let string = self.normalized_str();
-        let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
+        let enc: Cow<str> = utf8_percent_encode(&string, UNSAFE_PATH_ENCODE_SET).into();
         f.write_raw(&enc)
     }
 }
@@ -251,7 +244,7 @@ impl UriDisplay for Path {
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let string = self.normalized_str();
-        let enc: Cow<str> = utf8_percent_encode(&string, PATH_ENCODE_SET).into();
+        let enc: Cow<str> = utf8_percent_encode(&string, UNSAFE_PATH_ENCODE_SET).into();
         f.write_raw(&enc)
     }
 }

@@ -15,8 +15,8 @@
 #[macro_use]
 extern crate pear;
 extern crate smallvec;
-#[macro_use]
-extern crate percent_encoding;
+#[doc(hidden)] #[macro_use]
+pub extern crate percent_encoding;
 extern crate cookie;
 extern crate time;
 extern crate indexmap;
