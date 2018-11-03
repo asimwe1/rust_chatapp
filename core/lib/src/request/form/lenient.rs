@@ -59,7 +59,7 @@ use http::uri::FromUriParam;
 /// forms = 524288
 /// ```
 #[derive(Debug)]
-pub struct LenientForm<T>(crate T);
+pub struct LenientForm<T>(pub T);
 
 impl<T> LenientForm<T> {
     /// Consumes `self` and returns the parsed value.

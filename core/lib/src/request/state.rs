@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use Rocket;
 use request::{self, FromRequest, Request};
 use outcome::Outcome;
 use http::Status;
@@ -78,6 +79,29 @@ use http::Status;
 ///     }
 /// }
 /// ```
+///
+/// # Testing with `State`
+///
+/// When unit testing your application, you may find it necessary to manually
+/// construct a type of `State` to pass to your functions. To do so, use the
+/// [`State::from()`] static method:
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// use rocket::State;
+///
+/// struct MyManagedState(usize);
+///
+/// #[get("/")]
+/// fn handler(state: State<MyManagedState>) -> String {
+///     state.0.to_string()
+/// }
+///
+/// let rocket = rocket::ignite().manage(MyManagedState(127));
+/// let state = State::from(&rocket).expect("managing `MyManagedState`");
+/// assert_eq!(handler(state), "127");
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
@@ -111,6 +135,33 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     #[inline(always)]
     pub fn inner(&self) -> &'r T {
         self.0
+    }
+
+    /// Returns the managed state value in `rocket` for the type `T` if it is
+    /// being managed by `rocket`. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::State;
+    ///
+    /// #[derive(Debug, PartialEq)]
+    /// struct Managed(usize);
+    ///
+    /// #[derive(Debug, PartialEq)]
+    /// struct Unmanaged(usize);
+    ///
+    /// let rocket = rocket::ignite().manage(Managed(7));
+    ///
+    /// let state: Option<State<Managed>> = State::from(&rocket);
+    /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
+    ///
+    /// let state: Option<State<Unmanaged>> = State::from(&rocket);
+    /// assert_eq!(state, None);
+    /// ```
+    #[inline(always)]
+    pub fn from(rocket: &'r Rocket) -> Option<Self> {
+        rocket.state.try_get::<T>().map(State)
     }
 }
 
