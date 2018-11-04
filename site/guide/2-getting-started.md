@@ -87,7 +87,7 @@ run`. You should see the following:
     => keep-alive: 5s
     => tls: disabled
 🛰  Mounting '/':
-    => GET / (hello)
+    => GET / (index)
 🚀  Rocket has launched from http://localhost:8000
 ```
 

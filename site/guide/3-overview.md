@@ -167,8 +167,8 @@ Running the application, the console shows:
     => limits: forms = 32KiB
     => keep-alive: 5s
     => tls: disabled
-🛰  Mounting '/':
-    => GET / (hello)
+🛰  Mounting '/hello':
+    => GET /hello/world (world)
 🚀  Rocket has launched from http://localhost:8000
 ```
 
