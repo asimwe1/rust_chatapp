@@ -5,6 +5,10 @@ use uri::UriDisplay;
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
 ///
+/// Rocket provides a blanket implementation for all types that implement
+/// [`UriDisplay`]. As such, this trait typically does not need to be implemented.
+/// Instead, implement [`UriDisplay`].
+///
 /// This trait is invoked once per expression passed into a [`uri!`] invocation.
 /// In particular, for a route URI parameter of type `T` and a user-supplied
 /// expression of type `S`, `<T as FromUriParam<S>>::from_uri_param` is
@@ -30,10 +34,6 @@ use uri::UriDisplay;
 /// ```
 ///
 /// # Implementing
-///
-/// Rocket provides a blanket implementation for all types that implement
-/// [`UriDisplay`]. As such, this trait typically does not need to be implemented.
-/// Instead, implement [`UriDisplay`].
 ///
 /// This trait should only be implemented when you'd like to allow a type
 /// different from the route's declared type to be used in its place in a `uri!`
