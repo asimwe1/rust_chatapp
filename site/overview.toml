@@ -34,7 +34,7 @@ illustrate, let's use the following route:
 
 ```rust
 #[get("/hello/<name>/<age>")]
-fn hello(name: &str, age: u8) -> String {
+fn hello(name: String, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 ```
@@ -92,12 +92,12 @@ header, Rocket can protect those calls via a custom `ApiKey` request guard:
 
 ```rust
 #[get("/sensitive")]
-fn sensitive(key: ApiKey) -> &'static str { ... }
+fn sensitive(key: ApiKey) { ... }
 ```
 
 `ApiKey` protects the `sensitive` handler from running incorrectly. In order for
 Rocket to call the `sensitive` handler, the `ApiKey` type needs to be derived
-through a [FromRequest](@api/rocket/request/trait.FromRequest.html)
+through a [`FromRequest`](@api/rocket/request/trait.FromRequest.html)
 implementation, which in this case, validates the API key header. Request guards
 are a powerful and unique Rocket concept; they centralize application policy and
 invariants through types.
