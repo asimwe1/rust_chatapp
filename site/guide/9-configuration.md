@@ -254,12 +254,15 @@ let config = Config::build(Environment::Staging)
     .port(9234)
     .finalize()?;
 
-let app = rocket::custom(config, false);
+rocket::custom(config)
+    .mount(..)
+    .launch();
 ```
 
-Configuration via `rocket::custom()` replaces all configuration from
-`Rocket.toml` or environment variables. In other words, using `rocket::custom()`
-results in `Rocket.toml` and environment variables being ignored.
+Configuration via `rocket::custom()` replaces calls to `rocket::ignite()` and
+all configuration from `Rocket.toml` or environment variables. In other words,
+using `rocket::custom()` results in `Rocket.toml` and environment variables
+being ignored.
 
 [`rocket::custom()`]: @api/rocket/fn.custom.html
 [`ConfigBuilder`]: @api/rocket/config/struct.ConfigBuilder.html
