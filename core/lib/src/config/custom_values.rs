@@ -1,19 +1,17 @@
 use std::fmt;
 
-#[cfg(feature = "tls")] use http::tls::{Certificate, PrivateKey};
+#[cfg(feature = "tls")]
+use http::tls::{Certificate, PrivateKey};
+use http::Key;
 
 use config::{Result, Config, Value, ConfigError, LoggingLevel};
 
-#[cfg(feature = "private-cookies")] use http::Key;
-
-#[cfg(feature = "private-cookies")]
 #[derive(Clone)]
 pub enum SecretKey {
     Generated(Key),
     Provided(Key)
 }
 
-#[cfg(feature = "private-cookies")]
 impl SecretKey {
     #[inline]
     crate fn inner(&self) -> &Key {
@@ -25,19 +23,23 @@ impl SecretKey {
     #[inline]
     crate fn is_generated(&self) -> bool {
         match *self {
+            #[cfg(feature = "private-cookies")]
             SecretKey::Generated(_) => true,
             _ => false
         }
     }
 }
 
-#[cfg(feature = "private-cookies")]
 impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        #[cfg(feature = "private-cookies")]
         match *self {
             SecretKey::Generated(_) => write!(f, "generated"),
             SecretKey::Provided(_) => write!(f, "provided"),
         }
+
+        #[cfg(not(feature = "private-cookies"))]
+        write!(f, "private-cookies disabled")
     }
 }
 

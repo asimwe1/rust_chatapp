@@ -267,9 +267,10 @@ impl<'c> LocalRequest<'c> {
 
     /// Add a [private cookie] to this request.
     ///
-    /// [private cookie]: ::http::Cookies::add_private()
+    /// This method is only available when the `private-cookies` feature is
+    /// enabled.
     ///
-    /// This method is only available when the `private-cookies` feature is enabled.
+    /// [private cookie]: ::http::Cookies::add_private()
     ///
     /// # Examples
     ///
@@ -283,8 +284,8 @@ impl<'c> LocalRequest<'c> {
     /// # #[allow(unused_variables)]
     /// let req = client.get("/").private_cookie(Cookie::new("user_id", "sb"));
     /// ```
-    #[cfg(feature = "private-cookies")]
     #[inline]
+    #[cfg(feature = "private-cookies")]
     pub fn private_cookie(self, cookie: Cookie<'static>) -> Self {
         self.request.cookies().add_original_private(cookie);
         self

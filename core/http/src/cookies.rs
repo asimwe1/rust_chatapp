@@ -1,16 +1,29 @@
 use std::fmt;
 use std::cell::RefMut;
 
+use Header;
 use cookie::Delta;
+
+#[doc(hidden)] pub use self::key::*;
 pub use cookie::{Cookie, CookieJar, SameSite};
 
+/// Types and methods to manage a `Key` when private cookies are enabled.
 #[cfg(feature = "private-cookies")]
-pub use cookie::Key;
+mod key {
+    pub use cookie::Key;
+}
 
-use Header;
-
+/// Types and methods to manage a `Key` when private cookies are disabled.
 #[cfg(not(feature = "private-cookies"))]
-type Key = ();
+mod key {
+    #[derive(Copy, Clone)]
+    pub struct Key;
+
+    impl Key {
+        pub fn generate() -> Self { Key }
+        pub fn from_master(_bytes: &[u8]) -> Self { Key }
+    }
+}
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -245,8 +258,8 @@ impl<'a> Cookies<'a> {
     }
 
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
     #[inline]
+    #[doc(hidden)]
     pub fn delta(&self) -> Delta {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
@@ -262,7 +275,8 @@ impl<'a> Cookies<'a> {
     /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
     /// cookie fails to authenticate or decrypt, `None` is returned.
     ///
-    /// This method is only available when the `private-cookies` feature is enabled.
+    /// This method is only available when the `private-cookies` feature is
+    /// enabled.
     ///
     /// # Example
     ///
@@ -298,7 +312,8 @@ impl<'a> Cookies<'a> {
     /// These defaults ensure maximum usability and security. For additional
     /// security, you may wish to set the `secure` flag.
     ///
-    /// This method is only available when the `private-cookies` feature is enabled.
+    /// This method is only available when the `private-cookies` feature is
+    /// enabled.
     ///
     /// # Example
     ///
@@ -337,8 +352,6 @@ impl<'a> Cookies<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    /// This method is only available when the `private-cookies` feature is enabled.
-    ///
     fn set_private_defaults(cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
@@ -363,7 +376,8 @@ impl<'a> Cookies<'a> {
     /// and `domain` as the cookie that was initially set. If a path is not set
     /// on `cookie`, the `"/"` path will automatically be set.
     ///
-    /// This method is only available when the `private-cookies` feature is enabled.
+    /// This method is only available when the `private-cookies` feature is
+    /// enabled.
     ///
     /// # Example
     ///

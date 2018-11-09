@@ -59,8 +59,7 @@ pub mod uncased;
 #[doc(hidden)] pub use smallvec::{SmallVec, Array};
 
 // This one we need to expose for core.
-#[doc(hidden)] pub use cookies::CookieJar;
-#[doc(hidden)] #[cfg(feature = "private-cookies")] pub use cookies::Key;
+#[doc(hidden)] pub use cookies::{Key, CookieJar};
 
 pub use method::Method;
 pub use content_type::ContentType;

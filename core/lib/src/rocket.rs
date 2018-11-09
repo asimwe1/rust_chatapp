@@ -396,7 +396,6 @@ impl Rocket {
         launch_info_!("port: {}", Paint::white(&config.port));
         launch_info_!("log: {}", Paint::white(config.log_level));
         launch_info_!("workers: {}", Paint::white(config.workers));
-        #[cfg(feature = "private-cookies")]
         launch_info_!("secret key: {}", Paint::white(&config.secret_key));
         launch_info_!("limits: {}", Paint::white(&config.limits));
 
@@ -415,10 +414,8 @@ impl Rocket {
             launch_info_!("tls: {}", Paint::white("disabled"));
         }
 
-        #[cfg(feature = "private-cookies")] {
-            if config.secret_key.is_generated() && config.environment.is_prod() {
-                warn!("environment is 'production', but no `secret_key` is configured");
-            }
+        if config.secret_key.is_generated() && config.environment.is_prod() {
+            warn!("environment is 'production', but no `secret_key` is configured");
         }
 
         for (name, value) in config.extras() {

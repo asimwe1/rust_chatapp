@@ -503,14 +503,17 @@ fn logout(mut cookies: Cookies) -> Flash<Redirect> {
 
 [`Cookies::add()`]: @api/rocket/http/enum.Cookies.html#method.add
 
-Private Cookies can be omitted at build time by excluding the feature
-`private-cookies`. You can do this by setting the `default-features`
-directive to `false` in your `Cargo.toml`:
+Support for private cookies, which depends on the [`ring`] library, can be
+omitted at build time by disabling Rocket's default features, in-turn disabling
+the default `private-cookies` feature. To do so, modify your `Cargo.toml` file
+so that you depend on `rocket` as follows:
 
 ```toml
-[dependencies.rocket]
-default-features = false
+[dependencies]
+rocket = { version = "0.4.0-rc.1", default-features = false }
 ```
+
+[`ring`]: https://github.com/briansmith/ring
 
 ### Secret Key
 

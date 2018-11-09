@@ -222,10 +222,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// #
+/// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
-/// # struct User { id: String, is_admin: bool };
+/// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
 /// #     fn get_user(&self, id: String) -> Result<User, ()> {
@@ -239,7 +239,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #     }
 /// # }
 /// #
-/// # struct Admin { user: User };
+/// # struct Admin { user: User }
 /// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for User {
 ///     type Error = ();
@@ -274,6 +274,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// #[get("/dashboard", rank = 2)]
 /// fn user_dashboard(user: User) { }
+/// # }
 /// ```
 ///
 /// When a non-admin user is logged in, the database will be queried twice: once
@@ -285,10 +286,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![feature(never_type)]
 /// # #[macro_use] extern crate rocket;
-/// #
+/// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
-/// # struct User { id: String, is_admin: bool };
+/// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
 /// #     fn get_user(&self, id: String) -> Result<User, ()> {
@@ -302,7 +303,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #     }
 /// # }
 /// #
-/// # struct Admin<'a> { user: &'a User };
+/// # struct Admin<'a> { user: &'a User }
 /// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
 ///     type Error = !;
@@ -335,6 +336,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///         }
 ///     }
 /// }
+/// # }
 /// ```
 ///
 /// Notice that these request guards provide access to *borrowed* data (`&'a

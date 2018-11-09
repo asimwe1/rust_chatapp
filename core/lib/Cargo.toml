@@ -15,6 +15,7 @@ build = "build.rs"
 categories = ["web-programming::http-server"]
 
 [features]
+default = ["private-cookies"]
 tls = ["rocket_http/tls"]
 private-cookies = ["rocket_http/private-cookies"]
 
