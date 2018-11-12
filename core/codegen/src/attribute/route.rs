@@ -131,21 +131,21 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
     // All dynamic parameter should be found if this function is being called;
     // that's the point of statically checking the URI parameters.
     let internal_error = quote!({
-        log_error("Internal invariant error: expected dynamic parameter not found.");
-        log_error("Please report this error to the Rocket issue tracker.");
-        Outcome::Forward(__data)
+        ___l::error("Internal invariant error: expected dynamic parameter not found.");
+        ___l::error("Please report this error to the Rocket issue tracker.");
+        ___Outcome::Forward(__data)
     });
 
     // Returned when a dynamic parameter fails to parse.
     let parse_error = quote!({
-        log_warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-        Outcome::Forward(__data)
+        ___l::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
+        ___Outcome::Forward(__data)
     });
 
     let expr = match seg.kind {
         Kind::Single => quote_spanned! { span =>
             match __req.raw_segment_str(#i) {
-                Some(__s) => match <#ty as FromParam>::from_param(__s) {
+                Some(__s) => match <#ty as ___r::FromParam>::from_param(__s) {
                     Ok(__v) => __v,
                     Err(__e) => return #parse_error,
                 },
@@ -154,7 +154,7 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
         },
         Kind::Multi => quote_spanned! { span =>
             match __req.raw_segments(#i) {
-                Some(__s) => match <#ty as FromSegments>::from_segments(__s) {
+                Some(__s) => match <#ty as ___r::FromSegments>::from_segments(__s) {
                     Ok(__v) => __v,
                     Err(__e) => return #parse_error,
                 },
@@ -173,25 +173,25 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
 fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     quote_spanned! { span =>
-        let __transform = <#ty as FromData>::transform(__req, __data);
+        let __transform = <#ty as ___FromData>::transform(__req, __data);
 
         #[allow(unreachable_patterns, unreachable_code)]
         let __outcome = match __transform {
-            Owned(Outcome::Success(__v)) => Owned(Outcome::Success(__v)),
-            Borrowed(Outcome::Success(ref __v)) => {
-                Borrowed(Outcome::Success(::std::borrow::Borrow::borrow(__v)))
+            ___T::Owned(___Outcome::Success(__v)) => ___T::Owned(___Outcome::Success(__v)),
+            ___T::Borrowed(___Outcome::Success(ref __v)) => {
+                ___T::Borrowed(___Outcome::Success(::std::borrow::Borrow::borrow(__v)))
             },
-            Borrowed(__o) => Borrowed(__o.map(|_| {
+            ___T::Borrowed(__o) => ___T::Borrowed(__o.map(|_| {
                 unreachable!("Borrowed(Success(..)) case handled in previous block")
             })),
-            Owned(__o) => Owned(__o),
+            ___T::Owned(__o) => ___T::Owned(__o),
         };
 
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as FromData>::from_data(__req, __outcome) {
-            Outcome::Success(__d) => __d,
-            Outcome::Forward(__d) => return Outcome::Forward(__d),
-            Outcome::Failure((__c, _)) => return Outcome::Failure(__c),
+        let #ident: #ty = match <#ty as ___FromData>::from_data(__req, __outcome) {
+            ___Outcome::Success(__d) => __d,
+            ___Outcome::Forward(__d) => return ___Outcome::Forward(__d),
+            ___Outcome::Failure((__c, _)) => return ___Outcome::Failure(__c),
         };
     }
 }
@@ -218,7 +218,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
                 let mut #ident: Option<#ty> = None;
             },
             Kind::Multi => quote_spanned! { span =>
-                let mut __trail = SmallVec::<[FormItem; 8]>::new();
+                let mut __trail = ::rocket::http::SmallVec::<[___r::FormItem; 8]>::new();
             },
             Kind::Static => quote!()
         };
@@ -227,11 +227,11 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
             Kind::Single => quote_spanned! { span =>
                 (_, #name, __v) => {
                     #[allow(unreachable_patterns, unreachable_code)]
-                    let __v = match <#ty as FromFormValue>::from_form_value(__v) {
+                    let __v = match <#ty as ___r::FromFormValue>::from_form_value(__v) {
                         Ok(__v) => __v,
                         Err(__e) => {
-                            log_warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                            return Outcome::Forward(__data);
+                            ___l::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
+                            return ___Outcome::Forward(__data);
                         }
                     };
 
@@ -248,20 +248,20 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
 
         let builder = match segment.kind {
             Kind::Single => quote_spanned! { span =>
-                let #ident = match #ident.or_else(<#ty as FromFormValue>::default) {
+                let #ident = match #ident.or_else(<#ty as ___r::FromFormValue>::default) {
                     Some(__v) => __v,
                     None => {
-                        log_warn_(&format!("Missing required query parameter '{}'.", #name));
-                        return Outcome::Forward(__data);
+                        ___l::warn_(&format!("Missing required query parameter '{}'.", #name));
+                        return ___Outcome::Forward(__data);
                     }
                 };
             },
             Kind::Multi => quote_spanned! { span =>
-                let #ident = match <#ty as FromQuery>::from_query(Query(&__trail)) {
+                let #ident = match <#ty as ___r::FromQuery>::from_query(___r::Query(&__trail)) {
                     Ok(__v) => __v,
                     Err(__e) => {
-                        log_warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                        return Outcome::Forward(__data);
+                        ___l::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
+                        return ___Outcome::Forward(__data);
                     }
                 };
             },
@@ -299,10 +299,10 @@ fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     quote_spanned! { span =>
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as FromRequest>::from_request(__req) {
-            Outcome::Success(__v) => __v,
-            Outcome::Forward(_) => return Outcome::Forward(__data),
-            Outcome::Failure((__c, _)) => return Outcome::Failure(__c),
+        let #ident: #ty = match <#ty as ___r::FromRequest>::from_request(__req) {
+            ___Outcome::Success(__v) => __v,
+            ___Outcome::Forward(_) => return ___Outcome::Forward(__data),
+            ___Outcome::Failure((__c, _)) => return ___Outcome::Failure(__c),
         };
     }
 }
@@ -376,12 +376,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         ) -> ::rocket::handler::Outcome<'_b> {
             #[allow(unused_imports)]
             use rocket::{
-                handler, Outcome,
-                logger::{log_warn, log_error, log_warn_},
-                data::{FromData, Transform::*},
-                http::{SmallVec, RawStr},
-                request::{FromRequest, FromParam, FromFormValue, FromSegments},
-                request::{Query, FromQuery, FormItems, FormItem},
+                Outcome as ___Outcome, logger as ___l, request as ___r,
+                data::{FromData as ___FromData, Transform as ___T},
             };
 
             #(#req_guard_definitions)*
@@ -389,7 +385,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
             #data_stmt
 
             let ___responder = #user_handler_fn_name(#(#parameter_names),*);
-            handler::Outcome::from(__req, ___responder)
+            ::rocket::handler::Outcome::from(__req, ___responder)
         }
 
         /// Rocket code generated wrapping URI macro.

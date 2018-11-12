@@ -222,7 +222,7 @@ macro_rules! external_log_function {
     )
 }
 
-external_log_function!(log_error: error);
-external_log_function!(log_error_: error_);
-external_log_function!(log_warn: warn);
-external_log_function!(log_warn_: warn_);
+external_log_function!(error: error);
+external_log_function!(error_: error_);
+external_log_function!(warn: warn);
+external_log_function!(warn_: warn_);
