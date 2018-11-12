@@ -10,8 +10,6 @@ use yansi::Color::White;
 /// The type of a configuration error.
 #[derive(Debug)]
 pub enum ConfigError {
-    /// The current working directory could not be determined.
-    BadCWD,
     /// The configuration file was not found.
     NotFound,
     /// There was an I/O error while reading the configuration file.
@@ -35,7 +33,7 @@ pub enum ConfigError {
     /// A config key was specified with a value of the wrong type.
     ///
     /// Parameters: (entry_name, expected_type, actual_type, filename)
-    BadType(String, &'static str, &'static str, PathBuf),
+    BadType(String, &'static str, &'static str, Option<PathBuf>),
     /// There was a TOML parsing error.
     ///
     /// Parameters: (toml_source_string, filename, error_description, line/col)
@@ -57,9 +55,8 @@ pub enum ConfigError {
 impl ConfigError {
     /// Prints this configuration error with Rocket formatting.
     pub fn pretty_print(&self) {
-        let valid_envs = Environment::valid();
+        let valid_envs = Environment::VALID;
         match *self {
-            BadCWD => error!("couldn't get current working directory"),
             NotFound => error!("config file was not found"),
             IoError => error!("failed reading the config file: IO error"),
             Io(ref error, param) => {
@@ -82,7 +79,10 @@ impl ConfigError {
             }
             BadType(ref name, expected, actual, ref filename) => {
                 error!("{} key could not be parsed", White.paint(name));
-                info_!("in {:?}", White.paint(filename));
+                if let Some(filename) = filename {
+                    info_!("in {:?}", White.paint(filename));
+                }
+
                 info_!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
             }
@@ -133,7 +133,6 @@ impl ConfigError {
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            BadCWD => write!(f, "couldn't get current working directory"),
             NotFound => write!(f, "config file was not found"),
             IoError => write!(f, "I/O error while reading the config file"),
             Io(ref e, p) => write!(f, "I/O error while setting '{}': {}", p, e),
@@ -158,7 +157,6 @@ impl fmt::Display for ConfigError {
 impl Error for ConfigError {
     fn description(&self) -> &str {
         match *self {
-            BadCWD => "the current working directory could not be determined",
             NotFound => "config file was not found",
             IoError => "there was an I/O error while reading the config file",
             Io(..) => "an I/O error occured while setting a configuration parameter",
@@ -177,7 +175,6 @@ impl Error for ConfigError {
 impl PartialEq for ConfigError {
     fn eq(&self, other: &ConfigError) -> bool {
         match (self, other) {
-            (&BadCWD, &BadCWD) => true,
             (&NotFound, &NotFound) => true,
             (&IoError, &IoError) => true,
             (&Io(_, p1), &Io(_, p2)) => p1 == p2,
@@ -193,7 +190,7 @@ impl PartialEq for ConfigError {
                 k1 == k2 && v1 == v2
             }
             (&Missing(ref k1), &Missing(ref k2)) => k1 == k2,
-            (&BadCWD, _) | (&NotFound, _) | (&IoError, _) | (&Io(..), _)
+            (&NotFound, _) | (&IoError, _) | (&Io(..), _)
                 | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
                 | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
                 | (&BadEnvVal(..), _) | (&Missing(..), _) => false

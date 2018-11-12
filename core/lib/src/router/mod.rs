@@ -228,7 +228,7 @@ mod test {
     }
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
-        let rocket = Rocket::custom(Config::development().unwrap());
+        let rocket = Rocket::custom(Config::development());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         let matches = router.route(&request);
         if matches.len() > 0 {
@@ -239,7 +239,7 @@ mod test {
     }
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
-        let rocket = Rocket::custom(Config::development().unwrap());
+        let rocket = Rocket::custom(Config::development());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         router.route(&request)
     }

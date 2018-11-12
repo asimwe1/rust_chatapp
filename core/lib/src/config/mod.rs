@@ -229,29 +229,6 @@ pub struct RocketConfig {
 }
 
 impl RocketConfig {
-    /// Create a new configuration using the passed in `config` for all
-    /// environments. The Rocket.toml file is ignored, as are environment
-    /// variables.
-    ///
-    /// # Panics
-    ///
-    /// If the current working directory can't be retrieved, this function
-    /// panics.
-    pub fn new(config: Config) -> RocketConfig {
-        let f = config.config_path.clone();
-        let active_env = config.environment;
-
-        // None of these unwraps should fail since the filename is coming from
-        // an existing config.
-        let mut configs = HashMap::new();
-        configs.insert(Development, Config::default(Development, &f).unwrap());
-        configs.insert(Staging, Config::default(Staging, &f).unwrap());
-        configs.insert(Production, Config::default(Production, &f).unwrap());
-        configs.insert(active_env, config);
-
-        RocketConfig { active_env, config: configs }
-    }
-
     /// Read the configuration from the `Rocket.toml` file. The file is search
     /// for recursively up the tree, starting from the CWD.
     pub fn read() -> Result<RocketConfig> {
@@ -271,11 +248,17 @@ impl RocketConfig {
 
     /// Return the default configuration for all environments and marks the
     /// active environment (via the CONFIG_ENV variable) as active.
-    pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
+    pub fn active_default_from(filename: Option<&Path>) -> Result<RocketConfig> {
         let mut defaults = HashMap::new();
-        defaults.insert(Development, Config::default(Development, &filename)?);
-        defaults.insert(Staging, Config::default(Staging, &filename)?);
-        defaults.insert(Production, Config::default(Production, &filename)?);
+        if let Some(path) = filename {
+            defaults.insert(Development, Config::default_from(Development, &path)?);
+            defaults.insert(Staging, Config::default_from(Staging, &path)?);
+            defaults.insert(Production, Config::default_from(Production, &path)?);
+        } else {
+            defaults.insert(Development, Config::default(Development));
+            defaults.insert(Staging, Config::default(Staging));
+            defaults.insert(Production, Config::default(Production));
+        }
 
         let mut config = RocketConfig {
             active_env: Environment::active()?,
@@ -287,12 +270,18 @@ impl RocketConfig {
         Ok(config)
     }
 
+    /// Return the default configuration for all environments and marks the
+    /// active environment (via the CONFIG_ENV variable) as active.
+    pub fn active_default() -> Result<RocketConfig> {
+        RocketConfig::active_default_from(None)
+    }
+
     /// Iteratively search for `CONFIG_FILENAME` starting at the current working
     /// directory and working up through its parents. Returns the path to the
     /// file or an Error::NoKey if the file couldn't be found. If the current
     /// working directory can't be determined, return `BadCWD`.
     fn find() -> Result<PathBuf> {
-        let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
+        let cwd = env::current_dir().map_err(|_| ConfigError::NotFound)?;
         let mut current = cwd.as_path();
 
         loop {
@@ -365,7 +354,7 @@ impl RocketConfig {
                 Err(e) => return Err(ConfigError::BadEnvVal(key, val, e))
             };
 
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 match self.get_mut(*env).set_raw(&key, &toml_val) {
                     Err(ConfigError::BadType(_, exp, actual, _)) => {
                         let e = format!("expected {}, but found {}", exp, actual);
@@ -397,7 +386,7 @@ impl RocketConfig {
         };
 
         // Create a config with the defaults; set the env to the active one.
-        let mut config = RocketConfig::active_default(filename)?;
+        let mut config = RocketConfig::active_default_from(Some(filename.as_ref()))?;
 
         // Store all of the global overrides, if any, for later use.
         let mut global = None;
@@ -408,7 +397,7 @@ impl RocketConfig {
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
                 None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), path.clone()
+                    entry, "a table", value.type_str(), Some(path.clone())
                 ))
             };
 
@@ -428,7 +417,7 @@ impl RocketConfig {
 
         // Override all of the environments with the global values.
         if let Some(ref global_kv_pairs) = global {
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 config.set_from_table(*env, global_kv_pairs)?;
             }
         }
@@ -467,16 +456,11 @@ crate fn init() -> Config {
             | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
             | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..)
             | Missing(..) => bail(e),
-            IoError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
+            IoError => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
 
-        let default_path = match env::current_dir() {
-            Ok(path) => path.join(&format!(".{}.{}", "default", CONFIG_FILENAME)),
-            Err(_) => bail(ConfigError::BadCWD)
-        };
-
-        RocketConfig::active_default(&default_path).unwrap_or_else(|e| bail(e))
+        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
     });
 
     // FIXME: Should probably store all of the config.
@@ -522,7 +506,7 @@ mod test {
     }
 
     fn active_default() -> Result<RocketConfig>  {
-        RocketConfig::active_default(TEST_CONFIG_FILENAME)
+        RocketConfig::active_default()
     }
 
     fn default_config(env: Environment) -> ConfigBuilder {
@@ -1073,7 +1057,7 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
 
         // Test first that we can override each environment.
-        for env in &Environment::all() {
+        for env in &Environment::ALL {
             env::set_var(CONFIG_ENV, env.to_string());
 
             check_config!(RocketConfig::parse(format!(r#"
@@ -1127,14 +1111,14 @@ mod test {
 
             let rconfig = active_default().unwrap();
             // Check that it overrides the active config.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 env::set_var(CONFIG_ENV, env.to_string());
                 let rconfig = active_default().unwrap();
                 check_value(&*key.to_lowercase(), val, rconfig.active());
             }
 
             // And non-active configs.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 check_value(&*key.to_lowercase(), val, rconfig.get(*env));
             }
         }
@@ -1172,7 +1156,7 @@ mod test {
             check_value(&*key.to_lowercase(), val, r.active());
 
             // And non-active configs.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 check_value(&*key.to_lowercase(), val, r.get(*env));
             }
         }

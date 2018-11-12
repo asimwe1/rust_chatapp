@@ -697,7 +697,7 @@ impl<'r> Request<'r> {
 impl<'r> Request<'r> {
     // Only used by doc-tests! Needs to be `pub` because doc-test are external.
     pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::development().unwrap());
+        let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
