@@ -5,9 +5,9 @@ being a more flexible, friendly medley of [Rails](http://rubyonrails.org),
 [Flask](http://flask.pocoo.org/),
 [Bottle](http://bottlepy.org/docs/dev/index.html), and
 [Yesod](http://www.yesodweb.com/). We prefer to think of Rocket as something
-new. Rocket aims to be fast, easy, and flexible while offerring guaranteed
-safety and security where it can. Importantly, Rocket also aims to be _fun_, and
-it accomplishes this by ensuring that you write as little code as needed to
+new. Rocket aims to be fast, easy, and flexible while offering guaranteed safety
+and security where it can. Importantly, Rocket also aims to be _fun_, and it
+accomplishes this by ensuring that you write as little code as needed to
 accomplish your task.
 
 This guide introduces you to the core, intermediate, and advanced concepts of
