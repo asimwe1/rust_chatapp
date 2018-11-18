@@ -180,8 +180,10 @@ impl SpaceHelmet {
             response.set_header(policy.header());
         }
 
-        if !self.force_hsts.load(Ordering::Relaxed) {
-            response.set_header(Policy::header(&Hsts::default()));
+        if self.force_hsts.load(Ordering::Relaxed) {
+            if !response.headers().contains(Hsts::NAME) {
+                response.set_header(&Hsts::default());
+            }
         }
     }
 }
