@@ -22,5 +22,5 @@ devise = "0.1"
 quote = "0.6"
 
 [build-dependencies]
-yansi = "0.4"
+yansi = { git = "https://github.com/SergioBenitez/yansi", rev = "59c3a91" }
 version_check = "0.1.3"

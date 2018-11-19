@@ -207,7 +207,7 @@ impl Drop for LaunchError {
             LaunchErrorKind::FailedFairings(ref failures) => {
                 error!("Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info_!("{}", Paint::white(fairing));
+                    info_!("{}", fairing);
                 }
 
                 panic!("launch fairing failure");

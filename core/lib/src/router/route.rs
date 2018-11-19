@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 use std::convert::From;
 
-use yansi::Color::*;
+use yansi::Paint;
 
 use codegen::StaticRouteInfo;
 use handler::Handler;
@@ -282,19 +282,19 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
+        write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
 
         if self.rank > 1 {
-            write!(f, " [{}]", White.paint(&self.rank))?;
+            write!(f, " [{}]", Paint::default(&self.rank).bold())?;
         }
 
         if let Some(ref format) = self.format {
-            write!(f, " {}", Yellow.paint(format))?;
+            write!(f, " {}", Paint::yellow(format))?;
         }
 
         if let Some(name) = self.name {
             write!(f, " {}{}{}",
-                   Cyan.paint("("), Purple.paint(name), Cyan.paint(")"))?;
+                   Paint::cyan("("), Paint::magenta(name), Paint::cyan(")"))?;
         }
 
         Ok(())

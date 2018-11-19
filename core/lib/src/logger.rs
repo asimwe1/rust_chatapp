@@ -105,24 +105,25 @@ impl log::Log for RocketLogger {
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
+        let is_launch = record.target().starts_with("launch");
         if record.target().ends_with('_') {
-            if configged_level != LoggingLevel::Critical || record.target().starts_with("launch") {
-                print!("    {} ", Paint::white("=>"));
+            if configged_level != LoggingLevel::Critical || is_launch {
+                print!("    {} ", Paint::default("=>").bold());
             }
         }
 
         match record.level() {
-            log::Level::Info => println!("{}", Paint::blue(record.args())),
-            log::Level::Trace => println!("{}", Paint::purple(record.args())),
+            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
+            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
             log::Level::Error => {
                 println!("{} {}",
                          Paint::red("Error:").bold(),
-                         Paint::red(record.args()))
+                         Paint::red(record.args()).wrap())
             }
             log::Level::Warn => {
                 println!("{} {}",
                          Paint::yellow("Warning:").bold(),
-                         Paint::yellow(record.args()))
+                         Paint::yellow(record.args()).wrap())
             }
             log::Level::Debug => {
                 print!("\n{} ", Paint::blue("-->").bold());

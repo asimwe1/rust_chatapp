@@ -247,7 +247,7 @@ impl Rocket {
             Outcome::Forward(data) => {
                 // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
-                    info_!("Autohandling {} request.", Paint::white("HEAD"));
+                    info_!("Autohandling {} request.", Paint::default("HEAD").bold());
 
                     // Dispatch the request again with Method `GET`.
                     request._set_method(Method::Get);
@@ -290,7 +290,7 @@ impl Rocket {
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", Paint::white("Outcome:"), outcome);
+            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
@@ -391,27 +391,27 @@ impl Rocket {
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
-        launch_info_!("address: {}", Paint::white(&config.address));
-        launch_info_!("port: {}", Paint::white(&config.port));
-        launch_info_!("log: {}", Paint::white(config.log_level));
-        launch_info_!("workers: {}", Paint::white(config.workers));
-        launch_info_!("secret key: {}", Paint::white(&config.secret_key));
-        launch_info_!("limits: {}", Paint::white(&config.limits));
+        launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
+        launch_info_!("address: {}", Paint::default(&config.address).bold());
+        launch_info_!("port: {}", Paint::default(&config.port).bold());
+        launch_info_!("log: {}", Paint::default(config.log_level).bold());
+        launch_info_!("workers: {}", Paint::default(config.workers).bold());
+        launch_info_!("secret key: {}", Paint::default(&config.secret_key).bold());
+        launch_info_!("limits: {}", Paint::default(&config.limits).bold());
 
         match config.keep_alive {
-            Some(v) => launch_info_!("keep-alive: {}", Paint::white(format!("{}s", v))),
-            None => launch_info_!("keep-alive: {}", Paint::white("disabled")),
+            Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),
+            None => launch_info_!("keep-alive: {}", Paint::default("disabled").bold()),
         }
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            launch_info_!("tls: {}", Paint::white("enabled"));
+            launch_info_!("tls: {}", Paint::default("enabled").bold());
         } else if tls_configured {
-            error_!("tls: {}", Paint::white("disabled"));
+            error_!("tls: {}", Paint::default("disabled").bold());
             error_!("tls is configured, but the tls feature is disabled");
         } else {
-            launch_info_!("tls: {}", Paint::white("disabled"));
+            launch_info_!("tls: {}", Paint::default("disabled").bold());
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
@@ -420,9 +420,8 @@ impl Rocket {
 
         for (name, value) in config.extras() {
             launch_info_!("{} {}: {}",
-                          Paint::yellow("[extra]"),
-                          Paint::blue(name),
-                          Paint::white(LoggedValue(value)));
+                          Paint::yellow("[extra]"), name,
+                          Paint::default(LoggedValue(value)).bold());
         }
 
         Rocket {
@@ -491,10 +490,11 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
-        info!("{}{} '{}':",
+        info!("{}{} {}{}",
               Paint::masked("🛰  "),
-              Paint::purple("Mounting"),
-              Paint::blue(base));
+              Paint::magenta("Mounting"),
+              Paint::blue(base),
+              Paint::magenta(":"));
 
         let base_uri = Origin::parse(base)
             .unwrap_or_else(|e| {
@@ -550,7 +550,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}:", Paint::masked("👾  "), Paint::purple("Catchers"));
+        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
                 info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
@@ -709,10 +709,10 @@ impl Rocket {
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("{}{} {}{}",
-                         Paint::masked("🚀  "),
-                         Paint::white("Rocket has launched from"),
-                         Paint::white(proto).bold(),
-                         Paint::white(&full_addr).bold());
+                         Paint::masked("🚀 "),
+                         Paint::default("Rocket has launched from").bold(),
+                         Paint::default(proto).bold().underline(),
+                         Paint::default(&full_addr).bold().underline());
 
             // Restore the log level back to what it originally was.
             logger::pop_max_level();

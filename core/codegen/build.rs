@@ -4,7 +4,7 @@
 extern crate yansi;
 extern crate version_check;
 
-use yansi::Color::{Red, Yellow, Blue, White};
+use yansi::Color::{Red, Yellow, Blue};
 use version_check::{supports_features, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket.
@@ -19,9 +19,9 @@ fn main() {
 
     let print_version_err = |version: &str, date: &str| {
         eprintln!("{} {}. {} {}.",
-                  White.paint("Installed version is:"),
+                  "Installed version is:",
                   Yellow.paint(format!("{} ({})", version, date)),
-                  White.paint("Minimum required:"),
+                  "Minimum required:",
                   Yellow.paint(format!("{} ({})", MIN_VERSION, MIN_DATE)));
     };
 
@@ -29,11 +29,11 @@ fn main() {
         if !ok_channel {
             eprintln!("{} {}",
                       Red.paint("Error:").bold(),
-                      White.paint("Rocket requires a nightly or dev version of Rust."));
+                      "Rocket requires a nightly or dev version of Rust.");
             print_version_err(&*version, &*date);
             eprintln!("{}{}{}",
                       Blue.paint("See the getting started guide ("),
-                      White.paint("https://rocket.rs/v0.4/guide/getting-started/"),
+                      "https://rocket.rs/v0.4/guide/getting-started/",
                       Blue.paint(") for more information."));
             panic!("Aborting compilation due to incompatible compiler.")
         }
@@ -41,10 +41,9 @@ fn main() {
         if !ok_version || !ok_date {
             eprintln!("{} {}",
                       Red.paint("Error:").bold(),
-                      White.paint("Rocket requires a more recent version of rustc."));
+                      "Rocket requires a more recent version of rustc.");
             eprintln!("{}{}{}",
-                      Blue.paint("Use `"),
-                      White.paint("rustup update"),
+                      Blue.paint("Use `"), "rustup update",
                       Blue.paint("` or your preferred method to update Rust."));
             print_version_err(&*version, &*date);
             panic!("Aborting compilation due to incompatible compiler.")
