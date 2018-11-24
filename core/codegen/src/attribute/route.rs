@@ -3,7 +3,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use devise::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
 use indexmap::IndexSet;
 
-use proc_macro_ext::{Diagnostics, SpanExt};
+use proc_macro_ext::{Diagnostics, StringLit};
 use syn_ext::{syn_to_diag, IdentExt};
 use self::syn::{Attribute, parse::Parser};
 
@@ -426,7 +426,10 @@ fn incomplete_route(
 ) -> Result<TokenStream> {
     let method_str = method.to_string().to_lowercase();
     // FIXME(proc_macro): there should be a way to get this `Span`.
-    let method_span = Span::call_site().subspan(2..2 + method_str.len()).unwrap();
+    let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
+        .subspan(2..2 + method_str.len())
+        .unwrap_or(Span::call_site());
+
     let method_ident = syn::Ident::new(&method_str, method_span.into());
 
     let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)

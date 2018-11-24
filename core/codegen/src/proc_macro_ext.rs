@@ -1,6 +1,6 @@
 use std::ops::{Bound, RangeBounds};
 
-use proc_macro::{Span, Diagnostic, /* MultiSpan */};
+use proc_macro::{Span, Diagnostic, Literal};
 use syntax_pos::{Span as InnerSpan, Pos, BytePos};
 
 pub type PResult<T> = ::std::result::Result<T, Diagnostic>;
@@ -62,42 +62,31 @@ impl From<Vec<Diagnostic>> for Diagnostics {
     }
 }
 
-pub trait SpanExt {
-    fn subspan<R: RangeBounds<usize>>(self, range: R) -> Option<Span>;
+use std::ops::Deref;
+
+pub struct StringLit(crate String, crate Literal);
+
+impl Deref for StringLit {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
 }
 
-impl SpanExt for Span {
-    /// Create a `subspan` from `start` to `end`.
-    fn subspan<R: RangeBounds<usize>>(self, range: R) -> Option<Span> {
-        let inner: InnerSpan = unsafe { ::std::mem::transmute(self) };
-        let length = inner.hi().to_usize() - inner.lo().to_usize();
+impl StringLit {
+    pub fn new<S: Into<String>>(string: S, span: Span) -> Self {
+        let string = string.into();
+        let mut lit = Literal::string(&string);
+        lit.set_span(span);
+        StringLit(string, lit)
+    }
 
-        let start = match range.start_bound() {
-            Bound::Included(&lo) => lo,
-            Bound::Excluded(&lo) => lo + 1,
-            Bound::Unbounded => 0,
-        };
+    pub fn span(&self) -> Span {
+        self.1.span()
+    }
 
-        let end = match range.end_bound() {
-            Bound::Included(&hi) => hi + 1,
-            Bound::Excluded(&hi) => hi,
-            Bound::Unbounded => length,
-        };
-
-        // Bounds check the values, preventing addition overflow and OOB spans.
-        if start > u32::max_value() as usize
-            || end > u32::max_value() as usize
-            || (u32::max_value() - start as u32) < inner.lo().to_u32()
-            || (u32::max_value() - end as u32) < inner.lo().to_u32()
-            || start >= end
-            || end > length
-        {
-            return None;
-        }
-
-        let new_lo = inner.lo() + BytePos(start as u32);
-        let new_hi = inner.lo() + BytePos(end as u32);
-        let new_inner = inner.with_lo(new_lo).with_hi(new_hi);
-        Some(unsafe { ::std::mem::transmute(new_inner) })
+    pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Option<Span> {
+        self.1.subspan(range)
     }
 }

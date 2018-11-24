@@ -4,7 +4,7 @@ use devise::{FromMeta, MetaItem, Result, ext::Split2};
 use http::{self, ext::IntoOwned};
 use attribute::segments::{parse_segments, parse_segment, Segment, Kind, Source};
 
-use proc_macro_ext::SpanExt;
+use proc_macro_ext::StringLit;
 
 #[derive(Debug)]
 crate struct ContentType(crate http::ContentType);
@@ -26,6 +26,12 @@ crate struct DataSegment(crate Segment);
 
 #[derive(Clone, Debug)]
 crate struct Optional<T>(crate Option<T>);
+
+impl FromMeta for StringLit {
+    fn from_meta(meta: MetaItem) -> Result<Self> {
+        Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))
+    }
+}
 
 #[derive(Debug)]
 crate struct RoutePath {
@@ -159,14 +165,13 @@ impl ToTokens for Method {
 
 impl FromMeta for Origin {
     fn from_meta(meta: MetaItem) -> Result<Self> {
-        let string = String::from_meta(meta)?;
-        let span = meta.value_span();
+        let string = StringLit::from_meta(meta)?;
 
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
                 let span = e.index()
-                    .map(|i| span.subspan(i + 1..).expect("origin"))
-                    .unwrap_or(span);
+                    .map(|i| string.subspan(i + 1..).expect("origin"))
+                    .unwrap_or(string.span());
 
                 span.error(format!("invalid path URI: {}", e))
                     .help("expected path in origin form: \"/path/<param>\"")
@@ -174,7 +179,7 @@ impl FromMeta for Origin {
 
         if !uri.is_normalized() {
             let normalized = uri.to_normalized();
-            return Err(span.error("paths cannot contain empty segments")
+            return Err(string.span().error("paths cannot contain empty segments")
                 .note(format!("expected '{}', found '{}'", normalized, uri)));
         }
 
@@ -184,9 +189,8 @@ impl FromMeta for Origin {
 
 impl FromMeta for Segment {
     fn from_meta(meta: MetaItem) -> Result<Self> {
-        let string = String::from_meta(meta)?;
-        let span = meta.value_span()
-            .subspan(1..(string.len() + 1))
+        let string = StringLit::from_meta(meta)?;
+        let span = string.subspan(1..(string.len() + 1))
             .expect("segment");
 
         let segment = parse_segment(&string, span)?;
@@ -210,15 +214,15 @@ impl FromMeta for DataSegment {
 
 impl FromMeta for RoutePath {
     fn from_meta(meta: MetaItem) -> Result<Self> {
-        let (origin, span) = (Origin::from_meta(meta)?, meta.value_span());
-        let path_span = span.subspan(1..origin.0.path().len() + 1).expect("path");
+        let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
+        let path_span = string.subspan(1..origin.0.path().len() + 1).expect("path");
         let path = parse_segments(origin.0.path(), '/', Source::Path, path_span);
 
         let query = origin.0.query()
             .map(|q| {
                 let len_to_q = 1 + origin.0.path().len() + 1;
                 let end_of_q = len_to_q + q.len();
-                let query_span = span.subspan(len_to_q..end_of_q).expect("query");
+                let query_span = string.subspan(len_to_q..end_of_q).expect("query");
                 if q.starts_with('&') || q.contains("&&") || q.ends_with('&') {
                     // TODO: Show a help message with what's expected.
                     Err(query_span.error("query cannot contain empty segments").into())

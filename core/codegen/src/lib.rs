@@ -60,7 +60,7 @@
 //! ```
 
 #[macro_use] extern crate quote;
-#[macro_use] extern crate devise;
+extern crate devise;
 extern crate proc_macro;
 extern crate rocket_http as http;
 extern crate indexmap;

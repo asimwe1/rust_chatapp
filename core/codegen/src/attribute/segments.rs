@@ -4,7 +4,7 @@ use devise::syn;
 use proc_macro::{Span, Diagnostic};
 
 use http::route::RouteSegment;
-use proc_macro_ext::{SpanExt, Diagnostics, PResult, DResult};
+use proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
 
 crate use http::route::{Error, Kind, Source};
 
@@ -52,15 +52,16 @@ impl Hash for Segment {
 
 fn subspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
-    span.subspan(index..index + needle.len())
+    StringLit::new(haystack, span).subspan(index..index + needle.len())
 }
 
 fn trailspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
+    let lit = StringLit::new(haystack, span);
     if needle.as_ptr() as usize > haystack.as_ptr() as usize {
-        span.subspan((index - 1)..)
+        lit.subspan((index - 1)..)
     } else {
-        span.subspan(index..)
+        lit.subspan(index..)
     }
 }
 
