@@ -12,7 +12,7 @@ fn has_one(id: i32) {  }
 #[post("/<id>")]
 fn has_one_guarded(cookies: Cookies, id: i32) {  }
 
-#[post("/<id>/<name>")]
+#[post("/<id>?<name>")]
 fn has_two(cookies: Cookies, id: i32, name: String) {  }
 
 fn main() {

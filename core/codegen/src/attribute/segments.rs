@@ -115,14 +115,13 @@ crate fn parse_segment(segment: &str, span: Span) -> PResult<Segment> {
 
 crate fn parse_segments(
     string: &str,
-    sep: char,
     source: Source,
     span: Span
 ) -> DResult<Vec<Segment>> {
     let mut segments = vec![];
     let mut diags = Diagnostics::new();
 
-    for result in RouteSegment::parse_many(string, sep, source) {
+    for result in RouteSegment::parse_many(string, source) {
         if let Err((segment_string, error)) = result {
             diags.push(into_diagnostic(segment_string, string, span, &error));
             if let Error::Trailing(..) = error {

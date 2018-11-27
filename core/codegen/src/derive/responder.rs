@@ -17,7 +17,7 @@ struct FieldAttr {
 }
 
 pub fn derive_responder(input: TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, "::rocket::response::Responder<'__r>")
+    DeriveGenerator::build_for(input, quote!(impl<'__r> ::rocket::response::Responder<'__r>))
         .generic_support(GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .replace_generic(0, 0)

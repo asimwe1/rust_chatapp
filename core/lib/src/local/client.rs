@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use Rocket;
 use local::LocalRequest;
-use http::{Method, CookieJar};
+use http::{Method, private::CookieJar};
 use error::LaunchError;
 
 /// A structure to construct requests for local dispatching.

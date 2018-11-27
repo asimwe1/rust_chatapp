@@ -13,7 +13,7 @@ use rocket::http::{Status, RawStr, ContentType};
 
 // Use all of the code generation avaiable at once.
 
-#[derive(FromForm, UriDisplay)]
+#[derive(FromForm, UriDisplayQuery)]
 struct Inner<'r> {
     field: &'r RawStr
 }

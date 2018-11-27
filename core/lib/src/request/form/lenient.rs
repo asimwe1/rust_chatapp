@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use request::{Request, form::{Form, FormDataError, FromForm}};
 use data::{Data, Transform, Transformed, FromData, Outcome};
-use http::uri::FromUriParam;
+use http::uri::{Query, FromUriParam};
 
 /// A data gaurd for parsing [`FromForm`] types leniently.
 ///
@@ -109,7 +109,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
     }
 }
 
-impl<'f, A, T: FromUriParam<A> + FromForm<'f>> FromUriParam<A> for LenientForm<T> {
+impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for LenientForm<T> {
     type Target = T::Target;
 
     #[inline(always)]

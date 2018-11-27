@@ -59,7 +59,7 @@ fn validate_struct(gen: &DeriveGenerator, data: Struct) -> Result<()> {
 
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
     let form_error = quote!(::rocket::request::FormParseError);
-    DeriveGenerator::build_for(input, "::rocket::request::FromForm<'__f>")
+    DeriveGenerator::build_for(input, quote!(impl<'__f> ::rocket::request::FromForm<'__f>))
         .generic_support(GenericSupport::Lifetime | GenericSupport::Type)
         .replace_generic(0, 0)
         .data_support(DataSupport::NamedStruct)

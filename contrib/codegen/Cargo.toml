@@ -18,7 +18,7 @@ database_attribute = []
 proc-macro = true
 
 [dependencies]
-devise = "0.1"
+devise = { git = "http://github.com/SergioBenitez/Devise", rev = "b5295e3e" }
 quote = "0.6"
 
 [build-dependencies]

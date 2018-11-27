@@ -95,12 +95,13 @@ impl ToTokens for MediaType {
         let (top, sub) = (self.0.top().as_str(), self.0.sub().as_str());
         let (keys, values) = self.0.params().split2();
 
-        let (http, cow) = (quote!(::rocket::http), quote!(::std::borrow::Cow));
+        let cow = quote!(::std::borrow::Cow);
+        let (pub_http, http) = (quote!(::rocket::http), quote!(::rocket::http::private));
         let (http_, http__) = (repeat(&http), repeat(&http));
         let (cow_, cow__) = (repeat(&cow), repeat(&cow));
 
         // TODO: Produce less code when possible (for known media types).
-        tokens.extend(quote!(#http::MediaType {
+        tokens.extend(quote!(#pub_http::MediaType {
             source: #http::Source::None,
             top: #http::Indexed::Concrete(#cow::Borrowed(#top)),
             sub: #http::Indexed::Concrete(#cow::Borrowed(#sub)),
@@ -216,7 +217,7 @@ impl FromMeta for RoutePath {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
         let path_span = string.subspan(1..origin.0.path().len() + 1).expect("path");
-        let path = parse_segments(origin.0.path(), '/', Source::Path, path_span);
+        let path = parse_segments(origin.0.path(), Source::Path, path_span);
 
         let query = origin.0.query()
             .map(|q| {
@@ -227,7 +228,7 @@ impl FromMeta for RoutePath {
                     // TODO: Show a help message with what's expected.
                     Err(query_span.error("query cannot contain empty segments").into())
                 } else {
-                    parse_segments(q, '&', Source::Query, query_span)
+                    parse_segments(q, Source::Query, query_span)
                 }
             }).transpose();
 

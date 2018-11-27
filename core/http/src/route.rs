@@ -128,9 +128,13 @@ impl<'a> RouteSegment<'a> {
 
     pub fn parse_many(
         string: &str,
-        sep: char,
         source: Source,
     ) -> impl Iterator<Item = SResult> {
+        let sep = match source {
+            Source::Query => '&',
+            _ => '/',
+        };
+
         let mut last_multi_seg: Option<&str> = None;
         string.split(sep).filter(|s| !s.is_empty()).enumerate().map(move |(i, seg)| {
             if let Some(multi_seg) = last_multi_seg {
@@ -149,10 +153,10 @@ impl<'a> RouteSegment<'a> {
     }
 
     pub fn parse_path(uri: &'a Origin) -> impl Iterator<Item = SResult<'a>> {
-        Self::parse_many(uri.path(), '/', Source::Path)
+        Self::parse_many(uri.path(), Source::Path)
     }
 
     pub fn parse_query(uri: &'a Origin) -> Option<impl Iterator<Item = SResult<'a>>> {
-        uri.query().map(|q| Self::parse_many(q, '&', Source::Query))
+        uri.query().map(|q| Self::parse_many(q, Source::Query))
     }
 }

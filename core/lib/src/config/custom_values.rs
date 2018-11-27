@@ -2,7 +2,7 @@ use std::fmt;
 
 #[cfg(feature = "tls")]
 use http::tls::{Certificate, PrivateKey};
-use http::Key;
+use http::private::Key;
 
 use config::{Result, Config, Value, ConfigError, LoggingLevel};
 

@@ -13,10 +13,10 @@ use request::{FromFormValue, FormItems, FormItem};
 use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
-use http::uri::{Origin, Segments};
-use http::{Method, Header, HeaderMap, Cookies, CookieJar};
-use http::{RawStr, ContentType, Accept, MediaType, Indexed, SmallVec};
-use http::hyper;
+use http::{hyper, uri::{Origin, Segments}};
+use http::{Method, Header, HeaderMap, Cookies};
+use http::{RawStr, ContentType, Accept, MediaType};
+use http::private::{Indexed, SmallVec, CookieJar};
 
 type Indices = (usize, usize);
 

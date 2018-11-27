@@ -81,6 +81,91 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
     }
 }
 
+fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
+    let uri_mod = quote!(rocket::http::uri);
+    let (span, ident_tmp) = (expr.span(), ident.prepend("tmp_"));
+    let from_uri_param = if source == Source::Query {
+        quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Query, _>)
+    } else {
+        quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Path, _>)
+    };
+
+    to.push(quote_spanned!(span =>
+        let #ident_tmp = #expr;
+        let #ident = <#ty as #from_uri_param>::from_uri_param(#ident_tmp);
+    ));
+}
+
+fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
+    uri: &Origin,
+    bindings: &mut Vec<TokenStream2>,
+    mut items: I
+) -> TokenStream2 {
+    let (uri_mod, path) = (quote!(rocket::http::uri), uri.path());
+    if !path.contains('<') {
+        return quote!(#uri_mod::UriArgumentsKind::Static(#path));
+    }
+
+    let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Path>);
+    let dyn_exprs = RouteSegment::parse_path(uri).map(|segment| {
+        let segment = segment.expect("segment okay; prechecked on parse");
+        match segment.kind {
+            Kind::Static => {
+                let string = &segment.string;
+                quote!(&#string as &dyn #uri_display)
+            }
+            Kind::Single | Kind::Multi => {
+                let (ident, ty, expr) = items.next().expect("one item for each dyn");
+                add_binding(bindings, &ident, &ty, &expr, Source::Path);
+                quote_spanned!(expr.span() => &#ident as &dyn #uri_display)
+            }
+        }
+    });
+
+    quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
+}
+
+fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
+    uri: &Origin,
+    bindings: &mut Vec<TokenStream2>,
+    mut items: I
+) -> Option<TokenStream2> {
+    let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?);
+    if !query.contains('<') {
+        return Some(quote!(#uri_mod::UriArgumentsKind::Static(#query)));
+    }
+
+    let query_arg = quote!(#uri_mod::UriQueryArgument);
+    let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Query>);
+    let dyn_exprs = RouteSegment::parse_query(uri)?.map(|segment| {
+        let segment = segment.expect("segment okay; prechecked on parse");
+        match segment.kind {
+            Kind::Static => {
+                let string = &segment.string;
+                quote!(#query_arg::Raw(#string))
+            }
+            Kind::Single => {
+                let (ident, ty, expr) = items.next().expect("one item for each dyn");
+                add_binding(bindings, &ident, &ty, &expr, Source::Query);
+                let name = &segment.name;
+
+                quote_spanned!(expr.span() =>
+                   #query_arg::NameValue(#name, &#ident as &dyn #uri_display)
+                )
+            }
+            Kind::Multi => {
+                let (ident, ty, expr) = items.next().expect("one item for each dyn");
+                add_binding(bindings, &ident, &ty, &expr, Source::Query);
+                quote_spanned!(expr.span() =>
+                   #query_arg::Value(&#ident as &dyn #uri_display)
+                )
+            }
+        }
+    });
+
+    Some(quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
+}
+
 // Returns an Origin URI with the mount point and route path concatinated. The
 // query string is mangled by replacing single dynamic parameters in query parts
 // (`<param>`) with `param=<param>`.
@@ -90,56 +175,8 @@ fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
         .unwrap_or("");
 
     let path = format!("{}/{}", mount_point, internal.route_uri.path());
-    let query = RouteSegment::parse_query(&internal.route_uri).map(|segments| {
-        segments.map(|r| r.expect("invalid query segment")).map(|seg| {
-            match (seg.source, seg.kind) {
-                (Source::Query, Kind::Single) => format!("{k}=<{k}>", k = seg.name),
-                _ => seg.string.into_owned()
-            }
-        }).collect::<Vec<_>>().join("&")
-    });
-
+    let query = internal.route_uri.query();
     Origin::new(path, query).to_normalized().into_owned()
-}
-
-fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
-    where I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>
-{
-    // Generate the statements to typecheck each parameter.
-    // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
-    let (mut let_bindings, mut fmt_exprs) = (vec![], vec![]);
-    for (mut ident, ty, expr) in items {
-        let (span, expr) = (expr.span(), expr);
-        let ident_tmp = ident.prepend("tmp_");
-
-        let_bindings.push(quote_spanned!(span =>
-            let #ident_tmp = #expr;
-            let #ident = <#ty as rocket::http::uri::FromUriParam<_>>::from_uri_param(#ident_tmp);
-        ));
-
-        // generating: arg tokens for format string
-        fmt_exprs.push(quote_spanned! { span =>
-            &#ident as &dyn rocket::http::uri::UriDisplay
-        });
-    }
-
-    // Convert all of the '<...>' into '{}'.
-    let mut inside = false;
-    let fmt_string: String = route_str.chars().filter_map(|c| {
-        Some(match c {
-            '<' => { inside = true; '{' }
-            '>' => { inside = false; '}' }
-            _ if !inside => c,
-            _ => return None
-        })
-    }).collect();
-
-    // Don't allocate if there are no formatting expressions.
-    if fmt_exprs.is_empty() {
-        quote!({ #fmt_string.into() })
-    } else {
-        quote!({ #(#let_bindings)* format!(#fmt_string, #(#fmt_exprs),*).into() })
-    }
 }
 
 crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
@@ -147,22 +184,24 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let internal = syn::parse::<InternalUriParams>(input).map_err(syn_to_diag)?;
     let exprs = extract_exprs(&internal)?;
 
-    // Create an iterator over the `ident`, `ty`, and `expr` triple.
-    let mut arguments = internal.fn_args.iter()
+    // Create an iterator over all of the `ident`, `ty`, and `expr` triple.
+    let arguments = internal.fn_args.iter()
         .zip(exprs.iter())
         .map(|(FnArg { ident, ty }, &expr)| (ident, ty, expr));
 
-    // Generate an expression for the path and query.
-    let origin = build_origin(&internal);
-    let path_param_count = origin.path().matches('<').count();
-    let path = explode(origin.path(), arguments.by_ref().take(path_param_count));
-    let query = Optional(origin.query().map(|q| explode(q, arguments)));
+    // Create iterators for just the path and query parts.
+    let path_param_count = internal.route_uri.path().matches('<').count();
+    let path_params = arguments.clone().take(path_param_count);
+    let query_params = arguments.skip(path_param_count);
 
-    let span = internal.uri_params.route_path.span();
-    Ok(quote_spanned!(span => {
-        rocket::http::uri::Origin::new::<
-            std::borrow::Cow<'static, str>,
-            std::borrow::Cow<'static, str>,
-        >(#path, #query)
-    }).into())
+    let mut bindings = vec![];
+    let uri = build_origin(&internal);
+    let uri_mod = quote!(rocket::http::uri);
+    let path = explode_path(&uri, &mut bindings, path_params);
+    let query = Optional(explode_query(&uri, &mut bindings, query_params));
+
+     Ok(quote!({
+         #(#bindings)*
+         #uri_mod::UriArguments { path: #path, query: #query, }.into_origin()
+     }).into())
 }

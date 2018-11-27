@@ -1,16 +1,35 @@
-use std::fmt;
+use std::fmt::{self, Write};
+use std::marker::PhantomData;
 
 use smallvec::SmallVec;
 
-use uri::UriDisplay;
+use uri::{UriPart, Path, Query, UriDisplay, Origin};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
-/// A mutable version of this struct is passed to [`UriDisplay::fmt()`]. This
-/// struct properly formats series of named values for use in URIs. In
-/// particular, this struct applies the following transformations:
+/// # Marker Generic: `Formatter<Path>` vs. `Formatter<Query>`
 ///
-///   * When **mutliple values** are written, they are separated by `&`.
+/// Like [`UriDisplay`], the [`UriPart`] parameter `P` in `Formatter<P>` must be
+/// either [`Path`] or [`Query`] resulting in either `Formatter<Path>` or
+/// `Formatter<Query>`. The `Path` version is used when formatting parameters
+/// in the path part of the URI while the `Query` version is used when
+/// formatting parameters in the query part of the URI. The
+/// [`write_named_value()`] method is only available to `UriDisplay<Query>`.
+///
+/// [`UriPart`]: uri::UriPart
+/// [`Path`]: uri::Path
+/// [`Query`]: uri::Query
+///
+/// # Overview
+///
+/// A mutable version of this struct is passed to [`UriDisplay::fmt()`]. This
+/// struct properly formats series of values for use in URIs. In particular,
+/// this struct applies the following transformations:
+///
+///   * When **mutliple values** are written, they are separated by `/` for
+///     `Path` types and `&` for `Query` types.
+///
+/// Additionally, for `Formatter<Query>`:
 ///
 ///   * When a **named value** is written with [`write_named_value()`], the name
 ///     is written out, followed by a `=`, followed by the value.
@@ -36,8 +55,8 @@ use uri::UriDisplay;
 /// written value and, along with `write_value` and `write_raw`, handles nested
 /// calls to `write_named_value` automatically, prefixing names when necessary.
 /// Unlike the other methods, `write_raw` does _not_ prefix any nested names
-/// every time it is called. Instead, it only prefixes names the _first_ time it
-/// is called, after a call to `write_named_value` or `write_value`, or after a
+/// every time it is called. Instead, it only prefixes the _first_ time it is
+/// called, after a call to `write_named_value` or `write_value`, or after a
 /// call to [`refresh()`].
 ///
 /// [`refresh()`]: uri::Formatter::refresh()
@@ -45,15 +64,15 @@ use uri::UriDisplay;
 /// # Example
 ///
 /// The following example uses all of the `write` methods in a varied order to
-/// display the semantics of `Formatter`. Note that `UriDisplay` should rarely
-/// be implemented manually, preferring to use the derive, and that this
+/// display the semantics of `Formatter<Query>`. Note that `UriDisplay` should
+/// rarely be implemented manually, preferring to use the derive, and that this
 /// implementation is purely demonstrative.
 ///
 /// ```rust
 /// # extern crate rocket;
 /// use std::fmt;
 ///
-/// use rocket::http::uri::{Formatter, UriDisplay};
+/// use rocket::http::uri::{Formatter, UriDisplay, Query};
 ///
 /// struct Outer {
 ///     value: Inner,
@@ -66,8 +85,8 @@ use uri::UriDisplay;
 ///     extra: usize
 /// }
 ///
-/// impl UriDisplay for Outer {
-///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+/// impl UriDisplay<Query> for Outer {
+///     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
 ///         f.write_named_value("outer_field", &self.value)?;
 ///         f.write_named_value("another", &self.another)?;
 ///         f.write_raw("out")?;
@@ -76,8 +95,8 @@ use uri::UriDisplay;
 ///     }
 /// }
 ///
-/// impl UriDisplay for Inner {
-///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+/// impl UriDisplay<Query> for Inner {
+///     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
 ///         f.write_named_value("inner_field", &self.value)?;
 ///         f.write_value(&self.extra)?;
 ///         f.write_raw("inside")
@@ -86,7 +105,7 @@ use uri::UriDisplay;
 ///
 /// let inner = Inner { value: 0, extra: 1 };
 /// let outer = Outer { value: inner, another: 2, extra: 3 };
-/// let uri_string = format!("{}", &outer as &UriDisplay);
+/// let uri_string = format!("{}", &outer as &UriDisplay<Query>);
 /// assert_eq!(uri_string, "outer_field.inner_field=0&\
 ///                         outer_field=1&\
 ///                         outer_field=inside&\
@@ -104,56 +123,64 @@ use uri::UriDisplay;
 /// # #[macro_use] extern crate rocket;
 /// use std::fmt::{self, Write};
 ///
-/// use rocket::http::uri::{Formatter, UriDisplay};
+/// use rocket::http::uri::{UriDisplay, Formatter, UriPart, Path, Query};
 ///
 /// pub struct Complex(u8, u8);
 ///
-/// impl UriDisplay for Complex {
-///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+/// impl<P: UriPart> UriDisplay<P> for Complex {
+///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
 ///         write!(f, "{}+{}", self.0, self.1)
 ///     }
 /// }
 ///
-/// #[derive(UriDisplay)]
+/// let uri_string = format!("{}", &Complex(42, 231) as &UriDisplay<Path>);
+/// assert_eq!(uri_string, "42+231");
+///
+/// #[derive(UriDisplayQuery)]
 /// struct Message {
 ///     number: Complex,
 /// }
 ///
-/// let message = Message { number: Complex(42, 231) };
-/// let uri_string = format!("{}", &message as &UriDisplay);
-/// assert_eq!(uri_string, "number=42+231");
+/// let message = Message { number: Complex(42, 47) };
+/// let uri_string = format!("{}", &message as &UriDisplay<Query>);
+/// assert_eq!(uri_string, "number=42+47");
 /// ```
 ///
 /// [`write_value()`]: uri::Formatter::write_value()
 /// [`write_raw()`]: uri::Formatter::write_raw()
-pub struct Formatter<'i, 'f: 'i> {
-    crate prefixes: SmallVec<[&'static str; 3]>,
-    crate inner: &'i mut fmt::Formatter<'f>,
-    crate previous: bool,
-    crate fresh: bool
+pub struct Formatter<'i, P: UriPart> {
+    prefixes: SmallVec<[&'static str; 3]>,
+    inner: &'i mut (dyn Write + 'i),
+    previous: bool,
+    fresh: bool,
+    delimiter: char,
+    _marker: PhantomData<P>,
 }
 
-impl<'i, 'f: 'i> Formatter<'i, 'f> {
-    crate fn new(formatter: &'i mut fmt::Formatter<'f>) -> Self {
+impl<'i> Formatter<'i, Path> {
+    #[inline(always)]
+    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
+        Formatter::make(inner, '/')
+    }
+}
+
+impl<'i> Formatter<'i, Query> {
+    #[inline(always)]
+    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
+        Formatter::make(inner, '&')
+    }
+}
+
+impl<'i, P: UriPart> Formatter<'i, P> {
+    #[inline(always)]
+    fn make(inner: &'i mut (dyn Write + 'i), delimiter: char) -> Self {
         Formatter {
+            inner, delimiter,
             prefixes: SmallVec::new(),
-            inner: formatter,
             previous: false,
             fresh: true,
+            _marker: PhantomData,
         }
-    }
-
-    fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
-        where F: FnOnce(&mut Self) -> fmt::Result
-    {
-        // TODO: PROOF OF CORRECTNESS.
-        let prefix: &'static str = unsafe { ::std::mem::transmute(prefix) };
-
-        self.prefixes.push(prefix);
-        let result = f(self);
-        self.prefixes.pop();
-
-        result
     }
 
     #[inline(always)]
@@ -167,7 +194,7 @@ impl<'i, 'f: 'i> Formatter<'i, 'f> {
     /// Writes `string` to `self`.
     ///
     /// If `self` is _fresh_ (after a call to other `write_` methods or
-    /// [`refresh()`]), prefixes any names as necessary.
+    /// [`refresh()`]), prefixes any names and adds separators as necessary.
     ///
     /// This method is called by the `write!` macro.
     ///
@@ -179,12 +206,12 @@ impl<'i, 'f: 'i> Formatter<'i, 'f> {
     /// # extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay};
+    /// use rocket::http::uri::{Formatter, UriDisplay, UriPart, Path};
     ///
     /// struct Foo;
     ///
-    /// impl UriDisplay for Foo {
-    ///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    /// impl<P: UriPart> UriDisplay<P> for Foo {
+    ///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
     ///         f.write_raw("f")?;
     ///         f.write_raw("o")?;
     ///         f.write_raw("o")
@@ -192,14 +219,23 @@ impl<'i, 'f: 'i> Formatter<'i, 'f> {
     /// }
     ///
     /// let foo = Foo;
-    /// let uri_string = format!("{}", &foo as &UriDisplay);
+    /// let uri_string = format!("{}", &foo as &UriDisplay<Path>);
     /// assert_eq!(uri_string, "foo");
     /// ```
     pub fn write_raw<S: AsRef<str>>(&mut self, string: S) -> fmt::Result {
-        let s = string.as_ref();
-        if self.fresh {
+        // This implementation is a bit of a lie to the type system. Instead of
+        // implementing this twice, one for <Path> and again for <Query>, we do
+        // this once here. This is okay since we know that this handles the
+        // cases for both Path and Query, and doing it this way allows us to
+        // keep the uri part generic _generic_ in other implementations that use
+        // `write_raw`.
+        if self.fresh && self.delimiter == '/' {
             if self.previous {
-                self.inner.write_str("&")?;
+                self.inner.write_char(self.delimiter)?;
+            }
+        } else if self.fresh && self.delimiter == '&' {
+            if self.previous {
+                self.inner.write_char(self.delimiter)?;
             }
 
             if !self.prefixes.is_empty() {
@@ -216,7 +252,123 @@ impl<'i, 'f: 'i> Formatter<'i, 'f> {
 
         self.fresh = false;
         self.previous = true;
-        self.inner.write_str(s)
+        self.inner.write_str(string.as_ref())
+    }
+
+    /// Writes the unnamed value `value`. Any nested names are prefixed as
+    /// necessary.
+    ///
+    /// Refreshes `self` before and after the value is written.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use std::fmt;
+    ///
+    /// use rocket::http::uri::{Formatter, UriDisplay, UriPart, Path, Query};
+    ///
+    /// struct Foo(usize);
+    ///
+    /// impl<P: UriPart> UriDisplay<P> for Foo {
+    ///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    ///         f.write_value(&self.0)
+    ///     }
+    /// }
+    ///
+    /// let foo = Foo(123);
+    ///
+    /// let uri_string = format!("{}", &foo as &UriDisplay<Path>);
+    /// assert_eq!(uri_string, "123");
+    ///
+    /// let uri_string = format!("{}", &foo as &UriDisplay<Query>);
+    /// assert_eq!(uri_string, "123");
+    /// ```
+    #[inline]
+    pub fn write_value<T: UriDisplay<P>>(&mut self, value: T) -> fmt::Result {
+        self.refreshed(|f| UriDisplay::fmt(&value, f))
+    }
+
+    /// Refreshes the formatter.
+    ///
+    /// After refreshing, [`write_raw()`] will prefix any nested names as well
+    /// as insert a separator.
+    ///
+    /// [`write_raw()`]: Formatter::write_raw()
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use std::fmt;
+    ///
+    /// use rocket::http::uri::{Formatter, UriDisplay, Query, Path};
+    ///
+    /// struct Foo;
+    ///
+    /// impl UriDisplay<Query> for Foo {
+    ///     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+    ///         f.write_raw("a")?;
+    ///         f.write_raw("raw")?;
+    ///         f.refresh();
+    ///         f.write_raw("format")
+    ///     }
+    /// }
+    ///
+    /// let uri_string = format!("{}", &Foo as &UriDisplay<Query>);
+    /// assert_eq!(uri_string, "araw&format");
+    ///
+    ///// #[derive(UriDisplayQuery)]
+    ///// struct Message {
+    /////     inner: Foo,
+    ///// }
+    /////
+    ///// let msg = Message { inner: Foo };
+    ///// let uri_string = format!("{}", &msg as &UriDisplay);
+    ///// assert_eq!(uri_string, "inner=araw&inner=format");
+    ///
+    /// impl UriDisplay<Path> for Foo {
+    ///     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+    ///         f.write_raw("a")?;
+    ///         f.write_raw("raw")?;
+    ///         f.refresh();
+    ///         f.write_raw("format")
+    ///     }
+    /// }
+    ///
+    /// let uri_string = format!("{}", &Foo as &UriDisplay<Path>);
+    /// assert_eq!(uri_string, "araw/format");
+    /// ```
+    #[inline(always)]
+    pub fn refresh(&mut self) {
+        self.fresh = true;
+    }
+}
+
+impl<'i> Formatter<'i, Query> {
+    fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
+        where F: FnOnce(&mut Self) -> fmt::Result
+    {
+        // The `prefix` string is pushed in a `StackVec` for use by recursive
+        // (nested) calls to `write_raw`. The string is pushed here and then
+        // popped here. `self.prefixes` is modified nowhere else, and no strings
+        // leak from the the vector. As a result, it is impossible for a
+        // `prefix` to be accessed incorrectly as:
+        //
+        //   * Rust _guarantees_ it exists for the lifetime of this method
+        //   * it is only reachable while this method's stack is active because
+        //     it is popped before this method returns
+        //   * thus, at any point that it's reachable, it's valid
+        //
+        // Said succinctly: this `prefixes` stack shadows a subset of the
+        // `with_prefix` stack precisely, making it reachable to other code.
+        let prefix: &'static str = unsafe { ::std::mem::transmute(prefix) };
+
+        self.prefixes.push(prefix);
+        let result = f(self);
+        self.prefixes.pop();
+
+        result
     }
 
     /// Writes the named value `value` by prefixing `name` followed by `=` to
@@ -231,100 +383,99 @@ impl<'i, 'f: 'i> Formatter<'i, 'f> {
     /// # extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay};
+    /// use rocket::http::uri::{Formatter, UriDisplay, Query};
     ///
     /// struct Foo {
     ///     name: usize
     /// }
     ///
-    /// impl UriDisplay for Foo {
-    ///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    /// // Note: This is identical to what #[derive(UriDisplayQuery)] would
+    /// // generate! In practice, _always_ use the derive.
+    /// impl UriDisplay<Query> for Foo {
+    ///     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
     ///         f.write_named_value("name", &self.name)
     ///     }
     /// }
     ///
     /// let foo = Foo { name: 123 };
-    /// let uri_string = format!("{}", &foo as &UriDisplay);
+    /// let uri_string = format!("{}", &foo as &UriDisplay<Query>);
     /// assert_eq!(uri_string, "name=123");
     /// ```
     #[inline]
-    pub fn write_named_value<T: UriDisplay>(&mut self, name: &str, value: T) -> fmt::Result {
+    pub fn write_named_value<T: UriDisplay<Query>>(&mut self, name: &str, value: T) -> fmt::Result {
         self.refreshed(|f| f.with_prefix(name, |f| f.write_value(value)))
-    }
-
-    /// Writes the unnamed value `value`. Any nested names are prefixed as
-    /// necessary.
-    ///
-    /// Refreshes `self` before and after the value is written.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use std::fmt;
-    ///
-    /// use rocket::http::uri::{Formatter, UriDisplay};
-    ///
-    /// struct Foo(usize);
-    ///
-    /// impl UriDisplay for Foo {
-    ///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    ///         f.write_value(&self.0)
-    ///     }
-    /// }
-    ///
-    /// let foo = Foo(123);
-    /// let uri_string = format!("{}", &foo as &UriDisplay);
-    /// assert_eq!(uri_string, "123");
-    /// ```
-    #[inline]
-    pub fn write_value<T: UriDisplay>(&mut self, value: T) -> fmt::Result {
-        self.refreshed(|f| UriDisplay::fmt(&value, f))
-    }
-
-    /// Refreshes the formatter.
-    ///
-    /// After refreshing, [`write_raw()`] will prefix any nested names as well
-    /// as insert an `&` separator.
-    ///
-    /// [`write_raw()`]: Formatter::write_raw()
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate rocket;
-    /// use std::fmt;
-    ///
-    /// use rocket::http::uri::{Formatter, UriDisplay};
-    ///
-    /// struct Foo;
-    ///
-    /// impl UriDisplay for Foo {
-    ///     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    ///         f.write_raw("a")?;
-    ///         f.write_raw("raw")?;
-    ///         f.refresh();
-    ///         f.write_raw("format")
-    ///     }
-    /// }
-    ///
-    /// #[derive(UriDisplay)]
-    /// struct Message {
-    ///     inner: Foo,
-    /// }
-    ///
-    /// let msg = Message { inner: Foo };
-    /// let uri_string = format!("{}", &msg as &UriDisplay);
-    /// assert_eq!(uri_string, "inner=araw&inner=format");
-    /// ```
-    #[inline(always)]
-    pub fn refresh(&mut self) {
-        self.fresh = true;
     }
 }
 
-impl<'f, 'i: 'f> fmt::Write for Formatter<'f, 'i> {
+impl<'i, P: UriPart> fmt::Write for Formatter<'i, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_raw(s)
+    }
+}
+
+// Used by code generation.
+#[doc(hidden)]
+pub enum UriArgumentsKind<A> {
+    Static(&'static str),
+    Dynamic(A)
+}
+
+// Used by code generation.
+#[doc(hidden)]
+pub enum UriQueryArgument<'a> {
+    Raw(&'a str),
+    NameValue(&'a str, &'a dyn UriDisplay<Query>),
+    Value(&'a dyn UriDisplay<Query>)
+}
+
+// Used by code generation.
+#[doc(hidden)]
+pub struct UriArguments<'a> {
+    pub path: UriArgumentsKind<&'a [&'a dyn UriDisplay<Path>]>,
+    pub query: Option<UriArgumentsKind<&'a [UriQueryArgument<'a>]>>,
+}
+
+// Used by code generation.
+impl<'a> UriArguments<'a> {
+    #[doc(hidden)]
+    pub fn into_origin(self) -> Origin<'static> {
+        use std::borrow::Cow;
+        use self::{UriArgumentsKind::*, UriQueryArgument::*};
+
+        let path: Cow<'static, str> = match self.path {
+            Static(path) => path.into(),
+            Dynamic(args) => {
+                let mut string = String::from("/");
+                {
+                    let mut formatter = Formatter::<Path>::new(&mut string);
+                    for value in args {
+                        let _ = formatter.write_value(value);
+                    }
+                }
+
+                string.into()
+            }
+        };
+
+        let query: Option<Cow<'static, str>> = self.query.map(|query| match query {
+            Static(query) => query.into(),
+            Dynamic(args) => {
+                let mut string = String::new();
+                {
+                    let mut f = Formatter::<Query>::new(&mut string);
+                    for arg in args {
+                        let _ = match arg {
+                            Raw(v) => f.write_raw(v),
+                            NameValue(n, v) => f.write_named_value(n, v),
+                            Value(v) => f.write_value(v),
+                        };
+                    }
+                }
+
+                string.into()
+            }
+        });
+
+        Origin::new(path, query)
     }
 }

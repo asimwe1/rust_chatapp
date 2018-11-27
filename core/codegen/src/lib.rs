@@ -1,7 +1,6 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 #![feature(crate_visibility_modifier)]
 #![feature(transpose_result)]
-#![feature(rustc_private)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
@@ -64,8 +63,6 @@ extern crate devise;
 extern crate proc_macro;
 extern crate rocket_http as http;
 extern crate indexmap;
-
-extern crate syntax_pos;
 
 #[macro_use] mod proc_macro_ext;
 mod derive;
@@ -616,21 +613,21 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))
 }
 
-/// Derive for the [`UriDisplay`] trait.
+/// Derive for the [`UriDisplay<Query>`] trait.
 ///
-/// The [`UriDisplay`] derive can be applied to enums and structs. When applied
-/// to enums, variants must have at least one field. When applied to structs,
-/// the struct must have at least one field.
+/// The [`UriDisplay<Query>`] derive can be applied to enums and structs. When
+/// applied to enums, variants must have at least one field. When applied to
+/// structs, the struct must have at least one field.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #[derive(UriDisplay)]
+/// #[derive(UriDisplayQuery)]
 /// enum Kind {
 ///     A(String),
 ///     B(usize),
 /// }
 ///
-/// #[derive(UriDisplay)]
+/// #[derive(UriDisplayQuery)]
 /// struct MyStruct {
 ///     name: String,
 ///     id: usize,
@@ -638,10 +635,10 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// Each field's type is required to implement [`UriDisplay`].
+/// Each field's type is required to implement [`UriDisplay<Query>`].
 ///
-/// The derive generates an implementation of the [`UriDisplay`] trait. The
-/// implementation calls [`Formatter::write_named_value()`] for every named
+/// The derive generates an implementation of the [`UriDisplay<Query>`] trait.
+/// The implementation calls [`Formatter::write_named_value()`] for every named
 /// field, using the field's name (unless overriden, explained next) as the
 /// `name` parameter, and [`Formatter::write_value()`] for every unnamed field
 /// in the order the fields are declared.
@@ -658,9 +655,9 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[derive(UriDisplay)]
+/// # #[derive(UriDisplayQuery)]
 /// # struct Kind(String);
-/// #[derive(UriDisplay)]
+/// #[derive(UriDisplayQuery)]
 /// struct MyStruct {
 ///     name: String,
 ///     id: usize,
@@ -675,12 +672,38 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// the example above, the field `MyStruct::kind` is rendered with a name of
 /// `type`.
 ///
-/// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
+/// [`UriDisplay<Query>`]: ../rocket/http/uri/trait.UriDisplay.html
 /// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value
 /// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
-#[proc_macro_derive(UriDisplay, attributes(form))]
-pub fn derive_uri_display(input: TokenStream) -> TokenStream {
-    emit!(derive::uri_display::derive_uri_display(input))
+#[proc_macro_derive(UriDisplayQuery, attributes(form))]
+pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
+    emit!(derive::uri_display::derive_uri_display_query(input))
+}
+
+/// Derive for the [`UriDisplay<Path>`] trait.
+///
+/// The [`UriDisplay<Path>`] derive can only be applied to tuple structs with
+/// one field.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(UriDisplayPath)]
+/// struct Name(String);
+///
+/// #[derive(UriDisplayPath)]
+/// struct Age(usize);
+/// ```
+///
+/// The field's type is required to implement [`UriDisplay<Path>`].
+///
+/// The derive generates an implementation of the [`UriDisplay<Path>`] trait.
+/// The implementation calls [`Formatter::write_value()`] for the field.
+///
+/// [`UriDisplay<Path>`]: ../rocket/http/uri/trait.UriDisplay.html
+/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+#[proc_macro_derive(UriDisplayPath)]
+pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
+    emit!(derive::uri_display::derive_uri_display_path(input))
 }
 
 /// Generates a [`Vec`] of [`Route`]s from a set of route paths.

@@ -6,16 +6,16 @@
 use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Origin, FromUriParam};
+use rocket::http::uri::{Origin, FromUriParam, Query};
 use rocket::request::Form;
 
-#[derive(FromForm, UriDisplay)]
+#[derive(FromForm, UriDisplayQuery)]
 struct User<'a> {
     name: &'a RawStr,
     nickname: String,
 }
 
-impl<'a, 'b> FromUriParam<(&'a str, &'b str)> for User<'a> {
+impl<'a, 'b> FromUriParam<Query, (&'a str, &'b str)> for User<'a> {
     type Target = User<'a>;
     fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
         User { name: name.into(), nickname: nickname.to_string() }

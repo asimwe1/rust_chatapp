@@ -10,7 +10,7 @@ use config::Environment::*;
 use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use config::{Table, Value, Array, Datetime};
 
-use http::Key;
+use http::private::Key;
 
 /// Structure for Rocket application configuration.
 ///

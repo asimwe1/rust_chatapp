@@ -1,7 +1,6 @@
-use std::ops::{Bound, RangeBounds};
+use std::ops::RangeBounds;
 
 use proc_macro::{Span, Diagnostic, Literal};
-use syntax_pos::{Span as InnerSpan, Pos, BytePos};
 
 pub type PResult<T> = ::std::result::Result<T, Diagnostic>;
 

@@ -218,7 +218,8 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
                 let mut #ident: Option<#ty> = None;
             },
             Kind::Multi => quote_spanned! { span =>
-                let mut __trail = ::rocket::http::SmallVec::<[___r::FormItem; 8]>::new();
+                let mut __trail =
+                    ::rocket::http::private::SmallVec::<[___r::FormItem; 8]>::new();
             },
             Kind::Static => quote!()
         };

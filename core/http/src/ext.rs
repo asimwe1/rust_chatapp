@@ -101,6 +101,8 @@ impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
 
 use std::path::Path;
 
+// Outside of http, this is used by a test.
+#[doc(hidden)]
 pub trait Normalize {
     fn normalized_str(&self) -> Cow<str>;
 }

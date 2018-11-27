@@ -30,7 +30,6 @@ impl AsPtr for [u8] {
     }
 }
 
-
 #[derive(PartialEq)]
 pub enum Indexed<'a, T: ?Sized + ToOwned + 'a> {
     Indexed(usize, usize),

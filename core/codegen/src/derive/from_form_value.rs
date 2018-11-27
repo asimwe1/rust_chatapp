@@ -7,7 +7,7 @@ struct Form {
 }
 
 pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, "::rocket::request::FromFormValue<'__v>")
+    DeriveGenerator::build_for(input, quote!(impl<'__v> ::rocket::request::FromFormValue<'__v>))
         .generic_support(GenericSupport::None)
         .data_support(DataSupport::Enum)
         .validate_enum(|generator, data| {

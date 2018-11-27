@@ -7,6 +7,7 @@ const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
 const NO_EMPTY_ENUMS: &str = "empty enums are not supported";
 const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one field";
+const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
 
 fn validate_fields(fields: Fields, parent_span: Span) -> Result<()> {
     if fields.count() == 0 {
@@ -36,15 +37,17 @@ fn validate_enum(gen: &DeriveGenerator, data: Enum) -> Result<()> {
     Ok(())
 }
 
-pub fn derive_uri_display(input: TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, "::rocket::http::uri::UriDisplay")
+pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
+    let display_trait = quote!(::rocket::http::uri::UriDisplay<::rocket::http::uri::Query>);
+    let formatter = quote!(::rocket::http::uri::Formatter<::rocket::http::uri::Query>);
+    DeriveGenerator::build_for(input, quote!(impl #display_trait))
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .validate_enum(validate_enum)
         .validate_struct(validate_struct)
-        .map_type_generic(|_, ident, _| quote!(#ident : ::rocket::http::uri::UriDisplay))
-        .function(|_, inner| quote! {
-            fn fmt(&self, f: &mut ::rocket::http::uri::Formatter) -> ::std::fmt::Result {
+        .map_type_generic(move |_, ident, _| quote!(#ident : #display_trait))
+        .function(move |_, inner| quote! {
+            fn fmt(&self, f: &mut #formatter) -> ::std::fmt::Result {
                 #inner
                 Ok(())
             }
@@ -63,6 +66,31 @@ pub fn derive_uri_display(input: TokenStream) -> TokenStream {
             };
 
             Ok(tokens)
+        })
+        .to_tokens()
+}
+
+pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
+    let display_trait = quote!(::rocket::http::uri::UriDisplay<::rocket::http::uri::Path>);
+    let formatter = quote!(::rocket::http::uri::Formatter<::rocket::http::uri::Path>);
+    DeriveGenerator::build_for(input, quote!(impl #display_trait))
+        .data_support(DataSupport::TupleStruct)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #display_trait))
+        .validate_fields(|_, fields| match fields.count() {
+            1 => Ok(()),
+            _ => Err(fields.span().error(EXACTLY_ONE_FIELD))
+        })
+        .function(move |_, inner| quote! {
+            fn fmt(&self, f: &mut #formatter) -> ::std::fmt::Result {
+                #inner
+                Ok(())
+            }
+        })
+        .map_field(|_, field| {
+            let span = field.span().into();
+            let accessor = field.accessor();
+            quote_spanned!(span => f.write_value(&#accessor)?;)
         })
         .to_tokens()
 }

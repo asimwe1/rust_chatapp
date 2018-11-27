@@ -3,7 +3,7 @@ use std::ops::Deref;
 use outcome::Outcome::*;
 use request::{Request, form::{FromForm, FormItems, FormDataError}};
 use data::{Outcome, Transform, Transformed, Data, FromData};
-use http::{Status, uri::FromUriParam};
+use http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
@@ -219,7 +219,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     }
 }
 
-impl<'f, A, T: FromUriParam<A> + FromForm<'f>> FromUriParam<A> for Form<T> {
+impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for Form<T> {
     type Target = T::Target;
 
     #[inline(always)]
