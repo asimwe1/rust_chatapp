@@ -18,9 +18,9 @@ database_attribute = []
 proc-macro = true
 
 [dependencies]
-devise = { git = "http://github.com/SergioBenitez/Devise", rev = "b5295e3e" }
+devise = "0.2"
 quote = "0.6"
 
 [build-dependencies]
-yansi = { git = "https://github.com/SergioBenitez/yansi", rev = "59c3a91" }
+yansi = "0.5"
 version_check = "0.1.3"

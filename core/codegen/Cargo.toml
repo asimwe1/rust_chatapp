@@ -18,12 +18,12 @@ proc-macro = true
 indexmap = "1.0"
 quote = "0.6.1"
 rocket_http = { version = "0.4.0-rc.1", path = "../http/" }
-devise = { git = "http://github.com/SergioBenitez/Devise", rev = "b5295e3e" }
+devise = "0.2"
 
 [build-dependencies]
-yansi = { git = "https://github.com/SergioBenitez/yansi", rev = "59c3a91" }
+yansi = "0.5"
 version_check = "0.1.3"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-rc.1", path = "../lib" }
-compiletest_rs = { git = "https://github.com/laumann/compiletest-rs" }
+compiletest_rs = { version = "0.3", features = ["stable"] }
