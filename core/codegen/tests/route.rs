@@ -112,33 +112,3 @@ fn test_full_route() {
     assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }
-
-// Check that we propogate span information correctly to allow re-expansion.
-
-#[get("/easy/<id>")]
-fn easy(id: i32) -> String {
-    format!("easy id: {}", id)
-}
-
-macro_rules! make_handler {
-    () => {
-        #[get("/hard/<id>")]
-        fn hard(id: i32) -> String {
-            format!("hard id: {}", id)
-        }
-    }
-}
-
-make_handler!();
-
-#[test]
-fn test_reexpansion() {
-    let rocket = rocket::ignite().mount("/", routes![easy, hard]);
-    let client = Client::new(rocket).unwrap();
-
-    let mut response = client.get("/easy/327").dispatch();
-    assert_eq!(response.body_string().unwrap(), "easy id: 327");
-
-    let mut response = client.get("/hard/72").dispatch();
-    assert_eq!(response.body_string().unwrap(), "hard id: 72");
-}

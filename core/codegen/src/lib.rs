@@ -64,7 +64,34 @@ extern crate proc_macro;
 extern crate rocket_http as http;
 extern crate indexmap;
 
-#[macro_use] mod proc_macro_ext;
+macro_rules! define {
+    ($val:path as $v:ident) => (#[allow(non_snake_case)] let $v = quote!($val););
+}
+
+macro_rules! define_vars_and_mods {
+    (@req as $v:ident) => (define!(__req as $v));
+    (@catcher as $v:ident) => (define!(__catcher as $v));
+    (@data as $v:ident) => (define!(__data as $v));
+    (@error as $v:ident) => (define!(__error as $v));
+    (@trail as $v:ident) => (define!(__trail as $v));
+    (@request as $v:ident) => (define!(::rocket::request as $v));
+    (@response as $v:ident) => (define!(::rocket::response as $v));
+    (@handler as $v:ident) => (define!(::rocket::handler as $v));
+    (@log as $v:ident) => (define!(::rocket::logger as $v));
+    (@Outcome as $v:ident) => (define!(::rocket::Outcome as $v));
+    (@FromData as $v:ident) => (define!(::rocket::data::FromData as $v));
+    (@Transform as $v:ident) => (define!(::rocket::data::Transform as $v));
+    (@Query as $v:ident) => (define!(::rocket::request::Query as $v));
+    (@Request as $v:ident) => (define!(::rocket::Request as $v));
+    (@Response as $v:ident) => (define!(::rocket::response::Response as $v));
+    (@Data as $v:ident) => (define!(::rocket::Data as $v));
+    (@StaticRouteInfo as $v:ident) => (define!(::rocket::StaticRouteInfo as $v));
+    (@SmallVec as $v:ident) => (define!(::rocket::http::private::SmallVec as $v));
+    ($($name:ident),*) => ($(define_vars_and_mods!(@$name as $name);)*)
+}
+
+#[macro_use]
+mod proc_macro_ext;
 mod derive;
 mod attribute;
 mod bang;

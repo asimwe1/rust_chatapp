@@ -50,10 +50,13 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let (vis, status) = (&catch.function.vis, &catch.status);
     let status_code = status.0.code;
 
+    // Variables names we'll use and reuse.
+    define_vars_and_mods!(req, catcher, response, Request, Response);
+
     // Determine the number of parameters that will be passed in.
     let (fn_sig, inputs) = match catch.function.decl.inputs.len() {
         0 => (quote!(fn() -> _), quote!()),
-        1 => (quote!(fn(&::rocket::Request) -> _), quote!(__req)),
+        1 => (quote!(fn(&#Request) -> _), quote!(#req)),
         _ => return Err(catch.function.decl.inputs.span()
                 .error("invalid number of arguments: must be zero or one")
                 .help("catchers may optionally take an argument of type `&Request`"))
@@ -70,8 +73,8 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
 
     let catcher_response = quote_spanned!(return_type_span => {
         // Emit this to force a type signature check.
-        let __catcher: #fn_sig = #user_catcher_fn_name;
-        ::rocket::response::Responder::respond_to(__catcher(#inputs), __req)?
+        let #catcher: #fn_sig = #user_catcher_fn_name;
+        ::rocket::response::Responder::respond_to(#catcher(#inputs), #req)?
     });
 
     // Generate the catcher, keeping the user's input around.
@@ -79,13 +82,11 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         #user_catcher_fn
 
         /// Rocket code generated wrapping catch function.
-        #vis fn #generated_fn_name<'_b>(
-            __req: &'_b ::rocket::Request
-        ) -> ::rocket::response::Result<'_b> {
-            let response = #catcher_response;
-            ::rocket::response::Response::build()
+        #vis fn #generated_fn_name<'_b>(#req: &'_b #Request) -> #response::Result<'_b> {
+            let __response = #catcher_response;
+            #Response::build()
                 .status(#status)
-                .merge(response)
+                .merge(__response)
                 .ok()
         }
 
