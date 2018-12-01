@@ -1,4 +1,24 @@
 [[articles]]
+title = "Rocket's 2nd v0.4 Release Candidate"
+slug = "2018-11-30-version-0.4-rc-2"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "November 30, 2018"
+snippet = """
+After a successful and productive initial v0.4 release candidate, I am happy to
+announce that the second release candidate for Rocket v0.4 is now available.
+
+This release candidate fixes issues identified during the first release
+candidate, introduces further features, and leverages upstream `rustc`
+contributions for improved diagnostics and stability. As before, this is an
+opportunity to discover issues with Rocket v0.4 and its documentation before its
+general release. We encourage all users to migrate their applications to the
+second release candidate and report any issues to the [GitHub issue tracker].
+
+[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+"""
+
+[[articles]]
 title = "Rocket v0.4 Release Candidate"
 slug = "2018-10-31-version-0.4-rc"
 author = "Sergio Benitez"

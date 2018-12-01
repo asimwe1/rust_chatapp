@@ -215,7 +215,7 @@ databases, you'd write in `Cargo.toml`:
 
 ```toml
 [dependencies.rocket_contrib]
-version = "0.4.0-rc.1"
+version = "0.4.0-rc.2"
 default-features = false
 features = ["diesel_sqlite_pool"]
 ```

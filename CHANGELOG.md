@@ -1,3 +1,83 @@
+# Version 0.4.0-rc.2 (Nov 30, 2018)
+
+## New Features
+
+This release includes the following new features:
+
+  * Introduced the [`SpaceHelmet`] security and privacy headers fairing.
+  * Private cookies are gated behind a `private-cookies` feature.
+  * Applications can launch without a working directory.
+  * `Option` and `Result` types can be used in `uri!` expressions.
+  * Added [`State::from()`] for constructing `State` values.
+
+[`SpaceHelmet`]: https://api.rocket.rs/v0.4/rocket_contrib/helmet/index.html
+[`State::from()`]: https://api.rocket.rs/v0.4/rocket/struct.State.html#method.from
+
+## Breaking Changes
+
+This release includes several breaking changes. These changes are listed below
+along with a short note about how to handle the breaking change in existing
+applications when applicable.
+
+  * **Minimum required nightly is `2018-11-23`.**
+
+    Update to `nightly-2018-11-23` or later before updating to `rc.2`.
+
+  * **[`UriDisplay`] is parameterized by a [`UriPart`].**
+
+    When implementing `UriDisplay`, decide whether the value is to be displayed
+    in the path part, query part, or both of a URI. Implement `UriDisplay<Path>`
+    and/or `UriDisplay<Query>` appropriately.
+
+  * **[`UriDisplay`] derive was removed in favor of [`UriDisplayQuery`] and
+    [`UriDisplayPath`].**
+
+    To mimic the previous behavior, derive `UriDisplayQuery`.
+
+  * **[`Config::root()`] returns an `Option<&Path>` instead of an `&Path`.**
+
+    For the previous behavior, use `config.root().unwrap()`.
+
+  * **[`Config`] constructors return a `Config` instead of a `Result<Config>`.**
+
+  * **`ConfigError::BadCWD`, `Config.config_path` were removed.**
+
+[`UriDisplay`]: https://api.rocket.rs/v0.4/rocket/http/uri/trait.UriDisplay.html
+[`UriPart`]: https://api.rocket.rs/v0.4/rocket/http/uri/trait.UriPart.html
+[`UriDisplayPath`]: https://api.rocket.rs/v0.4/rocket_codegen/derive.UriDisplayPath.html
+[`UriDisplayQuery`]: https://api.rocket.rs/v0.4/rocket_codegen/derive.UriDisplayQuery.html
+[`Config`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html
+[`Config::root()`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html#method.root
+
+## Fixes
+
+Several issues in the first release candidate were addressed in this release:
+
+  * Characters in URIs are properly percent-encoded ([#808]).
+  * Generated variables are properly spanned and prefixed ([#817], [#839]).
+  * [`Client`] regained `Sync` ([#814]).
+
+[#808]: https://github.com/SergioBenitez/Rocket/issues/808
+[#817]: https://github.com/SergioBenitez/Rocket/issues/817
+[#839]: https://github.com/SergioBenitez/Rocket/issues/839
+[#814]: https://github.com/SergioBenitez/Rocket/issues/814
+
+## General Improvements
+
+In addition to new features, Rocket saw the following improvements:
+
+  * Console coloring uses default terminal colors instead of white.
+  * Console coloring is consistent across all messages.
+  * `i128` and `u128` now implement [`FromParam`], [`FromFormValue`].
+  * [`Form`] and [`LenientForm`] can be publicly constructed.
+  * Added ZIP (`application/zip`) as a known media type.
+  * The `base64` dependency was updated to `0.10`.
+  * Private, hidden `http` types are no longer visible in the rustdocs.
+
+[`FromParam`]: https://api.rocket.rs/v0.4/rocket/request/trait.FromParam.html
+[`FromFormValue`]: https://api.rocket.rs/v0.4/rocket/request/trait.FromFormValue.html
+[`Data`]: https://api.rocket.rs/v0.4/rocket/struct.Data.html
+
 # Version 0.4.0-rc.1 (Oct 31, 2018)
 
 ## New Features

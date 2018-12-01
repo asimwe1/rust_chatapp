@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib"
-version = "0.4.0-rc.1"
+version = "0.4.0-rc.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/v0.4/rocket_contrib/"
@@ -36,8 +36,8 @@ redis_pool = ["databases", "redis", "r2d2_redis"]
 
 [dependencies]
 # Global dependencies.
-rocket_contrib_codegen = { version = "0.4.0-rc.1", path = "../codegen", optional = true }
-rocket = { version = "0.4.0-rc.1", path = "../../core/lib/" }
+rocket_contrib_codegen = { version = "0.4.0-rc.2", path = "../codegen", optional = true }
+rocket = { version = "0.4.0-rc.2", path = "../../core/lib/" }
 log = "0.4"
 
 # Serialization and templating dependencies.

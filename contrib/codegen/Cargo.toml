@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib_codegen"
-version = "0.4.0-rc.1"
+version = "0.4.0-rc.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket contrib libraries."
 documentation = "https://api.rocket.rs/v0.4/rocket_contrib/"
