@@ -26,6 +26,7 @@ fi
 echo ":::: Running test suite..."
 cargo clean
 bash "${SCRIPT_DIR}/test.sh"
+bash "${SCRIPT_DIR}/test.sh" --contrib
 bash "${SCRIPT_DIR}/test.sh" --release
 
 # Temporarily remove dev-dependencies so crates.io verifies.
