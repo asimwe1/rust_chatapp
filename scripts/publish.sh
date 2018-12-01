@@ -10,7 +10,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/config.sh"
 
 function strip_dev_dependencies() {
-  perl -i.bak -p0e 's/\[dev-dependencies\][^\[]*//smg' "${1}/Cargo.toml"
+  perl -i.bak -p0e 's/\[dev-dependencies\].*//smg' "${1}/Cargo.toml"
 }
 
 function restore_dev_dependencies() {
