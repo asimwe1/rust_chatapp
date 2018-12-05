@@ -32,10 +32,35 @@ crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
     Ok(quote!(#path!(#input2)).into())
 }
 
-fn extract_exprs(internal: &InternalUriParams) -> Result<Vec<&Expr>> {
+fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
+        impl Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>,
+        impl Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>,
+    )>
+{
     let route_name = &internal.uri_params.route_path;
     match internal.validate() {
-        Validation::Ok(exprs) => Ok(exprs),
+        Validation::Ok(exprs) => {
+            let path_param_count = internal.route_uri.path().matches('<').count();
+            for expr in exprs.iter().take(path_param_count) {
+                if !expr.as_expr().is_some() {
+                    return Err(expr.span().unstable()
+                               .error("path parameters cannot be ignored"));
+                }
+            }
+
+            // Create an iterator over all `ident`, `ty`, and `expr` triples.
+            let arguments = internal.fn_args.iter()
+                .zip(exprs.into_iter())
+                .map(|(FnArg { ident, ty }, expr)| (ident, ty, expr));
+
+            // Create iterators for just the path and query parts.
+            let path_params = arguments.clone()
+                .take(path_param_count)
+                .map(|(i, t, e)| (i, t, e.unwrap_expr()));
+
+            let query_params = arguments.skip(path_param_count);
+            Ok((path_params, query_params))
+        }
         Validation::Unnamed(expected, actual) => {
             let mut diag = internal.uri_params.args_span().error(
                 format!("`{}` route uri expects {} but {} supplied", quote!(#route_name),
@@ -125,7 +150,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
 }
 
-fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
+fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     uri: &Origin,
     bindings: &mut Vec<TokenStream2>,
     mut items: I
@@ -137,30 +162,38 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
 
     let query_arg = quote!(#uri_mod::UriQueryArgument);
     let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Query>);
-    let dyn_exprs = RouteSegment::parse_query(uri)?.map(|segment| {
+    let dyn_exprs = RouteSegment::parse_query(uri)?.filter_map(|segment| {
         let segment = segment.expect("segment okay; prechecked on parse");
-        match segment.kind {
-            Kind::Static => {
-                let string = &segment.string;
-                quote!(#query_arg::Raw(#string))
-            }
-            Kind::Single => {
-                let (ident, ty, expr) = items.next().expect("one item for each dyn");
-                add_binding(bindings, &ident, &ty, &expr, Source::Query);
-                let name = &segment.name;
-
-                quote_spanned!(expr.span() =>
-                   #query_arg::NameValue(#name, &#ident as &dyn #uri_display)
-                )
-            }
-            Kind::Multi => {
-                let (ident, ty, expr) = items.next().expect("one item for each dyn");
-                add_binding(bindings, &ident, &ty, &expr, Source::Query);
-                quote_spanned!(expr.span() =>
-                   #query_arg::Value(&#ident as &dyn #uri_display)
-                )
-            }
+        if segment.kind == Kind::Static {
+            let string = &segment.string;
+            return Some(quote!(#query_arg::Raw(#string)));
         }
+
+        let (ident, ty, arg_expr) = items.next().expect("one item for each dyn");
+        let expr = match arg_expr.as_expr() {
+            Some(expr) => expr,
+            None => {
+                // Force a typecheck for the `Ignoreable` trait. Note that write
+                // out the path to `is_ignorable` to get the right span.
+                bindings.push(quote_spanned! { arg_expr.span() =>
+                    rocket::http::uri::assert_ignorable::<#uri_mod::Query, #ty>();
+                });
+
+                return None;
+            }
+        };
+
+        let name = &segment.name;
+        add_binding(bindings, &ident, &ty, &expr, Source::Query);
+        Some(match segment.kind {
+            Kind::Single => quote_spanned! { expr.span() =>
+                #query_arg::NameValue(#name, &#ident as &dyn #uri_display)
+            },
+            Kind::Multi => quote_spanned! { expr.span() =>
+                #query_arg::Value(&#ident as &dyn #uri_display)
+            },
+            Kind::Static => unreachable!("Kind::Static returns early")
+        })
     });
 
     Some(quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
@@ -182,17 +215,7 @@ fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
 crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     // Parse the internal invocation and the user's URI param expressions.
     let internal = syn::parse::<InternalUriParams>(input).map_err(syn_to_diag)?;
-    let exprs = extract_exprs(&internal)?;
-
-    // Create an iterator over all of the `ident`, `ty`, and `expr` triple.
-    let arguments = internal.fn_args.iter()
-        .zip(exprs.iter())
-        .map(|(FnArg { ident, ty }, &expr)| (ident, ty, expr));
-
-    // Create iterators for just the path and query parts.
-    let path_param_count = internal.route_uri.path().matches('<').count();
-    let path_params = arguments.clone().take(path_param_count);
-    let query_params = arguments.skip(path_param_count);
+    let (path_params, query_params) = extract_exprs(&internal)?;
 
     let mut bindings = vec![];
     let uri = build_origin(&internal);

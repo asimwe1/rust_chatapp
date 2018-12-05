@@ -2,6 +2,7 @@ use proc_macro::{Span, TokenStream};
 use devise::*;
 
 use derive::from_form::Form;
+use proc_macro2::TokenStream as TokenStream2;
 
 const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
@@ -37,17 +38,21 @@ fn validate_enum(gen: &DeriveGenerator, data: Enum) -> Result<()> {
     Ok(())
 }
 
+#[allow(non_snake_case)]
 pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
-    let display_trait = quote!(::rocket::http::uri::UriDisplay<::rocket::http::uri::Query>);
-    let formatter = quote!(::rocket::http::uri::Formatter<::rocket::http::uri::Query>);
-    DeriveGenerator::build_for(input, quote!(impl #display_trait))
+    let Query = quote!(::rocket::http::uri::Query);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
+    let Formatter = quote!(::rocket::http::uri::Formatter<#Query>);
+    let FromUriParam = quote!(::rocket::http::uri::FromUriParam);
+
+    let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #UriDisplay))
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .validate_enum(validate_enum)
         .validate_struct(validate_struct)
-        .map_type_generic(move |_, ident, _| quote!(#ident : #display_trait))
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .function(move |_, inner| quote! {
-            fn fmt(&self, f: &mut #formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
                 #inner
                 Ok(())
             }
@@ -67,7 +72,49 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 
             Ok(tokens)
         })
-        .to_tokens()
+        .to_tokens();
+
+    let i = input.clone();
+    let gen_trait = quote!(impl #FromUriParam<#Query, Self>);
+    let from_self = DeriveGenerator::build_for(i, gen_trait)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .data_support(DataSupport::Struct | DataSupport::Enum)
+        .function(|_, _| quote! {
+            type Target = Self;
+            #[inline(always)]
+            fn from_uri_param(param: Self) -> Self { param }
+        })
+        .to_tokens();
+
+    let i = input.clone();
+    let gen_trait = quote!(impl<'__r> #FromUriParam<#Query, &'__r Self>);
+    let from_ref = DeriveGenerator::build_for(i, gen_trait)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .data_support(DataSupport::Struct | DataSupport::Enum)
+        .function(|_, _| quote! {
+            type Target = &'__r Self;
+            #[inline(always)]
+            fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+        })
+        .to_tokens();
+
+    let i = input.clone();
+    let gen_trait = quote!(impl<'__r> #FromUriParam<#Query, &'__r mut Self>);
+    let from_mut = DeriveGenerator::build_for(i, gen_trait)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .data_support(DataSupport::Struct | DataSupport::Enum)
+        .function(|_, _| quote! {
+            type Target = &'__r mut Self;
+            #[inline(always)]
+            fn from_uri_param(param: &'__r mut Self) -> &'__r mut Self { param }
+        })
+        .to_tokens();
+
+    let mut ts = TokenStream2::from(uri_display);
+    ts.extend(TokenStream2::from(from_self));
+    ts.extend(TokenStream2::from(from_ref));
+    ts.extend(TokenStream2::from(from_mut));
+    ts.into()
 }
 
 pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {

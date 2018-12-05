@@ -50,7 +50,9 @@ mod private {
 /// [`Path`]: uri::Path
 /// [`UriDisplay`]: uri::UriDisplay
 /// [`Formatter`]: uri::Formatter
-pub trait UriPart: private::Sealed {  }
+pub trait UriPart: private::Sealed {
+    const DELIMITER: char;
+}
 
 /// Marker type indicating use of a type for the path [`UriPart`] of a URI.
 ///
@@ -77,5 +79,10 @@ pub enum Path {  }
 /// [`UriPart`]: uri::UriPart
 pub enum Query {  }
 
-impl UriPart for Path {  }
-impl UriPart for Query {  }
+impl UriPart for Path {
+    const DELIMITER: char = '/';
+}
+
+impl UriPart for Query {
+    const DELIMITER: char = '&';
+}

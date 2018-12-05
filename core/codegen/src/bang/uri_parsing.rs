@@ -13,9 +13,15 @@ use http::{uri::Origin, ext::IntoOwned};
 use indexmap::IndexMap;
 
 #[derive(Debug)]
+pub enum ArgExpr {
+    Expr(Expr),
+    Ignored(Token![_]),
+}
+
+#[derive(Debug)]
 pub enum Arg {
-    Unnamed(Expr),
-    Named(Ident, Token![=], Expr),
+    Unnamed(ArgExpr),
+    Named(Ident, Token![=], ArgExpr),
 }
 
 #[derive(Debug)]
@@ -48,7 +54,7 @@ pub enum Validation<'a> {
     // (Missing, Extra, Duplicate)
     Named(Vec<&'a Ident>, Vec<&'a Ident>, Vec<&'a Ident>),
     // Everything is okay; here are the expressions in the route decl order.
-    Ok(Vec<&'a Expr>)
+    Ok(Vec<&'a ArgExpr>)
 }
 
 // This is invoked by Rocket itself. The `uri!` macro expands to a call to a
@@ -72,16 +78,26 @@ pub struct InternalUriParams {
     pub uri_params: UriParams,
 }
 
+impl Parse for ArgExpr {
+    fn parse(input: ParseStream) -> parse::Result<Self> {
+        if input.peek(Token![_]) {
+            return Ok(ArgExpr::Ignored(input.parse::<Token![_]>()?));
+        }
+
+        input.parse::<Expr>().map(ArgExpr::Expr)
+    }
+}
+
 impl Parse for Arg {
     fn parse(input: ParseStream) -> parse::Result<Self> {
         let has_key = input.peek2(Token![=]);
         if has_key {
             let ident = input.parse::<Ident>()?;
             let eq_token = input.parse::<Token![=]>()?;
-            let expr = input.parse::<Expr>()?;
+            let expr = input.parse::<ArgExpr>()?;
             Ok(Arg::Named(ident, eq_token, expr))
         } else {
-            let expr = input.parse::<Expr>()?;
+            let expr = input.parse::<ArgExpr>()?;
             Ok(Arg::Unnamed(expr))
         }
     }
@@ -208,7 +224,7 @@ impl InternalUriParams {
                 else { Validation::Ok(args.unnamed().unwrap().collect()) }
             },
             Args::Named(_) => {
-                let mut params: IndexMap<&Ident, Option<&Expr>> = self.fn_args.iter()
+                let mut params: IndexMap<&Ident, Option<&ArgExpr>> = self.fn_args.iter()
                     .map(|FnArg { ident, .. }| (ident, None))
                     .collect();
 
@@ -253,18 +269,18 @@ impl Arg {
     fn is_named(&self) -> bool {
         match *self {
             Arg::Named(..) => true,
-            Arg::Unnamed(_) => false,
+            _ => false
         }
     }
 
-    fn unnamed(&self) -> &Expr {
+    fn unnamed(&self) -> &ArgExpr {
         match self {
             Arg::Unnamed(expr) => expr,
             _ => panic!("Called Arg::unnamed() on an Arg::named!"),
         }
     }
 
-    fn named(&self) -> (&Ident, &Expr) {
+    fn named(&self) -> (&Ident, &ArgExpr) {
         match self {
             Arg::Named(ident, _, expr) => (ident, expr),
             _ => panic!("Called Arg::named() on an Arg::Unnamed!"),
@@ -279,14 +295,14 @@ impl Args {
         }
     }
 
-    fn named(&self) -> Option<impl Iterator<Item = (&Ident, &Expr)>> {
+    fn named(&self) -> Option<impl Iterator<Item = (&Ident, &ArgExpr)>> {
         match self {
             Args::Named(args) => Some(args.iter().map(|arg| arg.named())),
             _ => None
         }
     }
 
-    fn unnamed(&self) -> Option<impl Iterator<Item = &Expr>> {
+    fn unnamed(&self) -> Option<impl Iterator<Item = &ArgExpr>> {
         match self {
             Args::Unnamed(args) => Some(args.iter().map(|arg| arg.unnamed())),
             _ => None
@@ -294,12 +310,36 @@ impl Args {
     }
 }
 
+impl ArgExpr {
+    pub fn as_expr(&self) -> Option<&Expr> {
+        match self {
+            ArgExpr::Expr(expr) => Some(expr),
+            _ => None
+        }
+    }
+
+    pub fn unwrap_expr(&self) -> &Expr {
+        match self {
+            ArgExpr::Expr(expr) => expr,
+            _ => panic!("Called ArgExpr::expr() on ArgExpr::Ignored!"),
+        }
+    }
+}
+
+impl ToTokens for ArgExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            ArgExpr::Expr(e) => e.to_tokens(tokens),
+            ArgExpr::Ignored(e) => e.to_tokens(tokens)
+        }
+    }
+}
 
 impl ToTokens for Arg {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
             Arg::Unnamed(e) => e.to_tokens(tokens),
-            Arg::Named(ident, eq, expr) => tokens.extend(quote!(#ident #eq #expr))
+            Arg::Named(ident, eq, expr) => tokens.extend(quote!(#ident #eq #expr)),
         }
     }
 }

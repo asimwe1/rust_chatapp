@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-use rocket::http::Cookies;
+use rocket::http::{Cookies, RawStr};
 
 #[post("/<id>")]
 fn has_one(id: i32) {  }
@@ -14,6 +14,9 @@ fn has_one_guarded(cookies: Cookies, id: i32) {  }
 
 #[post("/<id>?<name>")]
 fn has_two(cookies: Cookies, id: i32, name: String) {  }
+
+#[post("/<id>/<name>")]
+fn optionals(id: Option<i32>, name: Result<String, &RawStr>) {  }
 
 fn main() {
     uri!(has_one); //~ ERROR expects 1 parameter but 0
@@ -69,4 +72,10 @@ fn main() {
     uri!(has_two: id = 100, cookies = "hi"); //~ ERROR invalid parameters
     //~^ HELP missing parameter: `name`
     //~^^ HELP unknown parameter: `cookies`
+
+    uri!(optionals: id = _, name = "bob".into());
+    //~^ ERROR cannot be ignored
+
+    uri!(optionals: id = 10, name = _);
+    //~^ ERROR cannot be ignored
 }

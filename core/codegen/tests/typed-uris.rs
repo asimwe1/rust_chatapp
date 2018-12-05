@@ -208,9 +208,9 @@ fn check_with_segments() {
     assert_uri_eq! {
         uri!(segments: PathBuf::from("one/two/three")) => "/a/one/two/three",
         uri!(segments: path = PathBuf::from("one/two/three")) => "/a/one/two/three",
-        uri!("/c", segments: PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
-        uri!("/c", segments: path = PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o/",
-        uri!(segments: PathBuf::from("one/ tw?o/")) => "/a/one/%20tw%3Fo/",
+        uri!("/c", segments: PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o",
+        uri!("/c", segments: path = PathBuf::from("one/tw o/")) => "/c/a/one/tw%20o",
+        uri!(segments: PathBuf::from("one/ tw?o/")) => "/a/one/%20tw%3Fo",
         uri!(param_and_segments: 10, PathBuf::from("a/b")) => "/a/10/then/a/b",
         uri!(param_and_segments: id = 10, path = PathBuf::from("a/b"))
             => "/a/10/then/a/b",
@@ -223,7 +223,7 @@ fn check_with_segments() {
     assert_uri_eq! {
         uri!(segments: "one/two/three") => "/a/one/two/three",
         uri!("/oh", segments: path = "one/two/three") => "/oh/a/one/two/three",
-        uri!(segments: "one/ tw?o/") => "/a/one/%20tw%3Fo/",
+        uri!(segments: "one/ tw?o/") => "/a/one/%20tw%3Fo",
         uri!(param_and_segments: id = 10, path = "a/b") => "/a/10/then/a/b",
         uri!(guarded_segments: 10, "a/b") => "/a/10/then/a/b",
         uri!(guarded_segments: id = 10, path = "a/b") => "/a/10/then/a/b",
@@ -283,8 +283,10 @@ fn check_location_promotion() {
 
     assert_uri_eq! {
         uri!(simple2: 1, &S1("A".into()).0) => "/1/A",
+        uri!(simple2: 1, &mut S1("A".into()).0) => "/1/A",
         uri!(simple2: 1, S1("A".into()).0) => "/1/A",
         uri!(simple2: 1, &S2 { name: "A".into() }.name) => "/1/A",
+        uri!(simple2: 1, &mut S2 { name: "A".into() }.name) => "/1/A",
         uri!(simple2: 1, S2 { name: "A".into() }.name) => "/1/A",
         uri!(simple2: 1, &s1.0) => "/1/Bob",
         uri!(simple2: 1, &s2.name) => "/1/Bob",
@@ -348,5 +350,66 @@ mod typed_uris {
                 uri!(::simple: id = 100) => "/100",
             }
         }
+    }
+}
+
+#[derive(FromForm, UriDisplayQuery)]
+struct Third<'r> {
+    one: String,
+    two: &'r RawStr,
+}
+
+#[post("/<foo>/<bar>?<q1>&<rest..>")]
+fn optionals(
+    foo: Option<usize>,
+    bar: Result<String, &RawStr>,
+    q1: Result<usize, &RawStr>,
+    rest: Option<Form<Third>>
+) { }
+
+#[test]
+fn test_optional_uri_parameters() {
+    assert_uri_eq! {
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = 10,
+            rest = Third { one: "hi there".into(), two: "a b".into() }
+        ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
+
+        uri!(optionals:
+            foo = &10,
+            bar = &"hi there",
+            q1 = &10,
+            rest = &Third { one: "hi there".into(), two: "a b".into() }
+        ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
+
+        uri!(optionals:
+            foo = &mut 10,
+            bar = &mut "hi there",
+            q1 = &mut 10,
+            rest = &mut Third { one: "hi there".into(), two: "a b".into() }
+        ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = _,
+            rest = Third { one: "hi there".into(), two: "a b".into() }
+        ) => "/10/hi%20there?one=hi%20there&two=a%20b",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = 10,
+            rest = _
+        ) => "/10/hi%20there?q1=10",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = _,
+            rest = _,
+        ) => "/10/hi%20there",
     }
 }

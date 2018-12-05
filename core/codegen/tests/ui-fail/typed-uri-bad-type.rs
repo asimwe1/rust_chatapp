@@ -1,3 +1,6 @@
+// normalize-stderr-test: "<(.*) as (.*)>" -> "$1 as $$TRAIT"
+// normalize-stderr-test: "and \d+ others" -> "and $$N others"
+
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
@@ -13,7 +16,7 @@ impl<'a> FromParam<'a> for S {
 }
 
 #[post("/<id>")]
-fn simple(id: i32) {  }
+fn simple(id: usize) {  }
 
 #[post("/<id>/<name>")]
 fn not_uri_display(id: i32, name: S) {  }
@@ -32,7 +35,7 @@ impl<'q> FromQuery<'q> for S {
 }
 
 #[post("/?<id>")]
-fn simple_q(id: i32) {  }
+fn simple_q(id: isize) {  }
 
 #[post("/?<id>&<rest..>")]
 fn other_q(id: usize, rest: S) {  }
@@ -42,13 +45,13 @@ fn optionals_q(id: Option<i32>, name: Result<String, &RawStr>) {  }
 
 fn main() {
     uri!(simple: id = "hi");
-    //~^ ERROR i32: rocket::http::uri::FromUriParam<rocket::http::uri::Path, &str>
+    //~^ ERROR usize: rocket::http::uri::FromUriParam<rocket::http::uri::Path, &str>
 
     uri!(simple: "hello");
-    //~^ ERROR i32: rocket::http::uri::FromUriParam<rocket::http::uri::Path, &str>
+    //~^ ERROR usize: rocket::http::uri::FromUriParam<rocket::http::uri::Path, &str>
 
     uri!(simple: id = 239239i64);
-    //~^ ERROR i32: rocket::http::uri::FromUriParam<rocket::http::uri::Path, i64>
+    //~^ ERROR usize: rocket::http::uri::FromUriParam<rocket::http::uri::Path, i64>
 
     uri!(not_uri_display: 10, S);
     //~^ ERROR S: rocket::http::uri::FromUriParam<rocket::http::uri::Path, _>
@@ -61,10 +64,10 @@ fn main() {
     //~^^ ERROR String: rocket::http::uri::FromUriParam<rocket::http::uri::Path, std::result::Result<_, _>>
 
     uri!(simple_q: "hi");
-    //~^ ERROR i32: rocket::http::uri::FromUriParam<rocket::http::uri::Query, &str>
+    //~^ ERROR isize: rocket::http::uri::FromUriParam<rocket::http::uri::Query, &str>
 
     uri!(simple_q: id = "hi");
-    //~^ ERROR i32: rocket::http::uri::FromUriParam<rocket::http::uri::Query, &str>
+    //~^ ERROR isize: rocket::http::uri::FromUriParam<rocket::http::uri::Query, &str>
 
     uri!(other_q: 100, S);
     //~^ ERROR S: rocket::http::uri::FromUriParam<rocket::http::uri::Query, _>
@@ -72,11 +75,16 @@ fn main() {
     uri!(other_q: rest = S, id = 100);
     //~^ ERROR S: rocket::http::uri::FromUriParam<rocket::http::uri::Query, _>
 
-    // This one is okay.
-    uri!(optionals_q: None, Err("foo".into()));
+    uri!(other_q: rest = _, id = 100);
+    //~^ ERROR S: rocket::http::uri::Ignorable<rocket::http::uri::Query>
 
-    // For queries, we need to know the exact variant.
+    uri!(other_q: rest = S, id = _);
+    //~^ ERROR S: rocket::http::uri::FromUriParam<rocket::http::uri::Query, _>
+    //~^^ ERROR usize: rocket::http::uri::Ignorable<rocket::http::uri::Query>
+
+    // These are all okay.
+    uri!(optionals_q: _, _);
     uri!(optionals_q: id = 10, name = "Bob".to_string());
-    //~^ ERROR Option<i32>: rocket::http::uri::FromUriParam<rocket::http::uri::Query, {integer}>
-    //~^^ ERROR: Result<std::string::String, &rocket::http::RawStr>: rocket::http::uri::FromUriParam<rocket::http::uri::Query, std::string::String>
+    uri!(optionals_q: _, "Bob".into());
+    uri!(optionals_q: id = _, name = _);
 }

@@ -153,29 +153,14 @@ pub struct Formatter<'i, P: UriPart> {
     inner: &'i mut (dyn Write + 'i),
     previous: bool,
     fresh: bool,
-    delimiter: char,
     _marker: PhantomData<P>,
-}
-
-impl<'i> Formatter<'i, Path> {
-    #[inline(always)]
-    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
-        Formatter::make(inner, '/')
-    }
-}
-
-impl<'i> Formatter<'i, Query> {
-    #[inline(always)]
-    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
-        Formatter::make(inner, '&')
-    }
 }
 
 impl<'i, P: UriPart> Formatter<'i, P> {
     #[inline(always)]
-    fn make(inner: &'i mut (dyn Write + 'i), delimiter: char) -> Self {
+    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
         Formatter {
-            inner, delimiter,
+            inner,
             prefixes: SmallVec::new(),
             previous: false,
             fresh: true,
@@ -229,13 +214,13 @@ impl<'i, P: UriPart> Formatter<'i, P> {
         // cases for both Path and Query, and doing it this way allows us to
         // keep the uri part generic _generic_ in other implementations that use
         // `write_raw`.
-        if self.fresh && self.delimiter == '/' {
+        if self.fresh && P::DELIMITER == '/' {
             if self.previous {
-                self.inner.write_char(self.delimiter)?;
+                self.inner.write_char(P::DELIMITER)?;
             }
-        } else if self.fresh && self.delimiter == '&' {
+        } else if self.fresh && P::DELIMITER == '&' {
             if self.previous {
-                self.inner.write_char(self.delimiter)?;
+                self.inner.write_char(P::DELIMITER)?;
             }
 
             if !self.prefixes.is_empty() {
@@ -457,8 +442,9 @@ impl<'a> UriArguments<'a> {
             }
         };
 
-        let query: Option<Cow<'static, str>> = self.query.map(|query| match query {
-            Static(query) => query.into(),
+        let query: Option<Cow<'_, str>> = self.query.and_then(|q| match q {
+            Static(query) => Some(query.into()),
+            Dynamic(args) if args.is_empty() => None,
             Dynamic(args) => {
                 let mut string = String::new();
                 {
@@ -472,7 +458,7 @@ impl<'a> UriArguments<'a> {
                     }
                 }
 
-                string.into()
+                Some(string.into())
             }
         });
 

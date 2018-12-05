@@ -1,12 +1,11 @@
 use std::{fmt, path};
 use std::borrow::Cow;
 
-use percent_encoding::utf8_percent_encode;
+use RawStr;
+use uri::{Uri, UriPart, Path, Query, Formatter};
 
-use uri::{Uri, UriPart, Path, Query, Formatter, UNSAFE_PATH_ENCODE_SET};
-use {RawStr, ext::Normalize};
-
-/// Trait implemented by types that can be displayed as part of a URI in `uri!`.
+/// Trait implemented by types that can be displayed as part of a URI in
+/// [`uri!`].
 ///
 /// Types implementing this trait can be displayed in a URI-safe manner. Unlike
 /// `Display`, the string written by a `UriDisplay` implementation must be
@@ -14,7 +13,7 @@ use {RawStr, ext::Normalize};
 /// percent-encoded or consist only of characters that are alphanumeric, "-",
 /// ".", "_", or "~" - the "unreserved" characters.
 ///
-/// # Marker Generic: `UriDisplay<Path>` vs. `UriDisplay<Query>`
+/// # Marker Generic: `Path`, `Query`
 ///
 /// The [`UriPart`] parameter `P` in `UriDisplay<P>` must be either [`Path`] or
 /// [`Query`] (see the [`UriPart`] documentation for how this is enforced),
@@ -51,11 +50,12 @@ use {RawStr, ext::Normalize};
 ///
 /// # Code Generation
 ///
-/// When the `uri!` macro is used to generate a URI for a route, the types for
+/// When the [`uri!`] macro is used to generate a URI for a route, the types for
 /// the route's _path_ URI parameters must implement `UriDisplay<Path>`, while
 /// types in the route's query parameters must implement `UriDisplay<Query>`.
-/// The `UriDisplay` implementation for these types is used when generating the
-/// URI.
+/// Any parameters ignored with `_` must be of a type that implements
+/// [`Ignorable`]. The `UriDisplay` implementation for these types is used when
+/// generating the URI.
 ///
 /// To illustrate `UriDisplay`'s role in code generation for `uri!`, consider
 /// the following route:
@@ -64,7 +64,7 @@ use {RawStr, ext::Normalize};
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #[get("/item/<id>?<track>")]
-/// fn get_item(id: i32, track: String) { /* .. */ }
+/// fn get_item(id: i32, track: Option<String>) { /* .. */ }
 /// ```
 ///
 /// A URI for this route can be generated as follows:
@@ -74,7 +74,7 @@ use {RawStr, ext::Normalize};
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// # #[get("/item/<id>?<track>")]
-/// # fn get_item(id: i32, track: String) { /* .. */ }
+/// # fn get_item(id: i32, track: Option<String>) { /* .. */ }
 /// #
 /// // With unnamed parameters.
 /// uri!(get_item: 100, "inbound");
@@ -82,6 +82,11 @@ use {RawStr, ext::Normalize};
 /// // With named parameters.
 /// uri!(get_item: id = 100, track = "inbound");
 /// uri!(get_item: track = "inbound", id = 100);
+///
+/// // Ignoring `track`.
+/// uri!(get_item: 100, _);
+/// uri!(get_item: id = 100, track = _);
+/// uri!(get_item: track = _, id = 100);
 /// ```
 ///
 /// After verifying parameters and their types, Rocket will generate code
@@ -96,10 +101,12 @@ use {RawStr, ext::Normalize};
 /// ```
 ///
 /// For this expression to typecheck, `i32` must implement `UriDisplay<Path>`
-/// and `Value` must implement `UriDisplay<Query>`. As can be seen, the
-/// implementations will be used to display the value in a URI-safe manner.
+/// and `&str` must implement `UriDisplay<Query>`. What's more, when `track` is
+/// ignored, `Option<String>` is required to implement [`Ignorable`]. As can be
+/// seen, the implementations will be used to display the value in a URI-safe
+/// manner.
 ///
-/// [`uri!`]: /rocket_codegen/#typed-uris-uri
+/// [`uri!`]: ../../../rocket_codegen/macro.uri.html
 ///
 /// # Provided Implementations
 ///
@@ -161,6 +168,8 @@ use {RawStr, ext::Normalize};
 ///     If the `Result` is `Ok`, uses the implementation of `UriDisplay` for
 ///     `T`. Otherwise, nothing is rendered.
 ///
+/// [`FromUriParam`]: uri::FromUriParam
+///
 /// # Deriving
 ///
 /// Manually implementing `UriDisplay` should be done with care. For most use
@@ -195,6 +204,7 @@ use {RawStr, ext::Normalize};
 /// [`Formatter::write_value()`] for every unnamed field. See the [`UriDisplay`
 /// derive] documentation for full details.
 ///
+/// [`Ignorable`]: uri::Ignorable
 /// [`UriDisplay` derive]: ../../../rocket_codegen/derive.UriDisplay.html
 /// [`Formatter::write_named_value()`]: uri::Formatter::write_named_value()
 /// [`Formatter::write_value()`]: uri::Formatter::write_value()
@@ -250,18 +260,21 @@ use {RawStr, ext::Normalize};
 /// }
 ///
 /// use std::fmt;
-/// use rocket::http::uri::{Formatter, UriDisplay, Path};
+/// use rocket::http::impl_from_uri_param_identity;
+/// use rocket::http::uri::{Formatter, FromUriParam, UriDisplay, Path};
 /// use rocket::response::Redirect;
 ///
 /// impl UriDisplay<Path> for Name {
 ///     // Delegates to the `UriDisplay` implementation for `String` via the
-///     // call to `write_value` to ensure /// that the written string is
-///     // URI-safe. In this case, the string will /// be percent encoded.
+///     // call to `write_value` to ensure that the written string is
+///     // URI-safe. In this case, the string will be percent encoded.
 ///     // Prefixes the inner name with `name:`.
 ///     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
 ///         f.write_value(&format!("name:{}", self.0))
 ///     }
 /// }
+///
+/// impl_from_uri_param_identity!([Path] Name);
 ///
 /// #[get("/name/<name>")]
 /// fn redirector(name: Name) -> Redirect {
@@ -281,25 +294,14 @@ pub trait UriDisplay<P: UriPart> {
     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result;
 }
 
-impl<'a> fmt::Display for &'a UriDisplay<Path> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        UriDisplay::fmt(*self, &mut <Formatter<Path>>::new(f))
-    }
-}
-
-impl<'a> fmt::Display for &'a UriDisplay<Query> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        UriDisplay::fmt(*self, &mut <Formatter<Query>>::new(f))
-    }
-}
-
-/// Percent-encodes the raw string.
-impl<P: UriPart> UriDisplay<P> for RawStr {
+impl<'a, P: UriPart> fmt::Display for &'a UriDisplay<P> {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
-        f.write_raw(&Uri::percent_encode(self.as_str()))
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        UriDisplay::fmt(*self, &mut <Formatter<P>>::new(f))
     }
 }
+
+// Direct implementations: these are the leaves of a call to `UriDisplay::fmt`.
 
 /// Percent-encodes the raw string.
 impl<P: UriPart> UriDisplay<P> for str {
@@ -309,37 +311,19 @@ impl<P: UriPart> UriDisplay<P> for str {
     }
 }
 
-/// Percent-encodes the raw string.
-impl<'a, P: UriPart> UriDisplay<P> for Cow<'a, str> {
-    #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
-        f.write_raw(&Uri::percent_encode(self))
-    }
-}
-
-/// Percent-encodes the raw string.
-impl<P: UriPart> UriDisplay<P> for String {
-    #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
-        f.write_raw(&Uri::percent_encode(self.as_str()))
-    }
-}
-
-/// Percent-encodes each segment in the path and normalizes separators.
-impl UriDisplay<Path> for path::PathBuf {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
-        self.as_path().fmt(f)
-    }
-}
-
 /// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay<Path> for path::Path {
-    #[inline]
     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
-        let string = self.normalized_str();
-        let enc: Cow<str> = utf8_percent_encode(&string, UNSAFE_PATH_ENCODE_SET).into();
-        f.write_raw(&enc)
+        use std::path::Component;
+
+        for component in self.components() {
+            match component {
+                Component::Prefix(_) | Component::RootDir => continue,
+                _ => f.write_value(&component.as_os_str().to_string_lossy())?
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -365,38 +349,240 @@ impl_with_display! {
     IpAddr, Ipv4Addr, Ipv6Addr
 }
 
-macro_rules! impl_for_ref {
-    ($($T:ty),+) => {$(
-        /// Uses the implementation of `UriDisplay` for `T`.
-        impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for $T {
-            #[inline(always)]
-            fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
-                UriDisplay::fmt(*self, f)
-            }
-        }
-    )+}
-}
+// These are second level implementations: they all defer to an existing
+// implementation.
 
-impl_for_ref!(&'a mut T, &'a T);
-
-impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
+/// Percent-encodes the raw string. Defers to `str`.
+impl<P: UriPart> UriDisplay<P> for RawStr {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
-        if let Some(v) = self {
-            f.write_value(&v)?;
-        }
-
-        Ok(())
+    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+        self.as_str().fmt(f)
     }
 }
 
-impl<E, T: UriDisplay<Query>> UriDisplay<Query> for Result<T, E> {
+/// Percent-encodes the raw string. Defers to `str`.
+impl<P: UriPart> UriDisplay<P> for String {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+/// Percent-encodes the raw string. Defers to `str`.
+impl<'a, P: UriPart> UriDisplay<P> for Cow<'a, str> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+        self.as_ref().fmt(f)
+    }
+}
+
+/// Percent-encodes each segment in the path and normalizes separators.
+impl UriDisplay<Path> for path::PathBuf {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+        self.as_path().fmt(f)
+    }
+}
+
+/// Defers to the `UriDisplay<P>` implementation for `T`.
+impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+        UriDisplay::fmt(*self, f)
+    }
+}
+
+/// Defers to the `UriDisplay<P>` implementation for `T`.
+impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a mut T {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+        UriDisplay::fmt(*self, f)
+    }
+}
+
+/// Defers to the `UriDisplay<Query>` implementation for `T`.
+impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
-        if let Ok(v) = self {
-            f.write_value(&v)?;
+        match self {
+            Some(v) => v.fmt(f),
+            None => Ok(())
         }
+    }
+}
 
-        Ok(())
+/// Defers to the `UriDisplay<Query>` implementation for `T`.
+impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+        match self {
+            Ok(v) => v.fmt(f),
+            Err(_) => Ok(())
+        }
+    }
+}
+
+// And finally, the `Ignorable` trait, which has sugar of `_` in the `uri!`
+// macro, which expands to a typecheck.
+
+/// Trait implemented by types that can be ignored in `uri!`.
+///
+/// When a parameter is explicitly ignored in `uri!` by supplying `_` as the
+/// parameter's value, that parameter's type is required to implement this
+/// trait for the corresponding `UriPart`.
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// #[get("/item/<id>?<track>")]
+/// fn get_item(id: i32, track: Option<u8>) { /* .. */ }
+///
+/// // Ignore the `track` parameter: `Option<u8>` must be `Ignorable`.
+/// uri!(get_item: 100, _);
+/// uri!(get_item: id = 100, track = _);
+///
+/// // Provide a value for `track`.
+/// uri!(get_item: 100, 4);
+/// uri!(get_item: id = 100, track = 4);
+/// ```
+///
+/// # Implementations
+///
+/// Only `Option<T>` and `Result<T, E>` implement this trait. You may implement
+/// this trait for your own ignorable types as well:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::http::uri::{Ignorable, Query};
+///
+/// # struct MyType;
+/// impl Ignorable<Query> for MyType { }
+/// ```
+pub trait Ignorable<P: UriPart> { }
+
+impl<T> Ignorable<Query> for Option<T> { }
+impl<T, E> Ignorable<Query> for Result<T, E> { }
+
+#[doc(hidden)]
+pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
+
+#[cfg(test)]
+mod uri_display_tests {
+    use std::path;
+    use uri::{FromUriParam, UriDisplay, Query, Path};
+
+    macro_rules! uri_display {
+        (<$P:ident, $Target:ty> $source:expr) => ({
+            let tmp = $source;
+            let target = <$Target as FromUriParam<$P, _>>::from_uri_param(tmp);
+            format!("{}", &target as &dyn UriDisplay<$P>)
+        })
+    }
+
+    macro_rules! assert_display {
+        (<$P:ident, $Target:ty> $source:expr, $expected:expr) => ({
+            assert_eq!(uri_display!(<$P, $Target> $source), $expected);
+        })
+    }
+
+    #[test]
+    fn uri_display_encoding() {
+        assert_display!(<Query, String> "hello", "hello");
+        assert_display!(<Query, String> "hi hi", "hi%20hi");
+        assert_display!(<Query, &str> "hi hi", "hi%20hi");
+        assert_display!(<Query, &str> &"hi hi", "hi%20hi");
+        assert_display!(<Query, usize> 10, "10");
+        assert_display!(<Query, u8> 10, "10");
+        assert_display!(<Query, i32> 10, "10");
+        assert_display!(<Query, isize> 10, "10");
+
+        assert_display!(<Path, String> "hello", "hello");
+        assert_display!(<Path, String> "hi hi", "hi%20hi");
+        assert_display!(<Path, &str> "hi hi", "hi%20hi");
+        assert_display!(<Path, &str> &"hi hi", "hi%20hi");
+        assert_display!(<Path, usize> 10, "10");
+        assert_display!(<Path, u8> 10, "10");
+        assert_display!(<Path, i32> 10, "10");
+        assert_display!(<Path, isize> 10, "10");
+
+        assert_display!(<Query, &str> &"hi there", "hi%20there");
+        assert_display!(<Query, isize> &10, "10");
+        assert_display!(<Query, u8> &10, "10");
+
+        assert_display!(<Path, &str> &"hi there", "hi%20there");
+        assert_display!(<Path, isize> &10, "10");
+        assert_display!(<Path, u8> &10, "10");
+
+        assert_display!(<Path, Option<&str>> &"hi there", "hi%20there");
+        assert_display!(<Path, Option<isize>> &10, "10");
+        assert_display!(<Path, Option<u8>> &10, "10");
+        assert_display!(<Query, Option<&str>> &"hi there", "hi%20there");
+        assert_display!(<Query, Option<isize>> &10, "10");
+        assert_display!(<Query, Option<u8>> &10, "10");
+
+        assert_display!(<Path, Result<&str, usize>> &"hi there", "hi%20there");
+        assert_display!(<Path, Result<isize, &str>> &10, "10");
+        assert_display!(<Path, Result<u8, String>> &10, "10");
+        assert_display!(<Query, Result<&str, usize>> &"hi there", "hi%20there");
+        assert_display!(<Query, Result<isize, &str>> &10, "10");
+        assert_display!(<Query, Result<u8, String>> &10, "10");
+    }
+
+    #[test]
+    fn paths() {
+        assert_display!(<Path, path::PathBuf> "hello", "hello");
+        assert_display!(<Path, path::PathBuf> "hi there", "hi%20there");
+        assert_display!(<Path, path::PathBuf> "hello/world", "hello/world");
+        assert_display!(<Path, path::PathBuf> "hello//world", "hello/world");
+        assert_display!(<Path, path::PathBuf> "hello/ world", "hello/%20world");
+
+        assert_display!(<Path, path::PathBuf> "hi/wo rld", "hi/wo%20rld");
+
+        assert_display!(<Path, path::PathBuf> &"hi/wo rld", "hi/wo%20rld");
+        assert_display!(<Path, path::PathBuf> &"hi there", "hi%20there");
+    }
+
+    struct Wrapper<T>(T);
+
+    impl<A, T: FromUriParam<Query, A>> FromUriParam<Query, A> for Wrapper<T> {
+        type Target = T::Target;
+
+        #[inline(always)]
+        fn from_uri_param(param: A) -> Self::Target {
+            T::from_uri_param(param)
+        }
+    }
+
+    impl FromUriParam<Path, usize> for Wrapper<usize> {
+        type Target = usize;
+
+        #[inline(always)]
+        fn from_uri_param(param: usize) -> Self::Target {
+            param
+        }
+    }
+
+    #[test]
+    fn uri_display_encoding_wrapped() {
+        assert_display!(<Query, Option<Wrapper<&str>>> &"hi there", "hi%20there");
+        assert_display!(<Query, Option<Wrapper<&str>>> "hi there", "hi%20there");
+
+        assert_display!(<Query, Option<Wrapper<isize>>> 10, "10");
+        assert_display!(<Query, Option<Wrapper<usize>>> 18, "18");
+        assert_display!(<Path, Option<Wrapper<usize>>> 238, "238");
+
+        assert_display!(<Path, Result<Option<Wrapper<usize>>, usize>> 238, "238");
+        assert_display!(<Path, Option<Result<Wrapper<usize>, usize>>> 123, "123");
+    }
+
+    #[test]
+    fn check_ignorables() {
+        use uri::assert_ignorable;
+
+        assert_ignorable::<Query, Option<usize>>();
+        assert_ignorable::<Query, Option<Wrapper<usize>>>();
+        assert_ignorable::<Query, Result<Wrapper<usize>, usize>>();
+        assert_ignorable::<Query, Option<Result<Wrapper<usize>, usize>>>();
+        assert_ignorable::<Query, Result<Option<Wrapper<usize>>, usize>>();
     }
 }

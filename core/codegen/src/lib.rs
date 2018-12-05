@@ -858,9 +858,11 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
-/// #[get("/person/<name>/<age>")]
-/// fn person(name: String, age: u8) -> String {
-///     format!("Hello {}! You're {} years old.", name, age)
+/// #[get("/person/<name>?<age>")]
+/// fn person(name: String, age: Option<u8>) -> String {
+/// # "".into() /*
+///     ...
+/// # */
 /// }
 /// ```
 ///
@@ -870,21 +872,29 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
-/// # #[get("/person/<name>/<age>")]
-/// # fn person(name: String, age: u8) { }
+/// # #[get("/person/<name>?<age>")]
+/// # fn person(name: String, age: Option<u8>) { }
 /// #
 /// // with unnamed parameters, in route path declaration order
 /// let mike = uri!(person: "Mike Smith", 28);
-/// assert_eq!(mike.path(), "/person/Mike%20Smith/28");
+/// assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
 ///
 /// // with named parameters, order irrelevant
 /// let mike = uri!(person: name = "Mike", age = 28);
 /// let mike = uri!(person: age = 28, name = "Mike");
-/// assert_eq!(mike.path(), "/person/Mike/28");
+/// assert_eq!(mike.to_string(), "/person/Mike?age=28");
 ///
 /// // with a specific mount-point
 /// let mike = uri!("/api", person: name = "Mike", age = 28);
-/// assert_eq!(mike.path(), "/api/person/Mike/28");
+/// assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
+///
+/// // with unnamed values ignored
+/// let mike = uri!(person: "Mike", _);
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with named values ignored
+/// let mike = uri!(person: name = "Mike", age = _);
+/// assert_eq!(mike.to_string(), "/person/Mike");
 /// ```
 ///
 /// ## Grammar
@@ -896,8 +906,9 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 ///
 /// mount = STRING
 /// params := unnamed | named
-/// unnamed := EXPR (',' EXPR)*
-/// named := IDENT = EXPR (',' named)?
+/// unnamed := expr (',' expr)*
+/// named := IDENT = expr (',' named)?
+/// expr := EXPR | '_'
 ///
 /// EXPR := a valid Rust expression (examples: `foo()`, `12`, `"hey"`)
 /// IDENT := a valid Rust identifier (examples: `name`, `age`)
@@ -913,7 +924,19 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// converted into a [`Uri`] using `.into()` as needed.
 ///
 /// A `uri!` invocation only typechecks if the type of every value in the
-/// invocation matches the type declared for the parameter in the given route.
+/// invocation matches the type declared for the parameter in the given route,
+/// after conversion with [`FromUriParam`], or if a value is ignored using `_`
+/// and the corresponding route type implements [`Ignorable`].
+///
+/// Each value passed into `uri!` is rendered in its appropriate place in the
+/// URI using the [`UriDisplay`] implementation for the value's type. The
+/// `UriDisplay` implementation ensures that the rendered value is URI-safe.
+///
+/// If a mount-point is provided, the mount-point is prepended to the route's
+/// URI.
+///
+/// ### Conversion
+///
 /// The [`FromUriParam`] trait is used to typecheck and perform a conversion for
 /// each value. If a `FromUriParam<S>` implementation exists for a type `T`,
 /// then a value of type `S` can be used in `uri!` macro for a route URI
@@ -925,17 +948,18 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// impl<'a> FromUriParam<&'a str> for String { .. }
 /// ```
 ///
-/// Each value passed into `uri!` is rendered in its appropriate place in the
-/// URI using the [`UriDisplay`] implementation for the value's type. The
-/// `UriDisplay` implementation ensures that the rendered value is URI-safe.
+/// ### Ignorables
 ///
-/// If a mount-point is provided, the mount-point is prepended to the route's
-/// URI.
+/// Query parameters can be ignored using `_` in place of an expression. The
+/// corresponding type in the route URI must implement [`Ignorable`]. Ignored
+/// parameters are not interpolated into the resulting `Origin`. Path parameters
+/// are not ignorable.
 ///
 /// [`Uri`]: ../rocket/http/uri/enum.Uri.html
 /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
 /// [`FromUriParam`]: ../rocket/http/uri/trait.FromUriParam.html
 /// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
+/// [`Ignorable`]: ../rocket/http/uri/trait.Ignorable.html
 #[proc_macro]
 pub fn uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_macro(input))
