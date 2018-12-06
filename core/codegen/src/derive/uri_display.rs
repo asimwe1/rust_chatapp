@@ -46,8 +46,8 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
     let FromUriParam = quote!(::rocket::http::uri::FromUriParam);
 
     let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #UriDisplay))
-        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .validate_enum(validate_enum)
         .validate_struct(validate_struct)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
@@ -76,9 +76,11 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 
     let i = input.clone();
     let gen_trait = quote!(impl #FromUriParam<#Query, Self>);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
     let from_self = DeriveGenerator::build_for(i, gen_trait)
-        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .function(|_, _| quote! {
             type Target = Self;
             #[inline(always)]
@@ -88,9 +90,11 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 
     let i = input.clone();
     let gen_trait = quote!(impl<'__r> #FromUriParam<#Query, &'__r Self>);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
     let from_ref = DeriveGenerator::build_for(i, gen_trait)
-        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .function(|_, _| quote! {
             type Target = &'__r Self;
             #[inline(always)]
@@ -100,9 +104,11 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 
     let i = input.clone();
     let gen_trait = quote!(impl<'__r> #FromUriParam<#Query, &'__r mut Self>);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
     let from_mut = DeriveGenerator::build_for(i, gen_trait)
-        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .function(|_, _| quote! {
             type Target = &'__r mut Self;
             #[inline(always)]
@@ -117,19 +123,23 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
     ts.into()
 }
 
+#[allow(non_snake_case)]
 pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
-    let display_trait = quote!(::rocket::http::uri::UriDisplay<::rocket::http::uri::Path>);
-    let formatter = quote!(::rocket::http::uri::Formatter<::rocket::http::uri::Path>);
-    DeriveGenerator::build_for(input, quote!(impl #display_trait))
+    let Path = quote!(::rocket::http::uri::Path);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Path>);
+    let Formatter = quote!(::rocket::http::uri::Formatter<#Path>);
+    let FromUriParam = quote!(::rocket::http::uri::FromUriParam);
+
+    let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #UriDisplay))
         .data_support(DataSupport::TupleStruct)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
-        .map_type_generic(move |_, ident, _| quote!(#ident : #display_trait))
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .validate_fields(|_, fields| match fields.count() {
             1 => Ok(()),
             _ => Err(fields.span().error(EXACTLY_ONE_FIELD))
         })
         .function(move |_, inner| quote! {
-            fn fmt(&self, f: &mut #formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
                 #inner
                 Ok(())
             }
@@ -139,5 +149,38 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
             let accessor = field.accessor();
             quote_spanned!(span => f.write_value(&#accessor)?;)
         })
-        .to_tokens()
+        .to_tokens();
+
+    let i = input.clone();
+    let gen_trait = quote!(impl #FromUriParam<#Path, Self>);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Path>);
+    let from_self = DeriveGenerator::build_for(i, gen_trait)
+        .data_support(DataSupport::All)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
+        .function(|_, _| quote! {
+            type Target = Self;
+            #[inline(always)]
+            fn from_uri_param(param: Self) -> Self { param }
+        })
+        .to_tokens();
+
+    let i = input.clone();
+    let gen_trait = quote!(impl<'__r> #FromUriParam<#Path, &'__r Self>);
+    let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Path>);
+    let from_ref = DeriveGenerator::build_for(i, gen_trait)
+        .data_support(DataSupport::All)
+        .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
+        .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
+        .function(|_, _| quote! {
+            type Target = &'__r Self;
+            #[inline(always)]
+            fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+        })
+        .to_tokens();
+
+    let mut ts = TokenStream2::from(uri_display);
+    ts.extend(TokenStream2::from(from_self));
+    ts.extend(TokenStream2::from(from_ref));
+    ts.into()
 }
