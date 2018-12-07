@@ -365,21 +365,24 @@ fully composed application that makes use of Handlebars templates, while the
 
 Rocket's [`uri!`] macro allows you to build URIs to routes in your application
 in a robust, type-safe, and URI-safe manner. Type or route parameter mismatches
-are caught at compile-time.
+are caught at compile-time, and changes to route URIs are automatically
+reflected in the generated URIs.
 
 The `uri!` macro returns an [`Origin`] structure with the URI of the supplied
-route interpolated with the given values. Note that `Origin` implements
-`Into<Uri>` (and by extension, `TryInto<Uri>`), so it can be converted into a
-[`Uri`] using `.into()` as needed and passed into methods such as
-[`Redirect::to()`].
+route interpolated with the given values. Each value passed into `uri!` is
+rendered in its appropriate place in the URI using the [`UriDisplay`]
+implementation for the value's type. The `UriDisplay` implementation ensures
+that the rendered value is URI-safe.
+
+Note that `Origin` implements `Into<Uri>` (and by extension, `TryInto<Uri>`), so
+it can be converted into a [`Uri`] using `.into()` as needed and passed into
+methods such as [`Redirect::to()`].
 
 For example, given the following route:
 
 ```rust
-#[get("/person/<name>/<age>")]
-fn person(name: String, age: u8) -> String {
-    format!("Hello {}! You're {} years old.", name, age)
-}
+#[get("/person/<name>?<age>")]
+fn person(name: String, age: Option<u8>) -> T
 ```
 
 URIs to `person` can be created as follows:
@@ -387,48 +390,150 @@ URIs to `person` can be created as follows:
 ```rust
 // with unnamed parameters, in route path declaration order
 let mike = uri!(person: "Mike Smith", 28);
-assert_eq!(mike.path(), "/person/Mike%20Smith/28");
+assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
 
 // with named parameters, order irrelevant
 let mike = uri!(person: name = "Mike", age = 28);
 let mike = uri!(person: age = 28, name = "Mike");
-assert_eq!(mike.path(), "/person/Mike/28");
+assert_eq!(mike.to_string(), "/person/Mike?age=28");
 
 // with a specific mount-point
 let mike = uri!("/api", person: name = "Mike", age = 28);
-assert_eq!(mike.path(), "/api/person/Mike/28");
+assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
+
+// with optional (defaultable) query parameters ignored
+let mike = uri!(person: "Mike", _);
+let mike = uri!(person: name = "Mike", age = _);
+assert_eq!(mike.to_string(), "/person/Mike");
 ```
 
 Rocket informs you of any mismatched parameters at compile-time:
 
 ```rust
-error: person route uri expects 2 parameter but 1 was supplied
-  --> src/main.rs:21:19
-   |
-21 |     uri!(person: "Mike Smith");
-   |                  ^^^^^^^^^^^^
-   |
-   = note: expected parameter: age: u8
+error: person route uri expects 2 parameters but 1 was supplied
+ --> examples/uri/src/main.rs:9:29
+  |
+9 |     uri!(person: "Mike Smith");
+  |                  ^^^^^^^^^^^^
+  |
+  = note: expected parameters: name: String, age: Option<u8>
 ```
 
 Rocket also informs you of any type errors at compile-time:
 
 ```rust
-error: the trait bound u8: rocket::http::uri::FromUriParam<&str> is not satisfied
-  --> src/main:25:23
-   |
-25 |     uri!(person: age = "ten", name = "Mike");
-   |                        ^^^^^ FromUriParam<&str> is not implemented for u8
-   |
-   = note: required by rocket::http::uri::FromUriParam::from_uri_param
+error: the trait bound u8: FromUriParam<Query, &str> is not satisfied
+ --> examples/uri/src/main.rs:9:35
+  |
+9 |     uri!(person: age = "10", name = "Mike");
+  |                        ^^^^ FromUriParam<Query, &str> is not implemented for u8
+  |
 ```
 
 We recommend that you use `uri!` exclusively when constructing URIs to your
 routes.
 
-See the [`uri!`] documentation for more usage details.
+### Ignorables
+
+As illustrated in the previous above, query parameters can be ignored using `_`
+in place of an expression in a `uri!` invocation. The corresponding type in the
+route URI must implement [`Ignorable`]. Ignored parameters are not interpolated
+into the resulting `Origin`. Path parameters are not ignorable.
+
+### Deriving `UriDisplay`
+
+The `UriDisplay` trait can be derived for custom types. For types that appear in
+the path part of a URI, derive using [`UriDisplayPath`]; for types that appear
+in the query part of a URI, derive using [`UriDisplayQuery`].
+
+As an example, consider the following form structure and route:
+
+```rust
+#[derive(FromForm, UriDisplayQuery)]
+struct UserDetails<'r> {
+    age: Option<usize>,
+    nickname: &'r RawStr,
+}
+
+#[post("/user/<id>?<details..>")]
+fn add_user(id: usize, details: Form<UserDetails>) { .. }
+```
+
+By deriving using `UriDisplayQuery`, an implementation of `UriDisplay<Query>` is
+automatically generated, allowing for URIs to `add_user` to be generated using
+`uri!`:
+
+```rust
+uri!(add_user: 120, UserDetails { age: Some(20), nickname: "Bob".into() })
+  => "/user/120?age=20&nickname=Bob"
+```
+
+### Typed URI Parts
+
+The [`UriPart`] trait categorizes types that mark a part of the URI as either a
+[`Path`] or a [`Query`]. Said another way, types that implement `UriPart` are
+marker types that represent a part of a URI at the type-level. Traits such as
+[`UriDisplay`] and [`FromUriParam`] bound a generic parameter by `UriPart`: `P:
+UriPart`. This creates two instances of each trait: `UriDisplay<Query>` and
+`UriDisplay<Path>`, and `FromUriParam<Query>` and `FromUriParam<Path>`.
+
+As the names might imply, the `Path` version of the traits is used when
+displaying parameters in the path part of the URI while the `Query` version is
+used when displaying parameters in the query part of the URI. These distinct
+versions of the traits exist exactly to differentiate, at the type-level, where
+in the URI a value is to be written to, allowing for type safety in the face of
+differences between the two locations. For example, while it is valid to use a
+value of `None` in the query part, omitting the parameter entirely, doing so is
+_not_ valid in the path part. By differentiating in the type system, both of
+these conditions can be enforced appropriately through distinct implementations
+of `FromUriParam<Path>` and `FromUriParam<Query>`.
+
+### Conversions
+
+The [`FromUriParam`] is used to perform a conversion for each value passed to
+`uri!` before it is displayed with `UriDisplay`. If a `FromUriParam<P, S>`
+implementation exists for a type `T` for part URI part `P`, then a value of type
+`S` can be used in `uri!` macro for a route URI parameter declared with a type
+of `T` in part `P`. For example, the following implementation, provided by
+Rocket, allows an `&str` to be used in a `uri!` invocation for route URI
+parameters declared as `String`:
+
+```rust
+impl<P: UriPart, 'a> FromUriParam<P, &'a str> for String { .. }
+```
+
+Other conversions to be aware of are:
+
+  * `&str` to `RawStr`
+  * `String` to `&str`
+  * `String` to `RawStr`
+  * `T` to `Option<T>`
+  * `T` to `Result<T, E>`
+  * `T` to `Form<T>`
+  * `&str` to `&Path`
+  * `&str` to `PathBuf`
+
+Conversions _nest_. For instance, a value of type `T` can be supplied when a
+value of type `Option<Form<T>>` is expected:
+
+```rust
+#[get("/person/<id>?<details>")]
+fn person(id: usize, details: Option<Form<UserDetails>>) -> T
+
+uri!(person: id = 100, details = UserDetails { .. })
+```
+
+See the [`FromUriParam`] documentation for further details.
 
 [`Origin`]: @api/rocket/http/uri/struct.Origin.html
+[`UriPart`]: @api/rocket/http/uri/trait.UriPart.html
 [`Uri`]: @api/rocket/http/uri/enum.Uri.html
 [`Redirect::to()`]: @api/rocket/response/struct.Redirect.html#method.to
 [`uri!`]: @api/rocket_codegen/macro.uri.html
+[`UriDisplay`]: @api/rocket/http/uri/trait.UriDisplay.html
+[`FromUriParam`]: @api/rocket/http/uri/trait.FromUriParam.html
+[`Path`]: @api/rocket/http/uri/enum.Path.html
+[`Query`]: @api/rocket/http/uri/enum.Query.html
+[`Ignorable`]: @api/rocket/http/uri/trait.Ignorable.html
+[`UriDisplayPath`]: @api/rocket_codegen/derive.UriDisplayPath.html
+[`UriDisplayQuery`]: @api/rocket_codegen/derive.UriDisplayQuery.html

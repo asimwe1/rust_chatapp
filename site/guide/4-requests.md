@@ -269,6 +269,40 @@ trait.
 
 [`FromFormValue`]: @api/rocket/request/trait.FromFormValue.html
 
+### Optional Parameters
+
+Query parameters are allowed to be _missing_. As long as a request's query
+string contains all of the static components of a route's query string, the
+request will be routed to that route. This allows for optional parameters,
+validating even when a parameter is missing.
+
+More specifically, types that return `Some` from their
+[`FromFormValue::default()`] implementations will validate even when a value for
+the given parameter is missing, using the value returned from the `default()`
+method as the parameter's value. On such type is `Option<T>`, which returns
+`None` from its `default()` implementation. By using a type of `Option<T>` for a
+query parameter, `Some(T)` will be returned only when the parameter is present
+and represents a valid `T`. In all other cases, `None` will be returned. A route
+using `Option<T>` looks as follows:
+
+```rust
+#[get("/hello?wave&<name>")]
+fn hello(name: Option<&RawStr>) -> String {
+    name.map(|name| format!("Hi, {}!", name))
+        .unwrap_or_else(|| "Hello!".into())
+}
+```
+
+Any `GET` request with a path of `/hello` and a `wave` query segment will be
+routed to this route. If a `name=value` query segment is present, the route
+returns the string `"Hi, value!"`. If no `name` query segment is present, the
+route returns `"Hello!"`.
+
+Other defaultable `FromFormValue` types include `Result<T, E>` and `bool`. As
+always, your types can implement `FromFormValue` in a defaultable manner, too!
+
+[`FromFormValue::default()`]: @api/rocket/request/trait.FromFormValue.html#method.default
+
 ### Multiple Segments
 
 As with paths, you can also match against multiple segments in a query by using
@@ -297,7 +331,13 @@ fn item(id: usize, user: Form<User>) { /* ... */ }
 ```
 
 For a request to `/item?id=100&name=sandal&account=400`, the `item` route above
-sets `id` to `100` and `user` to `User { name: "sandal", account: 400 }`.
+sets `id` to `100` and `user` to `User { name: "sandal", account: 400 }`. To
+catch forms that fail to validate, use a type of `Option` or `Result`:
+
+```rust
+#[get("/item?<id>&<user..>")]
+fn item(id: usize, user: Option<Form<User>>) { /* ... */ }
+```
 
 For more query handling examples, see [the `query_params`
 example](@example/query_params).

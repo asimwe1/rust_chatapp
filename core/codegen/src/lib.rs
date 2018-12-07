@@ -938,14 +938,15 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// ### Conversion
 ///
 /// The [`FromUriParam`] trait is used to typecheck and perform a conversion for
-/// each value. If a `FromUriParam<S>` implementation exists for a type `T`,
-/// then a value of type `S` can be used in `uri!` macro for a route URI
-/// parameter declared with a type of `T`. For example, the following
-/// implementation, provided by Rocket, allows an `&str` to be used in a `uri!`
-/// invocation for route URI parameters declared as `String`:
+/// each value passed to `uri!`. If a `FromUriParam<P, S>` implementation exists
+/// for a type `T` for part URI part `P`, then a value of type `S` can be used
+/// in `uri!` macro for a route URI parameter declared with a type of `T` in
+/// part `P`. For example, the following implementation, provided by Rocket,
+/// allows an `&str` to be used in a `uri!` invocation for route URI parameters
+/// declared as `String`:
 ///
 /// ```rust,ignore
-/// impl<'a> FromUriParam<&'a str> for String { .. }
+/// impl<P: UriPart, 'a> FromUriParam<P, &'a str> for String { .. }
 /// ```
 ///
 /// ### Ignorables

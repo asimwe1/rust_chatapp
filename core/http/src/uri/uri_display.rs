@@ -21,14 +21,14 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// As the names might imply, the `Path` version of the trait is used when
 /// displaying parameters in the path part of the URI while the `Query` version
-/// is used when display parameters in the query part of the URI. These distinct
-/// versions of the trait exist exactly to differentiate, at the type-level,
-/// where in the URI a value is to be written to, allowing for type safety in
-/// the face of differences between the two locations. For example, while it is
-/// valid to use a value of `None` in the query part, omitting the parameter
-/// entirely, doing so is _not_ valid in the path part. By differentiating in
-/// the type system, both of these conditions can be enforced appropriately
-/// through distinct implementations of `UriDisplay<Path>` and
+/// is used when displaying parameters in the query part of the URI. These
+/// distinct versions of the trait exist exactly to differentiate, at the
+/// type-level, where in the URI a value is to be written to, allowing for type
+/// safety in the face of differences between the two locations. For example,
+/// while it is valid to use a value of `None` in the query part, omitting the
+/// parameter entirely, doing so is _not_ valid in the path part. By
+/// differentiating in the type system, both of these conditions can be enforced
+/// appropriately through distinct implementations of `UriDisplay<Path>` and
 /// `UriDisplay<Query>`.
 ///
 /// Occasionally, the implementation of `UriDisplay` is independent of where the
