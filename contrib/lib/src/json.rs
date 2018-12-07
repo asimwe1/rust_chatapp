@@ -1,6 +1,19 @@
 //! Automatic JSON (de)serialization support.
 //!
 //! See the [`Json`](json::Json) type for further details.
+//!
+//! # Enabling
+//!
+//! This module is only available when the `json` feature is enabled. Enable it
+//! in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.4.0"
+//! default-features = false
+//! features = ["json"]
+//! ```
+
 extern crate serde;
 extern crate serde_json;
 

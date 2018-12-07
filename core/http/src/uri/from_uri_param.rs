@@ -75,12 +75,16 @@ use uri::{self, UriPart, UriDisplay};
 ///      `u32`, `u64`, `u128`, `usize`, `f32`, `f64`, `bool`, `IpAddr`,
 ///      `Ipv4Addr`, `Ipv6Addr`, `&str`, `&RawStr`, `Cow<str>`
 ///
-/// The following conversions are implemented:
+/// The following conversions are implemented, allowing a value of the type on
+/// the left to be used when a type on the right is expected by a route:
 ///
 ///   * `&str` to `String`
 ///   * `&str` to `RawStr`
 ///   * `String` to `&str`
 ///   * `String` to `RawStr`
+///   * `T` to `Option<T>`
+///   * `T` to `Result<T, E>`
+///   * `T` to `Form<T>`
 ///
 /// The following types have _identity_ implementations _only in [`Path`]_:
 ///
@@ -225,7 +229,7 @@ macro_rules! impl_conversion_ref {
     );
 }
 
-/// Macro to automatically generated _identity_ [`FromUriParam`] trait
+/// Macro to automatically generate _identity_ [`FromUriParam`] trait
 /// implementations.
 ///
 /// For a type `T`, the _identity_ implementations of `FromUriParam` are:

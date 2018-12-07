@@ -1,4 +1,18 @@
 //! Custom handler and options for static file serving.
+//!
+//! See the [`StaticFiles`](serve::StaticFiles) type for further details.
+//!
+//! # Enabling
+//!
+//! This module is only available when the `serve` feature is enabled. Enable it
+//! in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.4.0"
+//! default-features = false
+//! features = ["serve"]
+//! ```
 
 use std::path::{PathBuf, Path};
 

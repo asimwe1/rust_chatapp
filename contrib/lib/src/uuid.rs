@@ -1,4 +1,18 @@
 //! UUID parameter and form value parsing support.
+//!
+//! See the [`Uuid`](uuid::Uuid) type for further details.
+//!
+//! # Enabling
+//!
+//! This module is only available when the `uuid` feature is enabled. Enable it
+//! in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.4.0"
+//! default-features = false
+//! features = ["uuid"]
+//! ```
 
 pub extern crate uuid as uuid_crate;
 

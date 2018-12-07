@@ -1,6 +1,18 @@
 //! Automatic MessagePack (de)serialization support.
 //!
 //! See the [`MsgPack`](msgpack::MessagePack) type for further details.
+//!
+//! # Enabling
+//!
+//! This module is only available when the `msgpack` feature is enabled. Enable
+//! it in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.4.0"
+//! default-features = false
+//! features = ["msgpack"]
+//! ```
 extern crate serde;
 extern crate rmp_serde;
 

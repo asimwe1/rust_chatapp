@@ -9,6 +9,18 @@
 //! [express]: https://expressjs.com
 //! [`SpaceHelmet`]: helmet::SpaceHelmet
 //!
+//! # Enabling
+//!
+//! This module is only available when the `helmet` feature is enabled. Enable
+//! it in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.4.0"
+//! default-features = false
+//! features = ["helmet"]
+//! ```
+//!
 //! # Supported Headers
 //!
 //! | HTTP Header                 | Description                            | Policy       | Default? |
