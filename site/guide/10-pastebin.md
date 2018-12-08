@@ -44,7 +44,6 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 ```toml
 [dependencies]
 rocket = "0.4.0"
-rocket_codegen = "0.4.0"
 ```
 
 And finally, create a skeleton Rocket application to work off of in
@@ -136,7 +135,7 @@ use std::borrow::Cow;
 use rand::{self, Rng};
 
 /// Table to retrieve base62 values from.
-const BASE62: &'static [u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// A _probably_ unique paste ID.
 pub struct PasteID<'a>(Cow<'a, str>);
@@ -179,7 +178,7 @@ Finally, add a dependency for the `rand` crate to the `Cargo.toml` file:
 ```toml
 [dependencies]
 # existing Rocket dependencies...
-rand = "0.3"
+rand = "0.6"
 ```
 
 Then, ensure that your application builds with the new code:
@@ -251,7 +250,7 @@ fn upload(paste: Data) -> io::Result<String> {
 }
 ```
 
-Make sure that the route is mounted at the root path:
+Ensure that the route is mounted at the root path:
 
 ```rust
 fn main() {
@@ -301,6 +300,14 @@ use rocket::http::RawStr;
 fn retrieve(id: &RawStr) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).ok()
+}
+```
+
+Make sure that the route is mounted at the root path:
+
+```rust
+fn main() {
+    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
 }
 ```
 
