@@ -1,4 +1,26 @@
 [[articles]]
+title = """
+  Rocket v0.4: Typed URIs, Database Support, Revamed Queries, Stateful Handlers,
+  & More!
+"""
+slug = "2018-12-08-version-0.4"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "December 08, 2018"
+snippet = """
+I am elated to announce that the next major release of Rocket is now available!
+Rocket 0.4 is a step forward in every direction: it is **packed** with features
+and improvements that increase developer productivity, improve application
+security and robustness, provide new opportunities for extensibility, and
+deliver a renewed degree of toolchain stability.
+
+Rocket 0.4 is the culmination of more than a year of development. During this
+time, more than 600 changes were committed, almost 400 issues were closed, and
+over 165 pull requests were submitted. The Rocket community has proved steadfast
+in its support: a sincere thank you to everyone involved!
+"""
+
+[[articles]]
 title = "Rocket's 2nd v0.4 Release Candidate"
 slug = "2018-11-30-version-0.4-rc-2"
 author = "Sergio Benitez"
