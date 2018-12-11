@@ -91,7 +91,7 @@
 //! #[get("/logs/<id>")]
 //! fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 //! # /*
-//!     Logs::by_id(&conn, id)
+//!     Logs::by_id(&*conn, id)
 //! # */
 //! # Ok(())
 //! }
@@ -113,15 +113,15 @@
 //! follows:
 //!
 //! ```toml
-//! // Option 1:
+//! # Option 1:
 //! [global.databases]
 //! sqlite_db = { url = "db.sqlite" }
 //!
-//! // Option 2:
+//! # Option 2:
 //! [global.databases.pg_db]
 //! url = "mysql://root:root@localhost/pg_db"
 //!
-//! // With a `pool_size` key:
+//! # With a `pool_size` key:
 //! [global.databases]
 //! sqlite_db = { url = "db.sqlite", pool_size = 20 }
 //! ```
@@ -308,7 +308,7 @@
 //!
 //! #[get("/")]
 //! fn my_handler(conn: MyDatabase) -> Data {
-//!     load_from_db(&conn)
+//!     load_from_db(&*conn)
 //! }
 //! # }
 //! ```

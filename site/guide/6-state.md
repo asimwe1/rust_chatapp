@@ -257,15 +257,9 @@ That's it! Whenever a connection to the database is needed, use your type as a
 request guard:
 
 ```rust
-impl Logs {
-    fn by_id(conn: &diesel::SqliteConnection, log_id: usize) -> Result<Logs> {
-        logs.filter(id.eq(log_id)).load(conn)
-    }
-}
-
 #[get("/logs/<id>")]
 fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
-    Logs::by_id(&conn, id)
+    logs::filter(id.eq(log_id)).load(&*conn)
 }
 ```
 
