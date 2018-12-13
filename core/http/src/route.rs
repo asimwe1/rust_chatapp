@@ -1,8 +1,10 @@
 use std::borrow::Cow;
+use std::marker::PhantomData;
 use unicode_xid::UnicodeXID;
 
 use ext::IntoOwned;
-use uri::{Uri, Origin};
+use uri::{Origin, UriPart, Path, Query};
+use uri::encoding::unsafe_percent_encode;
 
 use self::Error::*;
 
@@ -22,25 +24,25 @@ pub enum Source {
 }
 
 #[derive(Debug, Clone)]
-pub struct RouteSegment<'a> {
+pub struct RouteSegment<'a, P: UriPart> {
     pub string: Cow<'a, str>,
     pub kind: Kind,
-    pub source: Source,
     pub name: Cow<'a, str>,
     pub index: Option<usize>,
+    _part: PhantomData<P>,
 }
 
-impl<'a> IntoOwned for RouteSegment<'a> {
-    type Owned = RouteSegment<'static>;
+impl<'a, P: UriPart + 'static> IntoOwned for RouteSegment<'a, P> {
+    type Owned = RouteSegment<'static, P>;
 
     #[inline]
     fn into_owned(self) -> Self::Owned {
         RouteSegment {
             string: IntoOwned::into_owned(self.string),
             kind: self.kind,
-            source: self.source,
             name: IntoOwned::into_owned(self.name),
             index: self.index,
+            _part: PhantomData
         }
     }
 }
@@ -56,7 +58,7 @@ pub enum Error<'a> {
     Trailing(&'a str)
 }
 
-pub type SResult<'a> = Result<RouteSegment<'a>, (&'a str, Error<'a>)>;
+pub type SResult<'a, P> = Result<RouteSegment<'a, P>, (&'a str, Error<'a>)>;
 
 #[inline]
 fn is_ident_start(c: char) -> bool {
@@ -83,9 +85,9 @@ fn is_valid_ident(string: &str) -> bool {
     }
 }
 
-impl<'a> RouteSegment<'a> {
-    pub fn parse_one(segment: &str) -> Result<RouteSegment, Error> {
-        let (string, source, index) = (segment.into(), Source::Unknown, None);
+impl<'a, P: UriPart> RouteSegment<'a, P> {
+    pub fn parse_one(segment: &'a str) -> Result<Self, Error> {
+        let (string, index) = (segment.into(), None);
 
         // Check if this is a dynamic param. If so, check its well-formedness.
         if segment.starts_with('<') && segment.ends_with('>') {
@@ -105,7 +107,7 @@ impl<'a> RouteSegment<'a> {
             }
 
             let name = name.into();
-            return Ok(RouteSegment { string, source, name, kind, index });
+            return Ok(RouteSegment { string, name, kind, index, _part: PhantomData });
         } else if segment.is_empty() {
             return Err(Empty);
         } else if segment.starts_with('<') && segment.len() > 1
@@ -113,50 +115,49 @@ impl<'a> RouteSegment<'a> {
             return Err(MissingClose);
         } else if segment.contains('>') || segment.contains('<') {
             return Err(Malformed);
-        } else if Uri::percent_encode(segment) != segment
-                || Uri::percent_decode_lossy(segment.as_bytes()) != segment
-                || segment.contains('+') {
+        } else if unsafe_percent_encode::<P>(segment) != segment {
             return Err(Uri);
         }
 
         Ok(RouteSegment {
-            string, source, index,
+            string, index,
             name: segment.into(),
             kind: Kind::Static,
+            _part: PhantomData
         })
     }
 
     pub fn parse_many(
-        string: &str,
-        source: Source,
-    ) -> impl Iterator<Item = SResult> {
-        let sep = match source {
-            Source::Query => '&',
-            _ => '/',
-        };
-
+        string: &'a str,
+    ) -> impl Iterator<Item = SResult<P>> {
         let mut last_multi_seg: Option<&str> = None;
-        string.split(sep).filter(|s| !s.is_empty()).enumerate().map(move |(i, seg)| {
-            if let Some(multi_seg) = last_multi_seg {
-                return Err((seg, Trailing(multi_seg)));
-            }
+        string.split(P::DELIMITER)
+            .filter(|s| !s.is_empty())
+            .enumerate()
+            .map(move |(i, seg)| {
+                if let Some(multi_seg) = last_multi_seg {
+                    return Err((seg, Trailing(multi_seg)));
+                }
 
-            let mut parsed = Self::parse_one(seg).map_err(|e| (seg, e))?;
-            if parsed.kind == Kind::Multi {
-                last_multi_seg = Some(seg);
-            }
+                let mut parsed = Self::parse_one(seg).map_err(|e| (seg, e))?;
+                if parsed.kind == Kind::Multi {
+                    last_multi_seg = Some(seg);
+                }
 
-            parsed.index = Some(i);
-            parsed.source = source;
-            Ok(parsed)
-        })
+                parsed.index = Some(i);
+                Ok(parsed)
+            })
     }
+}
 
-    pub fn parse_path(uri: &'a Origin) -> impl Iterator<Item = SResult<'a>> {
-        Self::parse_many(uri.path(), Source::Path)
+impl<'a> RouteSegment<'a, Path> {
+    pub fn parse(uri: &'a Origin) -> impl Iterator<Item = SResult<'a, Path>> {
+        Self::parse_many(uri.path())
     }
+}
 
-    pub fn parse_query(uri: &'a Origin) -> Option<impl Iterator<Item = SResult<'a>>> {
-        uri.query().map(|q| Self::parse_many(q, Source::Query))
+impl<'a> RouteSegment<'a, Query> {
+    pub fn parse(uri: &'a Origin) -> Option<impl Iterator<Item = SResult<'a, Query>>> {
+        uri.query().map(|q| Self::parse_many(q))
     }
 }

@@ -32,24 +32,23 @@ fn f6() {}
 
 // Check that paths contain only valid URI characters
 
-#[get("/?????")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain
-fn g0() {}
-
 #[get("/!@#$%^&*()")] //~ ERROR invalid path URI
 //~^ HELP origin form
 fn g1() {}
 
 #[get("/a%20b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain
+//~^ NOTE cannot contain reserved
+//~^^ HELP reserved characters include
 fn g2() {}
 
 #[get("/a?a%20b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain
+//~^ NOTE cannot contain reserved
+//~^^ HELP reserved characters include
 fn g3() {}
 
 #[get("/a?a+b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain
+//~^ NOTE cannot contain reserved
+//~^^ HELP reserved characters include
 fn g4() {}
 
 // Check that all declared parameters are accounted for

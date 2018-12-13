@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use devise::syn;
 use proc_macro::{Span, Diagnostic};
 
+use http::uri::{UriPart, Path};
 use http::route::RouteSegment;
 use proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
 
@@ -18,8 +19,14 @@ crate struct Segment {
 }
 
 impl Segment {
-    fn from(segment: RouteSegment, span: Span) -> Segment {
-        let (kind, source, index) = (segment.kind, segment.source, segment.index);
+    fn from<P: UriPart>(segment: RouteSegment<P>, span: Span) -> Segment {
+        let source = match P::DELIMITER {
+            '/' => Source::Path,
+            '&' => Source::Query,
+            _ => unreachable!("only paths and queries")
+        };
+
+        let (kind, index) = (segment.kind, segment.index);
         Segment { span, kind, source, index, name: segment.name.into_owned() }
     }
 }
@@ -95,7 +102,8 @@ fn into_diagnostic(
         }
         Error::Uri => {
             seg_span.error("component contains invalid URI characters")
-                .note("components cannot contain '%' and '+' characters")
+                .note("components cannot contain reserved characters")
+                .help("reserved characters include: '%', '+', '&', etc.")
         }
         Error::Trailing(multi) => {
             let multi_span = subspan(multi, source, span).expect("mutli_span");
@@ -107,21 +115,25 @@ fn into_diagnostic(
     }
 }
 
-crate fn parse_segment(segment: &str, span: Span) -> PResult<Segment> {
-    RouteSegment::parse_one(segment)
-        .map(|segment| Segment::from(segment, span))
+crate fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
+    <RouteSegment<Path>>::parse_one(segment)
+        .map(|segment| {
+            let mut seg = Segment::from(segment, span);
+            seg.source = Source::Data;
+            seg.index = Some(0);
+            seg
+        })
         .map_err(|e| into_diagnostic(segment, segment, span, &e))
 }
 
-crate fn parse_segments(
+crate fn parse_segments<P: UriPart>(
     string: &str,
-    source: Source,
     span: Span
 ) -> DResult<Vec<Segment>> {
     let mut segments = vec![];
     let mut diags = Diagnostics::new();
 
-    for result in RouteSegment::parse_many(string, source) {
+    for result in <RouteSegment<P>>::parse_many(string) {
         if let Err((segment_string, error)) = result {
             diags.push(into_diagnostic(segment_string, string, span, &error));
             if let Error::Trailing(..) = error {

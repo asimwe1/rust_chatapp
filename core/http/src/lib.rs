@@ -14,7 +14,7 @@
 //! [#17]: https://github.com/SergioBenitez/Rocket/issues/17
 
 #[macro_use] extern crate pear;
-#[macro_use] extern crate percent_encoding;
+extern crate percent_encoding;
 extern crate smallvec;
 extern crate cookie;
 extern crate time;

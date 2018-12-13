@@ -4,7 +4,7 @@ use proc_macro2::TokenStream as TokenStream2;
 
 use devise::{syn, Result};
 use devise::syn::{Expr, Ident, Type, spanned::Spanned};
-use http::{uri::Origin, ext::IntoOwned};
+use http::{uri::{Origin, Path, Query}, ext::IntoOwned};
 use http::route::{RouteSegment, Kind, Source};
 
 use http_codegen::Optional;
@@ -132,7 +132,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     }
 
     let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Path>);
-    let dyn_exprs = RouteSegment::parse_path(uri).map(|segment| {
+    let dyn_exprs = <RouteSegment<Path>>::parse(uri).map(|segment| {
         let segment = segment.expect("segment okay; prechecked on parse");
         match segment.kind {
             Kind::Static => {
@@ -162,7 +162,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
 
     let query_arg = quote!(#uri_mod::UriQueryArgument);
     let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Query>);
-    let dyn_exprs = RouteSegment::parse_query(uri)?.filter_map(|segment| {
+    let dyn_exprs = <RouteSegment<Query>>::parse(uri)?.filter_map(|segment| {
         let segment = segment.expect("segment okay; prechecked on parse");
         if segment.kind == Kind::Static {
             let string = &segment.string;

@@ -7,6 +7,7 @@ use std::convert::TryFrom;
 use ext::IntoOwned;
 use parse::Indexed;
 use uri::{Origin, Authority, Absolute, Error};
+use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 /// An `enum` encapsulating any of the possible URI variants.
 ///
@@ -57,22 +58,6 @@ pub enum Uri<'a> {
     Absolute(Absolute<'a>),
     /// An asterisk: exactly `*`.
     Asterisk,
-}
-
-/// This encode set is used for strings where '/' characters are known to be
-/// safe; all other special path segment characters are encoded.
-define_encode_set! {
-    #[doc(hidden)]
-    pub UNSAFE_PATH_ENCODE_SET = [::percent_encoding::DEFAULT_ENCODE_SET] | {
-        '%', '[', '\\', ']', '^', '|'
-    }
-}
-
-/// This encode set should be used for path segments (components) of a
-/// `/`-separated path. It encodes as much as possible.
-define_encode_set! {
-    #[doc(hidden)]
-    pub DEFAULT_ENCODE_SET = [UNSAFE_PATH_ENCODE_SET] | { '/' }
 }
 
 impl<'a> Uri<'a> {
@@ -175,9 +160,8 @@ impl<'a> Uri<'a> {
         }
     }
 
-    /// Returns a URL-encoded version of the string. Any characters outside of
-    /// visible ASCII-range are encoded as well as ' ', '"', '#', '<', '>', '`',
-    /// '?', '{', '}', '%', '/', '[', '\\', ']', '^', and '|'.
+    /// Returns a URL-encoded version of the string. Any reserved characters are
+    /// percent-encoded.
     ///
     /// # Examples
     ///
@@ -186,10 +170,10 @@ impl<'a> Uri<'a> {
     /// use rocket::http::uri::Uri;
     ///
     /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
-    /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
+    /// assert_eq!(encoded, "hello%3Fa%3D%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
     pub fn percent_encode(string: &str) -> Cow<str> {
-        ::percent_encoding::utf8_percent_encode(string, DEFAULT_ENCODE_SET).into()
+        percent_encode::<DEFAULT_ENCODE_SET>(string)
     }
 
     /// Returns a URL-decoded version of the string. If the percent encoded

@@ -9,6 +9,8 @@ mod authority;
 mod absolute;
 mod segments;
 
+crate mod encoding;
+
 pub use parse::uri::Error;
 
 pub use self::uri::*;
@@ -65,6 +67,7 @@ pub trait UriPart: private::Sealed {
 /// ```
 ///
 /// [`UriPart`]: uri::UriPart
+#[derive(Debug, Clone, Copy)]
 pub enum Path {  }
 
 /// Marker type indicating use of a type for the query [`UriPart`] of a URI.
@@ -77,6 +80,7 @@ pub enum Path {  }
 /// ```
 ///
 /// [`UriPart`]: uri::UriPart
+#[derive(Debug, Clone, Copy)]
 pub enum Query {  }
 
 impl UriPart for Path {

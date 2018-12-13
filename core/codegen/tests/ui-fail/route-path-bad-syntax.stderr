@@ -50,222 +50,217 @@ error: paths cannot contain empty segments
    |
    = note: expected '/a/b', found '/a/b//'
 
-error: component contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:35:10
-   |
-35 | #[get("/?????")] //~ ERROR invalid URI characters
-   |          ^^^^
-   |
-   = note: components cannot contain '%' and '+' characters
-
 error: invalid path URI: expected EOF but found '#' at index 3
-  --> $DIR/route-path-bad-syntax.rs:39:11
+  --> $DIR/route-path-bad-syntax.rs:35:11
    |
-39 | #[get("/!@#$%^&*()")] //~ ERROR invalid path URI
+35 | #[get("/!@#$%^&*()")] //~ ERROR invalid path URI
    |           ^^^^^^^^^
    |
    = help: expected path in origin form: "/path/<param>"
 
 error: component contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:43:9
+  --> $DIR/route-path-bad-syntax.rs:39:9
    |
-43 | #[get("/a%20b")] //~ ERROR invalid URI characters
+39 | #[get("/a%20b")] //~ ERROR invalid URI characters
    |         ^^^^^
    |
-   = note: components cannot contain '%' and '+' characters
+   = note: components cannot contain reserved characters
+   = help: reserved characters include: '%', '+', '&', etc.
 
 error: component contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:47:11
+  --> $DIR/route-path-bad-syntax.rs:44:11
    |
-47 | #[get("/a?a%20b")] //~ ERROR invalid URI characters
+44 | #[get("/a?a%20b")] //~ ERROR invalid URI characters
    |           ^^^^^
    |
-   = note: components cannot contain '%' and '+' characters
+   = note: components cannot contain reserved characters
+   = help: reserved characters include: '%', '+', '&', etc.
 
 error: component contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:51:11
+  --> $DIR/route-path-bad-syntax.rs:49:11
    |
-51 | #[get("/a?a+b")] //~ ERROR invalid URI characters
+49 | #[get("/a?a+b")] //~ ERROR invalid URI characters
    |           ^^^
    |
-   = note: components cannot contain '%' and '+' characters
+   = note: components cannot contain reserved characters
+   = help: reserved characters include: '%', '+', '&', etc.
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:57:9
+  --> $DIR/route-path-bad-syntax.rs:56:9
    |
-57 | #[get("/<name>")] //~ ERROR unused dynamic parameter
+56 | #[get("/<name>")] //~ ERROR unused dynamic parameter
    |         ^^^^^^
    |
 note: expected argument named `name` here
-  --> $DIR/route-path-bad-syntax.rs:58:7
+  --> $DIR/route-path-bad-syntax.rs:57:7
    |
-58 | fn h0(_name: usize) {} //~ NOTE expected argument named `name` here
+57 | fn h0(_name: usize) {} //~ NOTE expected argument named `name` here
    |       ^^^^^^^^^^^^
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:60:11
+  --> $DIR/route-path-bad-syntax.rs:59:11
    |
-60 | #[get("/a?<r>")] //~ ERROR unused dynamic parameter
+59 | #[get("/a?<r>")] //~ ERROR unused dynamic parameter
    |           ^^^
    |
 note: expected argument named `r` here
-  --> $DIR/route-path-bad-syntax.rs:61:1
+  --> $DIR/route-path-bad-syntax.rs:60:1
    |
-61 | fn h1() {} //~ NOTE expected argument named `r` here
+60 | fn h1() {} //~ NOTE expected argument named `r` here
    | ^^^^^^^^^^
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:63:22
+  --> $DIR/route-path-bad-syntax.rs:62:22
    |
-63 | #[post("/a", data = "<test>")] //~ ERROR unused dynamic parameter
+62 | #[post("/a", data = "<test>")] //~ ERROR unused dynamic parameter
    |                      ^^^^^^
    |
 note: expected argument named `test` here
-  --> $DIR/route-path-bad-syntax.rs:64:1
+  --> $DIR/route-path-bad-syntax.rs:63:1
    |
-64 | fn h2() {} //~ NOTE expected argument named `test` here
+63 | fn h2() {} //~ NOTE expected argument named `test` here
    | ^^^^^^^^^^
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:66:9
+  --> $DIR/route-path-bad-syntax.rs:65:9
    |
-66 | #[get("/<_r>")] //~ ERROR unused dynamic parameter
+65 | #[get("/<_r>")] //~ ERROR unused dynamic parameter
    |         ^^^^
    |
 note: expected argument named `_r` here
-  --> $DIR/route-path-bad-syntax.rs:67:1
+  --> $DIR/route-path-bad-syntax.rs:66:1
    |
-67 | fn h3() {} //~ NOTE expected argument named `_r` here
+66 | fn h3() {} //~ NOTE expected argument named `_r` here
    | ^^^^^^^^^^
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:69:9
+  --> $DIR/route-path-bad-syntax.rs:68:9
    |
-69 | #[get("/<_r>/<b>")] //~ ERROR unused dynamic parameter
+68 | #[get("/<_r>/<b>")] //~ ERROR unused dynamic parameter
    |         ^^^^
    |
 note: expected argument named `_r` here
-  --> $DIR/route-path-bad-syntax.rs:71:1
+  --> $DIR/route-path-bad-syntax.rs:70:1
    |
-71 | fn h4() {} //~ NOTE expected argument named `_r` here
+70 | fn h4() {} //~ NOTE expected argument named `_r` here
    | ^^^^^^^^^^
 
 error: unused dynamic parameter
-  --> $DIR/route-path-bad-syntax.rs:69:14
+  --> $DIR/route-path-bad-syntax.rs:68:14
    |
-69 | #[get("/<_r>/<b>")] //~ ERROR unused dynamic parameter
+68 | #[get("/<_r>/<b>")] //~ ERROR unused dynamic parameter
    |              ^^^
    |
 note: expected argument named `b` here
-  --> $DIR/route-path-bad-syntax.rs:71:1
+  --> $DIR/route-path-bad-syntax.rs:70:1
    |
-71 | fn h4() {} //~ NOTE expected argument named `_r` here
+70 | fn h4() {} //~ NOTE expected argument named `_r` here
    | ^^^^^^^^^^
 
 error: `foo_.` is not a valid identifier
-  --> $DIR/route-path-bad-syntax.rs:76:9
+  --> $DIR/route-path-bad-syntax.rs:75:9
    |
-76 | #[get("/<foo_.>")] //~ ERROR `foo_.` is not a valid identifier
+75 | #[get("/<foo_.>")] //~ ERROR `foo_.` is not a valid identifier
    |         ^^^^^^^
    |
    = help: parameter names must be valid identifiers
 
 error: `foo*` is not a valid identifier
-  --> $DIR/route-path-bad-syntax.rs:80:9
+  --> $DIR/route-path-bad-syntax.rs:79:9
    |
-80 | #[get("/<foo*>")] //~ ERROR `foo*` is not a valid identifier
+79 | #[get("/<foo*>")] //~ ERROR `foo*` is not a valid identifier
    |         ^^^^^^
    |
    = help: parameter names must be valid identifiers
 
 error: `!` is not a valid identifier
-  --> $DIR/route-path-bad-syntax.rs:84:9
+  --> $DIR/route-path-bad-syntax.rs:83:9
    |
-84 | #[get("/<!>")] //~ ERROR `!` is not a valid identifier
+83 | #[get("/<!>")] //~ ERROR `!` is not a valid identifier
    |         ^^^
    |
    = help: parameter names must be valid identifiers
 
 error: `name>:<id` is not a valid identifier
-  --> $DIR/route-path-bad-syntax.rs:88:9
+  --> $DIR/route-path-bad-syntax.rs:87:9
    |
-88 | #[get("/<name>:<id>")] //~ ERROR `name>:<id` is not a valid identifier
+87 | #[get("/<name>:<id>")] //~ ERROR `name>:<id` is not a valid identifier
    |         ^^^^^^^^^^^
    |
    = help: parameter names must be valid identifiers
 
 error: malformed parameter
-  --> $DIR/route-path-bad-syntax.rs:94:20
+  --> $DIR/route-path-bad-syntax.rs:93:20
    |
-94 | #[get("/", data = "foo")] //~ ERROR malformed parameter
+93 | #[get("/", data = "foo")] //~ ERROR malformed parameter
    |                    ^^^
    |
    = help: parameter must be of the form '<param>'
 
 error: malformed parameter
-  --> $DIR/route-path-bad-syntax.rs:98:20
+  --> $DIR/route-path-bad-syntax.rs:97:20
    |
-98 | #[get("/", data = "<foo..>")] //~ ERROR malformed parameter
+97 | #[get("/", data = "<foo..>")] //~ ERROR malformed parameter
    |                    ^^^^^^^
    |
    = help: parameter must be of the form '<param>'
 
 error: parameter is missing a closing bracket
-   --> $DIR/route-path-bad-syntax.rs:102:20
+   --> $DIR/route-path-bad-syntax.rs:101:20
     |
-102 | #[get("/", data = "<foo")] //~ ERROR missing a closing bracket
+101 | #[get("/", data = "<foo")] //~ ERROR missing a closing bracket
     |                    ^^^^
     |
     = help: did you mean '<foo>'?
 
 error: `test ` is not a valid identifier
-   --> $DIR/route-path-bad-syntax.rs:106:20
+   --> $DIR/route-path-bad-syntax.rs:105:20
     |
-106 | #[get("/", data = "<test >")] //~ ERROR `test ` is not a valid identifier
+105 | #[get("/", data = "<test >")] //~ ERROR `test ` is not a valid identifier
     |                    ^^^^^^^
     |
     = help: parameter names must be valid identifiers
 
 error: parameters must be named
-   --> $DIR/route-path-bad-syntax.rs:112:9
+   --> $DIR/route-path-bad-syntax.rs:111:9
     |
-112 | #[get("/<_>")] //~ ERROR must be named
+111 | #[get("/<_>")] //~ ERROR must be named
     |         ^^^
     |
     = help: use a name such as `_guard` or `_param`
 
 error: parameter names cannot be empty
-   --> $DIR/route-path-bad-syntax.rs:117:9
+   --> $DIR/route-path-bad-syntax.rs:116:9
     |
-117 | #[get("/<>")] //~ ERROR cannot be empty
+116 | #[get("/<>")] //~ ERROR cannot be empty
     |         ^^
 
 error: malformed parameter or identifier
-   --> $DIR/route-path-bad-syntax.rs:120:9
+   --> $DIR/route-path-bad-syntax.rs:119:9
     |
-120 | #[get("/<id><")] //~ ERROR malformed parameter
+119 | #[get("/<id><")] //~ ERROR malformed parameter
     |         ^^^^^
     |
     = help: parameters must be of the form '<param>'
     = help: identifiers cannot contain '<' or '>'
 
 error: malformed parameter or identifier
-   --> $DIR/route-path-bad-syntax.rs:125:9
+   --> $DIR/route-path-bad-syntax.rs:124:9
     |
-125 | #[get("/<<<<id><")] //~ ERROR malformed parameter
+124 | #[get("/<<<<id><")] //~ ERROR malformed parameter
     |         ^^^^^^^^
     |
     = help: parameters must be of the form '<param>'
     = help: identifiers cannot contain '<' or '>'
 
 error: malformed parameter or identifier
-   --> $DIR/route-path-bad-syntax.rs:130:9
+   --> $DIR/route-path-bad-syntax.rs:129:9
     |
-130 | #[get("/<>name><")] //~ ERROR malformed parameter
+129 | #[get("/<>name><")] //~ ERROR malformed parameter
     |         ^^^^^^^^
     |
     = help: parameters must be of the form '<param>'
     = help: identifiers cannot contain '<' or '>'
 
-error: aborting due to 31 previous errors
+error: aborting due to 30 previous errors
 

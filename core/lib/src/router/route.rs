@@ -9,7 +9,7 @@ use http::{Method, MediaType};
 use http::route::{RouteSegment, Kind};
 use error::RouteUriError;
 use http::ext::IntoOwned;
-use http::uri::Origin;
+use http::uri::{Origin, Path, Query};
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -35,18 +35,18 @@ pub struct Route {
 
 #[derive(Debug, Default, Clone)]
 crate struct Metadata {
-    crate path_segments: Vec<RouteSegment<'static>>,
-    crate query_segments: Option<Vec<RouteSegment<'static>>>,
+    crate path_segments: Vec<RouteSegment<'static, Path>>,
+    crate query_segments: Option<Vec<RouteSegment<'static, Query>>>,
     crate fully_dynamic_query: bool,
 }
 
 impl Metadata {
     fn from(route: &Route) -> Result<Metadata, RouteUriError> {
-        let path_segments = RouteSegment::parse_path(&route.uri)
+        let path_segments = <RouteSegment<Path>>::parse(&route.uri)
             .map(|res| res.map(|s| s.into_owned()))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let (query_segments, dyn) = match RouteSegment::parse_query(&route.uri) {
+        let (query_segments, dyn) = match <RouteSegment<Query>>::parse(&route.uri) {
             Some(results) => {
                 let segments = results.map(|res| res.map(|s| s.into_owned()))
                     .collect::<Result<Vec<_>, _>>()?;
@@ -264,7 +264,7 @@ impl Route {
         path: Origin<'a>
     ) -> Result<(), RouteUriError> {
         base.clear_query();
-        for segment in RouteSegment::parse_path(&base) {
+        for segment in <RouteSegment<Path>>::parse(&base) {
             if segment?.kind != Kind::Static {
                 return Err(RouteUriError::DynamicBase);
             }

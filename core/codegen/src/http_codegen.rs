@@ -2,7 +2,8 @@ use quote::ToTokens;
 use proc_macro2::TokenStream as TokenStream2;
 use devise::{FromMeta, MetaItem, Result, ext::Split2};
 use http::{self, ext::IntoOwned};
-use attribute::segments::{parse_segments, parse_segment, Segment, Kind, Source};
+use http::uri::{Path, Query};
+use attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
 
 use proc_macro_ext::StringLit;
 
@@ -188,27 +189,18 @@ impl FromMeta for Origin {
     }
 }
 
-impl FromMeta for Segment {
+impl FromMeta for DataSegment {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..(string.len() + 1))
             .expect("segment");
 
-        let segment = parse_segment(&string, span)?;
+        let segment = parse_data_segment(&string, span)?;
         if segment.kind != Kind::Single {
             return Err(span.error("malformed parameter")
                         .help("parameter must be of the form '<param>'"));
         }
 
-        Ok(segment)
-    }
-}
-
-impl FromMeta for DataSegment {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
-        let mut segment = Segment::from_meta(meta)?;
-        segment.source = Source::Data;
-        segment.index = Some(0);
         Ok(DataSegment(segment))
     }
 }
@@ -217,7 +209,7 @@ impl FromMeta for RoutePath {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
         let path_span = string.subspan(1..origin.0.path().len() + 1).expect("path");
-        let path = parse_segments(origin.0.path(), Source::Path, path_span);
+        let path = parse_segments::<Path>(origin.0.path(), path_span);
 
         let query = origin.0.query()
             .map(|q| {
@@ -228,7 +220,7 @@ impl FromMeta for RoutePath {
                     // TODO: Show a help message with what's expected.
                     Err(query_span.error("query cannot contain empty segments").into())
                 } else {
-                    parse_segments(q, Source::Query, query_span)
+                    parse_segments::<Query>(q, query_span)
                 }
             }).transpose();
 

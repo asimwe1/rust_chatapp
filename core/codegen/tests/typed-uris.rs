@@ -120,6 +120,7 @@ fn check_simple_unnamed() {
         uri!(simple3: 1349) => "/?id=1349",
         uri!(simple4: 100, "bob") => "/?id=100&name=bob",
         uri!(simple4: 1349, "Bob Anderson") => "/?id=1349&name=Bob%20Anderson",
+        uri!(simple4: -2, "@M+s&OU=") => "/?id=-2&name=@M%2Bs%26OU%3D",
         uri!(simple4_flipped: 100, "bob") => "/?id=100&name=bob",
         uri!(simple4_flipped: 1349, "Bob Anderson") => "/?id=1349&name=Bob%20Anderson",
     }
