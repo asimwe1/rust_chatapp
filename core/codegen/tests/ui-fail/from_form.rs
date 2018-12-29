@@ -1,5 +1,7 @@
 #[macro_use] extern crate rocket;
 
+use rocket::http::RawStr;
+
 #[derive(FromForm)]
 enum Thing { }
 //~^ ERROR not supported
@@ -162,3 +164,5 @@ struct BadName3 {
     //~^ ERROR invalid form field name
     field: String,
 }
+
+fn main() { }

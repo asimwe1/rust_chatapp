@@ -1,305 +1,305 @@
 error: enums are not supported
- --> $DIR/from_form.rs:4:1
+ --> $DIR/from_form.rs:6:1
   |
-4 | enum Thing { }
+6 | enum Thing { }
   | ^^^^^^^^^^^^^^
   |
 note: error occurred while deriving `FromForm`
- --> $DIR/from_form.rs:3:10
+ --> $DIR/from_form.rs:5:10
   |
-3 | #[derive(FromForm)]
+5 | #[derive(FromForm)]
   |          ^^^^^^^^
 
 error: tuple structs are not supported
- --> $DIR/from_form.rs:8:1
-  |
-8 | struct Foo1;
-  | ^^^^^^^^^^^^
-  |
+  --> $DIR/from_form.rs:10:1
+   |
+10 | struct Foo1;
+   | ^^^^^^^^^^^^
+   |
 note: error occurred while deriving `FromForm`
- --> $DIR/from_form.rs:7:10
-  |
-7 | #[derive(FromForm)]
-  |          ^^^^^^^^
+  --> $DIR/from_form.rs:9:10
+   |
+9  | #[derive(FromForm)]
+   |          ^^^^^^^^
 
 error: at least one field is required
-  --> $DIR/from_form.rs:12:1
+  --> $DIR/from_form.rs:14:1
    |
-12 | struct Foo2 {  }
+14 | struct Foo2 {  }
    | ^^^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:11:10
+  --> $DIR/from_form.rs:13:10
    |
-11 | #[derive(FromForm)]
+13 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: tuple structs are not supported
-  --> $DIR/from_form.rs:16:1
+  --> $DIR/from_form.rs:18:1
    |
-16 | struct Foo3(usize);
+18 | struct Foo3(usize);
    | ^^^^^^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:15:10
+  --> $DIR/from_form.rs:17:10
    |
-15 | #[derive(FromForm)]
+17 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: only one lifetime is supported
-  --> $DIR/from_form.rs:20:20
+  --> $DIR/from_form.rs:22:20
    |
-20 | struct NextTodoTask<'f, 'a> {
+22 | struct NextTodoTask<'f, 'a> {
    |                    ^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:19:10
+  --> $DIR/from_form.rs:21:10
    |
-19 | #[derive(FromForm)]
+21 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: invalid form field name
-  --> $DIR/from_form.rs:30:20
+  --> $DIR/from_form.rs:32:20
    |
-30 |     #[form(field = "isindex")]
+32 |     #[form(field = "isindex")]
    |                    ^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:28:10
+  --> $DIR/from_form.rs:30:10
    |
-28 | #[derive(FromForm)]
+30 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: duplicate field name
-  --> $DIR/from_form.rs:39:5
+  --> $DIR/from_form.rs:41:5
    |
-39 |     foo: usize,
+41 |     foo: usize,
    |     ^^^
    |
 note: previous definition here
-  --> $DIR/from_form.rs:37:20
+  --> $DIR/from_form.rs:39:20
    |
-37 |     #[form(field = "foo")]
+39 |     #[form(field = "foo")]
    |                    ^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:35:10
+  --> $DIR/from_form.rs:37:10
    |
-35 | #[derive(FromForm)]
+37 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: duplicate field name
+  --> $DIR/from_form.rs:49:20
+   |
+49 |     #[form(field = "hello")]
+   |                    ^^^^^^^
+   |
+note: previous definition here
   --> $DIR/from_form.rs:47:20
    |
 47 |     #[form(field = "hello")]
    |                    ^^^^^^^
-   |
-note: previous definition here
-  --> $DIR/from_form.rs:45:20
-   |
-45 |     #[form(field = "hello")]
-   |                    ^^^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:43:10
+  --> $DIR/from_form.rs:45:10
    |
-43 | #[derive(FromForm)]
+45 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: duplicate field name
-  --> $DIR/from_form.rs:55:20
+  --> $DIR/from_form.rs:57:20
    |
-55 |     #[form(field = "first")]
+57 |     #[form(field = "first")]
    |                    ^^^^^^^
    |
 note: previous definition here
-  --> $DIR/from_form.rs:54:5
+  --> $DIR/from_form.rs:56:5
    |
-54 |     first: String,
+56 |     first: String,
    |     ^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:52:10
+  --> $DIR/from_form.rs:54:10
    |
-52 | #[derive(FromForm)]
+54 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: duplicate attribute parameter: field
-  --> $DIR/from_form.rs:62:28
+  --> $DIR/from_form.rs:64:28
    |
-62 |     #[form(field = "blah", field = "bloo")]
+64 |     #[form(field = "blah", field = "bloo")]
    |                            ^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:60:10
+  --> $DIR/from_form.rs:62:10
    |
-60 | #[derive(FromForm)]
+62 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: malformed attribute: expected list
-  --> $DIR/from_form.rs:69:7
+  --> $DIR/from_form.rs:71:7
    |
-69 |     #[form]
+71 |     #[form]
    |       ^^^^
    |
    = help: expected syntax: #[form(key = value, ..)]
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:67:10
+  --> $DIR/from_form.rs:69:10
    |
-67 | #[derive(FromForm)]
+69 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: expected key/value pair
-  --> $DIR/from_form.rs:76:12
+  --> $DIR/from_form.rs:78:12
    |
-76 |     #[form("blah")]
+78 |     #[form("blah")]
    |            ^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:74:10
+  --> $DIR/from_form.rs:76:10
    |
-74 | #[derive(FromForm)]
+76 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: expected key/value pair
-  --> $DIR/from_form.rs:83:12
+  --> $DIR/from_form.rs:85:12
    |
-83 |     #[form(123)]
+85 |     #[form(123)]
    |            ^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:81:10
+  --> $DIR/from_form.rs:83:10
    |
-81 | #[derive(FromForm)]
+83 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: unexpected attribute parameter: `beep`
-  --> $DIR/from_form.rs:90:12
+  --> $DIR/from_form.rs:92:12
    |
-90 |     #[form(beep = "bop")]
+92 |     #[form(beep = "bop")]
    |            ^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:88:10
+  --> $DIR/from_form.rs:90:10
    |
-88 | #[derive(FromForm)]
+90 | #[derive(FromForm)]
    |          ^^^^^^^^
 
 error: duplicate invocation of `form` attribute
-  --> $DIR/from_form.rs:98:5
-   |
-98 |     #[form(field = "bleh")]
-   |     ^^^^^^^^^^^^^^^^^^^^^^^
-   |
+   --> $DIR/from_form.rs:100:5
+    |
+100 |     #[form(field = "bleh")]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:95:10
-   |
-95 | #[derive(FromForm)]
-   |          ^^^^^^^^
+   --> $DIR/from_form.rs:97:10
+    |
+97  | #[derive(FromForm)]
+    |          ^^^^^^^^
 
 error: invalid value: expected string literal
-   --> $DIR/from_form.rs:105:20
+   --> $DIR/from_form.rs:107:20
     |
-105 |     #[form(field = true)]
+107 |     #[form(field = true)]
     |                    ^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:103:10
+   --> $DIR/from_form.rs:105:10
     |
-103 | #[derive(FromForm)]
+105 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: expected literal or key/value pair
-   --> $DIR/from_form.rs:112:12
+   --> $DIR/from_form.rs:114:12
     |
-112 |     #[form(field)]
+114 |     #[form(field)]
     |            ^^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:110:10
+   --> $DIR/from_form.rs:112:10
     |
-110 | #[derive(FromForm)]
+112 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid value: expected string literal
-   --> $DIR/from_form.rs:119:20
+   --> $DIR/from_form.rs:121:20
     |
-119 |     #[form(field = 123)]
+121 |     #[form(field = 123)]
     |                    ^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:117:10
+   --> $DIR/from_form.rs:119:10
     |
-117 | #[derive(FromForm)]
+119 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:126:20
+   --> $DIR/from_form.rs:128:20
     |
-126 |     #[form(field = "hello&world")]
+128 |     #[form(field = "hello&world")]
     |                    ^^^^^^^^^^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:124:10
+   --> $DIR/from_form.rs:126:10
     |
-124 | #[derive(FromForm)]
+126 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:133:20
+   --> $DIR/from_form.rs:135:20
     |
-133 |     #[form(field = "!@#$%^&*()_")]
+135 |     #[form(field = "!@#$%^&*()_")]
     |                    ^^^^^^^^^^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:131:10
+   --> $DIR/from_form.rs:133:10
     |
-131 | #[derive(FromForm)]
+133 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:140:20
+   --> $DIR/from_form.rs:142:20
     |
-140 |     #[form(field = "?")]
+142 |     #[form(field = "?")]
     |                    ^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:138:10
+   --> $DIR/from_form.rs:140:10
     |
-138 | #[derive(FromForm)]
+140 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:147:20
+   --> $DIR/from_form.rs:149:20
     |
-147 |     #[form(field = "")]
+149 |     #[form(field = "")]
     |                    ^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:145:10
+   --> $DIR/from_form.rs:147:10
     |
-145 | #[derive(FromForm)]
+147 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:154:20
+   --> $DIR/from_form.rs:156:20
     |
-154 |     #[form(field = "a&b")]
+156 |     #[form(field = "a&b")]
     |                    ^^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:152:10
+   --> $DIR/from_form.rs:154:10
     |
-152 | #[derive(FromForm)]
+154 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: invalid form field name
-   --> $DIR/from_form.rs:161:20
+   --> $DIR/from_form.rs:163:20
     |
-161 |     #[form(field = "a=")]
+163 |     #[form(field = "a=")]
     |                    ^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:159:10
+   --> $DIR/from_form.rs:161:10
     |
-159 | #[derive(FromForm)]
+161 | #[derive(FromForm)]
     |          ^^^^^^^^
 
 error: aborting due to 24 previous errors

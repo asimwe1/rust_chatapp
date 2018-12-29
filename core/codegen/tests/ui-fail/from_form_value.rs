@@ -43,3 +43,5 @@ enum Bar2 {
     //~^ ERROR expected literal or key/value
     A,
 }
+
+fn main() { }

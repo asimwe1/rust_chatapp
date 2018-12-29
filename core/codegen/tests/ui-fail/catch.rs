@@ -41,3 +41,5 @@ fn f3(_request: &Request, other: bool) {
     //~^ ERROR invalid number of arguments
     //~^^ HELP optionally take an argument
 }
+
+fn main() { }
