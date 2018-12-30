@@ -78,32 +78,27 @@ fn index(msg: Option<FlashMessage>, conn: DbConn) -> Template {
     })
 }
 
-fn rocket() -> (Rocket, Option<DbConn>) {
-    let rocket = rocket::ignite()
+fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
+    let conn = DbConn::get_one(&rocket).expect("database connection");
+    match embedded_migrations::run(&*conn) {
+        Ok(()) => Ok(rocket),
+        Err(e) => {
+            error!("Failed to run database migrations: {:?}", e);
+            Err(rocket)
+        }
+    }
+}
+
+fn rocket() -> Rocket {
+    rocket::ignite()
         .attach(DbConn::fairing())
-        .attach(AdHoc::on_attach("Database Migrations", |rocket| {
-            let conn = DbConn::get_one(&rocket).expect("database connection");
-            match embedded_migrations::run(&*conn) {
-                Ok(()) => Ok(rocket),
-                Err(e) => {
-                    error!("Failed to run database migrations: {:?}", e);
-                    Err(rocket)
-                },
-            }
-        }))
+        .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
         .mount("/", StaticFiles::from("static/"))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
-        .attach(Template::fairing());
-
-    let conn = match cfg!(test) {
-        true => DbConn::get_one(&rocket),
-        false => None,
-    };
-
-    (rocket, conn)
+        .attach(Template::fairing())
 }
 
 fn main() {
-    rocket().0.launch();
+    rocket().launch();
 }
