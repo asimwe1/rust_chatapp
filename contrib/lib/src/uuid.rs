@@ -34,7 +34,7 @@ pub use self::uuid_crate::parser::ParseError;
 ///
 /// ```toml
 /// [dependencies.rocket_contrib]
-/// version = "*"
+/// version = "0.4.0"
 /// default-features = false
 /// features = ["uuid"]
 /// ```
