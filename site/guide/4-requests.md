@@ -276,14 +276,9 @@ string contains all of the static components of a route's query string, the
 request will be routed to that route. This allows for optional parameters,
 validating even when a parameter is missing.
 
-More specifically, types that return `Some` from their
-[`FromFormValue::default()`] implementations will validate even when a value for
-the given parameter is missing, using the value returned from the `default()`
-method as the parameter's value. On such type is `Option<T>`, which returns
-`None` from its `default()` implementation. By using a type of `Option<T>` for a
-query parameter, `Some(T)` will be returned only when the parameter is present
-and represents a valid `T`. In all other cases, `None` will be returned. A route
-using `Option<T>` looks as follows:
+To achieve this, use `Option<T>` as the parameter type. Whenever the query
+parameter is missing in a request, `None` will be provided as the value.  A
+route using `Option<T>` looks as follows:
 
 ```rust
 #[get("/hello?wave&<name>")]
@@ -298,8 +293,11 @@ routed to this route. If a `name=value` query segment is present, the route
 returns the string `"Hi, value!"`. If no `name` query segment is present, the
 route returns `"Hello!"`.
 
-Other defaultable `FromFormValue` types include `Result<T, E>` and `bool`. As
-always, your types can implement `FromFormValue` in a defaultable manner, too!
+Just like a parameter of type `Option<T>` will have the value `None` if the
+parameter is missing from a query, a parameter of type `bool` will have the
+value `false` if it is missing. The default value for a missing parameter can be
+customized for your own types that implement `FromFormValue` by implementing
+[`FromFormValue::default()`].
 
 [`FromFormValue::default()`]: @api/rocket/request/trait.FromFormValue.html#method.default
 
