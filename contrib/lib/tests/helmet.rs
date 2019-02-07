@@ -14,7 +14,6 @@ mod helmet_tests {
     use rocket::local::{Client, LocalResponse};
 
     use self::rocket_contrib::helmet::*;
-    use self::rocket_contrib::helmet::*;
     use self::time::Duration;
 
     #[get("/")] fn hello() { }
