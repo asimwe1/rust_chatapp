@@ -177,7 +177,14 @@
 //! guide](https://rocket.rs/v0.4/guide/configuration/#environment-variables):
 //!
 //! ```bash
-//! ROCKET_DATABASES={my_db={url="db.sqlite"}}
+//! ROCKET_DATABASES='{my_db={url="db.sqlite"}}'
+//! ```
+//!
+//! Multiple databases can be specified in the `ROCKET_DATABASES` environment variable
+//! as well by comma separating them:
+//!
+//! ```bash
+//! ROCKET_DATABASES='{my_db={url="db.sqlite"},my_pg_db={url="postgres://root:root@localhost/my_pg_db"}}'
 //! ```
 //!
 //! ## Guard Types
@@ -200,6 +207,21 @@
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
+//! # }
+//! ```
+//!
+//! Other databases can be used by specifying their respective [`Poolable`]
+//! type:
+//!
+//! ```rust
+//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket_contrib;
+//! # #[cfg(feature = "postgres_pool")]
+//! # mod test {
+//! use rocket_contrib::databases::postgres;
+//!
+//! #[database("my_pg_db")]
+//! struct MyPgDatabase(postgres::Connection);
 //! # }
 //! ```
 //!
