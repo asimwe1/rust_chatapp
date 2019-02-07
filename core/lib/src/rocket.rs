@@ -355,9 +355,8 @@ impl Rocket {
     }
 
     /// Creates a new `Rocket` application using the supplied custom
-    /// configuration information. The `Rocket.toml` file, if present, is
-    /// ignored. Any environment variables setting config parameters are
-    /// ignored. If `log` is `true`, logging is enabled.
+    /// configuration. The `Rocket.toml` file, if present, is ignored. Any
+    /// environment variables setting config parameters are ignored.
     ///
     /// This method is typically called through the `rocket::custom` alias.
     ///
