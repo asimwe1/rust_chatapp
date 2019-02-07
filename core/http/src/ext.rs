@@ -94,7 +94,7 @@ impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
     type Owned = Cow<'static, B>;
 
     #[inline(always)]
-    fn into_owned(self) -> Self::Owned {
+    fn into_owned(self) -> <Self as IntoOwned>::Owned {
         Cow::Owned(self.into_owned())
     }
 }
