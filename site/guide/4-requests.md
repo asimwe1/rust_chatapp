@@ -52,14 +52,14 @@ your application explicitly handles.
 
 ### Reinterpreting
 
-Because browsers can only send `GET` and `POST` requests, Rocket _reinterprets_
-request methods under certain conditions. If a `POST` request contains a body of
-`Content-Type: application/x-www-form-urlencoded` and the form's **first**
-field has the name `_method` and a valid HTTP method name as its value (such as
-`"PUT"`), that field's value is used as the method for the incoming request.
-This allows Rocket applications to submit non-`POST` forms. The [todo
-example](@example/todo/static/index.html.tera#L47) makes use of this feature to
-submit `PUT` and `DELETE` requests from a web form.
+Because HTML forms can only be directly submitted as `GET` or `POST` requests,
+Rocket _reinterprets_ request methods under certain conditions. If a `POST`
+request contains a body of `Content-Type: application/x-www-form-urlencoded` and
+the form's **first** field has the name `_method` and a valid HTTP method name
+as its value (such as `"PUT"`), that field's value is used as the method for the
+incoming request.  This allows Rocket applications to submit non-`POST` forms.
+The [todo example](@example/todo/static/index.html.tera#L47) makes use of this
+feature to submit `PUT` and `DELETE` requests from a web form.
 
 ## Dynamic Paths
 
