@@ -388,7 +388,7 @@ pub trait FromData<'a>: Sized {
 
 /// The identity implementation of `FromData`. Always returns `Success`.
 impl<'f> FromData<'f> for Data {
-    type Error = !;
+    type Error = std::convert::Infallible;
     type Owned = Data;
     type Borrowed = Data;
 

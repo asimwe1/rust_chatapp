@@ -111,19 +111,19 @@ pub trait FromForm<'f>: Sized {
 }
 
 impl<'f, T: FromForm<'f>> FromForm<'f> for Option<T> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline]
-    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Option<T>, !> {
+    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Option<T>, Self::Error> {
         Ok(T::from_form(items, strict).ok())
     }
 }
 
 impl<'f, T: FromForm<'f>> FromForm<'f> for Result<T, T::Error> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline]
-    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Self, !> {
+    fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Self, Self::Error> {
         Ok(T::from_form(items, strict))
     }
 }

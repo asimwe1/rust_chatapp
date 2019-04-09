@@ -74,7 +74,7 @@ mod key {
 /// [private cookie]: Cookies::add_private()
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro, never_type)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::http::Status;
@@ -85,9 +85,9 @@ mod key {
 /// struct User(usize);
 ///
 /// impl FromRequest<'_, '_> for User {
-///     type Error = !;
+///     type Error = std::convert::Infallible;
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<User, !> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())

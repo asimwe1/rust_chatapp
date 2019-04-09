@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro, never_type)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
@@ -9,9 +9,9 @@ use rocket::outcome::Outcome::*;
 struct HeaderCount(usize);
 
 impl<'a, 'r> FromRequest<'a, 'r> for HeaderCount {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, !> {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         Success(HeaderCount(request.headers().len()))
     }
 }

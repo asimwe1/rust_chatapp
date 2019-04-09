@@ -191,7 +191,7 @@ pub trait FromFormValue<'v>: Sized {
 }
 
 impl<'v> FromFormValue<'v> for &'v RawStr {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     // This just gives the raw string.
     #[inline(always)]
@@ -248,7 +248,7 @@ impl_with_fromstr!(
 );
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline(always)]
     fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
@@ -266,7 +266,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
 
 // // TODO: Add more useful implementations (range, regex, etc.).
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline(always)]
     fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {

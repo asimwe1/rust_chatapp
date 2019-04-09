@@ -219,7 +219,7 @@ impl<'q, T: FromForm<'q>> FromQuery<'q> for LenientForm<T> {
 }
 
 impl<'q, T: FromQuery<'q>> FromQuery<'q> for Option<T> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline]
     fn from_query(q: Query<'q>) -> Result<Self, Self::Error> {
@@ -228,7 +228,7 @@ impl<'q, T: FromQuery<'q>> FromQuery<'q> for Option<T> {
 }
 
 impl<'q, T: FromQuery<'q>> FromQuery<'q> for Result<T, T::Error> {
-    type Error = !;
+    type Error = std::convert::Infallible;
 
     #[inline]
     fn from_query(q: Query<'q>) -> Result<Self, Self::Error> {
