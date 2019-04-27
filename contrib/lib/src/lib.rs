@@ -25,6 +25,7 @@
 //! * [uuid](uuid) - UUID (de)serialization
 //! * [${database}_pool](databases) - Database Configuration and Pooling
 //! * [helmet](helmet) - Fairing for Security and Privacy Headers
+//! * [compression](compression) - Response compression
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -51,15 +52,7 @@
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
 #[cfg(feature = "helmet")] pub mod helmet;
+#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
 
 #[cfg(feature="databases")] extern crate rocket_contrib_codegen;
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;
-
-#[cfg(any(feature="brotli_compression", feature="gzip_compression"))]
-pub mod compression;
-
-#[cfg(feature="brotli_compression")]
-extern crate brotli;
-
-#[cfg(feature="gzip_compression")]
-extern crate flate2;

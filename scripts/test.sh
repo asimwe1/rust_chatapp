@@ -79,6 +79,8 @@ if [ "$1" = "--contrib" ]; then
     redis_pool
     mongodb_pool
     memcache_pool
+    brotli_compression
+    gzip_compression
   )
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1

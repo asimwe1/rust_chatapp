@@ -5,7 +5,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
-mod compressed_tests {
+mod compress_responder_tests {
     extern crate brotli;
     extern crate flate2;
 
@@ -14,8 +14,7 @@ mod compressed_tests {
     use rocket::http::{ContentType, Header};
     use rocket::local::Client;
     use rocket::response::{Content, Response};
-    use rocket::routes;
-    use rocket_contrib::compression::Compressed;
+    use rocket_contrib::compression::Compress;
 
     use std::io::Cursor;
     use std::io::Read;
@@ -26,29 +25,29 @@ mod compressed_tests {
         in order to have to read more than one buffer when gzipping. こんにちは!";
 
     #[get("/")]
-    pub fn index() -> Compressed<String> {
-        Compressed::new(String::from(HELLO))
+    pub fn index() -> Compress<String> {
+        Compress(String::from(HELLO))
     }
 
     #[get("/font")]
-    pub fn font() -> Compressed<Content<&'static str>> {
-        Compressed::new(Content(ContentType::WOFF, HELLO))
+    pub fn font() -> Compress<Content<&'static str>> {
+        Compress(Content(ContentType::WOFF, HELLO))
     }
 
     #[get("/image")]
-    pub fn image() -> Compressed<Content<&'static str>> {
-        Compressed::new(Content(ContentType::PNG, HELLO))
+    pub fn image() -> Compress<Content<&'static str>> {
+        Compress(Content(ContentType::PNG, HELLO))
     }
 
     #[get("/already_encoded")]
-    pub fn already_encoded() -> Compressed<Response<'static>> {
+    pub fn already_encoded() -> Compress<Response<'static>> {
         let mut encoder = GzEncoder::new(
             Cursor::new(String::from(HELLO)),
             flate2::Compression::default(),
         );
         let mut encoded = Vec::new();
         encoder.read_to_end(&mut encoded).unwrap();
-        Compressed::new(
+        Compress(
             Response::build()
                 .header(ContentEncoding(vec![Encoding::Gzip]))
                 .sized_body(Cursor::new(encoded))
@@ -57,8 +56,8 @@ mod compressed_tests {
     }
 
     #[get("/identity")]
-    pub fn identity() -> Compressed<Response<'static>> {
-        Compressed::new(
+    pub fn identity() -> Compress<Response<'static>> {
+        Compress(
             Response::build()
                 .header(ContentEncoding(vec![Encoding::Identity]))
                 .sized_body(Cursor::new(String::from(HELLO)))

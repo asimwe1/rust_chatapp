@@ -1,56 +1,47 @@
-//! Response on demand compression.
-//!
-//! See the [`Compression`](compression::responder::Compressed) type for
-//! further details.
-
 use rocket::response::{self, Responder, Response};
 use rocket::Request;
 
-crate use super::CompressionUtils;
+use super::CompressionUtils;
 
-/// Compress a `Responder` response ignoring the compression exclusions.
+/// Compresses responses with Brotli or Gzip compression.
 ///
-/// Delegates the remainder of the response to the wrapped `Responder`.
+/// The `Compress` type implements brotli and gzip compression for responses in
+/// accordance with the `Accept-Encoding` header. If accepted, brotli
+/// compression is preferred over gzip.
+///
+/// In the brotli compression mode (using the
+/// [rust-brotli](https://github.com/dropbox/rust-brotli) crate), quality is set
+/// to 2 in order to achieve fast compression with a compression ratio similar
+/// to gzip. When appropriate, brotli's text and font compression modes are
+/// used.
+///
+/// In the gzip compression mode (using the
+/// [flate2](https://github.com/alexcrichton/flate2-rs) crate), quality is set
+/// to the default (9) in order to have good compression ratio.
+///
+/// Responses that already have a `Content-Encoding` header are not compressed.
 ///
 /// # Usage
 ///
-/// To use, add the `brotli_compression` feature, the `gzip_compression`
-/// feature, or the `compression` feature (to enable both algorithms) to the
-/// `rocket_contrib` dependencies section of your `Cargo.toml`:
-///
-/// ```toml,ignore
-/// [dependencies.rocket_contrib]
-/// version = "*"
-/// default-features = false
-/// features = ["compression"]
-/// ```
-///
-/// Then, compress the desired response wrapping a `Responder` inside
-/// `Compressed`:
+/// Compress responses by wrapping a `Responder` inside `Compress`:
 ///
 /// ```rust
-/// use rocket_contrib::compression::Compressed;
+/// use rocket_contrib::compression::Compress;
 ///
 /// # #[allow(unused_variables)]
-/// let response = Compressed("Hi.");
+/// let response = Compress("Hi.");
 /// ```
 #[derive(Debug)]
-pub struct Compressed<R>(pub R);
+pub struct Compress<R>(pub R);
 
-impl<'r, R: Responder<'r>> Compressed<R> {
-    pub fn new(response: R) -> Compressed<R> {
-        Compressed { 0: response }
-    }
-}
-
-impl<'r, R: Responder<'r>> Responder<'r> for Compressed<R> {
+impl<'r, R: Responder<'r>> Responder<'r> for Compress<R> {
     #[inline(always)]
     fn respond_to(self, request: &Request) -> response::Result<'r> {
         let mut response = Response::build()
             .merge(self.0.respond_to(request)?)
             .finalize();
 
-        CompressionUtils::compress_response(request, &mut response, false);
+        CompressionUtils::compress_response(request, &mut response, &[]);
         Ok(response)
     }
 }

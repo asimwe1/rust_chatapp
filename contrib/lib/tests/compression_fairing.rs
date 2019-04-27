@@ -5,7 +5,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
-mod compression_tests {
+mod compression_fairing_tests {
     extern crate brotli;
     extern crate flate2;
 
@@ -14,8 +14,8 @@ mod compression_tests {
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
     use rocket::local::Client;
-    use rocket::response::Response;
-    use rocket::routes;
+    use rocket::response::{Content, Response};
+    use rocket_contrib::compression::Compression;
 
     use std::io::Cursor;
     use std::io::Read;
@@ -31,27 +31,18 @@ mod compression_tests {
     }
 
     #[get("/font")]
-    pub fn font() -> Response<'static> {
-        Response::build()
-            .header(ContentType::WOFF)
-            .sized_body(Cursor::new(String::from(HELLO)))
-            .finalize()
+    pub fn font() -> Content<&'static str> {
+        Content(ContentType::WOFF, HELLO)
     }
 
     #[get("/image")]
-    pub fn image() -> Response<'static> {
-        Response::build()
-            .header(ContentType::PNG)
-            .sized_body(Cursor::new(String::from(HELLO)))
-            .finalize()
+    pub fn image() -> Content<&'static str> {
+        Content(ContentType::PNG, HELLO)
     }
 
     #[get("/tar")]
-    pub fn tar() -> Response<'static> {
-        Response::build()
-            .header(ContentType::TAR)
-            .sized_body(Cursor::new(String::from(HELLO)))
-            .finalize()
+    pub fn tar() -> Content<&'static str> {
+        Content(ContentType::TAR, HELLO)
     }
 
     #[get("/already_encoded")]
@@ -82,7 +73,7 @@ mod compression_tests {
                 "/",
                 routes![index, font, image, tar, already_encoded, identity],
             )
-            .attach(rocket_contrib::compression::Compression::fairing())
+            .attach(Compression::fairing())
     }
 
     fn rocket_tar_exception() -> rocket::Rocket {
@@ -94,7 +85,7 @@ mod compression_tests {
 
         rocket::custom(config)
             .mount("/", routes![image, tar])
-            .attach(rocket_contrib::compression::Compression::fairing())
+            .attach(Compression::fairing())
     }
 
     #[test]

@@ -80,7 +80,7 @@ r2d2-memcache = { version = "0.3", optional = true }
 time = { version = "0.1.40", optional = true }
 
 # Compression dependencies
-brotli = { version = "2.5", optional = true }
+brotli = { version = "3.3", optional = true }
 flate2 = { version = "1.0", optional = true }
 
 [target.'cfg(debug_assertions)'.dependencies]
