@@ -15,6 +15,13 @@
 //! default-features = false
 //! features = ["compression"]
 //! ```
+//!
+//! # Security Implications
+//!
+//! In some cases, HTTP compression on a site served over HTTPS can make a web
+//! application vulnerable to attacks including BREACH. These risks should be
+//! evaluated in the context of your application before enabling compression.
+//!
 #[cfg(feature="brotli_compression")] extern crate brotli;
 #[cfg(feature="gzip_compression")] extern crate flate2;
 

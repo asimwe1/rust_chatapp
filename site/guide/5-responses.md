@@ -241,6 +241,7 @@ library. Among these are:
   * [`Json`] - Automatically serializes values into JSON.
   * [`MsgPack`] - Automatically serializes values into MessagePack.
   * [`Template`] - Renders a dynamic template using handlebars or Tera.
+  * [`Compress`] - Compresses a response at the HTTP layer.
 
 [`status`]: @api/rocket/response/status/
 [`response`]: @api/rocket/response/
@@ -250,6 +251,7 @@ library. Among these are:
 [`Stream`]: @api/rocket/response/struct.Stream.html
 [`Flash`]: @api/rocket/response/struct.Flash.html
 [`MsgPack`]: @api/rocket_contrib/msgpack/struct.MsgPack.html
+[`Compress`]: @api/rocket_contrib/compression/struct.Compress.html
 
 ### Streaming
 

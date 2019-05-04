@@ -39,7 +39,14 @@ impl Default for Context {
 /// - `application/octet-stream`
 ///
 /// The excluded types can be changed changing the `compress.exclude` Rocket
-/// configuration property.
+/// configuration property in Rocket.toml. The default `Content-Type` exclusions
+/// will be ignored if this is set, and must be added back in one by one if
+/// desired.
+///
+/// ```toml
+/// [global.compress]
+/// exclude = ["video/*", "application/x-xz"]
+/// ```
 ///
 /// # Usage
 ///
