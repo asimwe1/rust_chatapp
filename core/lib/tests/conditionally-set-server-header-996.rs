@@ -1,27 +1,19 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use]
-extern crate rocket;
-extern crate rocket_http;
+#[macro_use] extern crate rocket;
 
-use rocket::response::Redirect;
 use rocket::Response;
-use rocket_http::{Header, Status};
+use rocket::http::Header;
 
 #[get("/do_not_overwrite")]
-fn do_not_overwrite<'r>() -> Result<Response<'r>, ()> {
-    let header = Header::new("Server", "Test");
-
+fn do_not_overwrite() -> Response<'static> {
     Response::build()
-        .header(header)
-        .ok()
+        .header(Header::new("Server", "Test"))
+        .finalize()
 }
 
 #[get("/use_default")]
-fn use_default<'r>() -> Result<Response<'r>, ()> {
-    Response::build()
-        .ok()
-}
+fn use_default() { }
 
 mod conditionally_set_server_header {
     use super::*;
