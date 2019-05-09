@@ -144,10 +144,8 @@ impl Fairing for AdHoc {
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         if let AdHocKind::Attach(ref mutex) = self.kind {
-            let mut option = mutex.lock().expect("AdHoc::Attach lock");
-            let f = option
-                .take()
-                .expect("internal error: `on_attach` single-call invariant broken");
+            let mut opt = mutex.lock().expect("AdHoc::Attach lock");
+            let f = opt.take().expect("internal error: `on_attach` one-call invariant broken");
             f(rocket)
         } else {
             Ok(rocket)
@@ -156,10 +154,8 @@ impl Fairing for AdHoc {
 
     fn on_launch(&self, rocket: &Rocket) {
         if let AdHocKind::Launch(ref mutex) = self.kind {
-            let mut option = mutex.lock().expect("AdHoc::Launch lock");
-            let f = option
-                .take()
-                .expect("internal error: `on_launch` single-call invariant broken");
+            let mut opt = mutex.lock().expect("AdHoc::Launch lock");
+            let f = opt.take().expect("internal error: `on_launch` one-call invariant broken");
             f(rocket)
         }
     }
