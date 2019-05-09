@@ -216,12 +216,13 @@ impl Rocket {
         // Route the request and run the user's handlers.
         let mut response = self.route_and_process(request, data);
 
-        // Add the 'rocket' server header to the response and run fairings only if the header
-        // doesn't already exist.
+        // Add a default 'Server' header if it isn't already there.
         // TODO: If removing Hyper, write out `Date` header too.
         if !response.headers().contains("Server") {
             response.set_header(Header::new("Server", "Rocket"));
         }
+
+        // Run the response fairings.
         self.fairings.handle_response(request, &mut response);
 
         // Strip the body if this is a `HEAD` request.
