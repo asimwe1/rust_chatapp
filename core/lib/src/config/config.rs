@@ -95,7 +95,8 @@ impl Config {
         ConfigBuilder::new(env)
     }
 
-    /// Returns a `Config` with the parameters for the environment `env`.
+    /// Returns a `Config` with the default parameters for the environment
+    /// `env`. See [`config`](::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -137,7 +138,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the development
-    /// environment.
+    /// environment. See [`config`](::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -152,7 +153,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the staging
-    /// environment.
+    /// environment. See [`config`](::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -167,7 +168,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the production
-    /// environment.
+    /// environment. See [`config`](::config) for a list of defaults.
     ///
     /// # Example
     ///
