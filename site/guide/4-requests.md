@@ -190,11 +190,18 @@ fn user_int(id: isize) -> T { ... }
 
 #[get("/user/<id>", rank = 3)]
 fn user_str(id: &RawStr) -> T { ... }
+
+fn main() {
+    rocket::ignite()
+        .mount("/", routes![user, user_int, user_str])
+        .launch();
+}
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
-application with the routes mounted at the root, requests to `/user/<id>` will
-be routed as follows:
+application with the routes mounted at the root path, as is done in `main`
+above, requests to `/user/<id>` (such as `/user/123`, `/user/Bob`, and so on)
+will be routed as follows:
 
   1. The `user` route matches first. If the string at the `<id>` position is an
      unsigned integer, then the `user` handler is called. If it is not, then the
@@ -205,6 +212,11 @@ be routed as follows:
 
   3. The `user_str` route matches last. Since `<id>` is a always string, the
      route always matches. The `user_str` handler is called.
+
+! note: A route's rank appears in **[brackets]** during launch.
+
+  You'll also find a route's rank logged in brackets during application launch:
+  `GET /user/<id> [3] (user_str)`.
 
 Forwards can be _caught_ by using a `Result` or `Option` type. For example, if
 the type of `id` in the `user` function was `Result<usize, &RawStr>`, then `user`
