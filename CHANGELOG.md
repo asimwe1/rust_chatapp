@@ -1,3 +1,30 @@
+# Version 0.4.1 (May 11, 2019)
+
+## Core
+
+  * Rocket's default `Server` HTTP header no longer overrides a user-set header.
+  * Fixed encoding and decoding of certain URI characters.
+
+## Codegen
+
+  * Compiler diagnostic information is more reliably produced.
+
+## Contrib
+
+  * Database pool types now implement `DerefMut`.
+  * Added support for memcache connection pools.
+  * Stopped depending on default features from core.
+
+## Docs
+
+  * Fixed many typos across the rustdocs and guide.
+  * Added guide documentation on mounting more than one route at once.
+
+## Infrastructure
+
+  * Testing no longer requires "bootstrapping".
+  * Removed deprecated `isatty` dependency in favor of `atty`.
+
 # Version 0.4.0 (Dec 06, 2018)
 
 ## New Features
