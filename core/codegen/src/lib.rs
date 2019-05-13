@@ -2,16 +2,16 @@
 #![feature(crate_visibility_modifier)]
 #![recursion_limit="128"]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.4")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
 
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
 //! custom derives, custom attributes, and procedural macros. The documentation
 //! here is purely technical. The code generation facilities are documented
-//! thoroughly in the [Rocket programming guide](https://rocket.rs/v0.4/guide).
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/v0.5/guide).
 //!
 //! # Usage
 //!
@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.4.0"
+//! rocket = "0.5.0-dev"
 //! ```
 //!
 //! And to import all macros, attributes, and derives via `#[macro_use]` in the

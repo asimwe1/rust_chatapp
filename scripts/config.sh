@@ -24,9 +24,9 @@ function relative() {
 }
 
 # Full and major version of Rocket
-ROCKET_VERSION="0.4.0"
-ROCKET_MAJOR_VERSION="0.4"
-CURRENT_RELEASE=true
+ROCKET_VERSION="0.5.0-dev"
+ROCKET_MAJOR_VERSION=$(echo "${ROCKET_VERSION}" | cut -d'.' -f1-2)
+CURRENT_RELEASE=false
 
 # Root of workspace-like directories.
 PROJECT_ROOT=$(relative "") || exit $?
@@ -54,6 +54,9 @@ ALL_PROJECT_DIRS=(
 )
 
 if [ "${1}" = "-p" ]; then
+  echo "ROCKET_VERSION: ${ROCKET_VERSION}"
+  echo "ROCKET_MAJOR_VERSION: ${ROCKET_MAJOR_VERSION}"
+  echo "CURRENT_RELEASE: ${CURRENT_RELEASE}"
   echo "SCRIPT_DIR: ${SCRIPT_DIR}"
   echo "PROJECT_ROOT: ${PROJECT_ROOT}"
   echo "CORE_ROOT: ${CORE_ROOT}"

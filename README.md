@@ -39,22 +39,23 @@ Rocket is extensively documented:
   * [Guide]: A detailed guide and reference to Rocket.
   * [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/v0.4/guide/quickstart
-[Getting Started]: https://rocket.rs/v0.4/guide/getting-started
-[Overview]: https://rocket.rs/v0.4/overview
-[Guide]: https://rocket.rs/v0.4/guide
-[API Documentation]: https://api.rocket.rs/v0.4/rocket
+[Quickstart]: https://rocket.rs/guide/quickstart
+[Getting Started]: https://rocket.rs/guide/getting-started
+[Overview]: https://rocket.rs/overview
+[Guide]: https://rocket.rs/guide
+[API Documentation]: https://api.rocket.rs/rocket
 
 The official community support channels are the `#rocket` IRC channel on the
-[Mozilla IRC Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` and the
-bridged [Rocket room on
-Matrix](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org). If you're not
-familiar with IRC, we recommend chatting through [Matrix via
-Riot](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org) or via the [Kiwi
-web IRC client](https://kiwiirc.com/client/irc.mozilla.org/#rocket). You can
-learn more about IRC via Mozilla's [Getting Started with
-IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
-guide.
+[Mozilla IRC Server] at `irc.mozilla.org` and the bridged [Rocket room on
+Matrix]. If you're not familiar with IRC, we recommend chatting through [Matrix
+via Riot] or via the [Kiwi web IRC client]. You can learn more about IRC via
+Mozilla's [Getting Started with IRC] guide.
+
+[Mozilla IRC Server]: https://wiki.mozilla.org/IRC
+[Rocket room on Matrix]: https://riot.im/app/#/room/#mozilla_#rocket:matrix.org
+[Matrix via Riot]: https://riot.im/app/#/room/#mozilla_#rocket:matrix.org
+[Kiwi web IRC client]: https://kiwiirc.com/client/irc.mozilla.org/#rocket
+[Getting Started with IRC]: https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC
 
 ## Building
 
@@ -101,28 +102,32 @@ example, the tests for routing can be found at the bottom of the
 
 ### Codegen
 
-Code generation tests can be found in `codegen/tests`. We use the
-[compiletest](https://crates.io/crates/compiletest_rs) library, which was
-extracted from `rustc`, for testing. See the [compiler test
-documentation](https://github.com/rust-lang/rust/blob/master/src/test/COMPILER_TESTS.md)
-for information on how to write compiler tests.
+Code generation tests can be found in `codegen/tests`. We use the [compiletest]
+library, which was extracted from `rustc`, for testing. See the [compiler test
+documentation] for information on how to write compiler tests.
+
+[compiletest]: https://crates.io/crates/compiletest_rs
+[compiler test documentation]: https://github.com/rust-lang/rust/blob/master/src/test/COMPILER_TESTS.md
 
 ## Documentation
 
 You can build the Rocket API documentation locally by running
 `./scripts/mk-docs.sh`. The resulting documentation is what gets uploaded to
-[api.rocket.rs](https://api.rocket.rs/v0.4/).
+[api.rocket.rs](https://api.rocket.rs/).
 
 ## Contributing
 
 Contributions are absolutely, positively welcome and encouraged! Contributions
 come in many forms. You could:
 
-  1. Submit a feature request or bug report as an [issue](https://github.com/SergioBenitez/Rocket/issues).
-  2. Ask for improved documentation as an [issue](https://github.com/SergioBenitez/Rocket/issues).
-  3. Comment on [issues that require
-     feedback](https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
-  4. Contribute code via [pull requests](https://github.com/SergioBenitez/Rocket/pulls).
+  1. Submit a feature request or bug report as an [issue].
+  2. Ask for improved documentation as an [issue].
+  3. Comment on [issues that require feedback].
+  4. Contribute code via [pull requests].
+
+[issue]: https://github.com/SergioBenitez/Rocket/issues
+[issues that require feedback]: https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
+[pull requests]: https://github.com/SergioBenitez/Rocket/pulls.
 
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:

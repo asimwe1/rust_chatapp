@@ -32,7 +32,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "0.4.0"
+//! version = "0.5.0-dev"
 //! default-features = false
 //! features = ["diesel_sqlite_pool"]
 //! ```
@@ -174,7 +174,7 @@
 //! Lastly, databases can be configured via environment variables by specifying
 //! the `databases` table as detailed in the [Environment Variables
 //! configuration
-//! guide](https://rocket.rs/v0.4/guide/configuration/#environment-variables):
+//! guide](https://rocket.rs/v0.5/guide/configuration/#environment-variables):
 //!
 //! ```bash
 //! ROCKET_DATABASES='{my_db={url="db.sqlite"}}'

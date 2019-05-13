@@ -15,7 +15,7 @@ For instance, the following set of commands runs the `hello_world` example:
 ```sh
 git clone https://github.com/SergioBenitez/Rocket
 cd Rocket
-git checkout v0.4.0
+git checkout v0.5.0-dev
 cd examples/hello_world
 cargo run
 ```

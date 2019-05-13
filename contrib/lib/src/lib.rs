@@ -2,9 +2,9 @@
 #![feature(never_type)]
 #![feature(doc_cfg)]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.4")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -34,7 +34,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "0.4.0"
+//! version = "0.5.0-dev"
 //! default-features = false
 //! features = ["json"]
 //! ```

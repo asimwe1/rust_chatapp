@@ -8,9 +8,9 @@
 
 #![recursion_limit="256"]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.4")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
 
 //! # Rocket - Core API Documentation
 //!
@@ -26,10 +26,10 @@
 //! automatic JSON (de)serialiazation, templating support, static file serving,
 //! and other useful features.
 //!
-//! [overview]: https://rocket.rs/v0.4/overview
-//! [full, detailed guide]: https://rocket.rs/v0.4/guide
-//! [quickstart]: https://rocket.rs/v0.4/guide/quickstart
-//! [getting started]: https://rocket.rs/v0.4/guide/getting-started
+//! [overview]: https://rocket.rs/v0.5/overview
+//! [full, detailed guide]: https://rocket.rs/v0.5/guide
+//! [quickstart]: https://rocket.rs/v0.5/guide/quickstart
+//! [getting started]: https://rocket.rs/v0.5/guide/getting-started
 //!
 //! ## Libraries
 //!
@@ -45,7 +45,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.4.0"
+//! rocket = "0.5.0-dev"
 //! ```
 //!
 //! Then, add the following to the top of your `main.rs` file:
@@ -58,7 +58,7 @@
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
 //! ```
 //!
-//! See the [guide](https://rocket.rs/v0.4/guide) for more information on how to
+//! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
@@ -85,7 +85,7 @@
 //! configure Rocket, see the [configuration section] of the guide as well as
 //! the [`config`] module documentation.
 //!
-//! [configuration section]: https://rocket.rs/v0.4/guide/configuration/
+//! [configuration section]: https://rocket.rs/v0.5/guide/configuration/
 //!
 //! ## Testing
 //!
@@ -94,7 +94,7 @@
 //! documentation and the [testing chapter of the guide] include detailed
 //! examples.
 //!
-//! [testing chapter of the guide]: https://rocket.rs/v0.4/guide/testing/#testing
+//! [testing chapter of the guide]: https://rocket.rs/v0.5/guide/testing/#testing
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 #[doc(hidden)] pub use rocket_codegen::*;

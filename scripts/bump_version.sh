@@ -25,8 +25,8 @@ function major() {
 
 function do_replace() {
   find "${PROJECT_ROOT}" -name "*.rs" | xargs sed -i.bak "s/${1}/${2}/g"
-  find "${PROJECT_ROOT}" -name "*.toml" | xargs sed -i.bak "s/${1}/${2}/g"
-  find "${SITE_ROOT}" -name "*.md" | xargs sed -i.bak "s/${1}/${2}/g"
+  find "${PROJECT_ROOT}" -name "*.toml" -not -path "*/news/*" | xargs sed -i.bak "s/${1}/${2}/g"
+  find "${SITE_ROOT}" -name "*.md" -not -path "*/news/*" | xargs sed -i.bak "s/${1}/${2}/g"
   sed -i.bak "s/${1}/${2}/g" "${SCRIPT_DIR}/config.sh"
   sed -i.bak "s/${1}/${2}/g" "${PROJECT_ROOT}/README.md"
 }
