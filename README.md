@@ -41,9 +41,9 @@ Rocket is extensively documented:
 
 [Quickstart]: https://rocket.rs/guide/quickstart
 [Getting Started]: https://rocket.rs/guide/getting-started
-[Overview]: https://rocket.rs/overview
-[Guide]: https://rocket.rs/guide
-[API Documentation]: https://api.rocket.rs/rocket
+[Overview]: https://rocket.rs/overview/
+[Guide]: https://rocket.rs/guide/
+[API Documentation]: https://api.rocket.rs/rocket/
 
 The official community support channels are the `#rocket` IRC channel on the
 [Mozilla IRC Server] at `irc.mozilla.org` and the bridged [Rocket room on
@@ -126,8 +126,8 @@ come in many forms. You could:
   4. Contribute code via [pull requests].
 
 [issue]: https://github.com/SergioBenitez/Rocket/issues
-[issues that require feedback]: https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22).
-[pull requests]: https://github.com/SergioBenitez/Rocket/pulls.
+[issues that require feedback]: https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22
+[pull requests]: https://github.com/SergioBenitez/Rocket/pulls
 
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:
