@@ -1,7 +1,10 @@
 #![feature(decl_macro, proc_macro_hygiene)]
 
 #[macro_use]
+#[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
 extern crate rocket;
+
+#[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
 extern crate rocket_contrib;
 
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
