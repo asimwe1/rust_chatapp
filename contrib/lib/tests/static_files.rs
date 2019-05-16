@@ -3,12 +3,12 @@
 extern crate rocket;
 extern crate rocket_contrib;
 
-#[cfg(feature = "static")]
+#[cfg(feature = "serve")]
 mod static_tests {
     use std::{io::Read, fs::File};
     use std::path::{Path, PathBuf};
 
-    use rocket::{self, Rocket};
+    use rocket::{self, Rocket, Route};
     use rocket_contrib::serve::{StaticFiles, Options};
     use rocket::http::Status;
     use rocket::local::Client;
@@ -104,5 +104,23 @@ mod static_tests {
         assert_all(&client, "both", REGULAR_FILES, true);
         assert_all(&client, "both", HIDDEN_FILES, true);
         assert_all(&client, "both", INDEXED_DIRECTORIES, true);
+    }
+
+    #[test]
+    fn test_ranking() {
+        let root = static_root();
+        for rank in (-128..127).chain([-32768, 32767].iter().cloned()) {
+            let opt_rank = Options::Rank(rank as i16);
+            let a = StaticFiles::new(&root, opt_rank);
+            let b = StaticFiles::new(&root, Options::None | opt_rank);
+            let c = StaticFiles::new(&root, Options::Index | opt_rank);
+            let d = StaticFiles::new(&root, Options::DotFiles | opt_rank);
+            let e = StaticFiles::new(&root, Options::Index | Options::DotFiles | opt_rank);
+
+            for handler in vec![a, b, c, d, e] {
+                let routes: Vec<Route> = handler.into();
+                assert!(routes.iter().all(|route| route.rank == rank), "{}", rank);
+            }
+        }
     }
 }

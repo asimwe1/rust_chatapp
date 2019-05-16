@@ -29,14 +29,16 @@ use rocket::outcome::IntoOutcome;
 ///   * [`Options::None`] - Return only present, visible files.
 ///   * [`Options::DotFiles`] - In addition to visible files, return dotfiles.
 ///   * [`Options::Index`] - Render `index.html` pages for directory requests.
+///   * [`Options::Rank(n)`](Options::Rank) - Mount the static files route(s)
+///     with rank `n`.
 ///
-/// Two `Options` structures can be `or`d together to slect two or more options.
+/// `Options` structures can be `or`d together to select two or more options.
 /// For instance, to request that both dot files and index pages be returned,
 /// use `Options::DotFiles | Options::Index`.
 #[derive(Debug, Clone, Copy)]
-pub struct Options(u8);
+pub struct Options(u32);
 
-#[allow(non_upper_case_globals)]
+#[allow(non_upper_case_globals, non_snake_case)]
 impl Options {
     /// `Options` representing the empty set. No dotfiles or index pages are
     /// rendered. This is different than the _default_, which enables `Index`.
@@ -53,6 +55,17 @@ impl Options {
     /// [`StaticFiles`] handler will respond to requests for files or
     /// directories beginning with `.`. This is _not_ enabled by default.
     pub const DotFiles: Options = Options(0b0010);
+
+    /// `Options` setting a rank of `rank` on the [`StaticFiles`] route(s). By
+    /// default, the rank is set to `10`.
+    pub const fn Rank(rank: i16) -> Options {
+        Options((rank as u32) << 16)
+    }
+
+    /// Return the rank set in `self`.
+    fn rank(self) -> isize {
+        ((self.0 >> 16) as i16) as isize
+    }
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the options in `other` are also in `self`.
@@ -77,6 +90,12 @@ impl Options {
     #[inline]
     pub fn contains(self, other: Options) -> bool {
         (other.0 & self.0) == other.0
+    }
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options::Index | Options::Rank(10)
     }
 }
 
@@ -154,8 +173,9 @@ pub struct StaticFiles {
 
 impl StaticFiles {
     /// Constructs a new `StaticFiles` that serves files from the file system
-    /// `path`. By default, [`Options::Index`] is enabled. To serve static files
-    /// with other options, use [`StaticFiles::new()`].
+    /// `path`. By default, [`Options::Index`] and
+    /// [`Options::Rank(10)`](Options::Rank) are set. To serve static files with
+    /// other options, use [`StaticFiles::new()`].
     ///
     /// # Example
     ///
@@ -176,7 +196,7 @@ impl StaticFiles {
     /// }
     /// ```
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
-        StaticFiles::new(path, Options::Index)
+        StaticFiles::new(path, Options::default())
     }
 
     /// Constructs a new `StaticFiles` that serves files from the file system
@@ -186,7 +206,8 @@ impl StaticFiles {
     ///
     /// Serve the static files in the `/www/public` local directory on path
     /// `/static` without serving index files or dot files. Additionally, serve
-    /// the same files on `/pub` while also seriving index files and dot files.
+    /// the same files on `/pub` with a route rank of -1 while also serving
+    /// index files and dot files.
     ///
     /// ```rust
     /// # extern crate rocket;
@@ -195,7 +216,7 @@ impl StaticFiles {
     ///
     /// fn main() {
     /// # if false {
-    ///     let options = Options::Index | Options::DotFiles;
+    ///     let options = Options::Index | Options::DotFiles | Options::Rank(-1);
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
     ///         .mount("/pub", StaticFiles::new("/www/public", options))
@@ -210,9 +231,10 @@ impl StaticFiles {
 
 impl Into<Vec<Route>> for StaticFiles {
     fn into(self) -> Vec<Route> {
-        let non_index = Route::ranked(10, Method::Get, "/<path..>", self.clone());
+        let rank = self.options.rank();
+        let non_index = Route::ranked(rank, Method::Get, "/<path..>", self.clone());
         if self.options.contains(Options::Index) {
-            let index = Route::ranked(10, Method::Get, "/", self);
+            let index = Route::ranked(rank, Method::Get, "/", self);
             vec![index, non_index]
         } else {
             vec![non_index]
