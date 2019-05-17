@@ -109,15 +109,11 @@ mod static_tests {
     #[test]
     fn test_ranking() {
         let root = static_root();
-        for rank in (-128..127).chain([-32768, 32767].iter().cloned()) {
-            let opt_rank = Options::Rank(rank as i16);
-            let a = StaticFiles::new(&root, opt_rank);
-            let b = StaticFiles::new(&root, Options::None | opt_rank);
-            let c = StaticFiles::new(&root, Options::Index | opt_rank);
-            let d = StaticFiles::new(&root, Options::DotFiles | opt_rank);
-            let e = StaticFiles::new(&root, Options::Index | Options::DotFiles | opt_rank);
+        for rank in -128..128 {
+            let a = StaticFiles::new(&root, Options::None).rank(rank);
+            let b = StaticFiles::from(&root).rank(rank);
 
-            for handler in vec![a, b, c, d, e] {
+            for handler in vec![a, b] {
                 let routes: Vec<Route> = handler.into();
                 assert!(routes.iter().all(|route| route.rank == rank), "{}", rank);
             }
