@@ -16,7 +16,7 @@ pub(crate) fn dummy_handler<'r>(r: &'r crate::Request<'_>, _: crate::Data) -> cr
     crate::Outcome::from(r, ())
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }

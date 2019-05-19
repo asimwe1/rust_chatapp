@@ -22,7 +22,9 @@ private-cookies = ["cookie/private", "cookie/key-expansion"]
 [dependencies]
 smallvec = "1.0"
 percent-encoding = "1"
-hyper = { version = "0.10.13", default-features = false }
+hyper = { version = "0.12.31", default-features = false, features = ["tokio"] }
+http = "0.1.17"
+mime = "0.3.13"
 time = "0.2.11"
 indexmap = "1.0"
 rustls = { version = ">=0.16, <=0.17", optional = true }
