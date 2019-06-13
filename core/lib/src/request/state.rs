@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
-use Rocket;
-use request::{self, FromRequest, Request};
-use outcome::Outcome;
-use http::Status;
+use crate::Rocket;
+use crate::request::{self, FromRequest, Request};
+use crate::outcome::Outcome;
+use crate::http::Status;
 
 /// Request guard to retrieve managed state.
 ///
@@ -11,7 +11,7 @@ use http::Status;
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
 /// registered to be managed by Rocket via
-/// [`Rocket::manage()`](::Rocket::manage()). The type being managed must be
+/// [`Rocket::manage()`]. The type being managed must be
 /// thread safe and sendable across thread boundaries. In other words, it must
 /// implement [`Send`] + [`Sync`] + 'static`.
 ///
@@ -70,10 +70,10 @@ use http::Status;
 /// # struct MyConfig{ user_val: String };
 /// struct Item(String);
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for Item {
+/// impl FromRequest<'_, '_> for Item {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Item, ()> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Item, ()> {
 ///         request.guard::<State<MyConfig>>()
 ///             .map(|my_config| Item(my_config.user_val.clone()))
 ///     }
@@ -165,11 +165,11 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     }
 }
 
-impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
+impl<'r, T: Send + Sync + 'static> FromRequest<'_, 'r> for State<'r, T> {
     type Error = ();
 
     #[inline(always)]
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
+    fn from_request(req: &Request<'r>) -> request::Outcome<State<'r, T>, ()> {
         match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
@@ -180,7 +180,7 @@ impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
     }
 }
 
-impl<'r, T: Send + Sync + 'static> Deref for State<'r, T> {
+impl<T: Send + Sync + 'static> Deref for State<'_, T> {
     type Target = T;
 
     #[inline(always)]

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::fmt::Debug;
 use std::borrow::Cow;
 
-use http::{RawStr, uri::{Segments, SegmentError}};
+use crate::http::{RawStr, uri::{Segments, SegmentError}};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -322,10 +322,10 @@ impl<'a> FromSegments<'a> for Segments<'a> {
 /// As a result of these conditions, a `PathBuf` derived via `FromSegments` is
 /// safe to interpolate within, or use as a suffix of, a path without additional
 /// checks.
-impl<'a> FromSegments<'a> for PathBuf {
+impl FromSegments<'_> for PathBuf {
     type Error = SegmentError;
 
-    fn from_segments(segments: Segments<'a>) -> Result<PathBuf, SegmentError> {
+    fn from_segments(segments: Segments<'_>) -> Result<PathBuf, SegmentError> {
         segments.into_path_buf(false)
     }
 }

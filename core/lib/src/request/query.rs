@@ -1,4 +1,4 @@
-use request::{FormItems, FormItem, Form, LenientForm, FromForm};
+use crate::request::{FormItems, FormItem, Form, LenientForm, FromForm};
 
 /// Iterator over form items in a query string.
 ///
@@ -34,9 +34,9 @@ use request::{FormItems, FormItem, Form, LenientForm, FromForm};
 /// # use rocket::request::FromQuery;
 /// #
 /// # struct MyType;
-/// # type Result = ::std::result::Result<MyType, ()>;
+/// # type Result = std::result::Result<MyType, ()>;
 /// #
-/// # impl<'q> FromQuery<'q> for MyType {
+/// # impl FromQuery<'_> for MyType {
 /// #    type Error = ();
 /// #
 /// fn from_query(query: Query) -> Result {
