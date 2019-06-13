@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::Utf8Error;
 
-use uri::Uri;
+use crate::uri::Uri;
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///
@@ -40,7 +40,7 @@ pub enum SegmentError {
     BadEnd(char),
 }
 
-impl<'a> Segments<'a> {
+impl Segments<'_> {
     /// Creates a `PathBuf` from a `Segments` iterator. The returned `PathBuf`
     /// is percent-decoded. If a segment is equal to "..", the previous segment
     /// (if any) is skipped.

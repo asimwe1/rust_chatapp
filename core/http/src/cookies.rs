@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cell::RefMut;
 
-use Header;
+use crate::Header;
 use cookie::Delta;
 
 #[doc(hidden)] pub use self::key::*;
@@ -40,7 +40,7 @@ mod key {
 /// can be added or removed via the [`add()`], [`add_private()`], [`remove()`],
 /// and [`remove_private()`] methods.
 ///
-/// [`Request::cookies()`]: ::rocket::Request::cookies()
+/// [`Request::cookies()`]: rocket::Request::cookies()
 /// [`get()`]: #method.get
 /// [`get_private()`]: #method.get_private
 /// [`add()`]: #method.add
@@ -84,10 +84,10 @@ mod key {
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for User {
+/// impl FromRequest<'_, '_> for User {
 ///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, !> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<User, !> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
@@ -260,7 +260,7 @@ impl<'a> Cookies<'a> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[inline]
     #[doc(hidden)]
-    pub fn delta(&self) -> Delta {
+    pub fn delta(&self) -> Delta<'_> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
             Cookies::Empty(ref jar) => jar.delta()
@@ -269,7 +269,7 @@ impl<'a> Cookies<'a> {
 }
 
 #[cfg(feature = "private-cookies")]
-impl<'a> Cookies<'a> {
+impl Cookies<'_> {
     /// Returns a reference to the `Cookie` inside this collection with the name
     /// `name` and authenticates and decrypts the cookie's value, returning a
     /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
@@ -362,7 +362,7 @@ impl<'a> Cookies<'a> {
         }
 
         if cookie.expires().is_none() {
-            cookie.set_expires(::time::now() + ::time::Duration::weeks(1));
+            cookie.set_expires(time::now() + time::Duration::weeks(1));
         }
 
         if cookie.same_site().is_none() {
@@ -400,8 +400,8 @@ impl<'a> Cookies<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Cookies<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Debug for Cookies<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
             Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
@@ -409,14 +409,14 @@ impl<'a> fmt::Debug for Cookies<'a> {
     }
 }
 
-impl<'c> From<Cookie<'c>> for Header<'static> {
-    fn from(cookie: Cookie) -> Header<'static> {
+impl From<Cookie<'_>> for Header<'static> {
+    fn from(cookie: Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }
 
-impl<'a, 'c> From<&'a Cookie<'c>> for Header<'static> {
-    fn from(cookie: &Cookie) -> Header<'static> {
+impl From<&Cookie<'_>> for Header<'static> {
+    fn from(cookie: &Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }
