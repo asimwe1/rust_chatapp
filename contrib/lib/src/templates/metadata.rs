@@ -2,7 +2,7 @@ use rocket::{Request, State, Outcome};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
-use templates::ContextManager;
+use crate::templates::ContextManager;
 
 /// Request guard for dynamiclly querying template metadata.
 ///
@@ -39,7 +39,7 @@ use templates::ContextManager;
 /// ```
 pub struct Metadata<'a>(&'a ContextManager);
 
-impl<'a> Metadata<'a> {
+impl Metadata<'_> {
     /// Returns `true` if the template with the given `name` is currently
     /// loaded.  Otherwise, returns `false`.
     ///
@@ -87,11 +87,11 @@ impl<'a> Metadata<'a> {
 /// Retrieves the template metadata. If a template fairing hasn't been attached,
 /// an error is printed and an empty `Err` with status `InternalServerError`
 /// (`500`) is returned.
-impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
+impl<'a> FromRequest<'a, '_> for Metadata<'a> {
     type Error = ();
 
-    fn from_request(request: &'a Request) -> request::Outcome<Self, ()> {
-        request.guard::<State<ContextManager>>()
+    fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, ()> {
+        request.guard::<State<'_, ContextManager>>()
             .succeeded()
             .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {

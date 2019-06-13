@@ -95,7 +95,7 @@ impl Uuid {
 
 impl fmt::Display for Uuid {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -127,7 +127,7 @@ impl FromStr for Uuid {
 
     #[inline]
     fn from_str(s: &str) -> Result<Uuid, Self::Err> {
-        Ok(Uuid(try!(s.parse())))
+        s.parse().map(Uuid)
     }
 }
 

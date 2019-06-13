@@ -22,8 +22,6 @@
 //! application vulnerable to attacks including BREACH. These risks should be
 //! evaluated in the context of your application before enabling compression.
 //!
-#[cfg(feature="brotli_compression")] extern crate brotli;
-#[cfg(feature="gzip_compression")] extern crate flate2;
 
 mod fairing;
 mod responder;
@@ -38,15 +36,15 @@ use rocket::http::hyper::header::{ContentEncoding, Encoding};
 use rocket::{Request, Response};
 
 #[cfg(feature = "brotli_compression")]
-use self::brotli::enc::backward_references::BrotliEncoderMode;
+use brotli::enc::backward_references::BrotliEncoderMode;
 
 #[cfg(feature = "gzip_compression")]
-use self::flate2::read::GzEncoder;
+use flate2::read::GzEncoder;
 
 struct CompressionUtils;
 
 impl CompressionUtils {
-    fn accepts_encoding(request: &Request, encoding: &str) -> bool {
+    fn accepts_encoding(request: &Request<'_>, encoding: &str) -> bool {
         request
             .headers()
             .get("Accept-Encoding")
@@ -55,7 +53,7 @@ impl CompressionUtils {
             .any(|accept| accept == encoding)
     }
 
-    fn already_encoded(response: &Response) -> bool {
+    fn already_encoded(response: &Response<'_>) -> bool {
         response.headers().get("Content-Encoding").next().is_some()
     }
 
@@ -84,7 +82,7 @@ impl CompressionUtils {
         }
     }
 
-    fn compress_response(request: &Request, response: &mut Response, exclusions: &[MediaType]) {
+    fn compress_response(request: &Request<'_>, response: &mut Response<'_>, exclusions: &[MediaType]) {
         if CompressionUtils::already_encoded(response) {
             return;
         }
