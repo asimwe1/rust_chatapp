@@ -1,7 +1,7 @@
 language: rust
 sudo: required # so we get a VM with higher specs
 dist: trusty # so we get a VM with higher specs
-cache: cargo
+cache: false
 env:
   - TEST_FLAGS=
   - TEST_FLAGS=--release
