@@ -1,4 +1,5 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
+#![feature(async_await)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
@@ -96,12 +97,8 @@ vars_and_mods! {
     Data => rocket::Data,
     StaticRouteInfo => rocket::StaticRouteInfo,
     SmallVec => rocket::http::private::SmallVec,
-    _Option => ::std::option::Option,
-    _Result => ::std::result::Result,
-    _Some => ::std::option::Option::Some,
-    _None => ::std::option::Option::None,
-    _Ok => ::std::result::Result::Ok,
-    _Err => ::std::result::Result::Err,
+    HandlerFuture => rocket::handler::HandlerFuture,
+    ErrorHandlerFuture => rocket::handler::ErrorHandlerFuture,
 }
 
 macro_rules! define_vars_and_mods {

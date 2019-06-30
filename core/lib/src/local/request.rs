@@ -107,9 +107,7 @@ impl<'c> LocalRequest<'c> {
         uri: Cow<'c, str>
     ) -> LocalRequest<'c> {
         // We set a dummy string for now and check the user's URI on dispatch.
-        let config = &client.rocket().config;
-        let state = &client.rocket().state;
-        let request = Request::new(config, state, method, Origin::dummy());
+        let request = Request::new(client.rocket(), method, Origin::dummy());
 
         // Set up any cookies we know about.
         if let Some(ref jar) = client.cookies {
@@ -399,40 +397,46 @@ impl<'c> LocalRequest<'c> {
         uri: &str,
         data: Vec<u8>
     ) -> LocalResponse<'c> {
+        let maybe_uri = Origin::parse(uri);
+
         // First, validate the URI, returning an error response (generated from
         // an error catcher) immediately if it's invalid.
-        if let Ok(uri) = Origin::parse(uri) {
+        if let Ok(uri) = maybe_uri {
             request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", uri);
-            let res = client.rocket().handle_error(Status::BadRequest, request);
-            return LocalResponse { _request: owned_request, response: res };
+            return futures::executor::block_on(async move {
+                let res = client.rocket().handle_error(Status::BadRequest, request).await;
+                LocalResponse { _request: owned_request, response: res }
+            })
         }
 
-        // Actually dispatch the request.
-        let response = client.rocket().dispatch(request, Data::new(data));
+        futures::executor::block_on(async move {
+            // Actually dispatch the request.
+            let response = client.rocket().dispatch(request, Data::local(data)).await;
 
-        // If the client is tracking cookies, updates the internal cookie jar
-        // with the changes reflected by `response`.
-        if let Some(ref jar) = client.cookies {
-            let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
+            // If the client is tracking cookies, updates the internal cookie jar
+            // with the changes reflected by `response`.
+            if let Some(ref jar) = client.cookies {
+                let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
             let current_time = time::OffsetDateTime::now_utc();
-            for cookie in response.cookies() {
-                if let Some(expires) = cookie.expires() {
-                    if expires <= current_time {
-                        jar.force_remove(cookie);
-                        continue;
+                for cookie in response.cookies() {
+                    if let Some(expires) = cookie.expires() {
+                        if expires <= current_time {
+                            jar.force_remove(cookie);
+                            continue;
+                        }
                     }
+
+                    jar.add(cookie.into_owned());
                 }
-
-                jar.add(cookie.into_owned());
             }
-        }
 
-        LocalResponse {
-            _request: owned_request,
-            response: response
-        }
+            LocalResponse {
+                _request: owned_request,
+                response: response
+            }
+        })
     }
 }
 
@@ -452,6 +456,16 @@ impl fmt::Debug for LocalRequest<'_> {
 pub struct LocalResponse<'c> {
     _request: Rc<Request<'c>>,
     response: Response<'c>,
+}
+
+impl LocalResponse<'_> {
+    pub fn body_string_wait(&mut self) -> Option<String> {
+        futures::executor::block_on(self.body_string())
+    }
+
+    pub fn body_bytes_wait(&mut self) -> Option<Vec<u8>> {
+        futures::executor::block_on(self.body_bytes())
+    }
 }
 
 impl<'c> Deref for LocalResponse<'c> {

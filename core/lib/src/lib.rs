@@ -1,4 +1,5 @@
 #![feature(proc_macro_hygiene)]
+#![feature(async_await)]
 
 #![recursion_limit="256"]
 

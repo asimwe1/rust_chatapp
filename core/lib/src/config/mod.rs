@@ -460,7 +460,7 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{FullConfig, ConfigError, ConfigBuilder};
+    use super::{Config, FullConfig, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
     use super::Environment::*;
@@ -1071,19 +1071,6 @@ mod test {
         }
     }
 
-    macro_rules! check_value {
-        ($key:expr, $val:expr, $config:expr) => (
-            match $key {
-                "log" => assert_eq!($config.log_level, $val.parse().unwrap()),
-                "port" => assert_eq!($config.port, $val.parse().unwrap()),
-                "address" => assert_eq!($config.address, $val),
-                "extra_extra" => assert_eq!($config.get_bool($key).unwrap(), true),
-                "workers" => assert_eq!($config.workers, $val.parse().unwrap()),
-                _ => panic!("Unexpected key: {}", $key)
-            }
-        )
-    }
-
     #[test]
     fn test_env_override() {
         // Take the lock so changing the environment doesn't cause races.
@@ -1094,6 +1081,17 @@ mod test {
             ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
         ];
 
+        let check_value = |key: &str, val: &str, config: &Config| {
+            match key {
+                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
+                "port" => assert_eq!(config.port, val.parse::<u16>().unwrap()),
+                "address" => assert_eq!(config.address, val),
+                "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
+                "workers" => assert_eq!(config.workers, val.parse::<u16>().unwrap()),
+                _ => panic!("Unexpected key: {}", key)
+            }
+        };
+
         // Check that setting the environment variable actually changes the
         // config for the default active and nonactive environments.
         for &(key, val) in &pairs {
@@ -1103,13 +1101,13 @@ mod test {
             for env in &Environment::ALL {
                 env::set_var(CONFIG_ENV, env.to_string());
                 let rconfig = env_default().unwrap();
-                check_value!(&*key.to_lowercase(), val, rconfig.active());
+                check_value(&*key.to_lowercase(), val, rconfig.active());
             }
 
             // And non-active configs.
             let rconfig = env_default().unwrap();
             for env in &Environment::ALL {
-                check_value!(&*key.to_lowercase(), val, rconfig.get(*env));
+                check_value(&*key.to_lowercase(), val, rconfig.get(*env));
             }
         }
 
@@ -1144,11 +1142,11 @@ mod test {
 
             let mut r = FullConfig::parse(toml, TEST_CONFIG_FILENAME).unwrap();
             r.override_from_env().unwrap();
-            check_value!(&*key.to_lowercase(), val, r.active());
+            check_value(&*key.to_lowercase(), val, r.active());
 
             // And non-active configs.
             for env in &Environment::ALL {
-                check_value!(&*key.to_lowercase(), val, r.get(*env));
+                check_value(&*key.to_lowercase(), val, r.get(*env));
             }
         }
 

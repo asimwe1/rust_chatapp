@@ -1,3 +1,3 @@
-#![feature(external_doc)]
+// #![feature(external_doc)]
 
-rocket::rocket_internal_guide_tests!("../guide/*.md");
+// rocket::rocket_internal_guide_tests!("../guide/*.md");
