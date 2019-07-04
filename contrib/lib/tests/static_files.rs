@@ -44,7 +44,7 @@ mod static_tests {
     ];
 
     fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
-        let full_path = format!("/{}", Path::new(prefix).join(path).display());
+        let full_path = format!("/{}/{}", prefix, path);
         let mut response = client.get(full_path).dispatch();
         if exists {
             assert_eq!(response.status(), Status::Ok);

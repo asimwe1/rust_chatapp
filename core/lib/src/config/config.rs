@@ -331,8 +331,6 @@ impl Config {
     ///
     /// # #[cfg(not(windows))]
     /// assert_eq!(config.root().unwrap(), Path::new("/var/my_app"));
-    /// # #[cfg(windows)]
-    /// assert_eq!(config.root().unwrap(), Path::new("C:\\var\\my_app"));
     /// ```
     pub fn set_root<P: AsRef<Path>>(&mut self, path: P) {
         self.root_path = Some(path.as_ref().into());

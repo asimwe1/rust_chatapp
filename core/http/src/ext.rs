@@ -109,7 +109,7 @@ pub trait Normalize {
 
 impl<T: AsRef<Path>> Normalize for T {
     #[cfg(windows)]
-    fn normalized_str(&self) -> Cow<str> {
+    fn normalized_str(&self) -> Cow<'_, str> {
         self.as_ref().to_string_lossy().replace('\\', "/").into()
     }
 
