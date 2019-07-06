@@ -1,6 +1,6 @@
 # Rocket
 
-[![Build Status](https://dev.azure.com/SergioBenitez/Rocket/_apis/build/status/SergioBenitez.Rocket-Azure%20(1)?branchName=master)](https://dev.azure.com/SergioBenitez/Rocket/_build/latest?definitionId=2&branchName=master)
+[![Build Status](https://dev.azure.com/SergioBenitez/Rocket/_apis/build/status/SergioBenitez.Rocket?branchName=master)](https://dev.azure.com/SergioBenitez/Rocket/_build/latest?definitionId=3&branchName=master)
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Chat on Matrix](https://img.shields.io/badge/style-matrix-blue.svg?style=flat&label=chat)](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org)
