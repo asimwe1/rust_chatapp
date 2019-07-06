@@ -1,6 +1,6 @@
 # Rocket
 
-[![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket)
+[![Build Status](https://dev.azure.com/SergioBenitez/Rocket/_apis/build/status/SergioBenitez.Rocket-Azure%20(1)?branchName=master)](https://dev.azure.com/SergioBenitez/Rocket/_build/latest?definitionId=2&branchName=master)
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Chat on Matrix](https://img.shields.io/badge/style-matrix-blue.svg?style=flat&label=chat)](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org)
@@ -91,8 +91,12 @@ You should see `Hello, world!` by visiting `http://localhost:8000`.
 
 To test Rocket, simply run `./scripts/test.sh` from the root of the source tree.
 This will build and test the `core`, `codegen`, and `contrib` libraries as well
-as all of the examples. This is the script that gets run by Travis CI. To test a
-crate individually, run `cargo test --all-features`.
+as all of the examples. The `test.sh` script accepts no flags or either the
+`--release` flag to test in release mode or the `--contrib` flag to test all
+`contrib` modules individually. This script gets run by CI.
+
+To test a crate individually, run `cargo test --all-features` in the
+corresponding crate directory.
 
 ### Core
 
