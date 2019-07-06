@@ -1,4 +1,14 @@
 name: Rocket
+
+schedules:
+- cron: "0 4 * * *"
+  displayName: Nightly 4AM UTC Build
+  branches:
+    include:
+    - master
+    - v0.4
+  always: true
+
 jobs:
 - template: azure-pipelines-template.yml
   parameters:
