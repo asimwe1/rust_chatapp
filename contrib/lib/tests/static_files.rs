@@ -116,4 +116,31 @@ mod static_tests {
             }
         }
     }
+
+    #[test]
+    fn test_forwarding() {
+        use rocket::http::RawStr;
+        use rocket::{get, routes};
+
+        #[get("/<value>", rank = 20)]
+        fn catch_one(value: String) -> String { value }
+
+        #[get("/<a>/<b>", rank = 20)]
+        fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
+
+        let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
+        let client = Client::new(rocket).expect("valid rocket");
+
+        let mut response = client.get("/default/ireallydontexist").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.body_string().unwrap(), "ireallydontexist");
+
+        let mut response = client.get("/default/idont/exist").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.body_string().unwrap(), "idont/exist");
+
+        assert_all(&client, "both", REGULAR_FILES, true);
+        assert_all(&client, "both", HIDDEN_FILES, true);
+        assert_all(&client, "both", INDEXED_DIRECTORIES, true);
+    }
 }

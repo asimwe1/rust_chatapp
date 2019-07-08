@@ -17,10 +17,9 @@
 use std::path::{PathBuf, Path};
 
 use rocket::{Request, Data, Route};
-use rocket::http::{Method, Status, uri::Segments};
+use rocket::http::{Method, uri::Segments};
 use rocket::handler::{Handler, Outcome};
 use rocket::response::NamedFile;
-use rocket::outcome::IntoOutcome;
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
@@ -101,19 +100,21 @@ impl std::ops::BitOr for Options {
 /// local file system. To use it, construct a `StaticFiles` using either
 /// [`StaticFiles::from()`] or [`StaticFiles::new()`] then simply `mount` the
 /// handler at a desired path. When mounted, the handler will generate route(s)
-/// that serve the desired static files.
+/// that serve the desired static files. If a requested file is not found, the
+/// routes _forward_ the incoming request. The default rank of the generated
+/// routes is `10`. To customize route ranking, use the [`StaticFiles::rank()`]
+/// method.
 ///
 /// # Options
 ///
 /// The handler's functionality can be customized by passing an [`Options`] to
-/// [`StaticFiles::new()`]. Additionally, the rank of generate routes, which
-/// defaults to `10`, can be set via the [`StaticFiles::rank()`] builder method.
+/// [`StaticFiles::new()`].
 ///
 /// # Example
 ///
-/// To serve files from the `/static` directory at the `/public` path, allowing
-/// `index.html` files to be used to respond to requests for a directory (the
-/// default), you might write the following:
+/// To serve files from the `/static` local file system directory at the
+/// `/public` path, allowing `index.html` files to be used to respond to
+/// requests for a directory (the default), you might write the following:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -129,10 +130,10 @@ impl std::ops::BitOr for Options {
 /// }
 /// ```
 ///
-/// With this set-up, requests for files at `/public/<path..>` will be handled
-/// by returning the contents of `/static/<path..>`. Requests for _directories_
-/// at `/public/<directory>` will be handled by returning the contents of
-/// `/static/<directory>/index.html`.
+/// With this, requests for files at `/public/<path..>` will be handled by
+/// returning the contents of `./static/<path..>`. Requests for _directories_ at
+/// `/public/<directory>` will be handled by returning the contents of
+/// `./static/<directory>/index.html`.
 ///
 /// If your static files are stored relative to your crate and your project is
 /// managed by Cargo, you should either use a relative path and ensure that your
@@ -272,13 +273,14 @@ impl Into<Vec<Route>> for StaticFiles {
 }
 
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request<'_>, _: Data) -> Outcome<'r> {
-        fn handle_index<'r>(opt: Options, r: &'r Request<'_>, path: &Path) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> Outcome<'r> {
             if !opt.contains(Options::Index) {
-                return Outcome::failure(Status::NotFound);
+                return Outcome::forward(d);
             }
 
-            Outcome::from(r, NamedFile::open(path.join("index.html")).ok())
+            let file = NamedFile::open(path.join("index.html")).ok();
+            Outcome::from_or_forward(r, d, file)
         }
 
         // If this is not the route with segments, handle it only if the user
@@ -286,7 +288,7 @@ impl Handler for StaticFiles {
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            return handle_index(self.options, req, &self.root);
+            return handle_dir(self.options, req, data, &self.root);
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -295,13 +297,12 @@ impl Handler for StaticFiles {
         let path = req.get_segments::<Segments<'_>>(0)
             .and_then(|res| res.ok())
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
-            .map(|path| self.root.join(path))
-            .into_outcome(Status::NotFound)?;
+            .map(|path| self.root.join(path));
 
-        if path.is_dir() {
-            handle_index(self.options, req, &path)
-        } else {
-            Outcome::from(req, NamedFile::open(&path).ok())
+        match &path {
+            Some(path) if path.is_dir() => handle_dir(self.options, req, data, path),
+            Some(path) => Outcome::from_or_forward(req, data, NamedFile::open(path).ok()),
+            None => Outcome::forward(data)
         }
     }
 }

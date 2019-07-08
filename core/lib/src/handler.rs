@@ -206,6 +206,32 @@ impl<'r> Outcome<'r> {
         }
     }
 
+    /// Return the `Outcome` of response to `req` from `responder`.
+    ///
+    /// If the responder returns `Ok`, an outcome of `Success` is
+    /// returned with the response. If the responder returns `Err`, an
+    /// outcome of `Forward` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::{Request, Data};
+    /// use rocket::handler::Outcome;
+    ///
+    /// fn str_responder(req: &Request, data: Data) -> Outcome<'static> {
+    ///     Outcome::from_or_forward(req, data, "Hello, world!")
+    /// }
+    /// ```
+    #[inline]
+    pub fn from_or_forward<T>(req: &Request<'_>, data: Data, responder: T) -> Outcome<'r>
+        where T: Responder<'r>
+    {
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(_) => outcome::Outcome::Forward(data)
+        }
+    }
+
     /// Return an `Outcome` of `Failure` with the status code `code`. This is
     /// equivalent to `Outcome::Failure(code)`.
     ///
