@@ -64,8 +64,13 @@
 //! template's extension. At present, this library supports the following
 //! engines and extensions:
 //!
-//!   * **Tera**: `.tera`
-//!   * **Handlebars**: `.hbs`
+//! | Engine       | Version | Extension |
+//! |--------------|---------|-----------|
+//! | [Tera]       | 0.11    | `.tera`   |
+//! | [Handlebars] | 2       | `.hbs`    |
+//!
+//! [Tera]: https://docs.rs/crate/tera/0.11
+//! [Handlebars]: https://docs.rs/crate/handlebars/2
 //!
 //! Any file that ends with one of these extension will be discovered and
 //! rendered with the corresponding templating engine. The _name_ of the
