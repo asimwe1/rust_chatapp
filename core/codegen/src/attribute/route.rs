@@ -381,7 +381,7 @@ fn generate_respond_expr(route: &Route) -> TokenStream2 {
 
     quote_spanned! { ret_span =>
         #responder_stmt
-        #handler::Outcome::from(#req, ___responder)
+        #handler::Outcome::from(#req, ___responder).await
     }
 }
 

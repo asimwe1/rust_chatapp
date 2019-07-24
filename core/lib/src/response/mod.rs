@@ -48,3 +48,5 @@ pub use self::debug::Debug;
 
 /// Type alias for the `Result` of a `Responder::respond` call.
 pub type Result<'r> = std::result::Result<self::Response<'r>, crate::http::Status>;
+/// Type alias for the `Result` of a `Responder::respond` call.
+pub type ResultFuture<'r> = std::pin::Pin<Box<dyn std::future::Future<Output=Result<'r>> + Send + 'r>>;

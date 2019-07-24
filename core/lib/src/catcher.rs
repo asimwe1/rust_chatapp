@@ -157,7 +157,7 @@ macro_rules! default_catchers {
                 (async move {
                     status::Custom(Status::from_code($code).unwrap(),
                         content::Html(error_page_template!($code, $name, $description))
-                    ).respond_to(req)
+                    ).respond_to(req).await
                 }).boxed()
             }
 
