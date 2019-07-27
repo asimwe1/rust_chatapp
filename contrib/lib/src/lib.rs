@@ -1,3 +1,4 @@
+#![feature(async_await)]
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
