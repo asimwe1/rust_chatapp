@@ -2,7 +2,7 @@
 // normalize-stderr-test: "and \d+ others" -> "and $$N others"
 // normalize-stderr-test: "::: (.*)/core/http" -> "::: $$ROCKET/core/http"
 
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 

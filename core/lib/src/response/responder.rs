@@ -13,7 +13,7 @@ use crate::request::Request;
 /// as illustrated below with `T`:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// #
@@ -154,7 +154,7 @@ use crate::request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]
@@ -166,14 +166,16 @@ use crate::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl Responder<'_> for Person {
-///     fn respond_to(self, _: &Request) -> response::Result<'static> {
-///         Response::build()
-///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
-///             .raw_header("X-Person-Name", self.name)
-///             .raw_header("X-Person-Age", self.age.to_string())
-///             .header(ContentType::new("application", "x-person"))
-///             .ok()
+/// impl Responder<'r> for Person {
+///     fn respond_to(self, _: &'r Request) -> response::ResultFuture<'r> {
+///         Box::pin(async move {
+///             Response::build()
+///                 .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
+///                 .raw_header("X-Person-Name", self.name)
+///                 .raw_header("X-Person-Age", self.age.to_string())
+///                 .header(ContentType::new("application", "x-person"))
+///                 .ok()
+///         })
 ///     }
 /// }
 /// #

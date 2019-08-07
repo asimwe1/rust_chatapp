@@ -48,7 +48,7 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
+//! #![feature(proc_macro_hygiene, async_await)]
 //!
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
@@ -59,7 +59,7 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
+//! #![feature(proc_macro_hygiene, async_await)]
 //!
 //! #[macro_use] extern crate rocket;
 //!
