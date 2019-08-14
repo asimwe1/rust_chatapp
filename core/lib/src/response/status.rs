@@ -50,13 +50,15 @@ impl<'r, R> Created<R> {
     ///     status::Created::new("http://myservice.com/resource.json")
     /// }
     ///
+    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
+    /// let mut response = client.get("/").dispatch().await;
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
     /// assert!(response.body().is_none());
+    /// });
     /// ```
     pub fn new<L: Into<Cow<'static, str>>>(location: L) -> Self {
         Created(location.into(), None, None)
@@ -80,11 +82,12 @@ impl<'r, R> Created<R> {
     ///         .body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
+    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
+    /// let mut response = client.get("/").dispatch().await;
     ///
-    /// let body = response.body_string();
+    /// let body = response.body_string().await;
     /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
     ///
     /// let loc = response.headers().get_one("Location");
@@ -92,6 +95,7 @@ impl<'r, R> Created<R> {
     ///
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, None);
+    /// # });
     /// ```
     pub fn body(mut self, responder: R) -> Self
         where R: Responder<'r>
@@ -116,11 +120,12 @@ impl<'r, R> Created<R> {
     ///         .tagged_body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
+    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
+    /// let mut response = client.get("/").dispatch().await;
     ///
-    /// let body = response.body_string();
+    /// let body = response.body_string().await;
     /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
     ///
     /// let loc = response.headers().get_one("Location");
@@ -128,6 +133,7 @@ impl<'r, R> Created<R> {
     ///
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, Some(r#""13046220615156895040""#));
+    /// # });
     /// ```
     pub fn tagged_body(mut self, responder: R) -> Self
         where R: Responder<'r> + Hash

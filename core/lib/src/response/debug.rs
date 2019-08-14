@@ -18,16 +18,20 @@ use yansi::Paint;
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene)]
-/// use std::io::{self, Read};
+/// use std::io;
+///
+/// use futures::io::AsyncReadExt;
 ///
 /// # use rocket::post;
 /// use rocket::Data;
 /// use rocket::response::Debug;
 ///
+/// use rocket::AsyncReadExt as _;
+///
 /// #[post("/", format = "plain", data = "<data>")]
-/// fn post(data: Data) -> Result<String, Debug<io::Error>> {
+/// async fn post(data: Data) -> Result<String, Debug<io::Error>> {
 ///     let mut name = String::with_capacity(32);
-///     data.open().take(32).read_to_string(&mut name)?;
+///     data.open().take(32).read_to_string(&mut name).await?;
 ///     Ok(name)
 /// }
 /// ```
