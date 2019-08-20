@@ -8,11 +8,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::pin::Pin;
 
-use futures::compat::{Compat, Executor01CompatExt, Sink01CompatExt};
-use futures::future::{Future, FutureExt, TryFutureExt};
-use futures::sink::SinkExt;
+use futures::future::Future;
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
+use futures_tokio_compat::Compat as TokioCompat;
 
 use yansi::Paint;
 use state::Container;
@@ -47,76 +46,53 @@ pub struct Rocket {
     fairings: Fairings,
 }
 
-struct RocketHyperService {
+// This function tries to hide all of the Hyper-ness from Rocket. It
+// essentially converts Hyper types into Rocket types, then calls the
+// `dispatch` function, which knows nothing about Hyper. Because responding
+// depends on the `HyperResponse` type, this function does the actual
+// response processing.
+fn hyper_service_fn(
     rocket: Arc<Rocket>,
-    spawn: Box<dyn futures::task::Spawn + Send>,
-    remote_addr: std::net::SocketAddr,
-}
+    h_addr: std::net::SocketAddr,
+    mut spawn: impl futures::task::Spawn,
+    hyp_req: hyper::Request<hyper::Body>,
+) -> impl Future<Output = Result<hyper::Response<hyper::Body>, io::Error>> {
+    // This future must return a hyper::Response, but that's not easy
+    // because the response body might borrow from the request. Instead,
+    // we do the body writing in another future that will send us
+    // the response metadata (and a body channel) beforehand.
+    let (tx, rx) = futures::channel::oneshot::channel();
 
-impl std::ops::Deref for RocketHyperService {
-    type Target = Rocket;
+    spawn.spawn(async move {
+        // Get all of the information from Hyper.
+        let (h_parts, h_body) = hyp_req.into_parts();
 
-    fn deref(&self) -> &Self::Target {
-        &*self.rocket
-    }
-}
+        // Convert the Hyper request into a Rocket request.
+        let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, h_parts.uri, h_addr);
+        let mut req = match req_res {
+            Ok(req) => req,
+            Err(e) => {
+                error!("Bad incoming request: {}", e);
+                // TODO: We don't have a request to pass in, so we just
+                // fabricate one. This is weird. We should let the user know
+                // that we failed to parse a request (by invoking some special
+                // handler) instead of doing this.
+                let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
+                let r = rocket.handle_error(Status::BadRequest, &dummy).await;
+                return rocket.issue_response(r, tx).await;
+            }
+        };
 
-#[doc(hidden)]
-impl hyper::Service for RocketHyperService {
-    type ReqBody = hyper::Body;
-    type ResBody = hyper::Body;
-    type Error = io::Error;
-    type Future = Compat<Pin<Box<dyn Future<Output = Result<hyper::Response<Self::ResBody>, Self::Error>> + Send>>>;
+        // Retrieve the data from the hyper body.
+        let data = Data::from_hyp(h_body).await;
 
-    // This function tries to hide all of the Hyper-ness from Rocket. It
-    // essentially converts Hyper types into Rocket types, then calls the
-    // `dispatch` function, which knows nothing about Hyper. Because responding
-    // depends on the `HyperResponse` type, this function does the actual
-    // response processing.
-    fn call<'h>(
-        &mut self,
-        hyp_req: hyper::Request<Self::ReqBody>,
-    ) -> Self::Future {
-        let rocket = self.rocket.clone();
-        let h_addr = self.remote_addr;
+        // Dispatch the request to get a response, then write that response out.
+        let r = rocket.dispatch(&mut req, data).await;
+        rocket.issue_response(r, tx).await;
+    }).expect("failed to spawn handler");
 
-        // This future must return a hyper::Response, but that's not easy
-        // because the response body might borrow from the request. Instead,
-        // we do the body writing in another future that will send us
-        // the response metadata (and a body channel) beforehand.
-        let (tx, rx) = futures::channel::oneshot::channel();
-
-        self.spawn.spawn(async move {
-            // Get all of the information from Hyper.
-            let (h_parts, h_body) = hyp_req.into_parts();
-
-            // Convert the Hyper request into a Rocket request.
-            let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, h_parts.uri, h_addr);
-            let mut req = match req_res {
-                Ok(req) => req,
-                Err(e) => {
-                    error!("Bad incoming request: {}", e);
-                    // TODO: We don't have a request to pass in, so we just
-                    // fabricate one. This is weird. We should let the user know
-                    // that we failed to parse a request (by invoking some special
-                    // handler) instead of doing this.
-                    let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
-                    let r = rocket.handle_error(Status::BadRequest, &dummy).await;
-                    return rocket.issue_response(r, tx).await;
-                }
-            };
-
-            // Retrieve the data from the hyper body.
-            let data = Data::from_hyp(h_body).await;
-
-            // Dispatch the request to get a response, then write that response out.
-            let r = rocket.dispatch(&mut req, data).await;
-            rocket.issue_response(r, tx).await;
-        }).expect("failed to spawn handler");
-
-        async move {
-            Ok(rx.await.expect("TODO.async: sender was dropped, error instead"))
-        }.boxed().compat()
+    async move {
+        Ok(rx.await.expect("TODO.async: sender was dropped, error instead"))
     }
 }
 
@@ -170,40 +146,26 @@ impl Rocket {
                 }
                 Some(Body::Sized(body, size)) => {
                     hyp_res.header(header::CONTENT_LENGTH, size.to_string());
-                    let (sender, hyp_body) = hyper::Body::channel();
+                    let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
                     let mut stream = body.into_chunk_stream(4096);
-                    let mut sink = sender.sink_compat().sink_map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e)
-                    });
-
                     while let Some(next) = stream.next().await {
-                        sink.send(next?).await?;
+                        futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).expect("send chunk");
                     }
-
-                    // TODO.async: This should be better, but it creates an
-                    // incomprehensible error messasge instead
-                    // stream.forward(sink).await;
                 }
                 Some(Body::Chunked(body, chunk_size)) => {
                     // TODO.async: This is identical to Body::Sized except for the chunk size
 
-                    let (sender, hyp_body) = hyper::Body::channel();
+                    let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
                     let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
-                    let mut sink = sender.sink_compat().sink_map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e)
-                    });
-
                     while let Some(next) = stream.next().await {
-                        sink.send(next?).await?;
+                        futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).expect("send chunk");
                     }
-
-                    // TODO.async: This should be better, but it creates an
-                    // incomprehensible error messasge instead
-                    // stream.forward(sink).await;
                 }
             };
 
@@ -770,7 +732,7 @@ impl Rocket {
 
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
-        let mut runtime = tokio::runtime::Builder::new()
+        let runtime = tokio::runtime::Builder::new()
             .core_threads(self.config.workers as usize)
             .build()
             .expect("Cannot build runtime!");
@@ -815,13 +777,16 @@ impl Rocket {
         logger::pop_max_level();
 
         let rocket = Arc::new(self);
-        let spawn = Box::new(runtime.executor().compat());
+        let spawn = Box::new(TokioCompat::new(runtime.executor()));
         let service = hyper::make_service_fn(move |socket: &hyper::AddrStream| {
-            futures::future::ok::<_, Box<dyn std::error::Error + Send + Sync>>(RocketHyperService {
-                rocket: rocket.clone(),
-                spawn: spawn.clone(),
-                remote_addr: socket.remote_addr(),
-            }).compat()
+            let rocket = rocket.clone();
+            let remote_addr = socket.remote_addr();
+            let spawn = spawn.clone();
+            async move {
+                Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
+                    hyper_service_fn(rocket.clone(), remote_addr, spawn.clone(), req)
+                }))
+            }
         });
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
