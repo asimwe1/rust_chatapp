@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, async_await)]
+#![feature(proc_macro_hygiene)]
 #![recursion_limit="512"]
 
 #![warn(rust_2018_idioms)]
