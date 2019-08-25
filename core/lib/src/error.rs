@@ -8,6 +8,13 @@ use yansi::Paint;
 use crate::http::hyper;
 use crate::router::Route;
 
+// TODO.async docs
+#[derive(Debug)]
+pub enum Error {
+    Launch(LaunchError),
+    Run(hyper::Error),
+}
+
 /// The kind of launch error that occurred.
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
@@ -44,7 +51,9 @@ pub enum LaunchErrorKind {
 /// as inspected; a subsequent `drop` of the value will _not_ result in a panic.
 /// The following snippet illustrates this:
 ///
-/// ```rust
+// TODO.async This isn't true any more, as `.launch()` now returns a
+// `Result<(), crate::error::Error>`, which could also be a runtime error.
+/// ```rust,ignore
 /// # if false {
 /// let error = rocket::ignite().launch();
 ///
@@ -106,11 +115,14 @@ impl LaunchError {
     /// # Example
     ///
     /// ```rust
+    /// use rocket::error::Error;
     /// # if false {
-    /// let error = rocket::ignite().launch();
-    ///
-    /// // This line is only reached if launch failed.
-    /// let error_kind = error.kind();
+    /// if let Err(error) = rocket::ignite().launch() {
+    ///     match error {
+    ///         Error::Launch(err) => println!("Found a launch error: {}", err.kind()),
+    ///         Error::Run(err) => println!("Error at runtime"),
+    ///     }
+    /// }
     /// # }
     /// ```
     #[inline]

@@ -7,7 +7,8 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures::future::{Future, FutureExt, TryFutureExt, BoxFuture};
+use futures::future::{Future, FutureExt, BoxFuture};
+use futures::channel::{mpsc, oneshot};
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
 use futures_tokio_compat::Compat as TokioCompat;
@@ -29,6 +30,7 @@ use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
+use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -43,6 +45,8 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
     pub(crate) state: Container,
     fairings: Fairings,
+    shutdown_handle: ShutdownHandle,
+    shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
 // This function tries to hide all of the Hyper-ness from Rocket. It
@@ -464,14 +468,22 @@ impl Rocket {
                           Paint::default(LoggedValue(value)).bold());
         }
 
-        Rocket {
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+
+        let rocket = Rocket {
             config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
             state: Container::new(),
             fairings: Fairings::new(),
-        }
+            shutdown_handle: ShutdownHandle(shutdown_sender),
+            shutdown_receiver: Some(shutdown_receiver),
+        };
+
+        rocket.state.set(ShutdownHandleManaged(rocket.shutdown_handle.clone()));
+
+        rocket
     }
 
     /// Mounts all of the routes in the supplied vector at the given `base`
@@ -721,11 +733,10 @@ impl Rocket {
     /// });
     /// # }
     /// ```
-    // TODO.async Decide on an return type, possibly creating a discriminated union.
     pub fn spawn_on(
         mut self,
         runtime: &tokio::runtime::Runtime,
-    ) -> Result<impl Future<Output = Result<(), Box<dyn std::error::Error>>>, LaunchError> {
+    ) -> Result<impl Future<Output = Result<(), hyper::Error>>, LaunchError> {
         #[cfg(feature = "tls")] use crate::http::tls;
 
         self = self.prelaunch_check()?;
@@ -771,6 +782,11 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
+        // We need to get these values before moving `self` into an `Arc`.
+        let mut shutdown_receiver = self.shutdown_receiver
+            .take().expect("shutdown receiver has already been used");
+        let shutdown_handle = self.get_shutdown_handle();
+
         let rocket = Arc::new(self);
         let spawn = Box::new(TokioCompat::new(runtime.executor()));
         let service = hyper::make_service_fn(move |socket: &hyper::AddrStream| {
@@ -784,19 +800,54 @@ impl Rocket {
             }
         });
 
-        // NB: executor must be passed manually here, see hyperium/hyper#1537
-        let server = hyper::Server::builder(incoming)
-            .executor(runtime.executor())
-            .serve(service);
+        #[cfg(feature = "ctrl_c_shutdown")]
+        let (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver) = oneshot::channel();
 
-        let (future, handle) = server.remote_handle();
+        // NB: executor must be passed manually here, see hyperium/hyper#1537
+        let (future, handle) = hyper::Server::builder(incoming)
+            .executor(runtime.executor())
+            .serve(service)
+            .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
+            .inspect(|_| {
+                #[cfg(feature = "ctrl_c_shutdown")]
+                let _ = cancel_ctrl_c_listener_sender.send(());
+            })
+            .remote_handle();
+
         runtime.spawn(future);
-        Ok(handle.err_into())
+
+        #[cfg(feature = "ctrl_c_shutdown")]
+        match tokio::net::signal::ctrl_c() {
+            Ok(mut ctrl_c) => {
+                runtime.spawn(async move {
+                    // Stop listening for `ctrl_c` if the server shuts down
+                    // a different way to avoid waiting forever.
+                    futures::future::select(
+                        ctrl_c.next(),
+                        cancel_ctrl_c_listener_receiver,
+                    ).await;
+
+                    // Request the server shutdown.
+                    shutdown_handle.shutdown();
+                });
+            },
+            Err(err) => {
+                // Signal handling isn't strictly necessary, so we can skip it
+                // if necessary. It's a good idea to let the user know we're
+                // doing so in case they are expecting certain behavior.
+                let message = "Not listening for shutdown keybinding.";
+                warn!("{}", Paint::yellow(message));
+                info_!("Error: {}", err);
+            },
+        }
+
+        Ok(handle)
     }
 
     /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers. Unless there is an error, this
-    /// function does not return and blocks until program termination.
+    /// requests to mounted routes and catchers. This function does not return
+    /// unless a shutdown is requested via a [`ShutdownHandle`] or there is an
+    /// error.
     ///
     /// # Error
     ///
@@ -812,8 +863,9 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    // TODO.async Decide on an return type, possibly creating a discriminated union.
-    pub fn launch(self) -> Box<dyn std::error::Error> {
+    pub fn launch(self) -> Result<(), crate::error::Error> {
+        use crate::error::Error;
+
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
         let runtime = tokio::runtime::Builder::new()
@@ -821,14 +873,41 @@ impl Rocket {
             .build()
             .expect("Cannot build runtime!");
 
-        // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
         match self.spawn_on(&runtime) {
-            Ok(fut) => match runtime.block_on(fut) {
-                Ok(_) => unreachable!("the call to `block_on` should block on success"),
-                Err(err) => err,
-            }
-            Err(err) => Box::new(err),
+            Ok(fut) => runtime.block_on(fut).map_err(Error::Run),
+            Err(err) => Err(Error::Launch(err)),
         }
+    }
+
+    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
+    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
+    /// request guard.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use std::{thread, time::Duration};
+    /// #
+    /// let rocket = rocket::ignite();
+    /// let handle = rocket.get_shutdown_handle();
+    /// # let real_handle = rocket.get_shutdown_handle();
+    ///
+    /// # if false {
+    /// thread::spawn(move || {
+    ///     thread::sleep(Duration::from_secs(10));
+    ///     handle.shutdown();
+    /// });
+    /// # }
+    /// # real_handle.shutdown();
+    ///
+    /// // Shuts down after 10 seconds
+    /// let shutdown_result = rocket.launch();
+    /// assert!(shutdown_result.is_ok());
+    /// ```
+    #[inline(always)]
+    pub fn get_shutdown_handle(&self) -> ShutdownHandle {
+        self.shutdown_handle.clone()
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
