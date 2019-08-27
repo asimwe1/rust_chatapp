@@ -5,10 +5,13 @@
 
 #[cfg(test)] mod tests;
 
-use std::io::{self, Read};
+use std::io;
+
+use futures::io::AsyncReadExt as _;
 
 use rocket::{Request, data::Data};
 use rocket::response::{Debug, content::{Json, Html}};
+use rocket::AsyncReadExt as _;
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use
@@ -38,9 +41,10 @@ fn get_hello(name: String, age: u8) -> Json<String> {
 // In a real application, we wouldn't use `serde_json` directly; instead, we'd
 // use `contrib::Json` to automatically serialize a type into JSON.
 #[post("/<age>", format = "plain", data = "<name_data>")]
-fn post_hello(age: u8, name_data: Data) -> Result<Json<String>, Debug<io::Error>> {
+async fn post_hello(age: u8, name_data: Data) -> Result<Json<String>, Debug<io::Error>> {
     let mut name = String::with_capacity(32);
-    name_data.open().take(32).read_to_string(&mut name)?;
+    let mut stream = name_data.open().take(32);
+    stream.read_to_string(&mut name).await?;
     let person = Person { name: name, age: age, };
     // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
     Ok(Json(serde_json::to_string(&person).expect("valid JSON")))

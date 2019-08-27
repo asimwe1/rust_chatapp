@@ -30,8 +30,8 @@ fn test_echo() {
     test(&uri, ContentType::Plain, Status::Ok, "echo this text".into());
 }
 
-#[test]
-fn test_upload() {
+#[rocket::async_test]
+async fn test_upload() {
     let client = Client::new(rocket()).unwrap();
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
