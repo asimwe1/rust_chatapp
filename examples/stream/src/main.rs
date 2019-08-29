@@ -7,9 +7,7 @@
 use rocket::response::{content, Stream};
 
 use std::io::repeat;
-
-use tokio::fs::File;
-use futures_tokio_compat::Compat as TokioCompat;
+use async_std::fs::File;
 
 use rocket::AsyncReadExt as _;
 
@@ -25,8 +23,8 @@ fn root() -> content::Plain<Stream<LimitedRepeat>> {
 }
 
 #[get("/big_file")]
-async fn file() -> Option<Stream<TokioCompat<File>>> {
-    File::open(FILENAME).await.map(|file| Stream::from(TokioCompat::new(file))).ok()
+async fn file() -> Option<Stream<File>> {
+    File::open(FILENAME).await.map(Stream::from).ok()
 }
 
 fn rocket() -> rocket::Rocket {
