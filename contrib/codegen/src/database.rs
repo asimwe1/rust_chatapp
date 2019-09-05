@@ -42,7 +42,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
     let inner_type = match structure.fields {
         Fields::Unnamed(ref fields) if fields.unnamed.len() == 1 => {
             let first = fields.unnamed.first().expect("checked length");
-            first.value().ty.clone()
+            first.ty.clone()
         }
         _ => return Err(structure.fields.span().error(ONLY_UNNAMED_FIELDS).help(EXAMPLE))
     };

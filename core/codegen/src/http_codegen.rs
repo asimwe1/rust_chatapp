@@ -1,6 +1,6 @@
 use quote::ToTokens;
 use crate::proc_macro2::TokenStream as TokenStream2;
-use devise::{FromMeta, MetaItem, Result, ext::Split2};
+use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt}};
 use crate::http::{self, ext::IntoOwned};
 use crate::http::uri::{Path, Query};
 use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
@@ -130,16 +130,18 @@ impl FromMeta for Method {
         let span = meta.value_span();
         let help_text = format!("method must be one of: {}", VALID_METHODS_STR);
 
-        if let MetaItem::Ident(ident) = meta {
-            let method = ident.to_string().parse()
-                .map_err(|_| span.error("invalid HTTP method").help(&*help_text))?;
+        if let MetaItem::Path(path) = meta {
+            if let Some(ident) = path.last_ident() {
+                let method = ident.to_string().parse()
+                    .map_err(|_| span.error("invalid HTTP method").help(&*help_text))?;
 
-            if !VALID_METHODS.contains(&method) {
-                return Err(span.error("invalid HTTP method for route handlers")
+                if !VALID_METHODS.contains(&method) {
+                    return Err(span.error("invalid HTTP method for route handlers")
                                .help(&*help_text));
-            }
+                }
 
-            return Ok(Method(method));
+                return Ok(Method(method));
+            }
         }
 
         Err(span.error(format!("expected identifier, found {}", meta.description()))

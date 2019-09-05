@@ -11,7 +11,7 @@ mod uri_parsing;
 
 crate fn prefix_last_segment(path: &mut Path, prefix: &str) {
     let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
-    last_seg.value_mut().ident = last_seg.value().ident.prepend(prefix);
+    last_seg.ident = last_seg.ident.prepend(prefix);
 }
 
 fn _prefixed_vec(

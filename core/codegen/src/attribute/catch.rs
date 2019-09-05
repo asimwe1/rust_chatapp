@@ -44,7 +44,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
 
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
-    let mut user_catcher_fn_name = catch.function.ident.clone();
+    let mut user_catcher_fn_name = catch.function.sig.ident.clone();
     let generated_struct_name = user_catcher_fn_name.prepend(CATCH_STRUCT_PREFIX);
     let generated_fn_name = user_catcher_fn_name.prepend(CATCH_FN_PREFIX);
     let (vis, status) = (&catch.function.vis, &catch.status);
@@ -54,20 +54,20 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     define_vars_and_mods!(req, catcher, response, Request, Response);
 
     // Determine the number of parameters that will be passed in.
-    let (fn_sig, inputs) = match catch.function.decl.inputs.len() {
+    let (fn_sig, inputs) = match catch.function.sig.inputs.len() {
         0 => (quote!(fn() -> _), quote!()),
         1 => (quote!(fn(&#Request) -> _), quote!(#req)),
-        _ => return Err(catch.function.decl.inputs.span()
+        _ => return Err(catch.function.sig.inputs.span()
                 .error("invalid number of arguments: must be zero or one")
                 .help("catchers may optionally take an argument of type `&Request`"))
     };
 
     // Set the span of the function name to point to inputs so that a later type
     // coercion failure points to the user's catcher's handler input.
-    user_catcher_fn_name.set_span(catch.function.decl.inputs.span().into());
+    user_catcher_fn_name.set_span(catch.function.sig.inputs.span().into());
 
     // This ensures that "Responder not implemented" points to the return type.
-    let return_type_span = catch.function.decl.output.ty()
+    let return_type_span = catch.function.sig.output.ty()
         .map(|ty| ty.span().into())
         .unwrap_or(Span::call_site().into());
 
