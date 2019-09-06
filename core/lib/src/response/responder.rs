@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 
 use futures::io::BufReader;
+use futures::future;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
@@ -278,15 +279,13 @@ impl Responder<'_> for () {
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            match self {
-                Some(r) => r.respond_to(req).await,
-                None => {
-                    warn_!("Response was `None`.");
-                    Err(Status::NotFound)
-                },
-            }
-        })
+        match self {
+            Some(r) => r.respond_to(req),
+            None => {
+                warn_!("Response was `None`.");
+                Box::pin(future::err(Status::NotFound))
+            },
+        }
     }
 }
 
@@ -294,12 +293,10 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
 /// `Err`.
 impl<'r, R: Responder<'r> + Send + 'r, E: Responder<'r> + Send + 'r> Responder<'r> for Result<R, E> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            match self {
-                Ok(responder) => responder.respond_to(req).await,
-                Err(responder) => responder.respond_to(req).await,
-            }
-        })
+        match self {
+            Ok(responder) => responder.respond_to(req),
+            Err(responder) => responder.respond_to(req),
+        }
     }
 }
 
