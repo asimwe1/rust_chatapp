@@ -153,5 +153,5 @@ pub fn custom(config: config::Config) -> Rocket {
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
-    tokio::runtime::Runtime::new().expect("create tokio runtime").block_on(fut)
+    tokio::runtime::current_thread::Runtime::new().expect("create tokio runtime").block_on(fut)
 }
