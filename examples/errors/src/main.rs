@@ -19,13 +19,14 @@ fn not_found(req: &rocket::Request<'_>) -> content::Html<String> {
 }
 
 fn main() {
-    let e = rocket::ignite()
+    let result = rocket::ignite()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
         .register(catchers![not_found])
         .launch();
 
-    println!("Whoops! Rocket didn't launch!");
-    // TODO.async Uncomment the following line once `.launch()`'s error type is determined.
-    // println!("This went wrong: {}", e);
+    if let Err(e) = result {
+        println!("Whoops! Rocket didn't launch!");
+        println!("This went wrong: {:?}", e);
+    };
 }

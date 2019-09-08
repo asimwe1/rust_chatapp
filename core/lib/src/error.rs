@@ -51,17 +51,26 @@ pub enum LaunchErrorKind {
 /// as inspected; a subsequent `drop` of the value will _not_ result in a panic.
 /// The following snippet illustrates this:
 ///
-// TODO.async This isn't true any more, as `.launch()` now returns a
-// `Result<(), crate::error::Error>`, which could also be a runtime error.
-/// ```rust,ignore
+/// ```rust
+/// use rocket::error::Error;
+///
 /// # if false {
-/// let error = rocket::ignite().launch();
+/// if let Err(error) = rocket::ignite().launch() {
+///     match error {
+///         Error::Launch(error) => {
+///             // This case is only reached if launching failed. This println "inspects" the error.
+///             println!("Launch failed! Error: {}", error);
 ///
-/// // This line is only reached if launching failed. This "inspects" the error.
-/// println!("Launch failed! Error: {}", error);
+///             // This call to drop (explicit here for demonstration) will do nothing.
+///             drop(error);
+///         }
+///         Error::Run(error) => {
+///             // This case is reached if launching succeeds, but the server had a fatal error later
+///             println!("Server failed! Error: {}", error);
+///         }
+///     }
+/// }
 ///
-/// // This call to drop (explicit here for demonstration) will do nothing.
-/// drop(error);
 /// # }
 /// ```
 ///
