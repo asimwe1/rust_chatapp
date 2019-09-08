@@ -64,7 +64,7 @@ fn hyper_service_fn(
     // because the response body might borrow from the request. Instead,
     // we do the body writing in another future that will send us
     // the response metadata (and a body channel) beforehand.
-    let (tx, rx) = futures::channel::oneshot::channel();
+    let (tx, rx) = oneshot::channel();
 
     spawn.spawn(async move {
         // Get all of the information from Hyper.
@@ -105,7 +105,7 @@ impl Rocket {
     fn issue_response<'r>(
         &self,
         response: Response<'r>,
-        tx: futures::channel::oneshot::Sender<hyper::Response<hyper::Body>>,
+        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) -> impl Future<Output = ()> + 'r {
         let result = self.write_response(response, tx);
         async move {
@@ -124,7 +124,7 @@ impl Rocket {
     fn write_response<'r>(
         &self,
         mut response: Response<'r>,
-        tx: futures::channel::oneshot::Sender<hyper::Response<hyper::Body>>,
+        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) -> impl Future<Output = io::Result<()>> + 'r {
         async move {
             let mut hyp_res = hyper::Response::builder();
@@ -785,6 +785,8 @@ impl Rocket {
         // We need to get these values before moving `self` into an `Arc`.
         let mut shutdown_receiver = self.shutdown_receiver
             .take().expect("shutdown receiver has already been used");
+
+        #[cfg(feature = "ctrl_c_shutdown")]
         let shutdown_handle = self.get_shutdown_handle();
 
         let rocket = Arc::new(self);
