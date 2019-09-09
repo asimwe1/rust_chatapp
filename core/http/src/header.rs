@@ -480,7 +480,7 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(map.len(), 1);
     #[inline(always)]
     pub fn remove(&mut self, name: &str) {
-        self.headers.remove(UncasedStr::new(name));
+        self.headers.swap_remove(UncasedStr::new(name));
     }
 
     /// Removes all of the headers stored in this map and returns a vector
