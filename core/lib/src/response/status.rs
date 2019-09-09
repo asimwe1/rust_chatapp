@@ -9,65 +9,165 @@
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::borrow::Cow;
 
 use crate::request::Request;
 use crate::response::{Responder, Response};
-use crate::http::hyper::header;
 use crate::http::Status;
 
 /// Sets the status of the response to 201 (Created).
 ///
-/// The `String` field is set as the value of the `Location` header in the
-/// response. The optional `Responder` field is used to finalize the response.
+/// Sets the `Location` header and optionally the `ETag` header in the response.
+/// The body of the response, which identifies the created resource, can be set
+/// via the builder methods [`Created::body()`] and [`Created::tagged_body()`].
+/// While both builder methods set the responder, the [`Created::tagged_body()`]
+/// additionally computes a hash for the responder which is used as the value of
+/// the `ETag` header when responding.
 ///
 /// # Example
 ///
 /// ```rust
 /// use rocket::response::status;
 ///
-/// let url = "http://myservice.com/resource.json".to_string();
-/// let content = "{ 'resource': 'Hello, world!' }";
-/// # #[allow(unused_variables)]
-/// let response = status::Created(url, Some(content));
+/// let response = status::Created::new("http://myservice.com/resource.json")
+///     .tagged_body("{ 'resource': 'Hello, world!' }");
 /// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct Created<R>(pub String, pub Option<R>);
+pub struct Created<R>(Cow<'static, str>, Option<R>, Option<u64>);
 
-/// Sets the status code of the response to 201 Created. Sets the `Location`
-/// header to the `String` parameter in the constructor.
-///
-/// The optional responder finalizes the response if it exists. The wrapped
-/// responder should write the body of the response so that it contains
-/// information about the created resource. If no responder is provided, the
-/// response body will be empty.
-impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
-    default fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut build = Response::build();
-        if let Some(responder) = self.1 {
-            build.merge(responder.respond_to(req)?);
-        }
+impl<'r, R> Created<R> {
+    /// Constructs a `Created` response with a `location` and no body.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use rocket::{get, routes, local::Client};
+    /// use rocket::response::status;
+    ///
+    /// #[get("/")]
+    /// fn create() -> status::Created<&'static str> {
+    ///     status::Created::new("http://myservice.com/resource.json")
+    /// }
+    ///
+    /// # let rocket = rocket::ignite().mount("/", routes![create]);
+    /// # let client = Client::new(rocket).unwrap();
+    /// let mut response = client.get("/").dispatch();
+    ///
+    /// let loc = response.headers().get_one("Location");
+    /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
+    /// assert!(response.body().is_none());
+    /// ```
+    pub fn new<L: Into<Cow<'static, str>>>(location: L) -> Self {
+        Created(location.into(), None, None)
+    }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+    /// Adds `responder` as the body of `self`.
+    ///
+    /// Unlike [`tagged_body()`](self::Created::tagged_body()), this method
+    /// _does not_ result in an `ETag` header being set in the response.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use rocket::{get, routes, local::Client};
+    /// use rocket::response::status;
+    ///
+    /// #[get("/")]
+    /// fn create() -> status::Created<&'static str> {
+    ///     status::Created::new("http://myservice.com/resource.json")
+    ///         .body("{ 'resource': 'Hello, world!' }")
+    /// }
+    ///
+    /// # let rocket = rocket::ignite().mount("/", routes![create]);
+    /// # let client = Client::new(rocket).unwrap();
+    /// let mut response = client.get("/").dispatch();
+    ///
+    /// let body = response.body_string();
+    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
+    ///
+    /// let loc = response.headers().get_one("Location");
+    /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
+    ///
+    /// let etag = response.headers().get_one("ETag");
+    /// assert_eq!(etag, None);
+    /// ```
+    pub fn body(mut self, responder: R) -> Self
+        where R: Responder<'r>
+    {
+        self.1 = Some(responder);
+        self
+    }
+
+    /// Adds `responder` as the body of `self`. Computes a hash of the
+    /// `responder` to be used as the value of the `ETag` header.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use rocket::{get, routes, local::Client};
+    /// use rocket::response::status;
+    ///
+    /// #[get("/")]
+    /// fn create() -> status::Created<&'static str> {
+    ///     status::Created::new("http://myservice.com/resource.json")
+    ///         .tagged_body("{ 'resource': 'Hello, world!' }")
+    /// }
+    ///
+    /// # let rocket = rocket::ignite().mount("/", routes![create]);
+    /// # let client = Client::new(rocket).unwrap();
+    /// let mut response = client.get("/").dispatch();
+    ///
+    /// let body = response.body_string();
+    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
+    ///
+    /// let loc = response.headers().get_one("Location");
+    /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
+    ///
+    /// let etag = response.headers().get_one("ETag");
+    /// assert_eq!(etag, Some(r#""13046220615156895040""#));
+    /// ```
+    pub fn tagged_body(mut self, responder: R) -> Self
+        where R: Responder<'r> + Hash
+    {
+        let mut hasher = &mut DefaultHasher::default();
+        responder.hash(&mut hasher);
+        let hash = hasher.finish();
+        self.1 = Some(responder);
+        self.2 = Some(hash);
+        self
     }
 }
 
+/// Sets the status code of the response to 201 Created. Sets the `Location`
+/// header to the parameter in the [`Created::new()`] constructor.
+///
+/// The optional responder, set via [`Created::body()`] or
+/// [`Created::tagged_body()`] finalizes the response if it exists. The wrapped
+/// responder should write the body of the response so that it contains
+/// information about the created resource. If no responder is provided, the
+/// response body will be empty.
+///
 /// In addition to setting the status code, `Location` header, and finalizing
 /// the response with the `Responder`, the `ETag` header is set conditionally if
-/// a `Responder` is provided that implements `Hash`. The `ETag` header is set
-/// to a hash value of the responder.
-impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
+/// a hashable `Responder` is provided via [`Created::tagged_body()`]. The `ETag`
+/// header is set to a hash value of the responder.
+impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
     fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut hasher = DefaultHasher::default();
-        let mut build = Response::build();
-        if let Some(responder) = self.1 {
-            responder.hash(&mut hasher);
-            let hash = hasher.finish().to_string();
+       let mut response = Response::build();
+       if let Some(responder) = self.1 {
+           response.merge(responder.respond_to(req)?);
+       }
 
-            build.merge(responder.respond_to(req)?);
-            build.header(header::ETag(header::EntityTag::strong(hash)));
-        }
+       if let Some(hash) = self.2 {
+           response.raw_header("ETag", format!(r#""{}""#, hash));
+       }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+       response.status(Status::Created)
+           .raw_header("Location", self.0)
+           .ok()
     }
 }
 
