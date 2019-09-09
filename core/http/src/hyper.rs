@@ -18,8 +18,6 @@
 #[doc(hidden)] pub use hyper::http::h1;
 #[doc(hidden)] pub use hyper::buffer;
 
-pub use hyper::mime;
-
 /// Type alias to `hyper::Response<'a, hyper::net::Fresh>`.
 #[doc(hidden)] pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 

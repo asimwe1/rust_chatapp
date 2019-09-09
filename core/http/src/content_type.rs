@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
@@ -6,7 +6,6 @@ use std::fmt;
 use crate::header::Header;
 use crate::media_type::{MediaType, Source};
 use crate::ext::IntoCollection;
-use crate::hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -264,28 +263,6 @@ impl Deref for ContentType {
     #[inline(always)]
     fn deref(&self) -> &MediaType {
         &self.0
-    }
-}
-
-#[doc(hidden)]
-impl<T: Borrow<Mime>> From<T> for ContentType {
-    #[inline(always)]
-    default fn from(mime: T) -> ContentType {
-        let mime: Mime = mime.borrow().clone();
-        ContentType::from(mime)
-    }
-}
-
-#[doc(hidden)]
-impl From<Mime> for ContentType {
-    #[inline]
-    fn from(mime: Mime) -> ContentType {
-        // soooo inefficient.
-        let params = mime.2.into_iter()
-            .map(|(attr, value)| (attr.to_string(), value.to_string()))
-            .collect::<Vec<_>>();
-
-        ContentType::with_params(mime.0.to_string(), mime.1.to_string(), params)
     }
 }
 
