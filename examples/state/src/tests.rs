@@ -2,7 +2,7 @@ use rocket::local::Client;
 use rocket::http::Status;
 
 fn register_hit(client: &Client) {
-    let response = client.get("/").dispatch();;
+    let response = client.get("/").dispatch();
     assert_eq!(response.status(), Status::Ok);
 }
 

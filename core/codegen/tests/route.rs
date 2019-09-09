@@ -70,6 +70,7 @@ fn post2(
     format!("({}) ({})", string, uri.to_string())
 }
 
+#[allow(dead_code)]
 #[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
 fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
 }
