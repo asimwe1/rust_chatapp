@@ -277,13 +277,6 @@ impl<'s, 'c: 's> From<Cow<'c, str>> for Uncased<'s> {
     }
 }
 
-impl<'s, 'c: 's, T: Into<Cow<'c, str>>> From<T> for Uncased<'s> {
-    #[inline(always)]
-    default fn from(string: T) -> Self {
-        Uncased::new(string)
-    }
-}
-
 impl<'b> PartialOrd<Uncased<'b>> for Uncased<'_> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Uncased<'b>) -> Option<Ordering> {

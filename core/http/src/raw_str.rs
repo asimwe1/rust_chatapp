@@ -401,13 +401,6 @@ impl AsRef<[u8]> for RawStr {
     }
 }
 
-impl ToString for RawStr {
-    #[inline(always)]
-    fn to_string(&self) -> String {
-        String::from(self.as_str())
-    }
-}
-
 impl Deref for RawStr {
     type Target = str;
 
