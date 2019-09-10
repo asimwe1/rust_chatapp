@@ -25,6 +25,7 @@ mod redirect;
 mod named_file;
 mod stream;
 mod response;
+mod debug;
 
 crate mod flash;
 
@@ -39,6 +40,7 @@ pub use self::redirect::Redirect;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
+pub use self::debug::Debug;
 #[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a `Responder::respond` call.

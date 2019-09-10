@@ -7,7 +7,12 @@
 
 use std::io::{self, Read};
 
-use rocket::{Request, response::content, data::Data};
+use rocket::{Request, data::Data};
+use rocket::response::{Debug, content::{Json, Html}};
+
+// NOTE: This example explicitly uses the `Json` type from `response::content`
+// for demonstration purposes. In a real application, _always_ prefer to use
+// `rocket_contrib::json::Json` instead!
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
@@ -20,10 +25,10 @@ struct Person {
 // the route attribute. Note: if this was a real application, we'd use
 // `rocket_contrib`'s built-in JSON support and return a `JsonValue` instead.
 #[get("/<name>/<age>", format = "json")]
-fn get_hello(name: String, age: u8) -> content::Json<String> {
-    // In a real application, we'd use the JSON contrib type.
+fn get_hello(name: String, age: u8) -> Json<String> {
+    // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
     let person = Person { name: name, age: age, };
-    content::Json(serde_json::to_string(&person).unwrap())
+    Json(serde_json::to_string(&person).unwrap())
 }
 
 // In a `POST` request and all other payload supporting request types, the
@@ -33,15 +38,16 @@ fn get_hello(name: String, age: u8) -> content::Json<String> {
 // In a real application, we wouldn't use `serde_json` directly; instead, we'd
 // use `contrib::Json` to automatically serialize a type into JSON.
 #[post("/<age>", format = "plain", data = "<name_data>")]
-fn post_hello(age: u8, name_data: Data) -> io::Result<content::Json<String>> {
+fn post_hello(age: u8, name_data: Data) -> Result<Json<String>, Debug<io::Error>> {
     let mut name = String::with_capacity(32);
     name_data.open().take(32).read_to_string(&mut name)?;
     let person = Person { name: name, age: age, };
-    Ok(content::Json(serde_json::to_string(&person).unwrap()))
+    // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
+    Ok(Json(serde_json::to_string(&person).expect("valid JSON")))
 }
 
 #[catch(404)]
-fn not_found(request: &Request<'_>) -> content::Html<String> {
+fn not_found(request: &Request<'_>) -> Html<String> {
     let html = match request.format() {
         Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
             format!("<p>'{}' requests are not supported.</p>", mt)
@@ -51,7 +57,7 @@ fn not_found(request: &Request<'_>) -> content::Html<String> {
                  request.uri())
     };
 
-    content::Html(html)
+    Html(html)
 }
 
 fn main() {

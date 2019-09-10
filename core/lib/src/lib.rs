@@ -1,4 +1,3 @@
-#![feature(specialization)]
 #![feature(try_trait)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]

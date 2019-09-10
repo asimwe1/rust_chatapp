@@ -210,6 +210,33 @@ impl<'r> Outcome<'r> {
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is
     /// returned with the response. If the responder returns `Err`, an
+    /// outcome of `Failure` is returned with the status code.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::{Request, Data};
+    /// use rocket::handler::Outcome;
+    ///
+    /// fn str_responder(req: &Request, _: Data) -> Outcome<'static> {
+    ///     Outcome::from(req, "Hello, world!")
+    /// }
+    /// ```
+    #[inline]
+    pub fn try_from<T, E>(req: &Request<'_>, result: Result<T, E>) -> Outcome<'r>
+        where T: Responder<'r>, E: std::fmt::Debug
+    {
+        let responder = result.map_err(crate::response::Debug);
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(status) => outcome::Outcome::Failure(status)
+        }
+    }
+
+    /// Return the `Outcome` of response to `req` from `responder`.
+    ///
+    /// If the responder returns `Ok`, an outcome of `Success` is
+    /// returned with the response. If the responder returns `Err`, an
     /// outcome of `Forward` is returned.
     ///
     /// # Example

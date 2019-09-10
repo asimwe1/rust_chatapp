@@ -7,7 +7,9 @@ use rusqlite::types::ToSql;
 #[cfg(test)] mod tests;
 
 use std::sync::Mutex;
-use rocket::{Rocket, State};
+
+use rocket::{Rocket, State, response::Debug};
+
 use rusqlite::{Connection, Error};
 
 type DbConn = Mutex<Connection>;
@@ -25,11 +27,12 @@ fn init_database(conn: &Connection) {
 }
 
 #[get("/")]
-fn hello(db_conn: State<'_, DbConn>) -> Result<String, Error>  {
+fn hello(db_conn: State<'_, DbConn>) -> Result<String, Debug<Error>>  {
     db_conn.lock()
         .expect("db connection lock")
         .query_row("SELECT name FROM entries WHERE id = 0",
                    &[] as &[&dyn ToSql], |row| { row.get(0) })
+        .map_err(Debug)
 }
 
 fn rocket() -> Rocket {

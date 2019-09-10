@@ -34,7 +34,7 @@ fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
         .and_then(|res| res.ok())
         .into_outcome(Status::BadRequest)?;
 
-    Outcome::from(req, RawStr::from_str(param).url_decode())
+    Outcome::try_from(req, RawStr::from_str(param).url_decode())
 }
 
 fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {

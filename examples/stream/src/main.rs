@@ -6,7 +6,7 @@
 
 use rocket::response::{content, Stream};
 
-use std::io::{self, repeat, Repeat, Read, Take};
+use std::io::{repeat, Repeat, Read, Take};
 use std::fs::File;
 
 type LimitedRepeat = Take<Repeat>;
@@ -20,8 +20,8 @@ fn root() -> content::Plain<Stream<LimitedRepeat>> {
 }
 
 #[get("/big_file")]
-fn file() -> io::Result<Stream<File>> {
-    File::open(FILENAME).map(|file| Stream::from(file))
+fn file() -> Option<Stream<File>> {
+    File::open(FILENAME).map(|file| Stream::from(file)).ok()
 }
 
 fn rocket() -> rocket::Rocket {

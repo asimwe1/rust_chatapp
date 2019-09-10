@@ -5,11 +5,13 @@
 #[cfg(test)] mod tests;
 
 use std::{io, env};
-use rocket::Data;
+use rocket::{Data, response::Debug};
 
 #[post("/upload", format = "plain", data = "<data>")]
-fn upload(data: Data) -> io::Result<String> {
-    data.stream_to_file(env::temp_dir().join("upload.txt")).map(|n| n.to_string())
+fn upload(data: Data) -> Result<String, Debug<io::Error>> {
+    data.stream_to_file(env::temp_dir().join("upload.txt"))
+        .map(|n| n.to_string())
+        .map_err(Debug)
 }
 
 #[get("/")]

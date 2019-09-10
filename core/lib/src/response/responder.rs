@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{Cursor, BufReader};
-use std::fmt;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
@@ -268,28 +267,9 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     }
 }
 
-/// If `self` is `Ok`, responds with the wrapped `Responder`. Otherwise prints
-/// an error message with the `Err` value returns an `Err` of
-/// `Status::InternalServerError`.
-#[deprecated(since = "0.4.3")]
-impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
-    default fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
-        self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
-            error_!("Response was a non-`Responder` `Err`: {:?}.", e);
-            warn_!("This `Responder` implementation has been deprecated.");
-            warn_!(
-                "In Rocket v0.5, `Result<T, E>` implements `Responder` only if \
-                `E` implements `Responder`. For the previous behavior, use \
-                `Result<T, Debug<E>>` where `Debug` is `rocket::response::Debug`."
-            );
-            Err(Status::InternalServerError)
-        })
-    }
-}
-
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
+impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
     fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         match self {
             Ok(responder) => responder.respond_to(req),

@@ -2,8 +2,6 @@
 
 #[macro_use] extern crate rocket;
 
-use std::io;
-
 use rocket::request::{Form, FormError, FormDataError};
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
@@ -39,8 +37,8 @@ fn sink(sink: Result<Form<FormInput<'_>>, FormError<'_>>) -> String {
 }
 
 #[get("/")]
-fn index() -> io::Result<NamedFile> {
-    NamedFile::open("static/index.html")
+fn index() -> Option<NamedFile> {
+    NamedFile::open("static/index.html").ok()
 }
 
 fn rocket() -> rocket::Rocket {
