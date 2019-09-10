@@ -356,6 +356,24 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
     }
 }
 
+fn generate_respond_expr(route: &Route) -> TokenStream2 {
+    let ret_span = match route.function.sig.output {
+        syn::ReturnType::Default => route.function.sig.ident.span(),
+        syn::ReturnType::Type(_, ref ty) => ty.span().into()
+    };
+
+    define_vars_and_mods!(req);
+    define_vars_and_mods!(ret_span => handler);
+    let user_handler_fn_name = &route.function.sig.ident;
+    let parameter_names = route.inputs.iter()
+        .map(|(_, rocket_ident, _)| rocket_ident);
+
+    quote_spanned! { ret_span =>
+        let ___responder = #user_handler_fn_name(#(#parameter_names),*);
+        #handler::Outcome::from(#req, ___responder)
+    }
+}
+
 fn codegen_route(route: Route) -> Result<TokenStream> {
     // Generate the declarations for path, data, and request guard parameters.
     let mut data_stmt = None;
@@ -389,8 +407,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
     let generated_struct_name = user_handler_fn_name.prepend(ROUTE_STRUCT_PREFIX);
-    let parameter_names = route.inputs.iter().map(|(_, rocket_ident, _)| rocket_ident);
     let generated_internal_uri_macro = generate_internal_uri_macro(&route);
+    let generated_respond_expr = generate_respond_expr(&route);
+
     let method = route.attribute.method;
     let path = route.attribute.path.origin.0.to_string();
     let rank = Optional(route.attribute.rank);
@@ -408,8 +427,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
             #(#parameter_definitions)*
             #data_stmt
 
-            let ___responder = #user_handler_fn_name(#(#parameter_names),*);
-            #handler::Outcome::from(#req, ___responder)
+            #generated_respond_expr
         }
 
         /// Rocket code generated wrapping URI macro.

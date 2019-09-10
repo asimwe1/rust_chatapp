@@ -64,30 +64,44 @@ extern crate proc_macro;
 
 use rocket_http as http;
 
-macro_rules! define {
-    ($val:path as $v:ident) => (#[allow(non_snake_case)] let $v = quote!($val););
+macro_rules! vars_and_mods {
+    ($($name:ident => $path:path,)*) => {
+        macro_rules! define {
+            // Note: the `o` is to capture the input's span
+            $(($i:ident $name) => {
+                #[allow(non_snake_case)] let $i = quote!($path);
+            };)*
+            $(($span:expr => $i:ident $name) => {
+                #[allow(non_snake_case)] let $i = quote_spanned!($span => $path);
+            };)*
+        }
+    }
+}
+
+vars_and_mods! {
+    req => __req,
+    catcher => __catcher,
+    data => __data,
+    error => __error,
+    trail => __trail,
+    request => rocket::request,
+    response => rocket::response,
+    handler => rocket::handler,
+    log => rocket::logger,
+    Outcome => rocket::Outcome,
+    FromData => rocket::data::FromData,
+    Transform => rocket::data::Transform,
+    Query => rocket::request::Query,
+    Request => rocket::Request,
+    Response => rocket::response::Response,
+    Data => rocket::Data,
+    StaticRouteInfo => rocket::StaticRouteInfo,
+    SmallVec => rocket::http::private::SmallVec,
 }
 
 macro_rules! define_vars_and_mods {
-    (@req as $v:ident) => (define!(__req as $v));
-    (@catcher as $v:ident) => (define!(__catcher as $v));
-    (@data as $v:ident) => (define!(__data as $v));
-    (@error as $v:ident) => (define!(__error as $v));
-    (@trail as $v:ident) => (define!(__trail as $v));
-    (@request as $v:ident) => (define!(::rocket::request as $v));
-    (@response as $v:ident) => (define!(::rocket::response as $v));
-    (@handler as $v:ident) => (define!(::rocket::handler as $v));
-    (@log as $v:ident) => (define!(::rocket::logger as $v));
-    (@Outcome as $v:ident) => (define!(::rocket::Outcome as $v));
-    (@FromData as $v:ident) => (define!(::rocket::data::FromData as $v));
-    (@Transform as $v:ident) => (define!(::rocket::data::Transform as $v));
-    (@Query as $v:ident) => (define!(::rocket::request::Query as $v));
-    (@Request as $v:ident) => (define!(::rocket::Request as $v));
-    (@Response as $v:ident) => (define!(::rocket::response::Response as $v));
-    (@Data as $v:ident) => (define!(::rocket::Data as $v));
-    (@StaticRouteInfo as $v:ident) => (define!(::rocket::StaticRouteInfo as $v));
-    (@SmallVec as $v:ident) => (define!(::rocket::http::private::SmallVec as $v));
-    ($($name:ident),*) => ($(define_vars_and_mods!(@$name as $name);)*)
+    ($($name:ident),*) => ($(define!($name $name);)*);
+    ($span:expr => $($name:ident),*) => ($(define!($span => $name $name);)*)
 }
 
 #[macro_use]
