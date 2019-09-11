@@ -79,7 +79,6 @@
 //! `None`.
 
 use std::fmt;
-use std::ops::Try;
 
 use yansi::{Paint, Color};
 
@@ -601,28 +600,68 @@ impl<S, E, F> Outcome<S, E, F> {
     }
 }
 
-impl<S, E, F> Try for Outcome<S, E, F> {
-    type Ok = S;
-    type Error = Result<F, E>;
-
-    fn into_result(self) -> Result<Self::Ok, Self::Error> {
-        match self {
-            Success(val) => Ok(val),
-            Forward(val) => Err(Ok(val)),
-            Failure(val) => Err(Err(val)),
-        }
-    }
-
-    fn from_error(val: Self::Error) -> Self {
-        match val {
-            Ok(val) => Forward(val),
-            Err(val) => Failure(val),
-        }
-    }
-
-    fn from_ok(val: Self::Ok) -> Self {
-        Success(val)
-    }
+/// Unwraps an [`Outcome`] to its success value, otherwise propagating the
+/// forward or failure.
+///
+/// In the case of a `Forward` or `Failure` variant, the inner type is passed to
+/// [`From`](std::convert::From), allowing for the conversion between specific
+/// and more general types. The resulting forward/error is immediately returned.
+///
+/// Because of the early return, `try_outcome!` can only be used in methods that
+/// return [`Outcome`].
+///
+/// ## Example
+///
+/// ```rust,no_run
+/// # #![feature(proc_macro_hygiene)]
+/// # #[macro_use] extern crate rocket;
+/// # use std::sync::atomic::{AtomicUsize, Ordering};
+/// use rocket::request::{self, Request, FromRequest, State};
+/// use rocket::outcome::Outcome::*;
+///
+/// #[derive(Default)]
+/// struct Atomics {
+///     uncached: AtomicUsize,
+///     cached: AtomicUsize,
+/// }
+///
+/// struct Guard1;
+/// struct Guard2;
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
+///     type Error = ();
+///
+///     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///         // Attempt to fetch the guard, passing through any error or forward.
+///         let atomics = try_outcome!(req.guard::<State<'_, Atomics>>());
+///         atomics.uncached.fetch_add(1, Ordering::Relaxed);
+///         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
+///
+///         Success(Guard1)
+///     }
+/// }
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
+///     type Error = ();
+///
+///     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///         // Attempt to fetch the guard, passing through any error or forward.
+///         let guard1: Guard1 = try_outcome!(req.guard::<Guard1>());
+///         Success(Guard2)
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! try_outcome {
+    ($expr:expr $(,)?) => (match $expr {
+        $crate::outcome::Outcome::Success(val) => val,
+        $crate::outcome::Outcome::Failure(e) => {
+            return $crate::outcome::Outcome::Failure(::std::convert::From::from(e))
+        },
+        $crate::outcome::Outcome::Forward(f) => {
+            return $crate::outcome::Outcome::Forward(::std::convert::From::from(f))
+        },
+    });
 }
 
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
