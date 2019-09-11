@@ -26,13 +26,16 @@ async fn test_ranking() {
     let mut response = client.get("/0").dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "0");
 
-    let mut response = client.get(format!("/{}", 1 << 8)).dispatch().await;
+    let request = client.get(format!("/{}", 1 << 8));
+    let mut response = request.dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "1");
 
-    let mut response = client.get(format!("/{}", 1 << 16)).dispatch().await;
+    let request = client.get(format!("/{}", 1 << 16));
+    let mut response = request.dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "2");
 
-    let mut response = client.get(format!("/{}", 1u64 << 32)).dispatch().await;
+    let request = client.get(format!("/{}", 1u64 << 32));
+    let mut response = request.dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "3");
 }
 

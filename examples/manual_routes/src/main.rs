@@ -51,7 +51,8 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
         let file = File::create(env::temp_dir().join("upload.txt")).await;
         if let Ok(file) = file {
             if let Ok(n) = data.stream_to(file).await {
-                return Outcome::from(req, format!("OK: {} bytes uploaded.", n)).await;
+                let response = format!("OK: {} bytes uploaded.", n);
+                return Outcome::from(req, response).await;
             }
 
             println!("    => Failed copying.");
@@ -92,7 +93,8 @@ impl Handler for CustomHandler {
                 .or_forward(data);
 
             let id = try_outcome!(id_outcome);
-            Outcome::from(req, format!("{} - {}", self_data, id)).await
+            let response = format!("{} - {}", self_data, id);
+            Outcome::from(req, response).await
         })
     }
 }

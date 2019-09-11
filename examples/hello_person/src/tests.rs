@@ -18,8 +18,9 @@ async fn test_404(uri: &'static str) {
 #[rocket::async_test]
 async fn test_hello() {
     for &(name, age) in &[("Mike", 22), ("Michael", 80), ("A", 0), ("a", 127)] {
-        test(format!("/hello/{}/{}", name, age),
-            format!("Hello, {} year old named {}!", age, name)).await;
+        let uri = format!("/hello/{}/{}", name, age);
+        let expected = format!("Hello, {} year old named {}!", age, name);
+        test(uri, expected).await;
     }
 }
 
@@ -33,6 +34,7 @@ async fn test_failing_hello() {
 #[rocket::async_test]
 async fn test_hi() {
     for name in &["Mike", "A", "123", "hi", "c"] {
-        test(format!("/hello/{}", name), name.to_string()).await;
+        let uri = format!("/hello/{}", name);
+        test(uri, name.to_string()).await;
     }
 }

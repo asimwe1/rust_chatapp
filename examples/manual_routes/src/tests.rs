@@ -5,7 +5,8 @@ use rocket::http::{ContentType, Status};
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
     rocket::async_test(async move {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get(uri).header(content_type).dispatch().await;
+        let request = client.get(uri).header(content_type);
+        let mut response = request.dispatch().await;
         assert_eq!(response.status(), status);
         assert_eq!(response.body_string().await, Some(body));
     })

@@ -25,7 +25,8 @@ async fn upload_paste(client: &Client, body: &str) -> String {
 }
 
 async fn download_paste(client: &Client, id: &str) -> String {
-    let mut response = client.get(format!("/{}", id)).dispatch().await;
+    let request = client.get(format!("/{}", id));
+    let mut response = request.dispatch().await;
     assert_eq!(response.status(), Status::Ok);
     response.body_string().await.unwrap()
 }

@@ -348,7 +348,8 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     pub async fn dispatch(mut self) -> LocalResponse<'c> {
         let r = self.long_lived_request();
-        LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data).await
+        let dispatching = LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data);
+        dispatching.await
     }
 
     /// Dispatches the request, returning the response.

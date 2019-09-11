@@ -171,7 +171,8 @@ impl Data {
     pub fn stream_to_file<P: AsRef<Path> + Send + Unpin + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
         Box::pin(async move {
             let mut file = async_std::fs::File::create(path).await?;
-            self.stream_to(&mut file).await
+            let streaming = self.stream_to(&mut file);
+            streaming.await
         })
     }
 

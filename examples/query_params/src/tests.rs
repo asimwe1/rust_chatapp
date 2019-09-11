@@ -5,8 +5,9 @@ use rocket::http::Status;
 macro_rules! run_test {
     ($query:expr, |$response:ident| $body:expr) => ({
         let client = Client::new(rocket()).unwrap();
+        let request = client.get(format!("/hello{}", $query));
         #[allow(unused_mut)]
-        let mut $response = client.get(format!("/hello{}", $query)).dispatch().await;
+        let mut $response = request.dispatch().await;
         $body
     })
 }

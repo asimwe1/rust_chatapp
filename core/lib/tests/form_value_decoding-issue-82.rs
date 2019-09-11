@@ -22,10 +22,10 @@ mod tests {
 
     async fn check_decoding(raw: &str, decoded: &str) {
         let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
-        let mut response = client.post("/")
+        let request = client.post("/")
             .header(ContentType::Form)
-            .body(format!("form_data={}", raw))
-            .dispatch().await;
+            .body(format!("form_data={}", raw));
+        let mut response = request.dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(Some(decoded.to_string()), response.body_string().await);

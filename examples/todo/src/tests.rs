@@ -49,7 +49,8 @@ fn test_insertion_deletion() {
 
         // Issue a request to delete the task.
         let id = new_tasks[0].id.unwrap();
-        client.delete(format!("/todo/{}", id)).dispatch().await;
+        let request = client.delete(format!("/todo/{}", id));
+        request.dispatch().await;
 
         // Ensure it's gone.
         let final_tasks = Task::all(&conn).unwrap();
@@ -73,11 +74,13 @@ fn test_toggle() {
         assert_eq!(task.completed, false);
 
         // Issue a request to toggle the task; ensure it is completed.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
+        let request = client.put(format!("/todo/{}", task.id.unwrap()));
+        request.dispatch().await;
         assert_eq!(Task::all(&conn).unwrap()[0].completed, true);
 
         // Issue a request to toggle the task; ensure it's not completed again.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
+        let request = client.put(format!("/todo/{}", task.id.unwrap()));
+        request.dispatch().await;
         assert_eq!(Task::all(&conn).unwrap()[0].completed, false);
     })
 }
@@ -94,10 +97,10 @@ fn test_many_insertions() {
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
             let desc: String = thread_rng().sample_iter(&Alphanumeric).take(12).collect();
-            client.post("/todo")
+            let request = client.post("/todo")
                 .header(ContentType::Form)
-                .body(format!("description={}", desc))
-                .dispatch().await;
+                .body(format!("description={}", desc));
+            request.dispatch().await;
 
             // Record the description we choose for this iteration.
             descs.insert(0, desc);
