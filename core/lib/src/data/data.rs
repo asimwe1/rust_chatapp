@@ -76,6 +76,8 @@ impl Data {
 
     pub(crate) fn from_hyp(body: hyper::Body) -> impl Future<Output = Data> {
         // TODO.async: This used to also set the read timeout to 5 seconds.
+        // Such a short read timeout is likely no longer necessary, but some
+        // kind of idle timeout should be implemented.
 
         Data::new(body)
     }

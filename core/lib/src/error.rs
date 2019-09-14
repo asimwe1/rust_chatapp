@@ -26,7 +26,7 @@ pub enum Error {
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     /// Binding to the provided address/port failed.
-    Bind(hyper::Error),
+    Bind(io::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// Route collisions were detected.
