@@ -1,3 +1,11 @@
+error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
+  --> $DIR/responder-types.rs:38:13
+   |
+38 | fn foo() -> usize { 0 }
+   |             ^^^^^ the trait `rocket::response::Responder<'_>` is not implemented for `usize`
+   |
+   = note: required by `rocket::handler::<impl rocket::Outcome<rocket::Response<'r>, rocket::http::Status, rocket::Data>>::from`
+
 error[E0277]: the trait bound `u8: rocket::response::Responder<'_>` is not satisfied
   --> $DIR/responder-types.rs:11:5
    |
@@ -46,17 +54,6 @@ error[E0277]: the trait bound `rocket::http::Header<'_>: std::convert::From<std:
              rocket::http::Header<'static> as $TRAIT
              rocket::http::Header<'static> as $TRAIT
    = note: required because of the requirements on the impl of `std::convert::Into<rocket::http::Header<'_>>` for `std::string::String`
-
-error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
-   --> $DIR/responder-types.rs:39:13
-    |
-39  | fn foo() -> usize { 0 }
-    |             ^^^^^ the trait `rocket::response::Responder<'_>` is not implemented for `usize`
-    | 
-   ::: $ROCKET/core/lib/src/handler.rs:202:20
-    |
-202 |     pub fn from<T: Responder<'r>>(req: &Request<'_>, responder: T) -> Outcome<'r> {
-    |                    ------------- required by this bound in `rocket::handler::<impl rocket::Outcome<rocket::Response<'r>, rocket::http::Status, rocket::Data>>::from`
 
 error: aborting due to 6 previous errors
 
