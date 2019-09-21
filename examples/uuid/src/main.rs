@@ -2,7 +2,9 @@
 #[macro_use] extern crate lazy_static;
 
 use std::collections::HashMap;
+
 use rocket_contrib::uuid::Uuid;
+use rocket_contrib::uuid::uuid_crate as uuid;
 
 #[cfg(test)] mod tests;
 

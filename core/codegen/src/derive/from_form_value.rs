@@ -1,12 +1,13 @@
-use devise::*;
-use proc_macro::TokenStream;
+use devise::{*, ext::SpanDiagnosticExt};
+
+use crate::proc_macro2::TokenStream;
 
 #[derive(FromMeta)]
 struct Form {
     value: String,
 }
 
-pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
+pub fn derive_from_form_value(input: proc_macro::TokenStream) -> TokenStream {
     define_vars_and_mods!(_Ok, _Err, _Result);
     DeriveGenerator::build_for(input, quote!(impl<'__v> ::rocket::request::FromFormValue<'__v>))
         .generic_support(GenericSupport::None)
@@ -21,7 +22,8 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
 
             // Emit a warning if the enum is empty.
             if data.variants.is_empty() {
-                generator.input.span().warning("deriving for empty enum").emit();
+                return Err(generator.input.span()
+                    .error("enum must have at least one field"));
             }
 
             Ok(())
@@ -51,5 +53,5 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
                 }
             })
         })
-        .to_tokens()
+        .to_tokens2()
 }

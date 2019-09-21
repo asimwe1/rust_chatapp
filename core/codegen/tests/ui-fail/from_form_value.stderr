@@ -53,11 +53,18 @@ note: error occurred while deriving `FromFormValue`
    |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-warning: deriving for empty enum
+error: enum must have at least one field
   --> $DIR/from_form_value.rs:24:1
    |
 24 | enum Foo5 { }
    | ^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `FromFormValue`
+  --> $DIR/from_form_value.rs:23:10
+   |
+23 | #[derive(FromFormValue)]
+   |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: type generics are not supported
   --> $DIR/from_form_value.rs:28:11
@@ -98,5 +105,5 @@ note: error occurred while deriving `FromFormValue`
    |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: aborting due to 7 previous errors; 1 warning emitted
+error: aborting due to 8 previous errors
 

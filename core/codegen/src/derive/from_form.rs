@@ -1,5 +1,6 @@
-use proc_macro::{Span, TokenStream};
-use devise::{*, ext::{TypeExt, Split3}};
+use devise::{*, ext::{TypeExt, Split3, SpanDiagnosticExt}};
+
+use crate::proc_macro2::{Span, TokenStream};
 
 #[derive(FromMeta)]
 pub struct Form {
@@ -57,7 +58,7 @@ fn validate_struct(gen: &DeriveGenerator, data: Struct<'_>) -> Result<()> {
     Ok(())
 }
 
-pub fn derive_from_form(input: TokenStream) -> TokenStream {
+pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
     let form_error = quote!(::rocket::request::FormParseError);
     DeriveGenerator::build_for(input, quote!(impl<'__f> ::rocket::request::FromForm<'__f>))
         .generic_support(GenericSupport::Lifetime | GenericSupport::Type)
@@ -126,5 +127,5 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
                 #_Ok(Self { #(#builders)* })
             })
         })
-        .to_tokens()
+        .to_tokens2()
 }

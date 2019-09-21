@@ -1,16 +1,15 @@
-use proc_macro::Span;
-
-use devise::{syn, Spanned};
-use devise::proc_macro2::TokenStream as TokenStream2;
-use devise::ext::TypeExt;
+use indexmap::IndexMap;
+use devise::{Spanned, ext::TypeExt};
 use quote::ToTokens;
 
-use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
-use self::syn::parse::{self, Parse, ParseStream};
-use self::syn::punctuated::Punctuated;
+use crate::syn::{self, Expr, Ident, LitStr, Path, Token, Type};
+use crate::syn::parse::{self, Parse, ParseStream};
+use crate::syn::punctuated::Punctuated;
 
 use crate::http::{uri::Origin, ext::IntoOwned};
-use indexmap::IndexMap;
+use crate::proc_macro2::{TokenStream, Span};
+
+// TODO(diag): Use 'Diagnostic' in place of syn::Error.
 
 #[derive(Debug)]
 pub enum ArgExpr {
@@ -124,7 +123,7 @@ impl Parse for UriParams {
             })?;
 
             if !input.peek(Token![,]) && input.cursor().eof() {
-                return err(string.span().unstable(), "unexpected end of input: \
+                return err(string.span(), "unexpected end of input: \
                     expected ',' followed by route path");
             }
 
@@ -327,7 +326,7 @@ impl ArgExpr {
 }
 
 impl ToTokens for ArgExpr {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             ArgExpr::Expr(e) => e.to_tokens(tokens),
             ArgExpr::Ignored(e) => e.to_tokens(tokens)
@@ -336,7 +335,7 @@ impl ToTokens for ArgExpr {
 }
 
 impl ToTokens for Arg {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Arg::Unnamed(e) => e.to_tokens(tokens),
             Arg::Named(ident, eq, expr) => tokens.extend(quote!(#ident #eq #expr)),
@@ -345,7 +344,7 @@ impl ToTokens for Arg {
 }
 
 impl ToTokens for Args {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens)
         }

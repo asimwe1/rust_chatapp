@@ -1,4 +1,3 @@
-#![feature(proc_macro_diagnostic, proc_macro_span)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
@@ -101,6 +100,7 @@ vars_and_mods! {
     _Ok => ::std::result::Result::Ok,
     _Err => ::std::result::Result::Err,
     _Box => ::std::boxed::Box,
+    _Vec => ::std::vec::Vec,
 }
 
 macro_rules! define_vars_and_mods {
@@ -118,7 +118,7 @@ mod syn_ext;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-use devise::proc_macro2;
+use devise::{proc_macro2, syn};
 
 static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
@@ -129,15 +129,19 @@ static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
     ($tokens:expr) => ({
-        let tokens = $tokens;
+        use devise::ext::SpanDiagnosticExt;
+
+        let mut tokens = $tokens;
         if std::env::var_os("ROCKET_CODEGEN_DEBUG").is_some() {
-            proc_macro::Span::call_site()
+            let debug_tokens = proc_macro2::Span::call_site()
                 .note("emitting Rocket code generation debug output")
                 .note(tokens.to_string())
-                .emit()
+                .emit_as_tokens();
+
+            tokens.extend(debug_tokens);
         }
 
-        tokens
+        tokens.into()
     })
 }
 

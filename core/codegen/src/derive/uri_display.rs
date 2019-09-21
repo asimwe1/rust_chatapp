@@ -1,8 +1,8 @@
-use proc_macro::{Span, TokenStream};
-use devise::*;
+
+use devise::{*, ext::SpanDiagnosticExt};
 
 use crate::derive::from_form::Form;
-use crate::proc_macro2::TokenStream as TokenStream2;
+use crate::proc_macro2::{TokenStream, Span};
 
 const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
@@ -39,7 +39,7 @@ fn validate_enum(gen: &DeriveGenerator, data: Enum<'_>) -> Result<()> {
 }
 
 #[allow(non_snake_case)]
-pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
+pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
     let Query = quote!(::rocket::http::uri::Query);
     let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
     let Formatter = quote!(::rocket::http::uri::Formatter<#Query>);
@@ -116,15 +116,15 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
         })
         .to_tokens();
 
-    let mut ts = TokenStream2::from(uri_display);
-    ts.extend(TokenStream2::from(from_self));
-    ts.extend(TokenStream2::from(from_ref));
-    ts.extend(TokenStream2::from(from_mut));
+    let mut ts = TokenStream::from(uri_display);
+    ts.extend(TokenStream::from(from_self));
+    ts.extend(TokenStream::from(from_ref));
+    ts.extend(TokenStream::from(from_mut));
     ts.into()
 }
 
 #[allow(non_snake_case)]
-pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
+pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
     let Path = quote!(::rocket::http::uri::Path);
     let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Path>);
     let Formatter = quote!(::rocket::http::uri::Formatter<#Path>);
@@ -179,8 +179,8 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
         })
         .to_tokens();
 
-    let mut ts = TokenStream2::from(uri_display);
-    ts.extend(TokenStream2::from(from_self));
-    ts.extend(TokenStream2::from(from_ref));
+    let mut ts = TokenStream::from(uri_display);
+    ts.extend(TokenStream::from(from_self));
+    ts.extend(TokenStream::from(from_ref));
     ts.into()
 }

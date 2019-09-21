@@ -1,11 +1,6 @@
 //! Extensions to `syn` types.
 
 use devise::syn;
-use proc_macro::Diagnostic;
-
-pub fn syn_to_diag(error: syn::parse::Error) -> Diagnostic {
-    error.span().unstable().error(error.to_string())
-}
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;

@@ -22,7 +22,7 @@ enum Foo4 {
 
 #[derive(FromFormValue)]
 enum Foo5 { }
-//~^ WARNING empty enum
+//~^ ERROR at least one field
 
 #[derive(FromFormValue)]
 enum Foo6<T> {

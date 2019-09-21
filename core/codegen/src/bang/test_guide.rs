@@ -1,16 +1,14 @@
 use std::path::Path;
 use std::error::Error;
 
-use proc_macro::TokenStream;
-use devise::{syn::{self, Ident, LitStr}, Result};
+use devise::ext::SpanDiagnosticExt;
+use devise::syn::{self, Ident, LitStr};
+use devise::proc_macro2::TokenStream;
 
-use crate::syn_ext::syn_to_diag;
-use crate::proc_macro2::TokenStream as TokenStream2;
-
-pub fn _macro(input: TokenStream) -> Result<TokenStream> {
-    let root_glob = syn::parse::<LitStr>(input.into()).map_err(syn_to_diag)?;
+pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
+    let root_glob = syn::parse::<LitStr>(input.into())?;
     let modules = entry_to_modules(&root_glob)
-        .map_err(|e| root_glob.span().unstable().error(format!("failed to read: {}", e)))?;
+        .map_err(|e| root_glob.span().error(format!("failed to read: {}", e)))?;
 
     Ok(quote_spanned!(root_glob.span() =>
         #[allow(dead_code)]
@@ -19,7 +17,7 @@ pub fn _macro(input: TokenStream) -> Result<TokenStream> {
     ).into())
 }
 
-fn entry_to_modules(root_glob: &LitStr) -> std::result::Result<Vec<TokenStream2>, Box<dyn Error>> {
+fn entry_to_modules(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("MANIFEST_DIR");
     let full_glob = Path::new(&manifest_dir).join(&root_glob.value()).display().to_string();
 

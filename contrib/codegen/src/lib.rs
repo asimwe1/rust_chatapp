@@ -1,4 +1,3 @@
-#![feature(proc_macro_diagnostic)]
 #![recursion_limit="256"]
 
 #![warn(rust_2018_idioms)]
@@ -42,8 +41,6 @@ use proc_macro::TokenStream;
 #[cfg(feature = "database_attribute")]
 #[proc_macro_attribute]
 pub fn database(attr: TokenStream, input: TokenStream) -> TokenStream {
-    crate::database::database_attr(attr, input).unwrap_or_else(|diag| {
-        diag.emit();
-        TokenStream::new()
-    })
+    crate::database::database_attr(attr, input)
+        .unwrap_or_else(|diag| diag.emit_as_tokens().into())
 }

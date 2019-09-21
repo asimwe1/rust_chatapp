@@ -51,10 +51,10 @@ note: error occurred while deriving `UriDisplay`
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple structs or variants must have exactly one field
-  --> $DIR/uri_display.rs:39:12
+  --> $DIR/uri_display.rs:39:13
    |
 39 | struct Foo5(String, String);
-   |            ^^^^^^^^^^^^^^^^
+   |             ^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `UriDisplay`
   --> $DIR/uri_display.rs:35:10
@@ -77,10 +77,10 @@ note: error occurred while deriving `UriDisplay`
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one field
-  --> $DIR/uri_display.rs:55:12
+  --> $DIR/uri_display.rs:55:13
    |
 55 | struct Foo7(String, usize);
-   |            ^^^^^^^^^^^^^^^
+   |             ^^^^^^^^^^^^^
    |
 note: error occurred while deriving `UriDisplay`
   --> $DIR/uri_display.rs:52:10

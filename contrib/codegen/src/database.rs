@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
-use devise::{Spanned, Result};
+use devise::{Spanned, Result, ext::SpanDiagnosticExt};
+
 use crate::syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
 
 #[derive(Debug)]

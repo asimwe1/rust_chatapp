@@ -1,9 +1,9 @@
-use proc_macro::{TokenStream, Span};
-use devise::{syn, Spanned, Result, FromMeta};
-use crate::proc_macro2::TokenStream as TokenStream2;
+use devise::{syn, Spanned, Result, FromMeta, Diagnostic};
+use devise::ext::SpanDiagnosticExt;
 
+use crate::proc_macro2::{TokenStream, Span};
 use crate::http_codegen::Status;
-use crate::syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt, TokenStreamExt};
+use crate::syn_ext::{IdentExt, ReturnTypeExt, TokenStreamExt};
 use self::syn::{Attribute, parse::Parser};
 use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
@@ -22,12 +22,16 @@ struct CatchParams {
     function: syn::ItemFn,
 }
 
-fn parse_params(args: TokenStream2, input: TokenStream) -> Result<CatchParams> {
-    let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)
+fn parse_params(
+    args: TokenStream,
+    input: proc_macro::TokenStream
+) -> Result<CatchParams> {
+    let function: syn::ItemFn = syn::parse(input)
+        .map_err(Diagnostic::from)
         .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
 
     let full_attr = quote!(#[catch(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr).map_err(syn_to_diag)?;
+    let attrs = Attribute::parse_outer.parse2(full_attr)?;
     let attribute = match CatchAttribute::from_attrs("catch", &attrs) {
         Some(result) => result.map_err(|d| {
             d.help("`#[catch]` expects a single status integer, e.g.: #[catch(404)]")
@@ -38,9 +42,12 @@ fn parse_params(args: TokenStream2, input: TokenStream) -> Result<CatchParams> {
     Ok(CatchParams { status: attribute.status, function })
 }
 
-pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
+pub fn _catch(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream
+) -> Result<TokenStream> {
     // Parse and validate all of the user's input.
-    let catch = parse_params(TokenStream2::from(args), input)?;
+    let catch = parse_params(args.into(), input)?;
 
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
@@ -124,9 +131,12 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
                 code: #status_code,
                 handler: #generated_fn_name,
             };
-    }.into())
+    })
 }
 
-pub fn catch_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
-    _catch(args, input).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
+pub fn catch_attribute(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream
+) -> TokenStream {
+    _catch(args, input).unwrap_or_else(|d| d.emit_as_tokens())
 }
