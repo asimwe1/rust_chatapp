@@ -1,4 +1,4 @@
-use futures::future::BoxFuture;
+use futures_core::future::BoxFuture;
 
 use crate::{Request, Data};
 use crate::handler::{Outcome, ErrorHandler};

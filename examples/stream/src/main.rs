@@ -6,20 +6,17 @@
 
 use rocket::response::{content, Stream};
 
-use std::io::repeat;
-use async_std::fs::File;
-
-use rocket::AsyncReadExt as _;
-
-//type LimitedRepeat = Take<Repeat>;
-type LimitedRepeat = Box<dyn futures::io::AsyncRead + Send + Unpin>;
+use futures::io::repeat;
+use futures_tokio_compat::Compat;
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 // Generate this file using: head -c BYTES /dev/random > big_file.dat
 const FILENAME: &str = "big_file.dat";
 
 #[get("/")]
-fn root() -> content::Plain<Stream<LimitedRepeat>> {
-    content::Plain(Stream::from(Box::new(repeat('a' as u8).take(25000)) as Box<_>))
+fn root() -> content::Plain<Stream<impl AsyncRead>> {
+    content::Plain(Stream::from(Compat::new(repeat('a' as u8)).take(25000)))
 }
 
 #[get("/big_file")]

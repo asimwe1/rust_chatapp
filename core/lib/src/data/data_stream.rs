@@ -1,7 +1,7 @@
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
-use futures::io::{AsyncRead, Error as IoError};
-use futures::task::{Poll, Context};
+use tokio_io::AsyncRead;
 
 // TODO.async: Consider storing the real type here instead of a Box to avoid
 // the dynamic dispatch
@@ -19,7 +19,7 @@ pub struct DataStream(pub(crate) Vec<u8>, pub(crate) Box<dyn AsyncRead + Unpin +
 // possible since Hyper's `HttpReader` doesn't implement `BufRead`.
 impl AsyncRead for DataStream {
     #[inline(always)]
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize, IoError>> {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize, std::io::Error>> {
         trace_!("DataStream::poll_read()");
         if self.0.len() > 0 {
             let count = std::cmp::min(buf.len(), self.0.len());

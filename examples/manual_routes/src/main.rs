@@ -4,7 +4,8 @@ extern crate rocket;
 mod tests;
 
 use std::env;
-use async_std::fs::File;
+
+use tokio::fs::File;
 
 use rocket::{Request, Handler, Route, Data, Catcher, try_outcome};
 use rocket::http::{Status, RawStr};

@@ -5,11 +5,9 @@ use std::io;
 use std::mem;
 use std::sync::Arc;
 
-use futures::future::{Future, FutureExt, BoxFuture};
-use futures::channel::{mpsc, oneshot};
-use futures::stream::StreamExt;
-use futures::task::{Spawn, SpawnExt};
-use futures_tokio_compat::Compat as TokioCompat;
+use futures_core::future::{Future, BoxFuture};
+use futures_channel::{mpsc, oneshot};
+use futures_util::{future::FutureExt, stream::StreamExt};
 
 use yansi::Paint;
 use state::Container;
@@ -54,7 +52,6 @@ pub struct Rocket {
 fn hyper_service_fn(
     rocket: Arc<Rocket>,
     h_addr: std::net::SocketAddr,
-    mut spawn: impl futures::task::Spawn,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> impl Future<Output = Result<hyper::Response<hyper::Body>, io::Error>> {
     // This future must return a hyper::Response, but that's not easy
@@ -63,7 +60,7 @@ fn hyper_service_fn(
     // the response metadata (and a body channel) beforehand.
     let (tx, rx) = oneshot::channel();
 
-    spawn.spawn(async move {
+    tokio::spawn(async move {
         // Get all of the information from Hyper.
         let (h_parts, h_body) = hyp_req.into_parts();
 
@@ -89,7 +86,7 @@ fn hyper_service_fn(
         // Dispatch the request to get a response, then write that response out.
         let r = rocket.dispatch(&mut req, data).await;
         rocket.issue_response(r, tx).await;
-    }).expect("failed to spawn handler");
+    });
 
     async move {
         rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
@@ -708,11 +705,10 @@ impl Rocket {
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
-    async fn listen_on<L, S>(mut self, listener: L, spawn: S) -> Result<(), crate::error::Error>
+    async fn listen_on<L>(mut self, listener: L) -> Result<(), crate::error::Error>
     where
         L: Listener + Send + Unpin + 'static,
         <L as Listener>::Connection: Send + Unpin + 'static,
-        S: Spawn + Clone + Send + 'static,
     {
         self = self.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
@@ -754,21 +750,19 @@ impl Rocket {
             .take().expect("shutdown receiver has already been used");
 
         let rocket = Arc::new(self);
-        let spawn_makeservice = spawn.clone();
         let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
             let remote_addr = connection.remote_addr().unwrap_or_else(|| "0.0.0.0".parse().unwrap());
-            let spawn_service = spawn_makeservice.clone();
             async move {
                 Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), remote_addr, spawn_service.clone(), req)
+                    hyper_service_fn(rocket.clone(), remote_addr, req)
                 }))
             }
         });
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         hyper::Server::builder(Incoming::from_listener(listener))
-            .executor(TokioCompat::new(spawn))
+            .executor(tokio::executor::DefaultExecutor::current())
             .serve(service)
             .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
             .await
@@ -808,10 +802,9 @@ impl Rocket {
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let addrs = match full_addr.to_socket_addrs() {
             Ok(a) => a.collect::<Vec<_>>(),
-            Err(e) => return futures::future::err(Launch(From::from(e))).boxed(),
+            Err(e) => return futures_util::future::ready(Err(Launch(From::from(e)))).boxed(),
         };
         let addr = addrs[0];
-        let spawn = TokioCompat::new(runtime.executor());
 
         #[cfg(feature = "ctrl_c_shutdown")]
         let (
@@ -824,26 +817,26 @@ impl Rocket {
 
         let server = async move {
             macro_rules! listen_on {
-                ($spawn:expr, $expr:expr) => {{
+                ($expr:expr) => {{
                     let listener = match $expr {
                         Ok(ok) => ok,
                         Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
                     };
-                    self.listen_on(listener, spawn).await
+                    self.listen_on(listener).await
                 }};
             }
 
             #[cfg(feature = "tls")]
             {
                 if let Some(tls) = self.config.tls.clone() {
-                    listen_on!(spawn, crate::http::tls::bind_tls(addr, tls.certs, tls.key).await)
+                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await)
                 } else {
-                    listen_on!(spawn, crate::http::private::bind_tcp(addr).await)
+                    listen_on!(crate::http::private::bind_tcp(addr).await)
                 }
             }
             #[cfg(not(feature = "tls"))]
             {
-                listen_on!(spawn, crate::http::private::bind_tcp(addr).await)
+                listen_on!(crate::http::private::bind_tcp(addr).await)
             }
         };
 
@@ -858,7 +851,7 @@ impl Rocket {
                 runtime.spawn(async move {
                     // Stop listening for `ctrl_c` if the server shuts down
                     // a different way to avoid waiting forever.
-                    futures::future::select(
+                    futures_util::future::select(
                         ctrl_c.next(),
                         cancel_ctrl_c_listener_receiver,
                     ).await;

@@ -18,14 +18,13 @@ use std::ops::{Deref, DerefMut};
 use std::io;
 use std::iter::FromIterator;
 
-use futures::io::AsyncReadExt;
+use tokio_io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
 use rocket::data::{Transform::*, Transformed, Data, FromData, TransformFuture, FromDataFuture};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
-use rocket::AsyncReadExt as _;
 
 use serde::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};

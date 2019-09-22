@@ -1,6 +1,6 @@
 //! Types and traits for request and error handlers and their return values.
 
-use futures::future::BoxFuture;
+use futures_core::future::BoxFuture;
 
 use crate::data::Data;
 use crate::request::Request;

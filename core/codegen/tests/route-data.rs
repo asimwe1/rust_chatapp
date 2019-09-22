@@ -22,8 +22,7 @@ impl FromDataSimple for Simple {
 
     fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
         Box::pin(async {
-            use futures::io::AsyncReadExt as _;
-            use rocket::AsyncReadExt as _;
+            use tokio_io::AsyncReadExt;
 
             let mut string = String::new();
             let mut stream = data.open().take(64);

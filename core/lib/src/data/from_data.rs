@@ -1,7 +1,8 @@
 use std::borrow::Borrow;
 
-use futures::future::{ready, FutureExt, BoxFuture};
-use futures::io::AsyncReadExt;
+use futures_core::future::BoxFuture;
+use futures_util::future::{ready, FutureExt};
+use tokio_io::AsyncReadExt;
 
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
@@ -193,13 +194,11 @@ pub type FromDataFuture<'a, T, E> = BoxFuture<'a, Outcome<T, E>>;
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
 /// use std::io::{self, Read};
 ///
-/// use futures::io::AsyncReadExt;
+/// use tokio::io::AsyncReadExt;
 ///
 /// use rocket::{Request, Data, Outcome::*};
 /// use rocket::data::{FromData, Outcome, Transform, Transformed, TransformFuture, FromDataFuture};
 /// use rocket::http::Status;
-///
-/// use rocket::AsyncReadExt as _;
 ///
 /// const NAME_LIMIT: u64 = 256;
 ///
@@ -462,13 +461,11 @@ impl<'a> FromData<'a> for Data {
 /// #
 /// use std::io::Read;
 ///
-/// use futures::io::AsyncReadExt;
+/// use tokio::io::AsyncReadExt;
 ///
 /// use rocket::{Request, Data, Outcome, Outcome::*};
 /// use rocket::data::{self, FromDataSimple, FromDataFuture};
 /// use rocket::http::{Status, ContentType};
-///
-/// use rocket::AsyncReadExt as _;
 ///
 /// // Always use a limit to prevent DoS attacks.
 /// const LIMIT: u64 = 256;

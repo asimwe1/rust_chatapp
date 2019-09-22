@@ -67,8 +67,6 @@ pub fn load_private_key<P: AsRef<Path>>(path: P) -> Result<rustls::PrivateKey, E
     }
 }
 
-// TODO.async: Put these under a feature such as #[cfg(feature = "tokio-runtime")]
-
 pub struct TlsListener {
     listener: TcpListener,
     acceptor: TlsAcceptor,

@@ -22,7 +22,7 @@ fn other() -> content::Json<&'static str> {
 mod head_handling_tests {
     use super::*;
 
-    use futures::io::AsyncReadExt;
+    use tokio_io::{AsyncRead, AsyncReadExt};
 
     use rocket::Route;
     use rocket::local::Client;
@@ -33,7 +33,7 @@ mod head_handling_tests {
         routes![index, empty, other]
     }
 
-    async fn assert_empty_sized_body<T: futures::AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
+    async fn assert_empty_sized_body<T: AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
         match body {
             Body::Sized(mut body, size) => {
                 let mut buffer = vec![];

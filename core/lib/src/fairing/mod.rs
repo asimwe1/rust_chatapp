@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use futures::future::BoxFuture;
+use futures_core::future::BoxFuture;
 
 use crate::{Rocket, Request, Response, Data};
 

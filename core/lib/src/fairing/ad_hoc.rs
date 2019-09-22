@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use futures::future::BoxFuture;
+use futures_core::future::BoxFuture;
 
 use crate::{Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind, Info};

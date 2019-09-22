@@ -101,7 +101,6 @@ impl<L: Listener> Incoming<L> {
 
                         // Sleep for the specified duration
                         let delay = Instant::now() + duration;
-                        // TODO.async: This depends on a tokio Timer being set in the environment
                         let mut error_delay = tokio_timer::delay(delay);
 
                         match Pin::new(&mut error_delay).poll(cx) {
@@ -128,7 +127,7 @@ impl<L: Listener + Unpin> Accept for Incoming<L> {
     type Error = io::Error;
 
     fn poll_accept(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
-        let result = futures::ready!(self.poll_next(cx));
+        let result = futures_core::ready!(self.poll_next(cx));
         Poll::Ready(Some(result))
     }
 }
@@ -157,8 +156,6 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
     }
 }
 
-// TODO.async: Put these under a feature such as #[cfg(feature = "tokio-runtime")]
-
 pub fn bind_tcp(address: SocketAddr) -> Pin<Box<dyn Future<Output=Result<TcpListener, io::Error>> + Send>> {
     Box::pin(async move {
         Ok(TcpListener::bind(address).await?)
@@ -174,8 +171,8 @@ impl Listener for TcpListener {
 
     fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<Result<Self::Connection, io::Error>> {
         // NB: This is only okay because TcpListener::accept() is stateless.
-        let accept = self.accept();
-        futures::pin_mut!(accept);
+        let mut accept = self.accept();
+        let accept = unsafe { Pin::new_unchecked(&mut accept) };
         accept.poll(cx).map_ok(|(stream, _addr)| stream)
     }
 }

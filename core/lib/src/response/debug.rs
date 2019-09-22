@@ -20,13 +20,11 @@ use yansi::Paint;
 /// # #![feature(proc_macro_hygiene)]
 /// use std::io;
 ///
-/// use futures::io::AsyncReadExt;
+/// use tokio::io::AsyncReadExt;
 ///
 /// # use rocket::post;
 /// use rocket::Data;
 /// use rocket::response::Debug;
-///
-/// use rocket::AsyncReadExt as _;
 ///
 /// #[post("/", format = "plain", data = "<data>")]
 /// async fn post(data: Data) -> Result<String, Debug<io::Error>> {

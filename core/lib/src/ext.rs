@@ -1,37 +1,12 @@
-use std::io;
+use std::io::{self, Cursor};
 use std::pin::Pin;
+use std::task::{Poll, Context};
 
-use futures::io::{AsyncRead, AsyncReadExt as _};
-use futures::future::BoxFuture;
-use futures::stream::Stream;
-use futures::task::{Poll, Context};
+use futures_core::{ready, future::BoxFuture, stream::Stream};
+use tokio_io::{AsyncRead, AsyncReadExt as _};
 
-use crate::http::hyper::Chunk;
-
-// Based on std::io::Take, but for AsyncRead instead of Read
-pub struct Take<R>{
-    inner: R,
-    limit: u64,
-}
-
-// TODO.async: Verify correctness of this implementation.
-impl<R> AsyncRead for Take<R> where R: AsyncRead + Unpin {
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
-        if self.limit == 0 {
-            return Poll::Ready(Ok(0));
-        }
-
-        let max = std::cmp::min(buf.len() as u64, self.limit) as usize;
-        match Pin::new(&mut self.inner).poll_read(cx, &mut buf[..max]) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(n)) => {
-                self.limit -= n as u64;
-                Poll::Ready(Ok(n))
-            },
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-        }
-    }
-}
+use crate::http::hyper;
+use hyper::{Chunk, Payload};
 
 pub struct IntoChunkStream<R> {
     inner: R,
@@ -64,10 +39,6 @@ impl<R> Stream for IntoChunkStream<R>
 }
 
 pub trait AsyncReadExt: AsyncRead {
-    fn take(self, limit: u64) -> Take<Self> where Self: Sized {
-        Take { inner: self, limit }
-    }
-
     fn into_chunk_stream(self, buf_size: usize) -> IntoChunkStream<Self> where Self: Sized {
         IntoChunkStream { inner: self, buf_size, buffer: vec![0; buf_size] }
     }
@@ -93,3 +64,46 @@ pub trait AsyncReadExt: AsyncRead {
 }
 
 impl<T: AsyncRead> AsyncReadExt for T { }
+
+pub struct AsyncReadBody {
+    inner: hyper::Body,
+    state: AsyncReadBodyState,
+}
+
+enum AsyncReadBodyState {
+    Pending,
+    Partial(Cursor<Chunk>),
+    Done,
+}
+
+impl From<hyper::Body> for AsyncReadBody {
+    fn from(body: hyper::Body) -> Self {
+        Self { inner: body, state: AsyncReadBodyState::Pending }
+    }
+}
+
+impl AsyncRead for AsyncReadBody {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+        loop {
+            match self.state {
+                AsyncReadBodyState::Pending => {
+                    match ready!(Pin::new(&mut self.inner).poll_data(cx)) {
+                        Some(Ok(chunk)) => self.state = AsyncReadBodyState::Partial(Cursor::new(chunk)),
+                        Some(Err(e)) => return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
+                        None => self.state = AsyncReadBodyState::Done,
+                    }
+                },
+                AsyncReadBodyState::Partial(ref mut cursor) => {
+                    match ready!(Pin::new(cursor).poll_read(cx, buf)) {
+                        Ok(n) if n == 0 => {
+                            self.state = AsyncReadBodyState::Pending;
+                        }
+                        Ok(n) => return Poll::Ready(Ok(n)),
+                        Err(e) => return Poll::Ready(Err(e)),
+                    }
+                }
+                AsyncReadBodyState::Done => return Poll::Ready(Ok(0)),
+            }
+        }
+    }
+}

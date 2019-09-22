@@ -1,14 +1,13 @@
+use std::future::Future;
+use std::io;
 use std::path::Path;
 
-use futures::io::{self, AsyncRead, AsyncReadExt as _, AsyncWrite};
-use futures::future::Future;
-use futures::stream::TryStreamExt;
+use tokio_io::{AsyncRead, AsyncWrite, AsyncReadExt as _};
 
 use super::data_stream::DataStream;
 
 use crate::http::hyper;
-
-use crate::ext::AsyncReadExt;
+use crate::ext::{AsyncReadExt, AsyncReadBody};
 
 /// The number of bytes to read into the "peek" buffer.
 const PEEK_BYTES: usize = 512;
@@ -135,20 +134,19 @@ impl Data {
     ///
     /// ```rust
     /// use std::io;
-    /// use futures::io::AllowStdIo;
     /// use rocket::Data;
     ///
     /// async fn handler(mut data: Data) -> io::Result<String> {
     ///     // write all of the data to stdout
-    ///     let written = data.stream_to(AllowStdIo::new(io::stdout())).await?;
+    ///     let written = data.stream_to(tokio::io::stdout()).await?;
     ///     Ok(format!("Wrote {} bytes.", written))
     /// }
     /// ```
     #[inline(always)]
     pub fn stream_to<'w, W: AsyncWrite + Unpin + 'w>(self, mut writer: W) -> impl Future<Output = io::Result<u64>> + 'w {
         Box::pin(async move {
-            let stream = self.open();
-            stream.copy_into(&mut writer).await
+            let mut stream = self.open();
+            stream.copy(&mut writer).await
         })
     }
 
@@ -172,7 +170,7 @@ impl Data {
     #[inline(always)]
     pub fn stream_to_file<P: AsRef<Path> + Send + Unpin + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
         Box::pin(async move {
-            let mut file = async_std::fs::File::create(path).await?;
+            let mut file = tokio::fs::File::create(path).await?;
             let streaming = self.stream_to(&mut file);
             streaming.await
         })
@@ -186,9 +184,7 @@ impl Data {
     pub(crate) async fn new(body: hyper::Body) -> Data {
         trace_!("Data::new({:?})", body);
 
-        let mut stream = body.map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, e)
-        }).into_async_read();
+        let mut stream = AsyncReadBody::from(body);
 
         let mut peek_buf = vec![0; PEEK_BYTES];
 

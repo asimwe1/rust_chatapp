@@ -7,11 +7,10 @@
 
 use std::io;
 
-use futures::io::AsyncReadExt as _;
+use tokio::io::AsyncReadExt;
 
 use rocket::{Request, data::Data};
 use rocket::response::{Debug, content::{Json, Html}};
-use rocket::AsyncReadExt as _;
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use

@@ -1,5 +1,5 @@
 use crate::request::{FromRequest, Outcome, Request};
-use futures::channel::mpsc;
+use futures_channel::mpsc;
 
 /// # Example
 ///
