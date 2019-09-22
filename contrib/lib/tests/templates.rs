@@ -124,7 +124,6 @@ mod templates_tests {
         async fn test_template_reload() {
             use std::fs::File;
             use std::io::Write;
-            use std::thread;
             use std::time::Duration;
 
             use rocket::local::Client;
@@ -169,9 +168,8 @@ mod templates_tests {
                     return;
                 }
 
-                // TODO.async: blocking call in async context
                 // otherwise, retry a few times, waiting 250ms in between
-                thread::sleep(Duration::from_millis(250));
+                tokio_timer::delay_for(Duration::from_millis(250)).await;
             }
 
             panic!("failed to reload modified template in 1.5s");
