@@ -11,7 +11,9 @@ fn parse_input(input: TokenStream) -> Result<syn::ItemFn> {
         return Err(Span::call_site().error("`#[async_test]` can only be applied to async functions"))
     }
 
-    // TODO.async: verify of the form `async fn name(/* no args */) -> R`
+    if !function.sig.inputs.is_empty() {
+        return Err(Span::call_site().error("`#[async_test]` can only be applied to functions with no parameters"));
+    }
 
     Ok(function)
 }
