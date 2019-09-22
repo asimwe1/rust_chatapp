@@ -92,12 +92,11 @@ fn hyper_service_fn(
     }).expect("failed to spawn handler");
 
     async move {
-        Ok(rx.await.expect("TODO.async: sender was dropped, error instead"))
+        rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
 }
 
 impl Rocket {
-    // TODO.async: Reconsider io::Result
     #[inline]
     fn issue_response<'r>(
         &self,
@@ -151,7 +150,7 @@ impl Rocket {
 
                     let mut stream = body.into_chunk_stream(4096);
                     while let Some(next) = stream.next().await {
-                        sender.send_data(next?).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
                 }
                 Some(Body::Chunked(body, chunk_size)) => {
@@ -162,7 +161,7 @@ impl Rocket {
 
                     let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
                     while let Some(next) = stream.next().await {
-                        sender.send_data(next?).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
                 }
             };
