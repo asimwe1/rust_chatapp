@@ -6,8 +6,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 
-use futures::ready;
-use futures::stream::Stream;
+use hyper::server::accept::Accept;
 
 use log::{debug, error};
 
@@ -35,8 +34,8 @@ pub trait Connection: AsyncRead + AsyncWrite {
 
 /// This is a genericized version of hyper's AddrIncoming that is intended to be
 /// usable with listeners other than a plain TCP stream, e.g. TLS and/or Unix
-/// sockets. It does this by briding the `Listener` trait to what hyper wants (a
-/// Stream of AsyncRead+AsyncWrite). This type is internal to Rocket.
+/// sockets. It does this by bridging the `Listener` trait to what hyper wants
+/// (an Accept). This type is internal to Rocket.
 #[must_use = "streams do nothing unless polled"]
 pub struct Incoming<L> {
     listener: L,
@@ -73,7 +72,7 @@ impl<L: Listener> Incoming<L> {
         self.sleep_on_errors = val;
     }
 
-    fn poll_next_(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
+    fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
         // Check if a previous delay is active that was set by IO errors.
         if let Some(ref mut delay) = self.pending_error_delay {
             match Pin::new(delay).poll(cx) {
@@ -124,11 +123,12 @@ impl<L: Listener> Incoming<L> {
     }
 }
 
-impl<L: Listener + Unpin> Stream for Incoming<L> {
-    type Item = io::Result<L::Connection>;
+impl<L: Listener + Unpin> Accept for Incoming<L> {
+    type Conn = L::Connection;
+    type Error = io::Error;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let result = ready!(self.poll_next_(cx));
+    fn poll_accept(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+        let result = futures::ready!(self.poll_next(cx));
         Poll::Ready(Some(result))
     }
 }
