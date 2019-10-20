@@ -73,6 +73,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
     let Poolable = quote_spanned!(span => #databases::Poolable);
     let r2d2 = quote_spanned!(span => #databases::r2d2);
+    let tokio_executor = quote_spanned!(span => #databases::tokio_executor);
     let request = quote!(::rocket::request);
 
     let generated_types = quote_spanned! { span =>
@@ -140,17 +141,21 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             }
         }
 
-        impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
+        impl<'a, 'r> #request::FromRequestAsync<'a, 'r> for #guard_type {
             type Error = ();
 
-            fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+            fn from_request<'fut>(request: &'a #request::Request<'r>) -> #request::FromRequestFuture<'fut, Self, Self::Error> where 'a: 'fut {
                 use ::rocket::{Outcome, http::Status};
-                let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<#pool_type>>());
+                Box::pin(async move {
+                    let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, #pool_type>>()).0.clone();
 
-                match pool.0.get() {
-                    Ok(conn) => Outcome::Success(#guard_type(conn)),
-                    Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
-                }
+                    #tokio_executor::blocking::run(move || {
+                        match pool.get() {
+                            Ok(conn) => Outcome::Success(#guard_type(conn)),
+                            Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
+                        }
+                    }).await
+                })
             }
         }
     }.into())
