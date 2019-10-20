@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
+use futures_core::future::BoxFuture;
+
 use crate::router::Route;
 use crate::request::Request;
 use crate::outcome::{self, IntoOutcome};
@@ -30,6 +32,22 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
             Err(_) => Forward(())
         }
     }
+}
+
+/// Type alias for the future returned by [`FromRequestAsync::from_request`].
+pub type FromRequestFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
+
+pub trait FromRequestAsync<'a, 'r>: Sized {
+    /// The associated error to be returned if derivation fails.
+    type Error: Debug;
+
+    /// Derives an instance of `Self` from the incoming request metadata.
+    ///
+    /// If the derivation is successful, an outcome of `Success` is returned. If
+    /// the derivation fails in an unrecoverable fashion, `Failure` is returned.
+    /// `Forward` is returned to indicate that the request should be forwarded
+    /// to other matching routes, if any.
+    fn from_request<'fut>(request: &'a Request<'r>) -> FromRequestFuture<'fut, Self, Self::Error> where 'a: 'fut;
 }
 
 /// Trait implemented by request guards to derive a value from incoming
@@ -354,6 +372,14 @@ pub trait FromRequest<'a, 'r>: Sized {
     /// `Forward` is returned to indicate that the request should be forwarded
     /// to other matching routes, if any.
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
+}
+
+impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequestAsync<'a, 'r> for T {
+    type Error = T::Error;
+
+    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+        Box::pin(async move { T::from_request(request) })
+    }
 }
 
 impl FromRequest<'_, '_> for Method {
