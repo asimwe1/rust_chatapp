@@ -54,7 +54,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     define_vars_and_mods!(req, catcher, Request, Response, ErrorHandlerFuture);
 
     // Determine the number of parameters that will be passed in.
-    let (fn_sig, inputs) = match catch.function.sig.inputs.len() {
+    let (_fn_sig, inputs) = match catch.function.sig.inputs.len() {
         0 => (quote!(fn() -> _), quote!()),
         1 => (quote!(fn(&#Request) -> _), quote!(#req)),
         _ => return Err(catch.function.sig.inputs.span()
@@ -71,10 +71,22 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         .map(|ty| ty.span().into())
         .unwrap_or(Span::call_site().into());
 
+    let responder_stmt = if catch.function.sig.asyncness.is_some() {
+        quote_spanned! { return_type_span =>
+            let ___responder = #catcher(#inputs).await;
+        }
+    } else {
+        quote_spanned! { return_type_span =>
+            let ___responder = #catcher(#inputs);
+        }
+    };
+
     let catcher_response = quote_spanned!(return_type_span => {
-        // Emit this to force a type signature check.
-        let #catcher: #fn_sig = #user_catcher_fn_name;
-        let ___responder = #catcher(#inputs);
+        // TODO.async: fix this
+        // // Emit this to force a type signature check.
+        // let #catcher: #fn_sig = #user_catcher_fn_name;
+        let #catcher = #user_catcher_fn_name;
+        #responder_stmt
         ::rocket::response::Responder::respond_to(___responder, #req).await?
     });
 
