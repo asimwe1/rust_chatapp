@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock, Mutex};
 use std::net::{IpAddr, SocketAddr};
+use std::future::Future;
 use std::fmt;
 use std::str;
 
@@ -562,6 +563,39 @@ impl<'r> Request<'r> {
                 self.state.cache.set(f());
                 self.state.cache.get()
             })
+    }
+
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `fut` is `await`ed to produce the value which is subsequently
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # type User = ();
+    /// async fn current_user<'r>(request: &Request<'r>) -> User {
+    ///     // Validate request for a given user, load from database, etc.
+    /// }
+    ///
+    /// # Request::example(Method::Get, "/uri", |request| rocket::async_test(async {
+    /// let user = request.local_cache_async(async {
+    ///     current_user(request).await
+    /// }).await;
+    /// # }));
+    pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
+        where F: Future<Output = T>,
+              T: Send + Sync + 'static
+    {
+        match self.state.cache.try_get() {
+            Some(s) => s,
+            None => {
+                self.state.cache.set(fut.await);
+                self.state.cache.get()
+            }
+        }
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th segment from the
