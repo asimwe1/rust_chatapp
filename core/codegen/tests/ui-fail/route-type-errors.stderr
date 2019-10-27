@@ -35,6 +35,8 @@ error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not s
    |
 23 | fn f5(a: Q, foo: Q) {}
    |       ^^^^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+   |
+   = note: required because of the requirements on the impl of `rocket::request::FromRequestAsync<'_, '_>` for `Q`
 
 error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:23:13
@@ -47,6 +49,8 @@ error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not s
    |
 28 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |       ^^^^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+   |
+   = note: required because of the requirements on the impl of `rocket::request::FromRequestAsync<'_, '_>` for `Q`
 
 error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:28:13
