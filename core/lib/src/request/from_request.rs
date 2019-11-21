@@ -450,26 +450,30 @@ impl FromRequest<'_, '_> for SocketAddr {
     }
 }
 
-impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error> {
+impl<'a, 'r, T: FromRequestAsync<'a, 'r> + 'a> FromRequestAsync<'a, 'r> for Result<T, T::Error> {
     type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        match T::from_request(request) {
+    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+        // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
+        use futures_util::future::FutureExt;
+        T::from_request(request).map(|x| match x {
             Success(val) => Success(Ok(val)),
             Failure((_, e)) => Success(Err(e)),
             Forward(_) => Forward(()),
-        }
+        }).boxed()
     }
 }
 
-impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
+impl<'a, 'r, T: FromRequestAsync<'a, 'r> + 'a> FromRequestAsync<'a, 'r> for Option<T> {
     type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        match T::from_request(request) {
+    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+        // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
+        use futures_util::future::FutureExt;
+        T::from_request(request).map(|x| match x {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
-        }
+        }).boxed()
     }
 }
 
