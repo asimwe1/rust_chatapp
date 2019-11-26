@@ -7,8 +7,7 @@ async fn test(uri: &str, status: Status, body: String) {
         .register(catchers![super::not_found]);
 
     let client = Client::new(rocket).unwrap();
-    let request = client.get(uri);
-    let mut response = request.dispatch().await;
+    let mut response = client.get(uri).dispatch().await;
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string().await, Some(body));
 }
@@ -17,8 +16,7 @@ async fn test(uri: &str, status: Status, body: String) {
 async fn test_hello() {
     let (name, age) = ("Arthur", 42);
     let uri = format!("/hello/{}/{}", name, age);
-    let expected = format!("Hello, {} year old named {}!", age, name);
-    test(&uri, Status::Ok, expected).await;
+    test(&uri, Status::Ok, format!("Hello, {} year old named {}!", age, name)).await;
 }
 
 #[rocket::async_test]

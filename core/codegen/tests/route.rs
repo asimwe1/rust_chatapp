@@ -102,28 +102,26 @@ async fn test_full_route() {
     let response = client.post(&uri).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let request = client.post(format!("/1{}", uri)).body(simple);
-    let response = request.dispatch().await;
+    let response = client.post(format!("/1{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let request = client
+    let mut response = client
         .post(format!("/1{}", uri))
         .header(ContentType::JSON)
-        .body(simple);
-    let mut response = request.dispatch().await;
+        .body(simple)
+        .dispatch().await;
 
     assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 
-    let request = client.post(format!("/2{}", uri)).body(simple);
-    let response = request.dispatch().await;
+    let response = client.post(format!("/2{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let request = client
+    let mut response = client
         .post(format!("/2{}", uri))
         .header(ContentType::JSON)
-        .body(simple);
-    let mut response = request.dispatch().await;
+        .body(simple)
+        .dispatch().await;
 
     assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));

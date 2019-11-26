@@ -47,8 +47,7 @@ mod tests {
                         "/static", "/point/static"]
         {
             let path = "this/is/the/path/we/want";
-            let request = client.get(format!("{}/{}", prefix, path));
-            let mut response = request.dispatch().await;
+            let mut response = client.get(format!("{}/{}", prefix, path)).dispatch().await;
             assert_eq!(response.body_string().await, Some(path.into()));
         }
     }

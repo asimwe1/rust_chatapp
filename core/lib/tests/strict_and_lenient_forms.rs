@@ -34,18 +34,18 @@ mod strict_and_lenient_forms_tests {
     #[rocket::async_test]
     async fn test_strict_form() {
         let client = client();
-        let request = client.post("/strict")
+        let mut response = client.post("/strict")
             .header(ContentType::Form)
-            .body(format!("field={}", FIELD_VALUE));
-        let mut response = request.dispatch().await;
+            .body(format!("field={}", FIELD_VALUE))
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
 
-        let request = client.post("/strict")
+        let response = client.post("/strict")
             .header(ContentType::Form)
-            .body(format!("field={}&extra=whoops", FIELD_VALUE));
-        let response = request.dispatch().await;
+            .body(format!("field={}&extra=whoops", FIELD_VALUE))
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
@@ -53,18 +53,18 @@ mod strict_and_lenient_forms_tests {
     #[rocket::async_test]
     async fn test_lenient_form() {
         let client = client();
-        let request = client.post("/lenient")
+        let mut response = client.post("/lenient")
             .header(ContentType::Form)
-            .body(format!("field={}", FIELD_VALUE));
-        let mut response = request.dispatch().await;
+            .body(format!("field={}", FIELD_VALUE))
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
 
-        let request = client.post("/lenient")
+        let mut response = client.post("/lenient")
             .header(ContentType::Form)
-            .body(format!("field={}&extra=whoops", FIELD_VALUE));
-        let mut response = request.dispatch().await;
+            .body(format!("field={}&extra=whoops", FIELD_VALUE))
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));

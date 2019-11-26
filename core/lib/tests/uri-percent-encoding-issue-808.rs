@@ -52,8 +52,7 @@ mod tests {
     async fn uri_percent_encoding_get() {
         let client = Client::new(rocket()).unwrap();
         let name = Uri::percent_encode(NAME);
-        let request = client.get(format!("/hello/{}", name));
-        let mut response = request.dispatch().await;
+        let mut response = client.get(format!("/hello/{}", name)).dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await.unwrap(), format!("Hello, {}!", NAME));
     }

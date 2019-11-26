@@ -14,10 +14,10 @@ fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {
 }
 
 async fn login(client: &Client, user: &str, pass: &str) -> Option<Cookie<'static>> {
-    let request = client.post("/login")
+    let response = client.post("/login")
         .header(ContentType::Form)
-        .body(format!("username={}&password={}", user, pass));
-    let response = request.dispatch().await;
+        .body(format!("username={}&password={}", user, pass))
+        .dispatch().await;
 
     user_id_cookie(&response)
 }
