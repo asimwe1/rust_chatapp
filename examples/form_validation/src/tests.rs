@@ -72,7 +72,7 @@ fn test_bad_form_missing_fields() {
         "password=pass&age=30"
     ];
 
-    for bad_input in bad_inputs.into_iter() {
+    for bad_input in bad_inputs.iter() {
         check_bad_form(bad_input, Status::UnprocessableEntity);
     }
 }
