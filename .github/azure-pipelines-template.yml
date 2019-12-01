@@ -21,7 +21,9 @@ jobs:
 
   # maxOS native dependency installation
   - ${{ if eq(parameters.name, 'macOS') }}:
-    - script: brew install mysql-connector-c libpq sqlite coreutils
+    - script: |
+        brew install mysql-client libpq sqlite coreutils
+        echo "##vso[task.setvariable variable=PATH]$PATH:/usr/local/opt/mysql-client/bin"
       displayName: 'Install Native Dependencies'
 
   # Linux native dependency installation
