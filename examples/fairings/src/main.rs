@@ -39,7 +39,7 @@ impl Fairing for Counter {
         })
     }
 
-    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>)
+    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>)
         -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
     {
         Box::pin(async move {

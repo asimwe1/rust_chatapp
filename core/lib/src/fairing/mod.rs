@@ -238,7 +238,7 @@ pub use self::info_kind::{Info, Kind};
 ///         })
 ///     }
 ///
-///     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///     fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
 ///         Box::pin(async move {
 ///             // Don't change a successful user's response, ever.
 ///             if response.status() != Status::NotFound {
@@ -306,7 +306,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Adds a header to the response indicating how long the server took to
 ///     /// process the request.
-///     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///     fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
 ///         Box::pin(async move {
 ///             let start_time = request.local_cache(|| TimerStart(None));
 ///             if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
@@ -424,7 +424,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> BoxFuture<'a, ()> {
+    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> BoxFuture<'a, ()> {
         Box::pin(async { })
     }
 }
@@ -451,7 +451,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> BoxFuture<'a, ()> {
+    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> BoxFuture<'a, ()> {
         (self as &T).on_response(request, response)
     }
 }
