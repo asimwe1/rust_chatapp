@@ -34,7 +34,9 @@ use crate::fairing::{Fairing, Kind, Info};
 ///         println!("Rocket is about to launch! Exciting! Here we go...");
 ///     }))
 ///     .attach(AdHoc::on_request("Put Rewriter", |req, _| {
-///         req.set_method(Method::Put);
+///         Box::pin(async move {
+///             req.set_method(Method::Put);
+///         })
 ///     }));
 /// ```
 pub struct AdHoc {
@@ -48,7 +50,7 @@ enum AdHocKind {
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
     Launch(Mutex<Option<Box<dyn FnOnce(&Rocket) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<dyn Fn(&mut Request<'_>, &Data) + Send + Sync + 'static>),
+    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()> + Send + Sync + 'static>),
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
     Response(Box<dyn for<'a, 'r> Fn(&'a Request<'r>, &'a mut Response<'r>) -> BoxFuture<'a, ()> + Send + Sync + 'static>),
@@ -101,12 +103,14 @@ impl AdHoc {
     ///
     /// // The no-op request fairing.
     /// let fairing = AdHoc::on_request("Dummy", |req, data| {
-    ///     // do something with the request and data...
-    /// #   let (_, _) = (req, data);
+    ///     Box::pin(async move {
+    ///         // do something with the request and data...
+    /// #       let (_, _) = (req, data);
+    ///     })
     /// });
     /// ```
     pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&mut Request<'_>, &Data) + Send + Sync + 'static
+        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()> + Send + Sync + 'static
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
@@ -164,9 +168,11 @@ impl Fairing for AdHoc {
         }
     }
 
-    fn on_request(&self, request: &mut Request<'_>, data: &Data) {
+    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, data: &'a Data) -> BoxFuture<'a, ()> {
         if let AdHocKind::Request(ref callback) = self.kind {
             callback(request, data)
+        } else {
+            Box::pin(async { })
         }
     }
 

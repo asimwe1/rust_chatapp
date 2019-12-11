@@ -27,12 +27,16 @@ impl Fairing for Counter {
         }
     }
 
-    fn on_request(&self, request: &mut Request<'_>, _: &Data) {
-        if request.method() == Method::Get {
-            self.get.fetch_add(1, Ordering::Relaxed);
-        } else if request.method() == Method::Post {
-            self.post.fetch_add(1, Ordering::Relaxed);
-        }
+    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data)
+        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
+    {
+        Box::pin(async move {
+            if request.method() == Method::Get {
+                self.get.fetch_add(1, Ordering::Relaxed);
+            } else if request.method() == Method::Post {
+                self.post.fetch_add(1, Ordering::Relaxed);
+            }
+        })
     }
 
     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>)
@@ -79,11 +83,13 @@ fn rocket() -> rocket::Rocket {
             println!("Rocket is about to launch!");
         }))
         .attach(AdHoc::on_request("PUT Rewriter", |req, _| {
-            println!("    => Incoming request: {}", req);
-            if req.uri().path() == "/" {
-                println!("    => Changing method to `PUT`.");
-                req.set_method(Method::Put);
-            }
+            Box::pin(async move {
+                println!("    => Incoming request: {}", req);
+                if req.uri().path() == "/" {
+                    println!("    => Changing method to `PUT`.");
+                    req.set_method(Method::Put);
+                }
+            })
         }))
         .attach(AdHoc::on_response("Response Rewriter", |req, res| {
             Box::pin(async move {

@@ -21,7 +21,7 @@
 //!
 //! ```rust
 //! # use rocket::fairing::AdHoc;
-//! # let req_fairing = AdHoc::on_request("Request", |_, _| ());
+//! # let req_fairing = AdHoc::on_request("Request", |_, _| Box::pin(async move {}));
 //! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
 //! let rocket = rocket::ignite()
 //!     .attach(req_fairing)
@@ -228,12 +228,14 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     fn on_request(&self, request: &mut Request, _: &Data) {
-///         if request.method() == Method::Get {
-///             self.get.fetch_add(1, Ordering::Relaxed);
-///         } else if request.method() == Method::Post {
-///             self.post.fetch_add(1, Ordering::Relaxed);
-///         }
+///     fn on_request<'a>(&'a self, request: &'a mut Request, _: &'a Data) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///         Box::pin(async move {
+///             if request.method() == Method::Get {
+///                 self.get.fetch_add(1, Ordering::Relaxed);
+///             } else if request.method() == Method::Post {
+///                 self.post.fetch_add(1, Ordering::Relaxed);
+///             }
+///         })
 ///     }
 ///
 ///     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
@@ -293,11 +295,13 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     fn on_request(&self, request: &mut Request, _: &Data) {
-///         // Store a `TimerStart` instead of directly storing a `SystemTime`
-///         // to ensure that this usage doesn't conflict with anything else
-///         // that might store a `SystemTime` in request-local cache.
-///         request.local_cache(|| TimerStart(Some(SystemTime::now())));
+///     fn on_request<'a>(&'a self, request: &'a mut Request, _: &'a Data) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///         Box::pin(async move {
+///             // Store a `TimerStart` instead of directly storing a `SystemTime`
+///             // to ensure that this usage doesn't conflict with anything else
+///             // that might store a `SystemTime` in request-local cache.
+///             request.local_cache(|| TimerStart(Some(SystemTime::now())));
+///         })
 ///     }
 ///
 ///     /// Adds a header to the response indicating how long the server took to
@@ -405,7 +409,9 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_request(&self, request: &mut Request<'_>, data: &Data) {}
+    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, data: &'a Data) -> BoxFuture<'a, ()> {
+        Box::pin(async { })
+    }
 
     /// The response callback.
     ///
@@ -440,7 +446,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_request(&self, request: &mut Request<'_>, data: &Data) {
+    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, data: &'a Data) -> BoxFuture<'a, ()> {
         (self as &T).on_request(request, data)
     }
 

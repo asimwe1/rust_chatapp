@@ -29,10 +29,12 @@ fn rocket() -> rocket::Rocket {
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)
                 .attach(AdHoc::on_request("Inner", |req, _| {
-                    if req.method() == Method::Get {
-                        let counter = req.guard::<State<'_, Counter>>().unwrap();
-                        counter.get.fetch_add(1, Ordering::Release);
-                    }
+                    Box::pin(async move {
+                        if req.method() == Method::Get {
+                            let counter = req.guard::<State<'_, Counter>>().unwrap();
+                            counter.get.fetch_add(1, Ordering::Release);
+                        }
+                    })
                 }));
 
             Ok(rocket)

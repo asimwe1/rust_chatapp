@@ -59,9 +59,9 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub fn handle_request(&self, req: &mut Request<'_>, data: &Data) {
+    pub async fn handle_request(&self, req: &mut Request<'_>, data: &Data) {
         for &i in &self.request {
-            self.all_fairings[i].on_request(req, data);
+            self.all_fairings[i].on_request(req, data).await;
         }
     }
 

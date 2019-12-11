@@ -163,10 +163,14 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    fn on_request(&self, req: &mut rocket::Request<'_>, _data: &rocket::Data) {
-        let cm = req.guard::<rocket::State<'_, ContextManager>>()
-            .expect("Template ContextManager registered in on_attach");
+    fn on_request<'a>(&'a self, req: &'a mut rocket::Request<'_>, _data: &'a rocket::Data)
+        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
+    {
+        Box::pin(async move {
+            let cm = req.guard::<rocket::State<'_, ContextManager>>()
+                .expect("Template ContextManager registered in on_attach");
 
-        cm.reload_if_needed(&*self.custom_callback);
+            cm.reload_if_needed(&*self.custom_callback);
+        })
     }
 }

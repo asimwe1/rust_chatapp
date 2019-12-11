@@ -47,7 +47,7 @@ const PEEK_BYTES: usize = 512;
 pub struct Data {
     buffer: Vec<u8>,
     is_complete: bool,
-    stream: Box<dyn AsyncRead + Unpin + Send>,
+    stream: Box<dyn AsyncRead + Unpin + Send + Sync>,
 }
 
 impl Data {

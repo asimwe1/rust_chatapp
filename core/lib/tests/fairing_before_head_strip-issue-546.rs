@@ -31,7 +31,9 @@ mod fairing_before_head_strip {
         let rocket = rocket::ignite()
             .mount("/", routes![head])
             .attach(AdHoc::on_request("Check HEAD", |req, _| {
-                assert_eq!(req.method(), Method::Head);
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
+                })
             }))
             .attach(AdHoc::on_response("Check HEAD 2", |req, res| {
                 Box::pin(async move {
@@ -56,11 +58,13 @@ mod fairing_before_head_strip {
             .mount("/", routes![auto])
             .manage(counter)
             .attach(AdHoc::on_request("Check HEAD + Count", |req, _| {
-                assert_eq!(req.method(), Method::Head);
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
 
-                // This should be called exactly once.
-                let c = req.guard::<State<Counter>>().unwrap();
-                assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
+                    // This should be called exactly once.
+                    let c = req.guard::<State<Counter>>().unwrap();
+                    assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
+                })
             }))
             .attach(AdHoc::on_response("Check GET", |req, res| {
                 Box::pin(async move {

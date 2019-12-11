@@ -208,7 +208,7 @@ impl Rocket {
             self.preprocess_request(request, &data);
 
             // Run the request fairings.
-            self.fairings.handle_request(request, &data);
+            self.fairings.handle_request(request, &data).await;
 
             // Remember if the request is a `HEAD` request for later body stripping.
             let was_head_request = request.method() == Method::Head;
