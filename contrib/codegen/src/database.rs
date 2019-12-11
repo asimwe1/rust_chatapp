@@ -144,7 +144,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
         impl<'a, 'r> #request::FromRequestAsync<'a, 'r> for #guard_type {
             type Error = ();
 
-            fn from_request<'fut>(request: &'a #request::Request<'r>) -> #request::FromRequestFuture<'fut, Self, Self::Error> where 'a: 'fut {
+            fn from_request(request: &'a #request::Request<'r>) -> #request::FromRequestFuture<'a, Self, Self::Error> {
                 use ::rocket::{Outcome, http::Status};
                 Box::pin(async move {
                     let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, #pool_type>>()).0.clone();

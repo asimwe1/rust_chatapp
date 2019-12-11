@@ -44,8 +44,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
 impl<'a, 'r> FromRequestAsync<'a, 'r> for Guard3 {
     type Error = ();
 
-    fn from_request<'fut>(req: &'a Request<'r>) -> FromRequestFuture<'fut, Self, ()>
-        where 'a: 'fut
+    fn from_request(req: &'a Request<'r>) -> FromRequestFuture<'a, Self, ()>
     {
         Box::pin(async move {
             let atomics = try_outcome!(req.guard::<State<'_, Atomics>>());
@@ -62,8 +61,7 @@ impl<'a, 'r> FromRequestAsync<'a, 'r> for Guard3 {
 impl<'a, 'r> FromRequestAsync<'a, 'r> for Guard4 {
     type Error = ();
 
-    fn from_request<'fut>(req: &'a Request<'r>) -> FromRequestFuture<'fut, Self, ()>
-        where 'a: 'fut
+    fn from_request(req: &'a Request<'r>) -> FromRequestFuture<'a, Self, ()>
     {
         Box::pin(async move {
             try_outcome!(Guard3::from_request(req).await);

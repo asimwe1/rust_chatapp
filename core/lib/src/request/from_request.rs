@@ -47,7 +47,7 @@ pub trait FromRequestAsync<'a, 'r>: Sized {
     /// the derivation fails in an unrecoverable fashion, `Failure` is returned.
     /// `Forward` is returned to indicate that the request should be forwarded
     /// to other matching routes, if any.
-    fn from_request<'fut>(request: &'a Request<'r>) -> FromRequestFuture<'fut, Self, Self::Error> where 'a: 'fut;
+    fn from_request(request: &'a Request<'r>) -> FromRequestFuture<'a, Self, Self::Error>;
 }
 
 /// Trait implemented by request guards to derive a value from incoming
@@ -377,7 +377,7 @@ pub trait FromRequest<'a, 'r>: Sized {
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequestAsync<'a, 'r> for T {
     type Error = T::Error;
 
-    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+    fn from_request(request: &'a Request<'r>) -> BoxFuture<'a, Outcome<Self, Self::Error>> {
         Box::pin(async move { T::from_request(request) })
     }
 }
@@ -453,7 +453,7 @@ impl FromRequest<'_, '_> for SocketAddr {
 impl<'a, 'r, T: FromRequestAsync<'a, 'r> + 'a> FromRequestAsync<'a, 'r> for Result<T, T::Error> {
     type Error = std::convert::Infallible;
 
-    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+    fn from_request(request: &'a Request<'r>) -> BoxFuture<'a, Outcome<Self, Self::Error>> {
         // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
         use futures_util::future::FutureExt;
         T::from_request(request).map(|x| match x {
@@ -467,7 +467,7 @@ impl<'a, 'r, T: FromRequestAsync<'a, 'r> + 'a> FromRequestAsync<'a, 'r> for Resu
 impl<'a, 'r, T: FromRequestAsync<'a, 'r> + 'a> FromRequestAsync<'a, 'r> for Option<T> {
     type Error = std::convert::Infallible;
 
-    fn from_request<'fut>(request: &'a Request<'r>) -> BoxFuture<'fut, Outcome<Self, Self::Error>> where 'a: 'fut {
+    fn from_request(request: &'a Request<'r>) -> BoxFuture<'a, Outcome<Self, Self::Error>> {
         // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
         use futures_util::future::FutureExt;
         T::from_request(request).map(|x| match x {
