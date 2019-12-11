@@ -100,11 +100,11 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for LenientForm<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'f, Self::Owned, Self::Error> {
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         <Form<T>>::transform(r, d)
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
         Box::pin(futures_util::future::ready(o.borrowed().and_then(|form| {
             <Form<T>>::from_data(form, false).map(LenientForm)
         })))

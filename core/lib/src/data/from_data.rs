@@ -112,8 +112,8 @@ pub type Transformed<'a, T> =
         Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>
     >;
 
-pub type TransformFuture<'a, T, E> = BoxFuture<'a, Transform<Outcome<T, E>>>;
-pub type FromDataFuture<'a, T, E> = BoxFuture<'a, Outcome<T, E>>;
+pub type TransformFuture<'fut, T, E> = BoxFuture<'fut, Transform<Outcome<T, E>>>;
+pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///
@@ -212,7 +212,7 @@ pub type FromDataFuture<'a, T, E> = BoxFuture<'a, Outcome<T, E>>;
 ///     type Owned = String;
 ///     type Borrowed = str;
 ///
-///     fn transform(_: &Request, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+///     fn transform<'r>(_: &'r Request, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
 ///         Box::pin(async move {
 ///             let mut stream = data.open().take(NAME_LIMIT);
 ///             let mut string = String::with_capacity((NAME_LIMIT / 2) as usize);
@@ -226,7 +226,7 @@ pub type FromDataFuture<'a, T, E> = BoxFuture<'a, Outcome<T, E>>;
 ///         })
 ///     }
 ///
-///     fn from_data(_: &Request, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+///     fn from_data(_: &'a Request, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
 ///         Box::pin(async move {
 ///             // Retrieve a borrow to the now transformed `String` (an &str). This
 ///             // is only correct because we know we _always_ return a `Borrowed` from
@@ -367,7 +367,7 @@ pub trait FromData<'a>: Sized {
     /// If transformation succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. On failure, `Failure` is returned.
-    fn transform(request: &Request<'_>, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error>;
+    fn transform<'r>(request: &'r Request<'_>, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error>;
 
     /// Validates, parses, and converts the incoming request body data into an
     /// instance of `Self`.
@@ -397,7 +397,7 @@ pub trait FromData<'a>: Sized {
     /// # unimplemented!()
     /// # }
     /// ```
-    fn from_data(request: &Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error>;
+    fn from_data(request: &'a Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error>;
 }
 
 /// The identity implementation of `FromData`. Always returns `Success`.
@@ -407,12 +407,12 @@ impl<'a> FromData<'a> for Data {
     type Borrowed = ();
 
     #[inline(always)]
-    fn transform(_: &Request<'_>, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+    fn transform<'r>(_: &'r Request<'_>, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(ready(Transform::Owned(Success(data))))
     }
 
     #[inline(always)]
-    fn from_data(_: &Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(_: &'a Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         Box::pin(ready(outcome.owned()))
     }
 }
@@ -531,12 +531,12 @@ impl<'a, T: FromDataSimple + 'a> FromData<'a> for T {
     type Borrowed = ();
 
     #[inline(always)]
-    fn transform(_: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+    fn transform<'r>(_: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(ready(Transform::Owned(Success(d))))
     }
 
     #[inline(always)]
-    fn from_data(req: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(req: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         match o.owned() {
             Success(data) => T::from_data(req, data),
             _ => unreachable!(),
@@ -550,12 +550,12 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Result<T, T::Error> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(r: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         Box::pin(T::from_data(r, o).map(|x| match x {
             Success(val) => Success(Ok(val)),
             Forward(data) => Forward(data),
@@ -570,12 +570,12 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Option<T> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(r: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         Box::pin(T::from_data(r, o).map(|x| match x {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),

@@ -120,10 +120,9 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
     type Owned = Vec<u8>;
     type Borrowed = [u8];
 
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
-        let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
-
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
+            let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
             let mut buf = Vec::new();
             let mut reader = d.open().take(size_limit);
             match reader.read_to_end(&mut buf).await {
@@ -133,7 +132,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
         })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(_: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         use self::Error::*;
 
         Box::pin(async move {

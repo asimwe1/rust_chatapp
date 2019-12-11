@@ -191,20 +191,20 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for Form<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(
-        request: &Request<'_>,
+    fn transform<'r>(
+        request: &'r Request<'_>,
         data: Data
-    ) -> TransformFuture<'f, Self::Owned, Self::Error> {
-        use std::cmp::min;
-
-        if !request.content_type().map_or(false, |ct| ct.is_form()) {
-            warn_!("Form data does not have form content type.");
-            return Box::pin(futures_util::future::ready(Transform::Borrowed(Forward(data))));
-        }
-
-        let limit = request.limits().forms;
-        let mut stream = data.open().take(limit);
+    ) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
+            use std::cmp::min;
+
+            if !request.content_type().map_or(false, |ct| ct.is_form()) {
+                warn_!("Form data does not have form content type.");
+                return Transform::Borrowed(Forward(data));
+            }
+
+            let limit = request.limits().forms;
+            let mut stream = data.open().take(limit);
             let mut form_string = String::with_capacity(min(4096, limit) as usize);
             if let Err(e) = stream.read_to_string(&mut form_string).await {
                 return Transform::Borrowed(Failure((Status::InternalServerError, FormDataError::Io(e))));
@@ -214,7 +214,7 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for Form<T> {
         })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
         Box::pin(futures_util::future::ready(o.borrowed().and_then(|data| {
             <Form<T>>::from_data(data, true).map(Form)
         })))

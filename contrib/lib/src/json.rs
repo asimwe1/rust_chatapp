@@ -135,9 +135,9 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
-        let size_limit = r.limits().get("json").unwrap_or(LIMIT);
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
+            let size_limit = r.limits().get("json").unwrap_or(LIMIT);
             let mut s = String::with_capacity(512);
             let mut reader = d.open().take(size_limit);
             match reader.read_to_string(&mut s).await {
@@ -147,7 +147,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
         })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+    fn from_data(_: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         Box::pin(async move {
             let string = try_outcome!(o.borrowed());
             match serde_json::from_str(&string) {
