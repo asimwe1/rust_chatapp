@@ -5,9 +5,9 @@ use std::io;
 use std::mem;
 use std::sync::Arc;
 
-use futures_core::future::{Future, BoxFuture};
-use futures_channel::{mpsc, oneshot};
-use futures_util::{future::FutureExt, stream::StreamExt};
+use futures_util::future::{Future, FutureExt, BoxFuture};
+use futures_util::stream::StreamExt;
+use tokio::sync::{mpsc, oneshot};
 
 use yansi::Paint;
 use state::Container;
@@ -120,16 +120,16 @@ impl Rocket {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) -> impl Future<Output = io::Result<()>> + 'r {
         async move {
-            let mut hyp_res = hyper::Response::builder();
-            hyp_res.status(response.status().code);
+            let mut hyp_res = hyper::Response::builder()
+                .status(response.status().code);
 
             for header in response.headers().iter() {
                 let name = header.name.as_str();
                 let value = header.value.as_bytes();
-                hyp_res.header(name, value);
+                hyp_res = hyp_res.header(name, value);
             }
 
-            let send_response = move |mut hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
+            let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
                 let response = hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 tx.send(response).expect("channel receiver should not be dropped");
                 Ok(())
@@ -137,15 +137,15 @@ impl Rocket {
 
             match response.body() {
                 None => {
-                    hyp_res.header(header::CONTENT_LENGTH, "0");
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, "0");
                     send_response(hyp_res, hyper::Body::empty())?;
                 }
                 Some(Body::Sized(body, size)) => {
-                    hyp_res.header(header::CONTENT_LENGTH, size.to_string());
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
                     let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
-                    let mut stream = body.into_chunk_stream(4096);
+                    let mut stream = body.into_bytes_stream(4096);
                     while let Some(next) = stream.next().await {
                         sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
@@ -156,7 +156,7 @@ impl Rocket {
                     let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
-                    let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
+                    let mut stream = body.into_bytes_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
                     while let Some(next) = stream.next().await {
                         sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
@@ -760,41 +760,39 @@ impl Rocket {
             }
         });
 
-        // NB: executor must be passed manually here, see hyperium/hyper#1537
+        #[derive(Clone)]
+        struct TokioExecutor;
+
+        impl<Fut> hyper::Executor<Fut> for TokioExecutor where Fut: Future + Send + 'static, Fut::Output: Send {
+            fn execute(&self, fut: Fut) {
+                tokio::spawn(fut);
+            }
+        }
+
         hyper::Server::builder(Incoming::from_listener(listener))
-            .executor(tokio::executor::DefaultExecutor::current())
+            .executor(TokioExecutor)
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
+            .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
             .await
             .map_err(crate::error::Error::Run)
     }
 
-    /// Similar to `launch()`, but using a custom Tokio runtime and returning
-    /// a `Future` that completes along with the server. The runtime has no
-    /// restrictions other than being Tokio-based, and can have other tasks
-    /// running on it.
+    /// Returns a `Future` that completes when the server is shut down or
+    /// errors. If the `ctrl_c_shutdown` feature is enabled, `Ctrl-C` will be
+    /// handled as a shutdown signal.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use futures::future::FutureExt;
-    ///
-    /// // This gives us the default behavior. Alternatively, we could use a
-    /// // `tokio::runtime::Builder` to configure with greater detail.
-    /// let runtime = tokio::runtime::Runtime::new().expect("error creating runtime");
-    ///
+    /// #[tokio::main]
+    /// async fn main() {
     /// # if false {
-    /// let server_done = rocket::ignite().spawn_on(&runtime);
-    /// runtime.block_on(async move {
-    ///     let result = server_done.await;
+    ///     let result = rocket::ignite().serve().await;
     ///     assert!(result.is_ok());
-    /// });
     /// # }
+    /// }
     /// ```
-    pub fn spawn_on(
-        self,
-        runtime: &tokio::runtime::Runtime,
-    ) -> impl Future<Output = Result<(), crate::error::Error>> {
+    pub async fn serve(self) -> Result<(), crate::error::Error> {
         use std::net::ToSocketAddrs;
 
         use crate::error::Error::Launch;
@@ -802,7 +800,7 @@ impl Rocket {
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let addrs = match full_addr.to_socket_addrs() {
             Ok(a) => a.collect::<Vec<_>>(),
-            Err(e) => return futures_util::future::ready(Err(Launch(From::from(e)))).boxed(),
+            Err(e) => return Err(Launch(From::from(e))),
         };
         let addr = addrs[0];
 
@@ -812,26 +810,26 @@ impl Rocket {
             (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver)
         ) = (
             self.get_shutdown_handle(),
-            oneshot::channel()
+            oneshot::channel(),
         );
 
-        let server = async move {
+        let server = {
             macro_rules! listen_on {
                 ($expr:expr) => {{
                     let listener = match $expr {
                         Ok(ok) => ok,
                         Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
                     };
-                    self.listen_on(listener).await
+                    self.listen_on(listener)
                 }};
             }
 
             #[cfg(feature = "tls")]
             {
                 if let Some(tls) = self.config.tls.clone() {
-                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await)
+                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
                 } else {
-                    listen_on!(crate::http::private::bind_tcp(addr).await)
+                    listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
                 }
             }
             #[cfg(not(feature = "tls"))]
@@ -846,31 +844,30 @@ impl Rocket {
         });
 
         #[cfg(feature = "ctrl_c_shutdown")]
-        match tokio::net::signal::ctrl_c() {
-            Ok(mut ctrl_c) => {
-                runtime.spawn(async move {
-                    // Stop listening for `ctrl_c` if the server shuts down
-                    // a different way to avoid waiting forever.
-                    futures_util::future::select(
-                        ctrl_c.next(),
-                        cancel_ctrl_c_listener_receiver,
-                    ).await;
+        {
+            tokio::spawn(async move {
+                use futures_util::future::{select, Either};
 
-                    // Request the server shutdown.
-                    shutdown_handle.shutdown();
-                });
-            },
-            Err(err) => {
-                // Signal handling isn't strictly necessary, so we can skip it
-                // if necessary. It's a good idea to let the user know we're
-                // doing so in case they are expecting certain behavior.
-                let message = "Not listening for shutdown keybinding.";
-                warn!("{}", Paint::yellow(message));
-                info_!("Error: {}", err);
-            },
+                let either = select(
+                    tokio::signal::ctrl_c().boxed(),
+                    cancel_ctrl_c_listener_receiver,
+                ).await;
+
+                match either {
+                    Either::Left((Ok(()), _)) | Either::Right((_, _)) => shutdown_handle.shutdown(),
+                    Either::Left((Err(err), _)) => {
+                        // Signal handling isn't strictly necessary, so we can skip it
+                        // if necessary. It's a good idea to let the user know we're
+                        // doing so in case they are expecting certain behavior.
+                        let message = "Not listening for shutdown keybinding.";
+                        warn!("{}", Paint::yellow(message));
+                        info_!("Error: {}", err);
+                    }
+                }
+            });
         }
 
-        server.boxed()
+        server.await
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -893,14 +890,15 @@ impl Rocket {
     /// # }
     /// ```
     pub fn launch(self) -> Result<(), crate::error::Error> {
-        // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
-        let runtime = tokio::runtime::Builder::new()
-            .core_threads(self.config.workers as usize)
+        let mut runtime = tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .num_threads(self.config.workers as usize)
+            .enable_all()
             .build()
             .expect("Cannot build runtime!");
 
-        runtime.block_on(self.spawn_on(&runtime))
+        runtime.block_on(async move { self.serve().await })
     }
 
     /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate

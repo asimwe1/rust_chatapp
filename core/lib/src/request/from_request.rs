@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use futures_core::future::BoxFuture;
+use futures_util::future::BoxFuture;
 
 use crate::router::Route;
 use crate::request::Request;

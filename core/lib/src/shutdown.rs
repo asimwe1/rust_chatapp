@@ -1,5 +1,5 @@
 use crate::request::{FromRequest, Outcome, Request};
-use futures_channel::mpsc;
+use tokio::sync::mpsc;
 
 /// # Example
 ///
@@ -34,6 +34,7 @@ impl ShutdownHandle {
         // Intentionally ignore any error, as the only scenarios this can happen
         // is sending too many shutdown requests or we're already shut down.
         let _ = self.0.try_send(());
+        info!("Server shutdown requested, waiting for all pending requests to finish.");
     }
 }
 

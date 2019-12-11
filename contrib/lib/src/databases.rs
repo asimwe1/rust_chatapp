@@ -398,7 +398,7 @@
 pub extern crate r2d2;
 
 #[doc(hidden)]
-pub extern crate tokio_executor;
+pub use tokio::task::spawn_blocking;
 
 #[cfg(any(feature = "diesel_sqlite_pool",
           feature = "diesel_postgres_pool",

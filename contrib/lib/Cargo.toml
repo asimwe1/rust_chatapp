@@ -14,12 +14,12 @@ edition = "2018"
 [features]
 # Internal use only.
 templates = ["serde", "serde_json", "glob", "notify"]
-databases = ["r2d2", "tokio-executor", "rocket_contrib_codegen/database_attribute"]
+databases = ["r2d2", "tokio/blocking", "tokio/rt-threaded", "rocket_contrib_codegen/database_attribute"]
 
 # User-facing features.
 default = ["json", "serve"]
-json = ["serde", "serde_json"]
-msgpack = ["serde", "rmp-serde"]
+json = ["serde", "serde_json", "tokio/io-util"]
+msgpack = ["serde", "rmp-serde", "tokio/io-util"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
@@ -42,8 +42,7 @@ memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
 # Global dependencies.
-futures-util-preview = "0.3.0-alpha.19"
-tokio-io = "=0.2.0-alpha.6"
+tokio = { version = "0.2.0", optional = true }
 rocket_contrib_codegen = { version = "0.5.0-dev", path = "../codegen", optional = true }
 rocket = { version = "0.5.0-dev", path = "../../core/lib/", default-features = false }
 log = "0.4"
@@ -66,7 +65,6 @@ uuid = { version = ">=0.7.0, <0.9.0", optional = true }
 diesel = { version = "1.0", default-features = false, optional = true }
 postgres = { version = "0.17", optional = true }
 r2d2 = { version = "0.8", optional = true }
-tokio-executor = { version = "0.2.0-alpha.6", optional = true }
 r2d2_postgres = { version = "0.16", optional = true }
 mysql = { version = "17.0", optional = true }
 r2d2_mysql = { version = "17.0", optional = true }
@@ -89,7 +87,7 @@ brotli = { version = "3.3", optional = true }
 flate2 = { version = "1.0", optional = true }
 
 [dev-dependencies]
-tokio-timer = "=0.3.0-alpha.6"
+tokio = { version = "0.2.0", features = ["time"] }
 
 [package.metadata.docs.rs]
 all-features = true

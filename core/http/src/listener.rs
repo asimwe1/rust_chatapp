@@ -4,15 +4,15 @@ use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use hyper::server::accept::Accept;
 
 use log::{debug, error};
 
-use tokio_io::{AsyncRead, AsyncWrite};
-use tokio_timer::Delay;
-use tokio_net::tcp::{TcpListener, TcpStream};
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::time::Delay;
+use tokio::net::{TcpListener, TcpStream};
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
@@ -100,8 +100,7 @@ impl<L: Listener> Incoming<L> {
                         error!("accept error: {}", e);
 
                         // Sleep for the specified duration
-                        let delay = Instant::now() + duration;
-                        let mut error_delay = tokio_timer::delay(delay);
+                        let mut error_delay = tokio::time::delay_for(duration);
 
                         match Pin::new(&mut error_delay).poll(cx) {
                             Poll::Ready(()) => {
@@ -127,8 +126,7 @@ impl<L: Listener + Unpin> Accept for Incoming<L> {
     type Error = io::Error;
 
     fn poll_accept(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
-        let result = futures_core::ready!(self.poll_next(cx));
-        Poll::Ready(Some(result))
+        self.poll_next(cx).map(Some)
     }
 }
 
@@ -170,10 +168,7 @@ impl Listener for TcpListener {
     }
 
     fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<Result<Self::Connection, io::Error>> {
-        // NB: This is only okay because TcpListener::accept() is stateless.
-        let mut accept = self.accept();
-        let accept = unsafe { Pin::new_unchecked(&mut accept) };
-        accept.poll(cx).map_ok(|(stream, _addr)| stream)
+        self.poll_accept(cx).map_ok(|(stream, _addr)| stream)
     }
 }
 

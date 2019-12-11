@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
 
-use futures_core::future::BoxFuture;
+use futures_util::future::BoxFuture;
 use futures_util::future::{ready, FutureExt};
-use tokio_io::AsyncReadExt;
+use tokio::io::AsyncReadExt;
 
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;

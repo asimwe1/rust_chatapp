@@ -2,7 +2,7 @@ use std::future::Future;
 use std::io;
 use std::path::Path;
 
-use tokio_io::{AsyncRead, AsyncWrite, AsyncReadExt as _};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use super::data_stream::DataStream;
 
@@ -128,7 +128,7 @@ impl Data {
 
     /// A helper method to write the body of the request to any `Write` type.
     ///
-    /// This method is identical to `io::copy(&mut data.open(), writer)`.
+    /// This method is identical to `tokio::io::copy(&mut data.open(), &mut writer)`.
     ///
     /// # Example
     ///
@@ -146,7 +146,7 @@ impl Data {
     pub fn stream_to<'w, W: AsyncWrite + Unpin + 'w>(self, mut writer: W) -> impl Future<Output = io::Result<u64>> + 'w {
         Box::pin(async move {
             let mut stream = self.open();
-            stream.copy(&mut writer).await
+            tokio::io::copy(&mut stream, &mut writer).await
         })
     }
 
