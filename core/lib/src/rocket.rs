@@ -131,8 +131,7 @@ impl Rocket {
 
             let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
                 let response = hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                tx.send(response).expect("channel receiver should not be dropped");
-                Ok(())
+                tx.send(response).map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "Client disconnected before the response was started"))
             };
 
             match response.body() {
