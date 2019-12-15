@@ -2,7 +2,7 @@ use std::future::Future;
 use std::io;
 use std::path::Path;
 
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::AsyncWrite;
 
 use super::data_stream::DataStream;
 
@@ -47,7 +47,7 @@ const PEEK_BYTES: usize = 512;
 pub struct Data {
     buffer: Vec<u8>,
     is_complete: bool,
-    stream: Box<dyn AsyncRead + Unpin + Send + Sync>,
+    stream: AsyncReadBody,
 }
 
 impl Data {
@@ -69,7 +69,7 @@ impl Data {
     /// ```
     pub fn open(mut self) -> DataStream {
         let buffer = std::mem::replace(&mut self.buffer, vec![]);
-        let stream = std::mem::replace(&mut self.stream, Box::new(&[][..]));
+        let stream = std::mem::replace(&mut self.stream, AsyncReadBody::empty());
         DataStream(buffer, stream)
     }
 
@@ -210,7 +210,7 @@ impl Data {
         };
 
         trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-        Data { buffer: peek_buf, stream: Box::new(stream), is_complete: eof }
+        Data { buffer: peek_buf, stream, is_complete: eof }
     }
 
     /// This creates a `data` object from a local data source `data`.
@@ -218,7 +218,7 @@ impl Data {
     pub(crate) fn local(data: Vec<u8>) -> Data {
         Data {
             buffer: data,
-            stream: Box::new(&[][..]),
+            stream: AsyncReadBody::empty(),
             is_complete: true,
         }
     }

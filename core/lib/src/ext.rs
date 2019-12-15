@@ -14,14 +14,13 @@ pub struct IntoBytesStream<R> {
     buffer: Vec<u8>,
 }
 
-// TODO.async: Verify correctness of this implementation.
 impl<R> Stream for IntoBytesStream<R>
     where R: AsyncRead + Unpin
 {
     type Item = Result<Bytes, io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>{
-        assert!(self.buffer.len() == self.buf_size);
+        debug_assert!(self.buffer.len() == self.buf_size);
 
         let Self { ref mut inner, ref mut buffer, buf_size } = *self;
 
@@ -43,7 +42,6 @@ pub trait AsyncReadExt: AsyncRead {
         IntoBytesStream { inner: self, buf_size, buffer: vec![0; buf_size] }
     }
 
-    // TODO.async: Verify correctness of this implementation.
     fn read_max<'a>(&'a mut self, mut buf: &'a mut [u8]) -> BoxFuture<'_, io::Result<usize>>
         where Self: Send + Unpin
     {
@@ -52,7 +50,7 @@ pub trait AsyncReadExt: AsyncRead {
             while !buf.is_empty() {
                 match self.read(buf).await {
                     Ok(0) => break,
-                    Ok(n) => { let tmp = buf; buf = &mut tmp[n..]; }
+                    Ok(n) => buf = &mut buf[n..],
                     Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {}
                     Err(e) => return Err(e),
                 }
@@ -74,6 +72,12 @@ enum AsyncReadBodyState {
     Pending,
     Partial(Cursor<Bytes>),
     Done,
+}
+
+impl AsyncReadBody {
+    pub fn empty() -> Self {
+        Self { inner: hyper::Body::empty(), state: AsyncReadBodyState::Done }
+    }
 }
 
 impl From<hyper::Body> for AsyncReadBody {
