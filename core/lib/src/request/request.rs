@@ -822,13 +822,14 @@ impl<'r> Request<'r> {
         rocket: &'r Rocket,
         h_method: hyper::Method,
         h_headers: hyper::HeaderMap<hyper::HeaderValue>,
-        h_uri: hyper::Uri,
+        h_uri: &'r hyper::Uri,
         h_addr: SocketAddr,
     ) -> Result<Request<'r>, String> {
-        // TODO.async: Can we avoid this allocation?
-        // TODO.async: Assert that uri is "absolute"
-        // Get a copy of the URI for later use.
-        let uri = h_uri.to_string();
+        // Get a copy of the URI (only supports path-and-query) for later use.
+        let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
+            (None, None, Some(paq)) => paq.as_str(),
+            _ => return Err(format!("Bad URI: {}", h_uri)),
+        };
 
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = match Method::from_hyp(&h_method) {
@@ -837,7 +838,7 @@ impl<'r> Request<'r> {
         };
 
         // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse_owned(format!("{}", uri)).map_err(|e| e.to_string())?;
+        let uri = Origin::parse(uri).map_err(|e| e.to_string())?;
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);
@@ -846,9 +847,7 @@ impl<'r> Request<'r> {
         // Set the request cookies, if they exist.
         let mut cookie_jar = CookieJar::new();
         for header in h_headers.get_all("Cookie") {
-            // TODO.async: This used to only allow UTF-8 but now only allows ASCII
-            // (needs verification)
-            let raw_str = match header.to_str() {
+            let raw_str = match std::str::from_utf8(header.as_bytes()) {
                 Ok(string) => string,
                 Err(_) => continue
             };

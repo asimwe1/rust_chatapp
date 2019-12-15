@@ -65,7 +65,7 @@ fn hyper_service_fn(
         let (h_parts, h_body) = hyp_req.into_parts();
 
         // Convert the Hyper request into a Rocket request.
-        let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, h_parts.uri, h_addr);
+        let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, &h_parts.uri, h_addr);
         let mut req = match req_res {
             Ok(req) => req,
             Err(e) => {

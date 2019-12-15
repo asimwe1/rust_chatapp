@@ -17,7 +17,7 @@
 #[doc(hidden)] pub use http::request::Parts as RequestParts;
 #[doc(hidden)] pub use http::response::Builder as ResponseBuilder;
 #[doc(hidden)] pub use http::status::StatusCode;
-#[doc(hidden)] pub use http::uri::Uri;
+#[doc(hidden)] pub use http::uri::{Uri, Parts as UriParts};
 
 /// Reexported http header types.
 pub mod header {
