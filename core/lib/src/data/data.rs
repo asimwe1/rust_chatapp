@@ -143,11 +143,9 @@ impl Data {
     /// }
     /// ```
     #[inline(always)]
-    pub fn stream_to<'w, W: AsyncWrite + Unpin + 'w>(self, mut writer: W) -> impl Future<Output = io::Result<u64>> + 'w {
-        Box::pin(async move {
-            let mut stream = self.open();
-            tokio::io::copy(&mut stream, &mut writer).await
-        })
+    pub async fn stream_to<W: AsyncWrite + Unpin>(self, mut writer: W) -> io::Result<u64> {
+        let mut stream = self.open();
+        tokio::io::copy(&mut stream, &mut writer).await
     }
 
     /// A helper method to write the body of the request to a file at the path
@@ -168,11 +166,9 @@ impl Data {
     /// }
     /// ```
     #[inline(always)]
-    pub fn stream_to_file<P: AsRef<Path> + Send + Unpin + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
-        Box::pin(async move {
-            let mut file = tokio::fs::File::create(path).await?;
-            self.stream_to(&mut file).await
-        })
+    pub async fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
+        let mut file = tokio::fs::File::create(path).await?;
+        self.stream_to(&mut file).await
     }
 
     // Creates a new data object with an internal buffer `buf`, where the cursor
