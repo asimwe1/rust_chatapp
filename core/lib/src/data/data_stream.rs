@@ -10,7 +10,7 @@ use crate::ext::AsyncReadBody;
 /// This stream can only be obtained by calling
 /// [`Data::open()`](crate::data::Data::open()). The stream contains all of the data
 /// in the body of the request. It exposes no methods directly. Instead, it must
-/// be used as an opaque [`Read`] structure.
+/// be used as an opaque [`AsyncRead`] structure.
 pub struct DataStream(pub(crate) Vec<u8>, pub(crate) AsyncReadBody);
 
 // TODO.async: Consider implementing `AsyncBufRead`

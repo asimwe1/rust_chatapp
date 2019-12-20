@@ -140,13 +140,13 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Called by Rocket when a `Request` with its associated `Data` should be
     /// handled by this handler.
     ///
-    /// The variant of `Outcome` returned determines what Rocket does next. If
-    /// the return value is a `Success(Response)`, the wrapped `Response` is
-    /// used to respond to the client. If the return value is a
-    /// `Failure(Status)`, the error catcher for `Status` is invoked to generate
-    /// a response. Otherwise, if the return value is `Forward(Data)`, the next
-    /// matching route is attempted. If there are no other matching routes, the
-    /// `404` error catcher is invoked.
+    /// The variant of `Outcome` returned by the returned `Future` determines
+    /// what Rocket does next. If the return value is a `Success(Response)`, the
+    /// wrapped `Response` is used to respond to the client. If the return value
+    /// is a `Failure(Status)`, the error catcher for `Status` is invoked to
+    /// generate a response. Otherwise, if the return value is `Forward(Data)`,
+    /// the next matching route is attempted. If there are no other matching
+    /// routes, the `404` error catcher is invoked.
     fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> HandlerFuture<'r>;
 }
 
@@ -186,6 +186,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
 /// The type of an error handler.
 pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> ErrorHandlerFuture<'r>;
 
+/// Type type of `Future` returned by an error handler.
 pub type ErrorHandlerFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
 impl<'r> Outcome<'r> {

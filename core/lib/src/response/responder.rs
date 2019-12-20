@@ -26,7 +26,8 @@ use crate::request::Request;
 ///
 /// # Return Value
 ///
-/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`:
+/// A `Responder` returns a `Future` whose output type is an `Ok(Response)` or
+/// an `Err(Status)`:
 ///
 ///   * An `Ok` variant means that the `Responder` was successful in generating
 ///     a `Response`. The `Response` will be written out to the client.
@@ -84,14 +85,7 @@ use crate::request::Request;
 ///     the client. Otherwise, an `Err` with status **404 Not Found** is
 ///     returned and a warning is printed to the console.
 ///
-///   * **Result&lt;T, E>** _where_ **E: Debug**
-///
-///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
-///     client. Otherwise, an `Err` with status **500 Internal Server Error** is
-///     returned and the error is printed to the console using the `Debug`
-///     implementation.
-///
-///   * **Result&lt;T, E>** _where_ **E: Debug + Responder**
+///   * **Result&lt;T, E>**
 ///
 ///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
@@ -101,13 +95,6 @@ use crate::request::Request;
 ///
 /// This section describes a few best practices to take into account when
 /// implementing `Responder`.
-///
-/// ## Debug
-///
-/// A type implementing `Responder` should implement the `Debug` trait when
-/// possible. This is because the `Responder` implementation for `Result`
-/// requires its `Err` type to implement `Debug`. Therefore, a type implementing
-/// `Debug` can more easily be composed.
 ///
 /// ## Joining and Merging
 ///
@@ -277,7 +264,7 @@ impl Responder<'_> for () {
 
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
+impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
         match self {
             Some(r) => r.respond_to(req),
@@ -291,7 +278,7 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
 
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, R: Responder<'r> + Send + 'r, E: Responder<'r> + Send + 'r> Responder<'r> for Result<R, E> {
+impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
         match self {
             Ok(responder) => responder.respond_to(req),

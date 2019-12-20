@@ -772,9 +772,9 @@ impl Rocket {
             .map_err(crate::error::Error::Run)
     }
 
-    /// Returns a `Future` that completes when the server is shut down or
-    /// errors. If the `ctrl_c_shutdown` feature is enabled, `Ctrl-C` will be
-    /// handled as a shutdown signal.
+    /// Returns a `Future` that drives the server and completes when the server
+    /// is shut down or errors. If the `ctrl_c_shutdown` feature is enabled,
+    /// the server will shut down gracefully once `Ctrl-C` is pressed.
     ///
     /// # Example
     ///
@@ -869,6 +869,10 @@ impl Rocket {
     /// requests to mounted routes and catchers. This function does not return
     /// unless a shutdown is requested via a [`ShutdownHandle`] or there is an
     /// error.
+    ///
+    /// This is a convenience function that creates a suitable default runtime
+    /// and launches the server on that runtime. If you already have a runtime,
+    /// use the [`Rocket::serve`] method instead.
     ///
     /// # Error
     ///

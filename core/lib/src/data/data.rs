@@ -126,7 +126,7 @@ impl Data {
         self.is_complete
     }
 
-    /// A helper method to write the body of the request to any `Write` type.
+    /// A helper method to write the body of the request to any `AsyncWrite` type.
     ///
     /// This method is identical to `tokio::io::copy(&mut data.open(), &mut writer)`.
     ///
@@ -152,7 +152,7 @@ impl Data {
     /// determined by `path`.
     ///
     /// This method is identical to
-    /// `io::copy(&mut self.open(), &mut File::create(path)?)`.
+    /// `tokio::io::copy(&mut self.open(), &mut File::create(path).await?)`.
     ///
     /// # Example
     ///

@@ -37,6 +37,68 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// Type alias for the future returned by [`FromRequestAsync::from_request`].
 pub type FromRequestFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 
+/// Trait implemented by asynchronous request guards to derive a value from
+/// incoming requests.
+///
+/// For more information on request guards in general, see the [`FromRequest`]
+/// trait.
+///
+/// ## Example
+///
+/// Imagine you're running an authenticated service backed by a database. You
+/// want to ensure that certain handlers will only run if a valid API key is
+/// present in the request, and you need to make a database request in order to
+/// determine if the key is valid or not.
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene)]
+/// # #[macro_use] extern crate rocket;
+/// #
+/// # struct Database;
+/// # impl Database {
+/// #     async fn check_key(&self, key: &str) -> bool {
+/// #         true
+/// #     }
+/// # }
+/// #
+/// use rocket::Outcome;
+/// use rocket::http::Status;
+/// use rocket::request::{self, Request, State, FromRequestAsync};
+///
+/// struct ApiKey(String);
+///
+/// #[derive(Debug)]
+/// enum ApiKeyError {
+///     BadCount,
+///     Missing,
+///     Invalid,
+/// }
+///
+/// impl<'a, 'r> FromRequestAsync<'a, 'r> for ApiKey {
+///     type Error = ApiKeyError;
+///
+///     fn from_request(request: &'a Request<'r>) -> request::FromRequestFuture<'a, Self, Self::Error> {
+///         Box::pin(async move {
+///             let keys: Vec<_> = request.headers().get("x-api-key").collect();
+///             let database: State<'_, Database> = request.guard().expect("get database connection");
+///             match keys.len() {
+///                 0 => Outcome::Failure((Status::BadRequest, ApiKeyError::Missing)),
+///                 1 if database.check_key(keys[0]).await => Outcome::Success(ApiKey(keys[0].to_string())),
+///                 1 => Outcome::Failure((Status::BadRequest, ApiKeyError::Invalid)),
+///                 _ => Outcome::Failure((Status::BadRequest, ApiKeyError::BadCount)),
+///             }
+///         })
+///     }
+/// }
+///
+/// #[get("/sensitive")]
+/// fn sensitive(key: ApiKey) -> &'static str {
+/// #   let _key = key;
+///     "Sensitive data."
+/// }
+///
+/// # fn main() { }
+/// ```
 pub trait FromRequestAsync<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.
     type Error: Debug;
@@ -64,6 +126,10 @@ pub trait FromRequestAsync<'a, 'r>: Sized {
 /// invoke the `FromRequest` implementation for request guards before calling
 /// the handler. Rocket only dispatches requests to a handler when all of its
 /// guards pass.
+///
+/// Request guards can be made *asynchronous* by implementing
+/// [`FromRequestAsync`] instead of `FromRequest`. This is useful when the
+/// validation requires working with a database or performing other I/O.
 ///
 /// ## Example
 ///

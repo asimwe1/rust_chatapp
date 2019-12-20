@@ -48,5 +48,6 @@ pub use self::debug::Debug;
 
 /// Type alias for the `Result` of a `Responder::respond` call.
 pub type Result<'r> = std::result::Result<self::Response<'r>, crate::http::Status>;
-/// Type alias for the `Result` of a `Responder::respond` call.
+
+/// Type alias for the `Future` returned by a `Responder::respond` call.
 pub type ResultFuture<'r> = futures_util::future::BoxFuture<'r, Result<'r>>;

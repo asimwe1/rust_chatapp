@@ -94,7 +94,8 @@ impl AdHoc {
     }
 
     /// Constructs an `AdHoc` request fairing named `name`. The function `f`
-    /// will be called by Rocket when a new request is received.
+    /// will be called and the returned `Future` will be `await`ed by Rocket
+    /// when a new request is received.
     ///
     /// # Example
     ///
@@ -116,7 +117,8 @@ impl AdHoc {
     }
 
     /// Constructs an `AdHoc` response fairing named `name`. The function `f`
-    /// will be called by Rocket when a response is ready to be sent.
+    /// will be called and the returned `Future` will be `await`ed by Rocket
+    /// when a response is ready to be sent.
     ///
     /// # Example
     ///

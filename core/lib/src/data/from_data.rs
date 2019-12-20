@@ -112,7 +112,10 @@ pub type Transformed<'a, T> =
         Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>
     >;
 
+/// Type alias to the `Future` returned by [`FromData::transform`].
 pub type TransformFuture<'fut, T, E> = BoxFuture<'fut, Transform<Outcome<T, E>>>;
+
+/// Type alias to the `Future` returned by [`FromData::from_data`].
 pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 
 /// Trait implemented by data guards to derive a value from request body data.
@@ -161,14 +164,15 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 /// implement `FromDataSimple` automatically implement `FromData`.
 ///
 /// When exercising a data guard, Rocket first calls the guard's
-/// [`FromData::transform()`] method and then subsequently calls the guard's
-/// [`FromData::from_data()`] method. Rocket stores data returned by
-/// [`FromData::transform()`] on the stack. If `transform` returns a
-/// [`Transform::Owned`], Rocket moves the data back to the data guard in the
-/// subsequent `from_data` call as a `Transform::Owned`. If instead `transform`
-/// returns a [`Transform::Borrowed`] variant, Rocket calls `borrow()` on the
-/// owned value, producing a borrow of the associated [`FromData::Borrowed`]
-/// type and passing it as a `Transform::Borrowed`.
+/// [`FromData::transform()`] method and awaits on the returned future, then
+/// calls the guard's [`FromData::from_data()`] method and awaits on that
+/// returned future. Rocket stores data returned by [`FromData::transform()`] on
+/// the stack. If `transform` returns a [`Transform::Owned`], Rocket moves the
+/// data back to the data guard in the subsequent `from_data` call as a
+/// `Transform::Owned`. If instead `transform` returns a [`Transform::Borrowed`]
+/// variant, Rocket calls `borrow()` on the owned value, producing a borrow of
+/// the associated [`FromData::Borrowed`] type and passing it as a
+/// `Transform::Borrowed`.
 ///
 /// ## Example
 ///
@@ -349,11 +353,11 @@ pub trait FromData<'a>: Sized {
     /// associated type should be set to `Self::Owned`.
     type Borrowed: ?Sized;
 
-    /// Transforms `data` into a value of type `Self::Owned`.
+    /// Asynchronously transforms `data` into a value of type `Self::Owned`.
     ///
-    /// If this method returns a `Transform::Owned(Self::Owned)`, then
+    /// If the returned future resolves to `Transform::Owned(Self::Owned)`, then
     /// `from_data` should subsequently be called with a `data` value of
-    /// `Transform::Owned(Self::Owned)`. If this method returns a
+    /// `Transform::Owned(Self::Owned)`. If the future resolves to
     /// `Transform::Borrowed(Self::Owned)`, `from_data` should subsequently be
     /// called with a `data` value of `Transform::Borrowed(&Self::Borrowed)`. In
     /// other words, the variant of `Transform` returned from this method is
@@ -369,8 +373,8 @@ pub trait FromData<'a>: Sized {
     /// returned. On failure, `Failure` is returned.
     fn transform<'r>(request: &'r Request<'_>, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error>;
 
-    /// Validates, parses, and converts the incoming request body data into an
-    /// instance of `Self`.
+    /// Asynchronously validates, parses, and converts the incoming request body
+    /// data into an instance of `Self`.
     ///
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
@@ -512,12 +516,11 @@ impl<'a> FromData<'a> for Data {
 /// # fn main() {  }
 /// ```
 pub trait FromDataSimple: Sized {
-    // TODO.async: Can/should we relax this 'static? And how?
     /// The associated error to be returned when the guard fails.
     type Error: Send + 'static;
 
-    /// Validates, parses, and converts an instance of `Self` from the incoming
-    /// request body data.
+    /// Asynchronously validates, parses, and converts an instance of `Self`
+    /// from the incoming request body data.
     ///
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
