@@ -211,6 +211,31 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
     }
 }
 
+/// Sets the status of the response to 204 (No Content).
+///
+/// The response body will be empty.
+///
+/// # Example
+///
+/// A 204 No Content response:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::NoContent;
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoContent;
+
+/// Sets the status code of the response to 204 No Content.
+impl<'r> Responder<'r> for NoContent {
+    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        build.status(Status::NoContent).ok()
+    }
+}
+
 /// Sets the status of the response to 400 (Bad Request).
 ///
 /// If a responder is supplied, the remainder of the response is delegated to
@@ -251,6 +276,86 @@ impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
     }
 }
 
+/// Sets the status of the response to 401 (Unauthorized).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+/// # Examples
+///
+/// A 401 Unauthorized response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Unauthorized::<()>(None);
+/// ```
+///
+/// A 401 Unauthorized response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Unauthorized(Some("error message"));
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unauthorized<R>(pub Option<R>);
+
+/// Sets the status code of the response to 401 Unauthorized. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Unauthorized<R> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Unauthorized).ok()
+    }
+}
+
+/// Sets the status of the response to 403 (Forbidden).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+/// # Examples
+///
+/// A 403 Forbidden response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Forbidden::<()>(None);
+/// ```
+///
+/// A 403 Forbidden response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Forbidden(Some("error message"));
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct Forbidden<R>(pub Option<R>);
+
+/// Sets the status code of the response to 403 Forbidden. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Forbidden<R> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Forbidden).ok()
+    }
+}
+
 /// Sets the status of the response to 404 (Not Found).
 ///
 /// The remainder of the response is delegated to the wrapped `Responder`.
@@ -272,6 +377,47 @@ impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
         Response::build_from(self.0.respond_to(req)?)
             .status(Status::NotFound)
             .ok()
+    }
+}
+
+
+/// Sets the status of the response to 409 (Conflict).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+/// # Examples
+///
+/// A 409 Conflict response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Conflict::<()>(None);
+/// ```
+///
+/// A 409 Conflict response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Conflict(Some("error message"));
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conflict<R>(pub Option<R>);
+
+/// Sets the status code of the response to 409 Conflict. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Conflict<R> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Conflict).ok()
     }
 }
 
