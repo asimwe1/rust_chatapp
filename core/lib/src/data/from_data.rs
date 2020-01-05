@@ -2,7 +2,6 @@ use std::borrow::Borrow;
 
 use futures_util::future::BoxFuture;
 use futures_util::future::{ready, FutureExt};
-use tokio::io::AsyncReadExt;
 
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
@@ -592,6 +591,7 @@ impl FromDataSimple for String {
 
     #[inline(always)]
     fn from_data(_: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error> {
+        use tokio::io::AsyncReadExt;
         Box::pin(async {
             let mut string = String::new();
             let mut reader = data.open();
@@ -609,6 +609,7 @@ impl FromDataSimple for Vec<u8> {
 
     #[inline(always)]
     fn from_data(_: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error> {
+        use tokio::io::AsyncReadExt;
         Box::pin(async {
             let mut stream = data.open();
             let mut buf = Vec::new();
