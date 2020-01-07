@@ -54,6 +54,7 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
                 .merge(self.1.respond_to(req).await?)
                 .header(self.0)
                 .ok()
+                .await
         })
     }
 }
