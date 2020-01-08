@@ -203,6 +203,7 @@ request-local state to implement request timing.
 [`FromRequest` request-local state]: @api/rocket/request/trait.FromRequest.html#request-local-state
 [`Fairing`]: @api/rocket/fairing/trait.Fairing.html#request-local-state
 
+<!-- TODO.async: rewrite? -->
 ## Databases
 
 Rocket includes built-in, ORM-agnostic support for databases. In particular,

@@ -175,22 +175,24 @@ impl Fairing for Counter {
         };
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
-        // Don't change a successful user's response, ever.
-        if response.status() != Status::NotFound {
-            return
-        }
+    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> BoxFuture<'a, ()> {
+        Box::pin(async move {
+            // Don't change a successful user's response, ever.
+            if response.status() != Status::NotFound {
+                return
+            }
 
-        // Rewrite the response to return the current counts.
-        if request.method() == Method::Get && request.uri().path() == "/counts" {
-            let get_count = self.get.load(Ordering::Relaxed);
-            let post_count = self.post.load(Ordering::Relaxed);
-            let body = format!("Get: {}\nPost: {}", get_count, post_count);
+            // Rewrite the response to return the current counts.
+            if request.method() == Method::Get && request.uri().path() == "/counts" {
+                let get_count = self.get.load(Ordering::Relaxed);
+                let post_count = self.post.load(Ordering::Relaxed);
+                let body = format!("Get: {}\nPost: {}", get_count, post_count);
 
-            response.set_status(Status::Ok);
-            response.set_header(ContentType::Plain);
-            response.set_sized_body(Cursor::new(body));
-        }
+                response.set_status(Status::Ok);
+                response.set_header(ContentType::Plain);
+                response.set_sized_body(Cursor::new(body));
+            }
+        })
     }
 }
 ```
@@ -220,9 +222,9 @@ rocket::ignite()
     .attach(AdHoc::on_launch("Launch Printer", |_| {
         println!("Rocket is about to launch! Exciting! Here we go...");
     }))
-    .attach(AdHoc::on_request("Put Rewriter", |req, _| {
+    .attach(AdHoc::on_request("Put Rewriter", |req, _| Box::pin(async move {
         req.set_method(Method::Put);
-    }));
+    })));
 ```
 
 [`AdHoc`]: @api/rocket/fairing/struct.AdHoc.html

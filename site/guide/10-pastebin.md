@@ -216,10 +216,11 @@ For the `upload` route, we'll need to `use` a few items:
 
 ```rust
 use std::io;
-use std::path::Path;
+use std::path::PathBuf;
 
 use rocket::Data;
 use rocket::http::RawStr;
+use rocket::response::Debug;
 ```
 
 The [Data](@api/rocket/data/struct.Data.html) structure is key
@@ -279,7 +280,7 @@ fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
     // Write the paste out to the file and return the URL.
-    paste.stream_to_file(Path::new(&filename))?;
+    paste.stream_to_file(PathBuf::from(filename)).await?;
     Ok(url)
 }
 ```

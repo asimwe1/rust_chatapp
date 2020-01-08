@@ -299,8 +299,8 @@ library. Among these are:
 The `Stream` type deserves special attention. When a large amount of data needs
 to be sent to the client, it is better to stream the data to the client to avoid
 consuming large amounts of memory. Rocket provides the [`Stream`] type, making
-this easy. The `Stream` type can be created from any `Read` type. For example,
-to stream from a local Unix stream, we might write:
+this easy. The `Stream` type can be created from any `AsyncRead` type. For
+example, to stream from a local Unix stream, we might write:
 
 ```rust
 # #[macro_use] extern crate rocket;
