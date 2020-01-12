@@ -892,7 +892,7 @@ impl Rocket {
         // Initialize the tokio runtime
         let mut runtime = tokio::runtime::Builder::new()
             .threaded_scheduler()
-            .num_threads(self.config.workers as usize)
+            .core_threads(self.config.workers as usize)
             .enable_all()
             .build()
             .expect("Cannot build runtime!");
