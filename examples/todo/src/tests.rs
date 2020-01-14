@@ -83,7 +83,7 @@ fn test_toggle() {
 fn test_many_insertions() {
     const ITER: usize = 100;
 
-    let mut rng = thread_rng();
+    let rng = thread_rng();
     run_test!(|client, conn| {
         // Get the number of tasks initially.
         let init_num = Task::all(&conn).len();
