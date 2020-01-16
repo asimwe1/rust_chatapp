@@ -769,7 +769,7 @@ impl Rocket {
             .serve(service)
             .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
             .await
-            .map_err(crate::error::Error::Run)
+            .map_err(|e| crate::error::Error::Run(Box::new(e)))
     }
 
     /// Returns a `Future` that drives the server and completes when the server

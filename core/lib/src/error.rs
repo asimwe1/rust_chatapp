@@ -5,15 +5,29 @@ use std::sync::atomic::{Ordering, AtomicBool};
 
 use yansi::Paint;
 
-use crate::http::hyper;
 use crate::router::Route;
 
-// TODO.async docs
+/// An error that occurs when running a Rocket server.
+///
+/// Errors can happen immediately upon launch ([`LaunchError`])
+/// or more rarely during the server's execution.
 #[derive(Debug)]
 pub enum Error {
     Launch(LaunchError),
-    Run(hyper::Error),
+    Run(Box<dyn std::error::Error + Send + Sync>),
 }
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Launch(e) => write!(f, "Rocket failed to launch: {}", e),
+            Error::Run(e) => write!(f, "error while running server: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for Error { }
 
 /// The kind of launch error that occurred.
 ///
@@ -21,8 +35,7 @@ pub enum Error {
 /// this is represented by the `Io` variant. A launch error may also occur
 /// because of ill-defined routes that lead to collisions or because a fairing
 /// encountered an error; these are represented by the `Collision` and
-/// `FailedFairing` variants, respectively. The `Unknown` variant captures all
-/// other kinds of launch errors.
+/// `FailedFairing` variants, respectively.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     /// Binding to the provided address/port failed.
@@ -33,8 +46,6 @@ pub enum LaunchErrorKind {
     Collision(Vec<(Route, Route)>),
     /// A launch fairing reported an error.
     FailedFairings(Vec<&'static str>),
-    /// An otherwise uncategorized error occurred during launch.
-    Unknown(Box<dyn std::error::Error + Send + Sync>)
 }
 
 /// An error that occurs during launch.
@@ -141,15 +152,6 @@ impl LaunchError {
     }
 }
 
-impl From<hyper::Error> for LaunchError {
-    #[inline]
-    fn from(error: hyper::Error) -> LaunchError {
-        // TODO.async: Should "hyper error" be another variant of LaunchErrorKind?
-        // Or should this use LaunchErrorKind::Io?
-        LaunchError::new(LaunchErrorKind::Unknown(Box::new(error)))
-    }
-}
-
 impl From<io::Error> for LaunchError {
     #[inline]
     fn from(error: io::Error) -> LaunchError {
@@ -165,7 +167,6 @@ impl fmt::Display for LaunchErrorKind {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
-            LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
 }
@@ -183,20 +184,6 @@ impl fmt::Display for LaunchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.mark_handled();
         write!(f, "{}", self.kind())
-    }
-}
-
-impl std::error::Error for LaunchError {
-    #[inline]
-    fn description(&self) -> &str {
-        self.mark_handled();
-        match *self.kind() {
-            LaunchErrorKind::Bind(_) => "failed to bind to given address/port",
-            LaunchErrorKind::Io(_) => "an I/O error occurred during launch",
-            LaunchErrorKind::Collision(_) => "route collisions were detected",
-            LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
-            LaunchErrorKind::Unknown(_) => "an unknown error occurred during launch"
-        }
     }
 }
 
@@ -231,10 +218,6 @@ impl Drop for LaunchError {
                 }
 
                 panic!("launch fairing failure");
-            }
-            LaunchErrorKind::Unknown(ref e) => {
-                error!("Rocket failed to launch due to an unknown error.");
-                panic!("{}", e);
             }
         }
     }
