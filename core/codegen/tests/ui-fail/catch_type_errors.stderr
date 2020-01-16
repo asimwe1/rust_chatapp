@@ -17,11 +17,13 @@ error[E0277]: the trait bound `bool: rocket::response::Responder<'_>` is not sat
 error[E0308]: mismatched types
   --> $DIR/catch_type_errors.rs:18:7
    |
+17 | #[catch(404)]
+   | ------------- expected due to this
 18 | fn f3(_request: bool) -> usize {
-   |       ^^^^^^^^^^^^^^ expected reference, found bool
+   |       ^^^^^^^^^^^^^^ expected `&rocket::Request<'_>`, found `bool`
    |
-   = note: expected type `for<'r, 's> fn(&'r rocket::Request<'s>) -> _`
-              found type `fn(bool) -> usize {f3}`
+   = note: expected fn pointer `for<'r, 's> fn(&'r rocket::Request<'s>) -> _`
+                 found fn item `fn(bool) -> usize {f3}`
 
 error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
   --> $DIR/catch_type_errors.rs:24:12
