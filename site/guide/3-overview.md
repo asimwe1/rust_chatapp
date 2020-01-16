@@ -209,3 +209,61 @@ A version of this example's complete crate, ready to `cargo run`, can be found
 on [GitHub](@example/hello_world). You can find dozens of other complete
 examples, spanning all of Rocket's features, in the [GitHub examples
 directory](@example/).
+
+## Futures and Async
+
+Rocket uses Rust `Future`s for concurrency. Asynchronous programming with
+`Future`s and `async/await` allows route handlers to perform wait-heavy I/O such
+as filesystem and network access while still allowing other requests to be
+processed.  For an overview of Rust `Future`s, see [Asynchronous Programming in
+Rust](https://rust-lang.github.io/async-book/).
+
+In general, you should prefer to use async-ready libraries instead of
+synchronous equivalents inside Rocket applications.
+
+`async` appears in several places in Rocket:
+
+* [Routes](../requests) and [Error Catchers](../requests#error-catchers) can be
+  `async fn`s. Inside an `async fn`, you can `.await` `Future`s from Rocket or
+  other libraries
+* Several of Rocket's traits, such as [`FromData`](../requests#body-data) and
+  [`FromRequestAsync`](../requests#request-guards), have methods that return
+  `Future`s.
+* `Data` and `DataStream` (incoming request data) and `Response` and `Body`
+  (outgoing response data) are based on `tokio::io::AsyncRead` instead of
+  `std::io::Read`.
+
+You can find async-ready libraries on [crates.io](https://crates.io) with the
+`async` tag.
+
+! note
+
+  Rocket 0.5 uses the tokio (0.2) runtime. `Rocket::launch()` will automatically
+  start a runtime for you, or you can create a runtime yourself and use
+  `Rocket::spawn()`.
+
+### Cooperative Multitasking
+
+Rust's `Future`s are a form of *cooperative multitasking*. In general, `Future`s
+and `async fn`s should only `.await` on other operations and never block.  Some
+common examples of blocking include locking mutexes, joining threads, or using
+non-`async` library functions (including those in `std`) that perform I/O.
+
+If a `Future` or `async fn` blocks the thread, inefficient resource usage,
+stalls, or sometimes even deadlocks can occur.
+
+! note
+
+  Sometimes there is no good async alternative for a library or operation. If
+  necessary, you can convert a synchronous operation to an async one with
+  `tokio::task::spawn_blocking`:
+
+  ```rust
+  #[get("/blocking_task")]
+  async fn blocking_task() -> String {
+      // In a real application, we would use rocket::response::NamedFile
+      tokio::task::spawn_blocking(|| {
+          std::fs::read_file("data.txt")
+      }).await
+  }
+  ```

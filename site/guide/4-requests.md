@@ -1079,6 +1079,30 @@ returned. The handler above is complete. It really is that simple! See the
 
   [`take()`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.take
 
+## Async Routes
+
+Rocket makes it easy to use `async/await` in routes.
+
+```rust
+#[get("/weather")]
+async fn weather() -> String {
+    let response = reqwest::get("https://www.example.com").await;
+    response.text().await
+}
+```
+
+First, notice that the route function is an `async fn`. This enables
+the use of `await` inside the handler. `reqwest` is an asynchronous
+HTTP client, so we must `await` the response. Finally, we call
+the `text()` function, which asynchronously downloads the full
+response data from the server.
+
+! warning: You should _always_ set limits when reading incoming data.
+
+  Just like with client input, you should usually limit the amount
+  of data read from external APIs. The exact method will depend
+  on the library you are using to make requests.
+
 ## Error Catchers
 
 Routing may fail for a variety of reasons. These include:
