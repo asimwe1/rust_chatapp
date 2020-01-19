@@ -388,7 +388,6 @@ pub use tokio::task::spawn_blocking;
           feature = "diesel_mysql_pool"))]
 pub extern crate diesel;
 
-use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 use std::marker::{Send, Sized};
 
@@ -444,7 +443,7 @@ pub struct DatabaseConfig<'a> {
     pub pool_size: u32,
     /// Any extra options that are included in the configuration, **excluding**
     /// the url and pool_size.
-    pub extras: BTreeMap<String, Value>,
+    pub extras: rocket::config::Map<String, Value>,
 }
 
 /// A wrapper around `r2d2::Error`s or a custom database error type.
