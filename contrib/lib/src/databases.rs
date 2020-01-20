@@ -349,35 +349,35 @@
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | MySQL    | [`rust-mysql-simple`] | `16`      | [`mysql::conn`]                | `mysql_pool`           |
+//! | MySQL    | [`rust-mysql-simple`] | `17`      | [`mysql::Conn`]                | `mysql_pool`           |
 //! | Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
-//! | Postgres | [Rust-Postgres]       | `0.15`    | [`postgres::Connection`]       | `postgres_pool`        |
+//! | Postgres | [Rust-Postgres]       | `0.17`    | [`postgres::Client`]           | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Sqlite   | [`Rustqlite`]         | `0.16`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Sqlite   | [`Rusqlite`]          | `0.16`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Neo4j    | [`rusted_cypher`]     | `1`       | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
-//! | Redis    | [`redis-rs`]          | `0.10`    | [`redis::Connection`]          | `redis_pool`           |
+//! | Redis    | [`redis-rs`]          | `0.13`    | [`redis::Connection`]          | `redis_pool`           |
 //! | MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
-//! | Memcache | [`memcache`]          | `0.11`    | [`memcache::Client`]           | `memcache_pool`        |
+//! | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
-//! [`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
+//! [`redis::Connection`]: https://docs.rs/redis/0.13.0/redis/struct.Connection.html
 //! [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
 //! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.16.0/rusqlite/struct.Connection.html
 //! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
-//! [`postgres::Connection`]: https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html
+//! [`postgres::Client`]: https://docs.rs/postgres/0.17/postgres/struct.Client.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`mysql::conn`]: https://docs.rs/mysql/14.0.0/mysql/struct.Conn.html
+//! [`mysql::Conn`]: https://docs.rs/mysql/17/mysql/struct.Conn.html
 //! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 //! [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
 //! [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
-//! [`Rustqlite`]: https://github.com/jgallagher/rusqlite
+//! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
 //! [`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
-//! [`memcache::Client`]: https://docs.rs/memcache/0.11.0/memcache/struct.Client.html
+//! [`memcache::Client`]: https://docs.rs/memcache/0.14/memcache/struct.Client.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,

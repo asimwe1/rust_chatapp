@@ -66,10 +66,10 @@
 //!
 //! | Engine       | Version | Extension |
 //! |--------------|---------|-----------|
-//! | [Tera]       | 0.11    | `.tera`   |
+//! | [Tera]       | 1       | `.tera`   |
 //! | [Handlebars] | 2       | `.hbs`    |
 //!
-//! [Tera]: https://docs.rs/crate/tera/0.11
+//! [Tera]: https://docs.rs/crate/tera/1
 //! [Handlebars]: https://docs.rs/crate/handlebars/2
 //!
 //! Any file that ends with one of these extension will be discovered and
