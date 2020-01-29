@@ -203,8 +203,8 @@ impl<'r> Responder<'r> for &'r str {
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl Responder<'_> for String {
-    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+impl<'r> Responder<'r> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::ResultFuture<'r> {
         Box::pin(async move {
             Response::build()
                 .header(ContentType::Plain)
@@ -231,8 +231,8 @@ impl<'r> Responder<'r> for &'r [u8] {
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-impl Responder<'_> for Vec<u8> {
-    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+impl<'r> Responder<'r> for Vec<u8> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::ResultFuture<'r> {
         Box::pin(async move {
             Response::build()
                 .header(ContentType::Binary)
@@ -244,12 +244,18 @@ impl Responder<'_> for Vec<u8> {
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-impl Responder<'_> for File {
-    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+impl<'r> Responder<'r> for File {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        tokio::fs::File::from(self).respond_to(req)
+    }
+}
+
+/// Returns a response with a sized body for the file. Always returns `Ok`.
+impl<'r> Responder<'r> for tokio::fs::File {
+    fn respond_to(self, _: &'r Request<'_>) -> response::ResultFuture<'r> {
         Box::pin(async move {
-            let file = tokio::fs::File::from(self);
-            let metadata = file.metadata().await;
-            let stream = BufReader::new(file);
+            let metadata = self.metadata().await;
+            let stream = BufReader::new(self);
             match metadata {
                 Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok().await,
                 Err(_) => Response::build().streamed_body(stream).ok().await
@@ -259,8 +265,8 @@ impl Responder<'_> for File {
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-impl Responder<'_> for () {
-    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+impl<'r> Responder<'r> for () {
+    fn respond_to(self, _: &'r Request<'_>) -> response::ResultFuture<'r> {
         Box::pin(async move {
             Ok(Response::new())
         })
