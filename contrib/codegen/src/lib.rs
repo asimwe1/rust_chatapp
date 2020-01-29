@@ -26,9 +26,6 @@
 //! DATABASE_NAME := (string literal)
 //! </pre>
 
-#[allow(unused_extern_crates)]
-extern crate proc_macro;
-
 #[allow(unused_imports)]
 #[macro_use] extern crate quote;
 
