@@ -62,7 +62,7 @@ mod fairing_before_head_strip {
                     assert_eq!(req.method(), Method::Head);
 
                     // This should be called exactly once.
-                    let c = req.guard::<State<Counter>>().unwrap();
+                    let c = req.guard::<State<Counter>>().await.unwrap();
                     assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
                 })
             }))

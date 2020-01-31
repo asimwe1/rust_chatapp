@@ -87,11 +87,12 @@ impl Metadata<'_> {
 /// Retrieves the template metadata. If a template fairing hasn't been attached,
 /// an error is printed and an empty `Err` with status `InternalServerError`
 /// (`500`) is returned.
-impl<'a> FromRequest<'a, '_> for Metadata<'a> {
+#[rocket::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     type Error = ();
 
-    fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, ()> {
-        request.guard::<State<'_, ContextManager>>()
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        request.guard::<State<'_, ContextManager>>().await
             .succeeded()
             .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {

@@ -245,10 +245,11 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
 ///
 /// The suggested use is through an `Option` and the `FlashMessage` type alias
 /// in `request`: `Option<FlashMessage>`.
+#[crate::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attempting to retrieve message.");
         req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);

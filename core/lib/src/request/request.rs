@@ -6,6 +6,7 @@ use std::str;
 
 use yansi::Paint;
 use state::{Container, Storage};
+use futures_util::future::BoxFuture;
 
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
@@ -530,8 +531,9 @@ impl<'r> Request<'r> {
     /// let pool = request.guard::<State<Pool>>();
     /// # });
     /// ```
-    #[inline(always)]
-    pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
+    pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
+        where T: FromRequest<'a, 'r> + 'z, 'a: 'z, 'r: 'z
+    {
         T::from_request(self)
     }
 

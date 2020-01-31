@@ -412,7 +412,7 @@ imply, a request guard protects a handler from being called erroneously based on
 information contained in an incoming request. More specifically, a request guard
 is a type that represents an arbitrary validation policy. The validation policy
 is implemented through the [`FromRequest`] trait. Every type that implements
-`FromRequest` (or the related [`FromRequestAsync`]) is a request guard.
+`FromRequest` is a request guard.
 
 Request guards appear as inputs to handlers. An arbitrary number of request
 guards can appear as arguments in a route handler. Rocket will automatically
@@ -444,7 +444,6 @@ more about request guards and implementing them, see the [`FromRequest`]
 documentation.
 
 [`FromRequest`]: @api/rocket/request/trait.FromRequest.html
-[`FromRequestAsync`]: @api/rocket/request/trait.FromRequestAsync.html
 [`Cookies`]: @api/rocket/http/enum.Cookies.html
 
 ### Custom Guards

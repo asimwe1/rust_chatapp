@@ -353,10 +353,11 @@ pub use self::info_kind::{Info, Kind};
 /// pub struct StartTime(pub SystemTime);
 ///
 /// // Allows a route to access the time a request was initiated.
-/// impl FromRequest<'_, '_> for StartTime {
+/// #[rocket::async_trait]
+/// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
 ///     type Error = ();
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<StartTime, ()> {
+///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => Outcome::Success(StartTime(time)),
 ///             TimerStart(None) => Outcome::Failure((Status::InternalServerError, ())),
@@ -366,7 +367,6 @@ pub use self::info_kind::{Info, Kind};
 /// ```
 ///
 /// [request-local state]: https://rocket.rs/v0.5/guide/state/#request-local-state
-
 #[crate::async_trait]
 pub trait Fairing: Send + Sync + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this

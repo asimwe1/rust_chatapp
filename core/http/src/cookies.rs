@@ -84,10 +84,11 @@ mod key {
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
 ///
-/// impl FromRequest<'_, '_> for User {
+/// #[rocket::async_trait]
+/// impl<'a, 'r> FromRequest<'a, 'r> for User {
 ///     type Error = std::convert::Infallible;
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())

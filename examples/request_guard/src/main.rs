@@ -8,10 +8,11 @@ use rocket::outcome::Outcome::*;
 #[derive(Debug)]
 struct HeaderCount(usize);
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for HeaderCount {
     type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         Success(HeaderCount(request.headers().len()))
     }
 }

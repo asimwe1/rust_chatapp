@@ -8,10 +8,11 @@ use rocket::request::{self, FromRequest};
 
 struct HasContentType;
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
     type Error = ();
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
         if request.content_type().is_some() {
             Success(HasContentType)
         } else {

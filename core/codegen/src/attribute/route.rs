@@ -313,7 +313,7 @@ fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     quote_spanned! { span =>
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #request::FromRequestAsync>::from_request(#req).await {
+        let #ident: #ty = match <#ty as #request::FromRequest>::from_request(#req).await {
             #Outcome::Success(__v) => __v,
             #Outcome::Forward(_) => return #Outcome::Forward(#data),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),

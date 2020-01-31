@@ -227,7 +227,7 @@ synchronous equivalents inside Rocket applications.
   `async fn`s. Inside an `async fn`, you can `.await` `Future`s from Rocket or
   other libraries
 * Several of Rocket's traits, such as [`FromData`](../requests#body-data) and
-  [`FromRequestAsync`](../requests#request-guards), have methods that return
+  [`FromRequest`](../requests#request-guards), have methods that return
   `Future`s.
 * `Data` and `DataStream` (incoming request data) and `Response` and `Body`
   (outgoing response data) are based on `tokio::io::AsyncRead` instead of

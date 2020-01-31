@@ -31,7 +31,8 @@ fn rocket() -> rocket::Rocket {
                 .attach(AdHoc::on_request("Inner", |req, _| {
                     Box::pin(async move {
                         if req.method() == Method::Get {
-                            let counter = req.guard::<State<'_, Counter>>().unwrap();
+                            let counter = req.guard::<State<'_, Counter>>()
+                                .await.unwrap();
                             counter.get.fetch_add(1, Ordering::Release);
                         }
                     })

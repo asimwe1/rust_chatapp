@@ -141,21 +141,22 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             }
         }
 
-        impl<'a, 'r> #request::FromRequestAsync<'a, 'r> for #guard_type {
+        #[::rocket::async_trait]
+        impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
             type Error = ();
 
-            fn from_request(request: &'a #request::Request<'r>) -> #request::FromRequestFuture<'a, Self, Self::Error> {
+            async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
                 use ::rocket::{Outcome, http::Status};
-                Box::pin(async move {
-                    let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, #pool_type>>()).0.clone();
 
-                    #spawn_blocking(move || {
-                        match pool.get() {
-                            Ok(conn) => Outcome::Success(#guard_type(conn)),
-                            Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
-                        }
-                    }).await.expect("failed to spawn a blocking task to get a pooled connection")
-                })
+                let guard = request.guard::<::rocket::State<'_, #pool_type>>();
+                let pool = ::rocket::try_outcome!(guard.await).0.clone();
+
+                #spawn_blocking(move || {
+                    match pool.get() {
+                        Ok(conn) => Outcome::Success(#guard_type(conn)),
+                        Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
+                    }
+                }).await.expect("failed to spawn a blocking task to get a pooled connection")
             }
         }
 

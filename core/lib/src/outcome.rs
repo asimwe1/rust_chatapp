@@ -628,12 +628,13 @@ impl<S, E, F> Outcome<S, E, F> {
 /// struct Guard1;
 /// struct Guard2;
 ///
+/// #[rocket::async_trait]
 /// impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
 ///     type Error = ();
 ///
-///     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         // Attempt to fetch the guard, passing through any error or forward.
-///         let atomics = try_outcome!(req.guard::<State<'_, Atomics>>());
+///         let atomics = try_outcome!(req.guard::<State<'_, Atomics>>().await);
 ///         atomics.uncached.fetch_add(1, Ordering::Relaxed);
 ///         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
 ///
@@ -641,12 +642,13 @@ impl<S, E, F> Outcome<S, E, F> {
 ///     }
 /// }
 ///
+/// #[rocket::async_trait]
 /// impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
 ///     type Error = ();
 ///
-///     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         // Attempt to fetch the guard, passing through any error or forward.
-///         let guard1: Guard1 = try_outcome!(req.guard::<Guard1>());
+///         let guard1: Guard1 = try_outcome!(req.guard::<Guard1>().await);
 ///         Success(Guard2)
 ///     }
 /// }

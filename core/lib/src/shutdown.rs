@@ -46,11 +46,12 @@ impl ShutdownHandle {
     }
 }
 
-impl FromRequest<'_, '_> for ShutdownHandle {
+#[crate::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for ShutdownHandle {
     type Error = std::convert::Infallible;
 
     #[inline]
-    fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Outcome::Success(request.state.managed.get::<ShutdownHandleManaged>().0.clone())
     }
 }

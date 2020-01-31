@@ -5,7 +5,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rocket::outcome::Outcome::*;
-use rocket::request::{self, FromRequest, FromRequestAsync, FromRequestFuture, Request, State};
+use rocket::request::{self, FromRequest, Request, State};
 
 #[cfg(test)] mod tests;
 
@@ -20,11 +20,12 @@ struct Guard2;
 struct Guard3;
 struct Guard4;
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        let atomics = try_outcome!(req.guard::<State<'_, Atomics>>());
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        let atomics = try_outcome!(req.guard::<State<'_, Atomics>>().await);
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
 
@@ -32,41 +33,38 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
     }
 }
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        try_outcome!(req.guard::<Guard1>());
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        try_outcome!(req.guard::<Guard1>().await);
         Success(Guard2)
     }
 }
 
-impl<'a, 'r> FromRequestAsync<'a, 'r> for Guard3 {
+#[rocket::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for Guard3 {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> FromRequestFuture<'a, Self, ()>
-    {
-        Box::pin(async move {
-            let atomics = try_outcome!(req.guard::<State<'_, Atomics>>());
-            atomics.uncached.fetch_add(1, Ordering::Relaxed);
-            req.local_cache_async(async {
-                atomics.cached.fetch_add(1, Ordering::Relaxed)
-            }).await;
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        let atomics = try_outcome!(req.guard::<State<'_, Atomics>>().await);
+        atomics.uncached.fetch_add(1, Ordering::Relaxed);
+        req.local_cache_async(async {
+            atomics.cached.fetch_add(1, Ordering::Relaxed)
+        }).await;
 
-            Success(Guard3)
-        })
+        Success(Guard3)
     }
 }
 
-impl<'a, 'r> FromRequestAsync<'a, 'r> for Guard4 {
+#[rocket::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for Guard4 {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> FromRequestFuture<'a, Self, ()>
-    {
-        Box::pin(async move {
-            try_outcome!(Guard3::from_request(req).await);
-            Success(Guard4)
-        })
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        try_outcome!(Guard3::from_request(req).await);
+        Success(Guard4)
     }
 }
 
