@@ -94,6 +94,7 @@
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 pub use rocket_codegen::*;
+pub use async_trait::*;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;

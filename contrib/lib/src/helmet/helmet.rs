@@ -188,6 +188,7 @@ impl SpaceHelmet {
     }
 }
 
+#[rocket::async_trait]
 impl Fairing for SpaceHelmet {
     fn info(&self) -> Info {
         Info {
@@ -196,10 +197,8 @@ impl Fairing for SpaceHelmet {
         }
     }
 
-    fn on_response<'a>(&'a self, _request: &'a Request<'_>, response: &'a mut Response<'_>) -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>> {
-        Box::pin(async move {
-            self.apply(response);
-        })
+    async fn on_response<'a>(&'a self, _: &'a Request<'_>, res: &'a mut Response<'_>) {
+        self.apply(res);
     }
 
     fn on_launch(&self, rocket: &Rocket) {

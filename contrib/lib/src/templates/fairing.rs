@@ -124,17 +124,26 @@ pub struct TemplateFairing {
     pub custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
+#[rocket::async_trait]
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         // The on_request part of this fairing only applies in debug
         // mode, so only register it in debug mode.
-        Info {
+        #[cfg(debug_assertions)]
+        let info = Info {
             name: "Templates",
-            #[cfg(debug_assertions)]
             kind: Kind::Attach | Kind::Request,
-            #[cfg(not(debug_assertions))]
+        };
+
+        // FIXME: We declare two `info` variables here, instead of just one with
+        // `cfg`s on `kind`, due to issue #63 in `async_trait`.
+        #[cfg(not(debug_assertions))]
+        let info = Info {
+            name: "Templates",
             kind: Kind::Attach,
-        }
+        };
+
+        info
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -163,14 +172,10 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    fn on_request<'a>(&'a self, req: &'a mut rocket::Request<'_>, _data: &'a rocket::Data)
-        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
-    {
-        Box::pin(async move {
-            let cm = req.guard::<rocket::State<'_, ContextManager>>()
-                .expect("Template ContextManager registered in on_attach");
+    async fn on_request<'a>(&'a self, req: &'a mut rocket::Request<'_>, _data: &'a rocket::Data) {
+        let cm = req.guard::<rocket::State<'_, ContextManager>>()
+            .expect("Template ContextManager registered in on_attach");
 
-            cm.reload_if_needed(&*self.custom_callback);
-        })
+        cm.reload_if_needed(&*self.custom_callback);
     }
 }

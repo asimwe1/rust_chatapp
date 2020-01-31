@@ -68,8 +68,8 @@ impl AdHoc {
     /// // The no-op attach fairing.
     /// let fairing = AdHoc::on_attach("No-Op", |rocket| Ok(rocket));
     /// ```
-    pub fn on_attach<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static
+    pub fn on_attach<F: Send + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: FnOnce(Rocket) -> Result<Rocket, Rocket>
     {
         AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
     }
@@ -87,8 +87,8 @@ impl AdHoc {
     ///     println!("Launching in T-3..2..1..");
     /// });
     /// ```
-    pub fn on_launch<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(&Rocket) + Send + 'static
+    pub fn on_launch<F: Send + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: FnOnce(&Rocket)
     {
         AdHoc { name, kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))) }
     }
@@ -110,8 +110,8 @@ impl AdHoc {
     ///     })
     /// });
     /// ```
-    pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()> + Send + Sync + 'static
+    pub fn on_request<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
@@ -133,13 +133,14 @@ impl AdHoc {
     ///     })
     /// });
     /// ```
-    pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> Fn(&'a Request<'_>, &'a mut Response<'_>) -> BoxFuture<'a, ()> + Send + Sync + 'static
+    pub fn on_response<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: for<'a> Fn(&'a Request<'_>, &'a mut Response<'_>) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }
 }
 
+#[crate::async_trait]
 impl Fairing for AdHoc {
     fn info(&self) -> Info {
         let kind = match self.kind {
@@ -170,19 +171,15 @@ impl Fairing for AdHoc {
         }
     }
 
-    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, data: &'a Data) -> BoxFuture<'a, ()> {
+    async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, data: &'a Data) {
         if let AdHocKind::Request(ref callback) = self.kind {
-            callback(request, data)
-        } else {
-            Box::pin(async { })
+            callback(req, data).await;
         }
     }
 
-    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> BoxFuture<'a, ()> {
+    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
         if let AdHocKind::Response(ref callback) = self.kind {
-            callback(request, response)
-        } else {
-            Box::pin(async { })
+            callback(req, res).await;
         }
     }
 }

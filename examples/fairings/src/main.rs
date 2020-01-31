@@ -19,6 +19,7 @@ struct Counter {
     post: AtomicUsize,
 }
 
+#[rocket::async_trait]
 impl Fairing for Counter {
     fn info(&self) -> Info {
         Info {
@@ -27,36 +28,28 @@ impl Fairing for Counter {
         }
     }
 
-    fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data)
-        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
-    {
-        Box::pin(async move {
-            if request.method() == Method::Get {
-                self.get.fetch_add(1, Ordering::Relaxed);
-            } else if request.method() == Method::Post {
-                self.post.fetch_add(1, Ordering::Relaxed);
-            }
-        })
+    async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
+        if request.method() == Method::Get {
+            self.get.fetch_add(1, Ordering::Relaxed);
+        } else if request.method() == Method::Post {
+            self.post.fetch_add(1, Ordering::Relaxed);
+        }
     }
 
-    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>)
-        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
-    {
-        Box::pin(async move {
-            if response.status() != Status::NotFound {
-                return
-            }
+    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+        if res.status() != Status::NotFound {
+            return
+        }
 
-            if request.method() == Method::Get && request.uri().path() == "/counts" {
-                let get_count = self.get.load(Ordering::Relaxed);
-                let post_count = self.post.load(Ordering::Relaxed);
+        if req.method() == Method::Get && req.uri().path() == "/counts" {
+            let get_count = self.get.load(Ordering::Relaxed);
+            let post_count = self.post.load(Ordering::Relaxed);
 
-                let body = format!("Get: {}\nPost: {}", get_count, post_count);
-                response.set_status(Status::Ok);
-                response.set_header(ContentType::Plain);
-                response.set_sized_body(Cursor::new(body)).await;
-            }
-        })
+            let body = format!("Get: {}\nPost: {}", get_count, post_count);
+            res.set_status(Status::Ok);
+            res.set_header(ContentType::Plain);
+            res.set_sized_body(Cursor::new(body)).await;
+        }
     }
 }
 
