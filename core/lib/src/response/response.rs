@@ -5,7 +5,6 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt};
-use futures_util::future::FutureExt;
 
 use crate::response::{Responder, ResultFuture};
 use crate::http::{Header, HeaderMap, Status, ContentType, Cookie};
@@ -68,30 +67,26 @@ impl<T> Body<T> {
 impl<T: AsyncRead + Unpin> Body<T> {
     /// Attempts to read `self` into a `Vec` and returns it. If reading fails,
     /// returns `None`.
-    pub fn into_bytes(self) -> impl Future<Output=Option<Vec<u8>>> {
-        Box::pin(async move {
-            let mut vec = Vec::new();
-            let mut body = self.into_inner();
-            if let Err(e) = body.read_to_end(&mut vec).await {
-                error_!("Error reading body: {:?}", e);
-                return None;
-            }
+    pub async fn into_bytes(self) -> Option<Vec<u8>> {
+        let mut vec = Vec::new();
+        let mut body = self.into_inner();
+        if let Err(e) = body.read_to_end(&mut vec).await {
+            error_!("Error reading body: {:?}", e);
+            return None;
+        }
 
-            Some(vec)
-        })
+        Some(vec)
     }
 
     /// Attempts to read `self` into a `String` and returns it. If reading or
     /// conversion fails, returns `None`.
-    pub fn into_string(self) -> impl Future<Output = Option<String>> {
-        self.into_bytes().map(|bytes| {
-            bytes.and_then(|bytes| match String::from_utf8(bytes) {
-                Ok(string) => Some(string),
-                Err(e) => {
-                    error_!("Body is invalid UTF-8: {}", e);
-                    None
-                }
-            })
+    pub async fn into_string(self) -> Option<String> {
+        self.into_bytes().await.and_then(|bytes| match String::from_utf8(bytes) {
+            Ok(string) => Some(string),
+            Err(e) => {
+                error_!("Body is invalid UTF-8: {}", e);
+                None
+            }
         })
     }
 }
@@ -242,8 +237,7 @@ impl<'r> ResponseBuilder<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn raw_status(&mut self, code: u16, reason: &'static str)
-            -> &mut ResponseBuilder<'r> {
+    pub fn raw_status(&mut self, code: u16, reason: &'static str) -> &mut ResponseBuilder<'r> {
         self.response.set_raw_status(code, reason);
         self
     }
@@ -339,9 +333,8 @@ impl<'r> ResponseBuilder<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    pub fn raw_header<'a, 'b, N, V>(&mut self, name: N, value: V) -> &mut ResponseBuilder<'r>
+        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>, 'a: 'r, 'b: 'r
     {
         self.response.set_raw_header(name, value);
         self
@@ -370,9 +363,8 @@ impl<'r> ResponseBuilder<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    pub fn raw_header_adjoin<'a, 'b, N, V>(&mut self, name: N, value: V) -> &mut ResponseBuilder<'r>
+        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>, 'a: 'r, 'b: 'r
     {
         self.response.adjoin_raw_header(name, value);
         self
@@ -611,6 +603,7 @@ impl<'r> ResponseBuilder<'r> {
 
 impl<'r> Future for ResponseBuilder<'r> {
     type Output = Response<'r>;
+
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         if this.fut.is_none() {
@@ -624,6 +617,7 @@ impl<'r> Future for ResponseBuilder<'r> {
                 response
             }));
         }
+
         this.fut.as_mut().expect("this.fut.is_none() checked and assigned Some").as_mut().poll(cx)
     }
 }
@@ -996,15 +990,12 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_none());
     /// # })
     /// ```
-    #[inline(always)]
-    pub fn body_string(&mut self) -> impl Future<Output = Option<String>> + 'r {
-        let body = self.take_body();
-        Box::pin(async move {
-            match body {
-                Some(body) => body.into_string().await,
-                None => None,
-            }
-        })
+    // NOTE: We _could_ return an impl Future bounded by the looser `r instead!
+    pub async fn body_string(&mut self) -> Option<String> {
+        match self.take_body() {
+            Some(body) => body.into_string().await,
+            None => None,
+        }
     }
 
     /// Consumes `self's` body and reads it into a `Vec` of `u8` bytes. If
@@ -1026,15 +1017,12 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_none());
     /// # })
     /// ```
-    #[inline(always)]
-    pub fn body_bytes(&mut self) -> impl Future<Output = Option<Vec<u8>>> + 'r {
-        let body = self.take_body();
-        Box::pin(async move {
-            match body {
-                Some(body) => body.into_bytes().await,
-                None => None,
-            }
-        })
+    // NOTE: We _could_ return an impl Future bounded by the looser `r instead!
+    pub async fn body_bytes(&mut self) -> Option<Vec<u8>> {
+        match self.take_body() {
+            Some(body) => body.into_bytes().await,
+            None => None,
+        }
     }
 
     /// Moves the body of `self` out and returns it, if there is one, leaving no
