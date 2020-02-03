@@ -5,7 +5,10 @@ use tokio::sync::mpsc;
 /// shut down. Once a server shutdown has been requested manually by calling
 /// [`ShutdownHandle::shutdown()`] or automatically by `Ctrl-C` being pressed
 /// (if enabled), Rocket will finish handling any pending requests and return to
-/// the caller of [`Rocket::serve`] or [`Rocket::launch`].
+/// the caller of [`Rocket::serve()`] or [`Rocket::launch()`].
+///
+/// [`Rocket::serve()`]: crate::Rocket::serve()
+/// [`Rocket::launch()`]: crate::Rocket::launch()
 ///
 /// # Example
 ///

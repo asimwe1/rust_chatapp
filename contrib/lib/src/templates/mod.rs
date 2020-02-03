@@ -111,6 +111,10 @@
 //! template reloading is disabled to improve performance and cannot be enabled.
 //!
 //! [`Serialize`]: serde::Serialize
+//! [`Template`]: crate::templates::Template
+//! [`Template::fairing()`]: crate::templates::Template::fairing()
+//! [`Template::custom()`]: crate::templates::Template::custom()
+//! [`Template::render()`]: crate::templates::Template::render()
 
 #[cfg(feature = "tera_templates")] pub extern crate tera;
 #[cfg(feature = "tera_templates")] mod tera_templates;

@@ -157,6 +157,8 @@
 //! can be retrieved via the [`Rocket::config()`](crate::Rocket::config()) method
 //! on `Rocket` and `get_` methods on [`Config`] structure.
 //!
+//! [`Rocket::config()`]: crate::Rocket::config()
+//!
 //! The retrivial of configuration parameters usually occurs at launch time via
 //! a [launch fairing](crate::fairing::Fairing). If information about the
 //! configuraiton is needed later in the program, an attach fairing can be used

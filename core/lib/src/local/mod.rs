@@ -98,6 +98,9 @@
 //!     }
 //! }
 //! ```
+//!
+//! [`Client`]: crate::local::Client
+//! [`LocalRequest`]: crate::local::LocalRequest
 
 mod request;
 mod client;
