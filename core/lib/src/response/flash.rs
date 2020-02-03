@@ -3,7 +3,7 @@ use std::convert::AsRef;
 use time::Duration;
 
 use crate::outcome::IntoOutcome;
-use crate::response::{Responder, ResultFuture};
+use crate::response::{self, Responder};
 use crate::request::{self, Request, FromRequest};
 use crate::http::{Status, Cookie};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -198,11 +198,12 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response. In other words, simply sets a cookie and delegates the rest of the
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Flash<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
-        self.inner.respond_to(req)
+        self.inner.respond_to(req).await
     }
 }
 

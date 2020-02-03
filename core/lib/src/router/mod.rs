@@ -14,7 +14,9 @@ use crate::http::Method;
 type Selector = Method;
 
 // A handler to use when one is needed temporarily.
-pub(crate) fn dummy_handler<'r>(r: &'r Request<'_>, _: crate::Data) -> BoxFuture<'r, crate::handler::Outcome<'r>> {
+pub(crate) fn dummy_handler<'r>(
+    r: &'r Request<'_>, _: crate::Data
+) -> BoxFuture<'r, crate::handler::Outcome<'r>> {
     crate::Outcome::from(r, ())
 }
 

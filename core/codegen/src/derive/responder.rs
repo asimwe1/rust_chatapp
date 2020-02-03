@@ -30,10 +30,12 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
             false => Ok(())
         })
         .function(|_, inner| quote! {
-            fn respond_to(
+            fn respond_to<'__i, '__x>(
                 self,
-                __req: &'__r ::rocket::Request
-            ) -> ::rocket::response::ResultFuture<'__r> {
+                __req: &'__r ::rocket::request::Request<'__i>
+            ) -> ::rocket::futures::future::BoxFuture<'__x, ::rocket::response::Result<'__r>>
+                where '__i: '__x, '__r: '__x, Self: '__x
+            {
                 #inner
             }
         })

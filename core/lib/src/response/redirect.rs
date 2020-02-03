@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use crate::request::Request;
-use crate::response::{Response, Responder, ResultFuture};
+use crate::response::{self, Response, Responder};
 use crate::http::uri::Uri;
 use crate::http::Status;
 
@@ -147,19 +147,17 @@ impl Redirect {
 /// the `Location` header field. The body of the response is empty. If the URI
 /// value used to create the `Responder` is an invalid URI, an error of
 /// `Status::InternalServerError` is returned.
+#[crate::async_trait]
 impl<'r> Responder<'r> for Redirect {
-    fn respond_to(self, _: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async {
-            if let Some(uri) = self.1 {
-                Response::build()
-                    .status(self.0)
-                    .raw_header("Location", uri.to_string())
-                    .ok()
-                    .await
-            } else {
-                error!("Invalid URI used for redirect.");
-                Err(Status::InternalServerError)
-            }
-        })
+    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+        if let Some(uri) = self.1 {
+            Response::build()
+                .status(self.0)
+                .raw_header("Location", uri.to_string())
+                .ok()
+        } else {
+            error!("Invalid URI used for redirect.");
+            Err(Status::InternalServerError)
+        }
     }
 }

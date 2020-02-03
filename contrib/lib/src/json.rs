@@ -19,6 +19,7 @@ use std::io;
 use std::iter::FromIterator;
 
 use tokio::io::AsyncReadExt;
+use rocket::futures::future::BoxFuture;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
@@ -169,14 +170,19 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
 /// JSON and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r> for Json<T> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        match serde_json::to_string(&self.0) {
-            Ok(string) => Box::pin(async move { Ok(content::Json(string).respond_to(req).await.unwrap()) }),
-            Err(e) => Box::pin(async move {
-                error_!("JSON failed to serialize: {:?}", e);
-                Err(Status::InternalServerError)
-            })
-        }
+    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
+        where 'a: 'x, 'r: 'x, Self: 'x
+    {
+        let json_string = serde_json::to_string(&self.0);
+        Box::pin(async move {
+            match json_string {
+                Ok(string) => Ok(content::Json(string).respond_to(req).await.unwrap()),
+                Err(e) => {
+                    error_!("JSON failed to serialize: {:?}", e);
+                    Err(Status::InternalServerError)
+                }
+            }
+        })
     }
 }
 
@@ -291,10 +297,10 @@ impl<T> FromIterator<T> for JsonValue where serde_json::Value: FromIterator<T> {
 
 /// Serializes the value into JSON. Returns a response with Content-Type JSON
 /// and a fixed-size body with the serialized value.
+#[rocket::async_trait]
 impl<'r> Responder<'r> for JsonValue {
-    #[inline]
-    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        content::Json(self.0.to_string()).respond_to(req)
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        content::Json(self.0.to_string()).respond_to(req).await
     }
 }
 

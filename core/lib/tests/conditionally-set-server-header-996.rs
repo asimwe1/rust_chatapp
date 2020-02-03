@@ -9,7 +9,7 @@ use rocket::http::Header;
 async fn do_not_overwrite() -> Response<'static> {
     Response::build()
         .header(Header::new("Server", "Test"))
-        .await
+        .finalize()
 }
 
 #[get("/use_default")]

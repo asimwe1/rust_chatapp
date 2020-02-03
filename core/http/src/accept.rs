@@ -158,10 +158,7 @@ impl PartialEq for AcceptParams {
 /// use rocket::http::Accept;
 /// use rocket::response::Response;
 ///
-/// # #[allow(unused_variables)]
-/// # rocket::async_test(async {
-/// let response = Response::build().header(Accept::JSON).await;
-/// # })
+/// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Accept(pub(crate) AcceptParams);

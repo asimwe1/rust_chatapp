@@ -12,7 +12,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::borrow::Cow;
 
 use crate::request::Request;
-use crate::response::{Responder, Response, ResultFuture};
+use crate::response::{self, Responder, Response};
 use crate::http::Status;
 
 /// Sets the status of the response to 201 (Created).
@@ -160,23 +160,21 @@ impl<'r, R> Created<R> {
 /// the response with the `Responder`, the `ETag` header is set conditionally if
 /// a hashable `Responder` is provided via [`Created::tagged_body()`]. The `ETag`
 /// header is set to a hash value of the responder.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Created<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async move {
-            let mut response = Response::build();
-            if let Some(responder) = self.1 {
-                response.merge(responder.respond_to(req).await?);
-            }
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        let mut response = Response::build();
+        if let Some(responder) = self.1 {
+            response.merge(responder.respond_to(req).await?);
+        }
 
-            if let Some(hash) = self.2 {
-                response.raw_header("ETag", format!(r#""{}""#, hash));
-            }
+        if let Some(hash) = self.2 {
+            response.raw_header("ETag", format!(r#""{}""#, hash));
+        }
 
-           response.status(Status::Created)
-               .raw_header("Location", self.0)
-               .ok()
-               .await
-        })
+        response.status(Status::Created)
+            .raw_header("Location", self.0)
+            .ok()
     }
 }
 
@@ -209,16 +207,15 @@ pub struct Accepted<R>(pub Option<R>);
 
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Accepted<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async move {
-            let mut build = Response::build();
-            if let Some(responder) = self.0 {
-                build.merge(responder.respond_to(req).await?);
-            }
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req).await?);
+        }
 
-            build.status(Status::Accepted).ok().await
-        })
+        build.status(Status::Accepted).ok()
     }
 }
 
@@ -276,16 +273,15 @@ pub struct BadRequest<R>(pub Option<R>);
 
 /// Sets the status code of the response to 400 Bad Request. If the responder is
 /// `Some`, it is used to finalize the response.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for BadRequest<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async move {
-            let mut build = Response::build();
-            if let Some(responder) = self.0 {
-                build.merge(responder.respond_to(req).await?);
-            }
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req).await?);
+        }
 
-            build.status(Status::BadRequest).ok().await
-        })
+        build.status(Status::BadRequest).ok()
     }
 }
 
@@ -385,14 +381,12 @@ impl<'r, R: Responder<'r>> Responder<'r> for Forbidden<R> {
 pub struct NotFound<R>(pub R);
 
 /// Sets the status code of the response to 404 Not Found.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for NotFound<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async move {
-            Response::build_from(self.0.respond_to(req).await?)
-                .status(Status::NotFound)
-                .ok()
-                .await
-        })
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        Response::build_from(self.0.respond_to(req).await?)
+            .status(Status::NotFound)
+            .ok()
     }
 }
 
@@ -453,14 +447,12 @@ pub struct Custom<R>(pub Status, pub R);
 
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
+#[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Custom<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async move {
-            Response::build_from(self.1.respond_to(req).await?)
-                .status(self.0)
-                .ok()
-                .await
-        })
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        Response::build_from(self.1.respond_to(req).await?)
+            .status(self.0)
+            .ok()
     }
 }
 

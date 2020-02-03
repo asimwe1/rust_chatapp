@@ -3,8 +3,9 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::State;
-use rocket::response::{self, Responder};
+use rocket::{Request, State};
+use rocket::futures::future::BoxFuture;
+use rocket::response::{Responder, Result};
 
 struct SomeState;
 
@@ -14,7 +15,9 @@ pub struct CustomResponder<'r, R> {
 }
 
 impl<'r, R: Responder<'r>> Responder<'r> for CustomResponder<'r, R> {
-    fn respond_to(self, _: &rocket::Request) -> response::ResultFuture<'r> {
+    fn respond_to<'a, 'x>(self, _: &'r Request<'a>) -> BoxFuture<'x, Result<'r>>
+        where 'a: 'x, 'r: 'x, Self: 'x
+    {
         unimplemented!()
     }
 }

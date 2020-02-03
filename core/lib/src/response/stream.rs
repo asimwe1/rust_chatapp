@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 use tokio::io::AsyncRead;
 
 use crate::request::Request;
-use crate::response::{Response, Responder, ResultFuture, DEFAULT_CHUNK_SIZE};
+use crate::response::{self, Response, Responder, DEFAULT_CHUNK_SIZE};
 
 /// Streams a response to a client from an arbitrary `AsyncRead`er type.
 ///
@@ -66,10 +66,9 @@ impl<T: AsyncRead> From<T> for Stream<T> {
 /// If reading from the input stream fails at any point during the response, the
 /// response is abandoned, and the response ends abruptly. An error is printed
 /// to the console with an indication of what went wrong.
+#[crate::async_trait]
 impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
-    fn respond_to(self, _: &'r Request<'_>) -> ResultFuture<'r> {
-        Box::pin(async {
-            Response::build().chunked_body(self.0, self.1).ok().await
-        })
+    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+        Response::build().chunked_body(self.0, self.1).ok()
     }
 }

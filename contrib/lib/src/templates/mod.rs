@@ -383,21 +383,20 @@ impl Template {
 /// Returns a response with the Content-Type derived from the template's
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
+#[rocket::async_trait]
 impl<'r> Responder<'r> for Template {
-    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            let (render, content_type) = {
-                let ctxt = req.guard::<State<'_, ContextManager>>().await.succeeded().ok_or_else(|| {
-                    error_!("Uninitialized template context: missing fairing.");
-                    info_!("To use templates, you must attach `Template::fairing()`.");
-                    info_!("See the `Template` documentation for more information.");
-                    Status::InternalServerError
-                })?.inner().context();
+    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+        let (render, content_type) = {
+            let ctxt = req.guard::<State<'_, ContextManager>>().await.succeeded().ok_or_else(|| {
+                error_!("Uninitialized template context: missing fairing.");
+                info_!("To use templates, you must attach `Template::fairing()`.");
+                info_!("See the `Template` documentation for more information.");
+                Status::InternalServerError
+            })?.inner().context();
 
-                self.finalize(&ctxt)?
-            };
+            self.finalize(&ctxt)?
+        };
 
-            Content(content_type, render).respond_to(req).await
-        })
+        Content(content_type, render).respond_to(req).await
     }
 }

@@ -63,12 +63,11 @@ impl<E> From<E> for Debug<E> {
     }
 }
 
+#[crate::async_trait]
 impl<'r, E: std::fmt::Debug + Send + 'r> Responder<'r> for Debug<E> {
-    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            warn_!("Debug: {:?}", Paint::default(self.0));
-            warn_!("Debug always responds with {}.", Status::InternalServerError);
-            Response::build().status(Status::InternalServerError).ok().await
-        })
+    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+        warn_!("Debug: {:?}", Paint::default(self.0));
+        warn_!("Debug always responds with {}.", Status::InternalServerError);
+        Response::build().status(Status::InternalServerError).ok()
     }
 }

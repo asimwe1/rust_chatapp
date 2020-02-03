@@ -5,14 +5,14 @@ mod tests;
 
 use std::env;
 
-use tokio::fs::File;
-
 use rocket::{Request, Handler, Route, Data, Catcher, try_outcome};
 use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder, status::Custom};
 use rocket::handler::{Outcome, HandlerFuture};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
+use rocket::futures::future::BoxFuture;
+use rocket::tokio::fs::File;
 
 fn forward<'r>(_req: &'r Request, data: Data) -> HandlerFuture<'r> {
     Box::pin(async move { Outcome::forward(data) })
@@ -68,7 +68,7 @@ fn get_upload<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
     Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok())
 }
 
-fn not_found_handler<'r>(req: &'r Request) -> response::ResultFuture<'r> {
+fn not_found_handler<'r>(req: &'r Request) -> BoxFuture<'r, response::Result<'r>> {
     let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
     res.respond_to(req)
 }
