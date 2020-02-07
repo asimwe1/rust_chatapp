@@ -127,7 +127,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
 }
 
 fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
-    define_vars_and_mods!(req, data, error, log, request, Outcome);
+    define_vars_and_mods!(req, data, error, log, request, _None, _Some, _Ok, _Err, Outcome);
     let i = seg.index.expect("dynamic parameters must be indexed");
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     let name = ident.to_string();
@@ -149,20 +149,20 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
     let expr = match seg.kind {
         Kind::Single => quote_spanned! { span =>
             match #req.raw_segment_str(#i) {
-                Some(__s) => match <#ty as #request::FromParam>::from_param(__s) {
-                    Ok(__v) => __v,
-                    Err(#error) => return #parse_error,
+                #_Some(__s) => match <#ty as #request::FromParam>::from_param(__s) {
+                    #_Ok(__v) => __v,
+                    #_Err(#error) => return #parse_error,
                 },
-                None => return #internal_error
+                #_None => return #internal_error
             }
         },
         Kind::Multi => quote_spanned! { span =>
             match #req.raw_segments(#i) {
-                Some(__s) => match <#ty as #request::FromSegments>::from_segments(__s) {
-                    Ok(__v) => __v,
-                    Err(#error) => return #parse_error,
+                #_Some(__s) => match <#ty as #request::FromSegments>::from_segments(__s) {
+                    #_Ok(__v) => __v,
+                    #_Err(#error) => return #parse_error,
                 },
-                None => return #internal_error
+                #_None => return #internal_error
             }
         },
         Kind::Static => return quote!()
@@ -204,6 +204,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
 }
 
 fn query_exprs(route: &Route) -> Option<TokenStream2> {
+    define_vars_and_mods!(_None, _Some, _Ok, _Err, _Option);
     define_vars_and_mods!(data, trail, log, request, req, Outcome, SmallVec, Query);
     let query_segments = route.attribute.path.query.as_ref()?;
     let (mut decls, mut matchers, mut builders) = (vec![], vec![], vec![]);
@@ -224,7 +225,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
         let decl = match segment.kind {
             Kind::Single => quote_spanned! { span =>
                 #[allow(non_snake_case)]
-                let mut #ident: Option<#ty> = None;
+                let mut #ident: #_Option<#ty> = #_None;
             },
             Kind::Multi => quote_spanned! { span =>
                 #[allow(non_snake_case)]
@@ -238,14 +239,14 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
                 (_, #name, __v) => {
                     #[allow(unreachable_patterns, unreachable_code)]
                     let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
-                        Ok(__v) => __v,
-                        Err(__e) => {
+                        #_Ok(__v) => __v,
+                        #_Err(__e) => {
                             #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
                             return #Outcome::Forward(#data);
                         }
                     };
 
-                    #ident = Some(__v);
+                    #ident = #_Some(__v);
                 }
             },
             Kind::Static => quote! {
@@ -260,8 +261,8 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
             Kind::Single => quote_spanned! { span =>
                 #[allow(non_snake_case)]
                 let #ident = match #ident.or_else(<#ty as #request::FromFormValue>::default) {
-                    Some(__v) => __v,
-                    None => {
+                    #_Some(__v) => __v,
+                    #_None => {
                         #log::warn_(&format!("Missing required query parameter '{}'.", #name));
                         return #Outcome::Forward(#data);
                     }
@@ -270,8 +271,8 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
             Kind::Multi => quote_spanned! { span =>
                 #[allow(non_snake_case)]
                 let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
-                    Ok(__v) => __v,
-                    Err(__e) => {
+                    #_Ok(__v) => __v,
+                    #_Err(__e) => {
                         #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
                         return #Outcome::Forward(#data);
                     }
@@ -289,7 +290,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
     Some(quote! {
         #(#decls)*
 
-        if let Some(__items) = #req.raw_query_items() {
+        if let #_Some(__items) = #req.raw_query_items() {
             for __i in __items {
                 match (__i.raw.as_str(), __i.key.as_str(), __i.value) {
                     #(

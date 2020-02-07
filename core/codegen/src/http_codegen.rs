@@ -235,9 +235,10 @@ impl FromMeta for RoutePath {
 
 impl<T: ToTokens> ToTokens for Optional<T> {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
+        define_vars_and_mods!(_Some, _None);
         let opt_tokens = match self.0 {
-            Some(ref val) => quote!(Some(#val)),
-            None => quote!(None)
+            Some(ref val) => quote!(#_Some(#val)),
+            None => quote!(#_None)
         };
 
         tokens.extend(opt_tokens);

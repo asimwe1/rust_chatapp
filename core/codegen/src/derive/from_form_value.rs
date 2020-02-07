@@ -7,6 +7,7 @@ struct Form {
 }
 
 pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
+    define_vars_and_mods!(_Ok, _Err, _Result);
     DeriveGenerator::build_for(input, quote!(impl<'__v> ::rocket::request::FromFormValue<'__v>))
         .generic_support(GenericSupport::None)
         .data_support(DataSupport::Enum)
@@ -25,19 +26,19 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
 
             Ok(())
         })
-        .function(|_, inner| quote! {
+        .function(move |_, inner| quote! {
             type Error = &'__v ::rocket::http::RawStr;
 
             fn from_form_value(
                 value: &'__v ::rocket::http::RawStr
-            ) -> ::std::result::Result<Self, Self::Error> {
+            ) -> #_Result<Self, Self::Error> {
                 let uncased = value.as_uncased_str();
                 #inner
-                ::std::result::Result::Err(value)
+                #_Err(value)
             }
         })
         .try_map_enum(null_enum_mapper)
-        .try_map_variant(|_, variant| {
+        .try_map_variant(move |_, variant| {
             let variant_str = Form::from_attrs("form", &variant.attrs)
                 .unwrap_or_else(|| Ok(Form { value: variant.ident.to_string() }))?
                 .value;
@@ -45,7 +46,7 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
             let builder = variant.builder(|_| unreachable!());
             Ok(quote! {
                 if uncased == #variant_str {
-                    return ::std::result::Result::Ok(#builder);
+                    return #_Ok(#builder);
                 }
             })
         })

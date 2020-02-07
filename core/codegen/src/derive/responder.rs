@@ -38,6 +38,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
             }
         })
         .try_map_fields(|_, fields| {
+            define_vars_and_mods!(_Ok);
             fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream2 {
                 quote_spanned!(item.span().into() => __res.set_header(#item);)
             }
@@ -74,7 +75,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
                 #(#headers)*
                 #content_type
                 #status
-                Ok(__res)
+                #_Ok(__res)
             })
         })
         .to_tokens()
