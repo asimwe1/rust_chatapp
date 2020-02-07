@@ -413,7 +413,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, Request, Data, StaticRouteInfo, HandlerFuture);
+    define_vars_and_mods!(req, data, _Box, Request, Data, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
@@ -435,7 +435,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
             #req: &'_b #Request,
             #data: #Data
         ) -> #HandlerFuture<'_b> {
-            Box::pin(async move {
+            #_Box::pin(async move {
                 #(#req_guard_definitions)*
                 #(#parameter_definitions)*
                 #data_stmt

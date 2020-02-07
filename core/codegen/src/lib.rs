@@ -97,6 +97,13 @@ vars_and_mods! {
     SmallVec => rocket::http::private::SmallVec,
     HandlerFuture => rocket::handler::HandlerFuture,
     ErrorHandlerFuture => rocket::handler::ErrorHandlerFuture,
+    _Option => ::std::option::Option,
+    _Result => ::std::result::Result,
+    _Some => ::std::option::Option::Some,
+    _None => ::std::option::Option::None,
+    _Ok => ::std::result::Result::Ok,
+    _Err => ::std::result::Result::Err,
+    _Box => ::std::boxed::Box,
 }
 
 macro_rules! define_vars_and_mods {

@@ -38,7 +38,8 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
             }
         })
         .try_map_enum(null_enum_mapper)
-        .try_map_variant(move |_, variant| {
+        .try_map_variant(|_, variant| {
+            define_vars_and_mods!(_Ok);
             let variant_str = Form::from_attrs("form", &variant.attrs)
                 .unwrap_or_else(|| Ok(Form { value: variant.ident.to_string() }))?
                 .value;
