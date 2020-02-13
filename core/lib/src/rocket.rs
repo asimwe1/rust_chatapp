@@ -746,7 +746,7 @@ impl Rocket {
         let rocket = Arc::new(self);
         let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
-            let remote_addr = connection.remote_addr().unwrap_or_else(|| "0.0.0.0".parse().unwrap());
+            let remote_addr = connection.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
             async move {
                 Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
                     hyper_service_fn(rocket.clone(), remote_addr, req)
