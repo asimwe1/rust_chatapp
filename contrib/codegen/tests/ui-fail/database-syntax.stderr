@@ -3,6 +3,8 @@ error: expected string literal
   |
 5 | #[database]
   | ^^^^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected string literal
  --> $DIR/database-syntax.rs:9:12

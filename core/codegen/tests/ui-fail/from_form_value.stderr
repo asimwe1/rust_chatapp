@@ -9,6 +9,7 @@ note: error occurred while deriving `FromFormValue`
   |
 3 | #[derive(FromFormValue)]
   |          ^^^^^^^^^^^^^
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple structs are not supported
  --> $DIR/from_form_value.rs:8:1
@@ -21,6 +22,7 @@ note: error occurred while deriving `FromFormValue`
   |
 7 | #[derive(FromFormValue)]
   |          ^^^^^^^^^^^^^
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: named structs are not supported
   --> $DIR/from_form_value.rs:12:1
@@ -36,6 +38,7 @@ note: error occurred while deriving `FromFormValue`
    |
 11 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: variants cannot have fields
   --> $DIR/from_form_value.rs:19:5
@@ -48,6 +51,7 @@ note: error occurred while deriving `FromFormValue`
    |
 17 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 warning: deriving for empty enum
   --> $DIR/from_form_value.rs:24:1
@@ -66,6 +70,7 @@ note: error occurred while deriving `FromFormValue`
    |
 27 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> $DIR/from_form_value.rs:35:20
@@ -78,6 +83,7 @@ note: error occurred while deriving `FromFormValue`
    |
 33 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected literal or key/value pair
   --> $DIR/from_form_value.rs:42:12
@@ -90,6 +96,7 @@ note: error occurred while deriving `FromFormValue`
    |
 40 | #[derive(FromFormValue)]
    |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: aborting due to 7 previous errors
 

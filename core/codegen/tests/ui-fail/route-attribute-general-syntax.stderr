@@ -3,6 +3,8 @@ error: missing expected parameter: `path`
   |
 7 | #[get()] //~ ERROR missing expected parameter
   | ^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
   --> $DIR/route-attribute-general-syntax.rs:13:1
@@ -67,6 +69,7 @@ error: malformed attribute
    | ^^^^^^^^^^^^^^^^
    |
    = help: expected syntax: #[get(key = value, ..)]
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: handler arguments cannot be ignored
   --> $DIR/route-attribute-general-syntax.rs:53:7

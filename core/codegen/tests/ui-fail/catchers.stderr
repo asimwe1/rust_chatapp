@@ -14,7 +14,9 @@ error: unexpected end of input, expected identifier
  --> $DIR/catchers.rs:9:13
   |
 9 |     let _ = catchers![a::]; //~ ERROR expected identifier
-  |             ^^^^^^^^^^^^^^ in this macro invocation
+  |             ^^^^^^^^^^^^^^
+  |
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: aborting due to 3 previous errors
 
