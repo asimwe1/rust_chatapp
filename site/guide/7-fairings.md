@@ -45,14 +45,19 @@ that can be used to solve problems in a clean, composable, and robust manner.
 
 Fairings are registered with Rocket via the [`attach`] method on a [`Rocket`]
 instance. Only when a fairing is attached will its callbacks fire. As an
-example, the following snippet attached two fairings,  `req_fairing` and
+example, the following snippet attached two fairings, `req_fairing` and
 `res_fairing`, to a new Rocket instance:
 
 ```rust
+# let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| {});
+# let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| {});
+
+# if false {
 rocket::ignite()
     .attach(req_fairing)
     .attach(res_fairing)
     .launch();
+# }
 ```
 
 [`attach`]: @api/rocket/struct.Rocket.html#method.attach
@@ -140,6 +145,13 @@ unrouted requests to the `/counts` path by returning the recorded number of
 counts.
 
 ```rust
+use std::io::Cursor;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use rocket::{Request, Data, Response};
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::{Method, ContentType, Status};
+
 struct Counter {
     get: AtomicUsize,
     post: AtomicUsize,
@@ -160,7 +172,7 @@ impl Fairing for Counter {
             Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
             Method::Post => self.post.fetch_add(1, Ordering::Relaxed),
             _ => return
-        }
+        };
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
@@ -183,8 +195,8 @@ impl Fairing for Counter {
 }
 ```
 
-For brevity, imports are not shown. The complete example can be found in the
-[`Fairing` documentation](@api/rocket/fairing/trait.Fairing.html#example).
+The complete example can be found in the [`Fairing`
+documentation](@api/rocket/fairing/trait.Fairing.html#example).
 
 ## Ad-Hoc Fairings
 

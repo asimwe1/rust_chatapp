@@ -14,27 +14,40 @@ instance. Usage is straightforward:
 
   1. Construct a `Rocket` instance that represents the application.
 
-    ```rust
-    let rocket = rocket::ignite();
-    ```
+     ```rust
+     let rocket = rocket::ignite();
+     # let _ = rocket;
+     ```
 
   2. Construct a `Client` using the `Rocket` instance.
 
-    ```rust
-    let client = Client::new(rocket).expect("valid rocket instance");
-    ```
+     ```rust
+     # use rocket::local::Client;
+     # let rocket = rocket::ignite();
+     let client = Client::new(rocket).expect("valid rocket instance");
+     # let _ = client;
+     ```
 
   3. Construct requests using the `Client` instance.
 
-    ```rust
-    let req = client.get("/");
-    ```
+     ```rust
+     # use rocket::local::Client;
+     # let rocket = rocket::ignite();
+     # let client = Client::new(rocket).unwrap();
+     let req = client.get("/");
+     # let _ = req;
+     ```
 
   4. Dispatch the request to retrieve the response.
 
-    ```rust
-    let response = req.dispatch();
-    ```
+     ```rust
+     # use rocket::local::Client;
+     # let rocket = rocket::ignite();
+     # let client = Client::new(rocket).unwrap();
+     # let req = client.get("/");
+     let response = req.dispatch();
+     # let _ = response;
+     ```
 
 [`local`]: @api/rocket/local/
 [`Client`]: @api/rocket/local/struct.Client.html
@@ -69,14 +82,33 @@ These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
 
 ```rust
-let rocket = rocket::ignite();
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# use std::io::Cursor;
+# use rocket::Response;
+# use rocket::http::Header;
+
+# #[get("/")]
+# fn hello() -> Response<'static> {
+#     Response::build()
+#         .header(ContentType::Plain)
+#         .header(Header::new("X-Special", ""))
+#         .sized_body(Cursor::new("Expected Body"))
+#         .finalize()
+# }
+
+use rocket::local::Client;
+use rocket::http::{ContentType, Status};
+
+let rocket = rocket::ignite().mount("/", routes![hello]);
 let client = Client::new(rocket).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
 assert!(response.headers().get_one("X-Special").is_some());
-assert_eq!(response.body_string(), Some("Expected Body.".into()));
+assert_eq!(response.body_string(), Some("Expected Body".into()));
 ```
 
 ## Testing "Hello, world!"
@@ -85,17 +117,22 @@ To solidify an intuition for how Rocket applications are tested, we walk through
 how to test the "Hello, world!" application below:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
 #[get("/")]
 fn hello() -> &'static str {
     "Hello, world!"
 }
 
-fn rocket() -> Rocket {
+fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
 }
 
 fn main() {
+    # if false {
     rocket().launch();
+    # }
 }
 ```
 
@@ -116,7 +153,7 @@ mod test {
 
     #[test]
     fn hello_world() {
-        ...
+        /* .. */
     }
 }
 ```
@@ -135,6 +172,9 @@ To test our "Hello, world!" application, we first create a `Client` for our
 testing: we _want_ our tests to panic when something goes wrong.
 
 ```rust
+# fn rocket() -> rocket::Rocket { rocket::ignite() }
+# use rocket::local::Client;
+
 let client = Client::new(rocket()).expect("valid rocket instance");
 ```
 
@@ -142,6 +182,9 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
+# fn rocket() -> rocket::Rocket { rocket::ignite() }
+# use rocket::local::Client;
+# let client = Client::new(rocket()).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
 ```
 
@@ -154,6 +197,19 @@ Here, we want to ensure two things:
 We do this by checking the `Response` object directly:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# #[get("/")]
+# fn hello() -> &'static str { "Hello, world!" }
+
+# use rocket::local::Client;
+use rocket::http::{ContentType, Status};
+
+# let rocket = rocket::ignite().mount("/", routes![hello]);
+# let client = Client::new(rocket).expect("valid rocket instance");
+# let mut response = client.get("/").dispatch();
+
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.body_string(), Some("Hello, world!".into()));
 ```
@@ -161,13 +217,29 @@ assert_eq!(response.body_string(), Some("Hello, world!".into()));
 That's it! Altogether, this looks like:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+#[get("/")]
+fn hello() -> &'static str {
+    "Hello, world!"
+}
+
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![hello])
+}
+
+# /*
 #[cfg(test)]
+# */
 mod test {
     use super::rocket;
     use rocket::local::Client;
     use rocket::http::Status;
 
+    # /*
     #[test]
+    # */ pub
     fn hello_world() {
         let client = Client::new(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch();
@@ -175,6 +247,8 @@ mod test {
         assert_eq!(response.body_string(), Some("Hello, world!".into()));
     }
 }
+
+# fn main() { test::hello_world(); }
 ```
 
 The tests can be run with `cargo test`. You can find the full source code to
@@ -187,13 +261,13 @@ especially when you get a strange type error. To have Rocket log the code that
 it is emitting to the console, set the `ROCKET_CODEGEN_DEBUG` environment
 variable when compiling:
 
-```rust
+```sh
 ROCKET_CODEGEN_DEBUG=1 cargo build
 ```
 
 During compilation, you should see output like:
 
-```rust
+```rust,ignore
 note: emitting Rocket code generation debug output
  --> examples/hello_world/src/main.rs:7:1
   |

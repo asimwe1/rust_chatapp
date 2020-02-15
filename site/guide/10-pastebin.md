@@ -34,7 +34,7 @@ The finished product is composed of the following routes:
 Let's get started! First, create a fresh Cargo binary project named
 `rocket-pastebin`:
 
-```rust
+```sh
 cargo new --bin rocket-pastebin
 cd rocket-pastebin
 ```
@@ -55,7 +55,9 @@ And finally, create a skeleton Rocket application to work off of in
 #[macro_use] extern crate rocket;
 
 fn main() {
+    # if false {
     rocket::ignite().launch();
+    # }
 }
 ```
 
@@ -77,6 +79,8 @@ of the form `GET /`. We declare the route and its handler by adding the `index`
 function below to `src/main.rs`:
 
 ```rust
+# #[macro_use] extern crate rocket;
+
 #[get("/")]
 fn index() -> &'static str {
     "
@@ -105,8 +109,14 @@ Remember that routes first need to be mounted before Rocket dispatches requests
 to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# #[get("/")] fn index() { }
+
 fn main() {
+    # if false {
     rocket::ignite().mount("/", routes![index]).launch();
+    # }
 }
 ```
 
@@ -124,7 +134,7 @@ at a time, beginning with generating IDs.
 ### Unique IDs
 
 Generating a unique and useful ID is an interesting topic, but it is outside the
-scope of this tutorial. Instead, we simply provide the code for a `PasteID`
+scope of this tutorial. Instead, we simply provide the code for a `PasteId`
 structure that represents a _probably_ unique ID. Read through the code, then
 copy/paste it into a new file named `paste_id.rs` in the `src/` directory:
 
@@ -138,25 +148,25 @@ use rand::{self, Rng};
 const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// A _probably_ unique paste ID.
-pub struct PasteID<'a>(Cow<'a, str>);
+pub struct PasteId<'a>(Cow<'a, str>);
 
-impl<'a> PasteID<'a> {
+impl<'a> PasteId<'a> {
     /// Generate a _probably_ unique ID with `size` characters. For readability,
     /// the characters used are from the sets [0-9], [A-Z], [a-z]. The
     /// probability of a collision depends on the value of `size` and the number
     /// of IDs generated thus far.
-    pub fn new(size: usize) -> PasteID<'static> {
+    pub fn new(size: usize) -> PasteId<'static> {
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
         for _ in 0..size {
             id.push(BASE62[rng.gen::<usize>() % 62] as char);
         }
 
-        PasteID(Cow::Owned(id))
+        PasteId(Cow::Owned(id))
     }
 }
 
-impl<'a> fmt::Display for PasteID<'a> {
+impl<'a> fmt::Display for PasteId<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -166,11 +176,11 @@ impl<'a> fmt::Display for PasteID<'a> {
 Then, in `src/main.rs`, add the following after `extern crate rocket`:
 
 ```rust
-extern crate rand;
-
+# /*
 mod paste_id;
+# */ mod paste_id { pub struct PasteId; }
 
-use paste_id::PasteID;
+use paste_id::PasteId;
 ```
 
 Finally, add a dependency for the `rand` crate to the `Cargo.toml` file:
@@ -223,24 +233,48 @@ you should attempt to write the route yourself. Here's a hint: a possible route
 and handler signature look like this:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::Data;
+use rocket::response::Debug;
+
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> io::Result<String>
+fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
+    # unimplemented!()
+    /* .. */
+}
 ```
 
 Your code should:
 
-  1. Create a new `PasteID` of a length of your choosing.
-  2. Construct a filename inside `upload/` given the `PasteID`.
+  1. Create a new `PasteId` of a length of your choosing.
+  2. Construct a filename inside `upload/` given the `PasteId`.
   3. Stream the `Data` to the file with the constructed filename.
-  4. Construct a URL given the `PasteID`.
+  4. Construct a URL given the `PasteId`.
   5. Return the URL to the client.
 
 Here's our version (in `src/main.rs`):
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use std::fmt;
+# struct PasteId;
+# impl PasteId { fn new(n: usize) -> Self { PasteId } }
+# impl fmt::Display for PasteId {
+#     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
+# }
+
+use std::path::Path;
+
+use rocket::Data;
+use rocket::response::Debug;
+
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> io::Result<String> {
-    let id = PasteID::new(3);
+fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
+    let id = PasteId::new(3);
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
@@ -253,8 +287,16 @@ fn upload(paste: Data) -> io::Result<String> {
 Ensure that the route is mounted at the root path:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# #[get("/")] fn index() {}
+# #[post("/")] fn upload() {}
+
 fn main() {
+    # if false {
     rocket::ignite().mount("/", routes![index, upload]).launch();
+    # }
 }
 ```
 
@@ -293,6 +335,8 @@ as a **404** error, which is exactly what we want to return when the requested
 paste doesn't exist.
 
 ```rust
+# #[macro_use] extern crate rocket;
+
 use std::fs::File;
 use rocket::http::RawStr;
 
@@ -306,8 +350,17 @@ fn retrieve(id: &RawStr) -> Option<File> {
 Make sure that the route is mounted at the root path:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# #[get("/")] fn index() {}
+# #[post("/")] fn upload() {}
+# #[get("/<id>")] fn retrieve(id: String) {}
+
 fn main() {
+    # if false {
     rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
+    # }
 }
 ```
 
@@ -327,12 +380,18 @@ provides the tools to prevent this and other kinds of attacks from happening.
 To prevent the attack, we need to _validate_ `id` before we use it. Since the
 `id` is a dynamic parameter, we can use Rocket's
 [FromParam](@api/rocket/request/trait.FromParam.html) trait to
-implement the validation and ensure that the `id` is a valid `PasteID` before
-using it. We do this by implementing `FromParam` for `PasteID` in
+implement the validation and ensure that the `id` is a valid `PasteId` before
+using it. We do this by implementing `FromParam` for `PasteId` in
 `src/paste_id.rs`, as below:
 
 ```rust
+use std::borrow::Cow;
+
+use rocket::http::RawStr;
 use rocket::request::FromParam;
+
+/// A _probably_ unique paste ID.
+pub struct PasteId<'a>(Cow<'a, str>);
 
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
 fn valid_id(id: &str) -> bool {
@@ -343,27 +402,33 @@ fn valid_id(id: &str) -> bool {
     })
 }
 
-/// Returns an instance of `PasteID` if the path segment is a valid ID.
+/// Returns an instance of `PasteId` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
-impl<'a> FromParam<'a> for PasteID<'a> {
+impl<'a> FromParam<'a> for PasteId<'a> {
     type Error = &'a RawStr;
 
-    fn from_param(param: &'a RawStr) -> Result<PasteID<'a>, &'a RawStr> {
+    fn from_param(param: &'a RawStr) -> Result<PasteId<'a>, &'a RawStr> {
         match valid_id(param) {
-            true => Ok(PasteID(Cow::Borrowed(param))),
+            true => Ok(PasteId(Cow::Borrowed(param))),
             false => Err(param)
         }
     }
 }
 ```
 
-Then, we simply need to change the type of `id` in the handler to `PasteID`.
-Rocket will then ensure that `<id>` represents a valid `PasteID` before calling
+Then, we simply need to change the type of `id` in the handler to `PasteId`.
+Rocket will then ensure that `<id>` represents a valid `PasteId` before calling
 the `retrieve` route, preventing attacks on the `retrieve` route:
 
 ```rust
+# #[macro_use] extern crate rocket;
+
+# use std::fs::File;
+
+# type PasteId = usize;
+
 #[get("/<id>")]
-fn retrieve(id: PasteID) -> Option<File> {
+fn retrieve(id: PasteId) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).ok()
 }
@@ -375,8 +440,8 @@ potentially blacklisting sensitive files as needed.
 
 The wonderful thing about using `FromParam` and other Rocket traits is that they
 centralize policies. For instance, here, we've centralized the policy for valid
-`PasteID`s in dynamic parameters. At any point in the future, if other routes
-are added that require a `PasteID`, no further work has to be done: simply use
+`PasteId`s in dynamic parameters. At any point in the future, if other routes
+are added that require a `PasteId`, no further work has to be done: simply use
 the type in the signature and Rocket takes care of the rest.
 
 ## Conclusion
@@ -390,7 +455,7 @@ through some of them to get a better feel for Rocket. Here are some ideas:
     Accept the form at `POST /`. Use `format` and/or `rank` to specify which of
     the two `POST /` routes should be called.
   * Support **deletion** of pastes by adding a new `DELETE /<id>` route. Use
-    `PasteID` to validate `<id>`.
+    `PasteId` to validate `<id>`.
   * **Limit the upload** to a maximum size. If the upload exceeds that size,
     return a **206** partial status code. Otherwise, return a **201** created
     status code.

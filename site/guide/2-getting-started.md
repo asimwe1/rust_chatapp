@@ -48,7 +48,7 @@ cd hello-rocket
 
 Now, add Rocket as a dependency in your `Cargo.toml`:
 
-```
+```toml
 [dependencies]
 rocket = "0.5.0-dev"
 ```
@@ -67,7 +67,9 @@ fn index() -> &'static str {
 }
 
 fn main() {
+    # if false {
     rocket::ignite().mount("/", routes![index]).launch();
+    # }
 }
 ```
 

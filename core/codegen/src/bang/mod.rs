@@ -8,6 +8,7 @@ use crate::{ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 
 mod uri;
 mod uri_parsing;
+mod test_guide;
 
 pub fn prefix_last_segment(path: &mut Path, prefix: &str) {
     let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
@@ -61,6 +62,12 @@ pub fn uri_macro(input: TokenStream) -> TokenStream {
 
 pub fn uri_internal_macro(input: TokenStream) -> TokenStream {
     uri::_uri_internal_macro(input)
+        .map_err(|diag| diag.emit())
+        .unwrap_or_else(|_| quote!(()).into())
+}
+
+pub fn guide_tests_internal(input: TokenStream) -> TokenStream {
+    test_guide::_macro(input)
         .map_err(|diag| diag.emit())
         .unwrap_or_else(|_| quote!(()).into())
 }

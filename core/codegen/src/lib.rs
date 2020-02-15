@@ -990,3 +990,9 @@ pub fn uri(input: TokenStream) -> TokenStream {
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_internal_macro(input))
 }
+
+#[doc(hidden)]
+#[proc_macro]
+pub fn rocket_internal_guide_tests(input: TokenStream) -> TokenStream {
+    emit!(bang::guide_tests_internal(input))
+}

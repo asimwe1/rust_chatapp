@@ -102,7 +102,7 @@ overrides if already present, that parameter in every environment. For example,
 given the following `Rocket.toml` file, the value of `address` will be
 `"1.2.3.4"` in every environment:
 
-```
+```toml
 [global]
 address = "1.2.3.4"
 
@@ -189,6 +189,15 @@ The following code will:
   3. Retrieve the parameter in an `assets` route via the `State` guard.
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+use std::path::{Path, PathBuf};
+
+use rocket::State;
+use rocket::response::NamedFile;
+use rocket::fairing::AdHoc;
+
 struct AssetsDir(String);
 
 #[get("/<asset..>")]
@@ -197,6 +206,7 @@ fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
 }
 
 fn main() {
+    # if false {
     rocket::ignite()
         .mount("/", routes![assets])
         .attach(AdHoc::on_attach("Assets Config", |rocket| {
@@ -208,6 +218,7 @@ fn main() {
             Ok(rocket.manage(AssetsDir(assets_dir)))
         }))
         .launch();
+    # }
 }
 ```
 
@@ -247,16 +258,25 @@ In addition to using environment variables or a config file, Rocket can also be
 configured using the [`rocket::custom()`] method and [`ConfigBuilder`]:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
 use rocket::config::{Config, Environment};
 
+# fn build_config() -> rocket::config::Result<Config> {
 let config = Config::build(Environment::Staging)
     .address("1.2.3.4")
     .port(9234)
     .finalize()?;
+# Ok(config)
+# }
 
+# let config = build_config().expect("config okay");
+# /*
 rocket::custom(config)
-    .mount(..)
+    .mount("/", routes![/* .. */])
     .launch();
+# */
 ```
 
 Configuration via `rocket::custom()` replaces calls to `rocket::ignite()` and
@@ -277,7 +297,7 @@ Security). In order for TLS support to be enabled, Rocket must be compiled with
 the `"tls"` feature. To do this, add the `"tls"` feature to the `rocket`
 dependency in your `Cargo.toml` file:
 
-```
+```toml
 [dependencies]
 rocket = { version = "0.5.0-dev", features = ["tls"] }
 ```
@@ -291,7 +311,7 @@ must be a table with two keys:
 
 The recommended way to specify these parameters is via the `global` environment:
 
-```
+```toml
 [global.tls]
 certs = "/path/to/certs.pem"
 key = "/path/to/key.pem"
@@ -299,7 +319,7 @@ key = "/path/to/key.pem"
 
 Of course, you can always specify the configuration values per environment:
 
-```
+```toml
 [development]
 tls = { certs = "/path/to/certs.pem", key = "/path/to/key.pem" }
 ```

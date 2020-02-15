@@ -5,8 +5,11 @@ about a request in order for the route's handler to be called. You've already
 seen an example of this in action:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[get("/world")]
-fn handler() { .. }
+fn handler() { /* .. */ }
 ```
 
 This route indicates that it only matches against `GET` requests to the `/world`
@@ -36,7 +39,11 @@ against. For example, the following attribute will match against `POST` requests
 to the root path:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[post("/")]
+# fn handler() {}
 ```
 
 The grammar for these attributes is defined formally in the
@@ -68,6 +75,11 @@ names in a route's path. For example, if we want to say _Hello!_ to anything,
 not just the world, we can declare a route like so:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::http::RawStr;
+
 #[get("/hello/<name>")]
 fn hello(name: &RawStr) -> String {
     format!("Hello, {}!", name.as_str())
@@ -87,6 +99,9 @@ the full list of provided implementations, see the [`FromParam` API docs].
 Here's a more complete route to illustrate varied usage:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[get("/hello/<name>/<age>/<cool>")]
 fn hello(name: String, age: u8, cool: bool) -> String {
     if cool {
@@ -130,10 +145,13 @@ As an example, the following route matches against all paths that begin with
 `/page/`:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 use std::path::PathBuf;
 
 #[get("/page/<path..>")]
-fn get_page(path: PathBuf) -> T { ... }
+fn get_page(path: PathBuf) { /* ... */ }
 ```
 
 The path after `/page/` will be available in the `path` parameter. The
@@ -142,6 +160,12 @@ The path after `/page/` will be available in the `path` parameter. The
 this, a safe and secure static file server can be implemented in 4 lines:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use std::path::{Path, PathBuf};
+use rocket::response::NamedFile;
+
 #[get("/<file..>")]
 fn files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
@@ -166,8 +190,11 @@ Let's take a closer look at the route attribute and signature pair from a
 previous example:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[get("/hello/<name>/<age>/<cool>")]
-fn hello(name: String, age: u8, cool: bool) -> String { ... }
+fn hello(name: String, age: u8, cool: bool) { /* ... */ }
 ```
 
 What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? When a parameter
@@ -182,19 +209,26 @@ be manually set with the `rank` attribute. To illustrate, consider the following
 routes:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# use rocket::http::RawStr;
+
 #[get("/user/<id>")]
-fn user(id: usize) -> T { ... }
+fn user(id: usize) { /* ... */ }
 
 #[get("/user/<id>", rank = 2)]
-fn user_int(id: isize) -> T { ... }
+fn user_int(id: isize) { /* ... */ }
 
 #[get("/user/<id>", rank = 3)]
-fn user_str(id: &RawStr) -> T { ... }
+fn user_str(id: &RawStr) { /* ... */ }
 
 fn main() {
+    # if false {
     rocket::ignite()
         .mount("/", routes![user, user_int, user_str])
         .launch();
+    # }
 }
 ```
 
@@ -257,6 +291,12 @@ Query segments can be declared static or dynamic in much the same way as path
 segments:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::http::RawStr;
+
 #[get("/hello?wave&<name>")]
 fn hello(name: &RawStr) -> String {
     format!("Hello, {}!", name.as_str())
@@ -293,8 +333,11 @@ parameter is missing in a request, `None` will be provided as the value.  A
 route using `Option<T>` looks as follows:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[get("/hello?wave&<name>")]
-fn hello(name: Option<&RawStr>) -> String {
+fn hello(name: Option<String>) -> String {
     name.map(|name| format!("Hi, {}!", name))
         .unwrap_or_else(|| "Hello!".into())
 }
@@ -328,6 +371,9 @@ these types allow you to use a structure with named fields to automatically
 validate query/form parameters:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 use rocket::request::Form;
 
 #[derive(FromForm)]
@@ -345,6 +391,12 @@ sets `id` to `100` and `user` to `User { name: "sandal", account: 400 }`. To
 catch forms that fail to validate, use a type of `Option` or `Result`:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::request::Form;
+# #[derive(FromForm)] struct User { name: String, account: usize, }
+
 #[get("/item?<id>&<user..>")]
 fn item(id: usize, user: Option<Form<User>>) { /* ... */ }
 ```
@@ -374,8 +426,16 @@ For instance, the following dummy handler makes use of three request guards,
 named in the route attribute.
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type A = rocket::http::Method;
+# type B = A;
+# type C = A;
+
 #[get("/<param>")]
-fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
+fn index(param: isize, a: A, b: B, c: C) { /* ... */ }
 ```
 
 Request guards always fire in left-to-right declaration order. In the example
@@ -395,8 +455,13 @@ headers, you might create an `ApiKey` type that implements `FromRequest` and
 then use it as a request guard:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# fn main() {}
+# type ApiKey = rocket::http::Method;
+
 #[get("/sensitive")]
-fn sensitive(key: ApiKey) -> &'static str { ... }
+fn sensitive(key: ApiKey) { /* .. */ }
 ```
 
 You might also implement `FromRequest` for an `AdminUser` type that
@@ -425,7 +490,9 @@ follows, access control violations against health records are guaranteed to be
 prevented at _compile-time_:
 
 ```rust
-fn health_records(user: &SuperUser) -> Records { ... }
+# type Records = ();
+# type SuperUser = ();
+fn health_records(user: &SuperUser) -> Records { /* ... */ }
 ```
 
 The reasoning is as follows:
@@ -470,6 +537,19 @@ following three routes, each leading to an administrative control panel at
 `/admin`:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type Template = ();
+# type AdminUser = rocket::http::Method;
+# type User = rocket::http::Method;
+
+use rocket::response::{Flash, Redirect};
+
+#[get("/login")]
+fn login() -> Template { /* .. */ }
+
 #[get("/admin")]
 fn admin_panel(admin: AdminUser) -> &'static str {
     "Hello, administrator. This is the admin panel!"
@@ -482,7 +562,7 @@ fn admin_panel_user(user: User) -> &'static str {
 
 #[get("/admin", rank = 3)]
 fn admin_panel_redirect() -> Redirect {
-    Redirect::to("/login")
+    Redirect::to(uri!(login))
 }
 ```
 
@@ -502,6 +582,8 @@ and remove cookies. Because `Cookies` is a request guard, an argument of its
 type can simply be added to a handler:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
 use rocket::http::Cookies;
 
 #[get("/")]
@@ -536,6 +618,13 @@ methods are suffixed with `_private`. These methods are: [`get_private`],
 [`add_private`], and [`remove_private`]. An example of their usage is below:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::http::{Cookie, Cookies};
+use rocket::response::{Flash, Redirect};
+
 /// Retrieve the user's ID, if any.
 #[get("/user_id")]
 fn user_id(mut cookies: Cookies) -> Option<String> {
@@ -596,7 +685,7 @@ can be confusing to handle if it does crop up.
 If this does happen, Rocket will emit messages to the console that look as
 follows:
 
-```
+```text
 => Error: Multiple `Cookies` instances are active at once.
 => An instance of `Cookies` must be dropped before another can be retrieved.
 => Warning: The retrieved `Cookies` instance will be empty.
@@ -609,8 +698,13 @@ due to the offending handler. A common error is to have a handler that uses a
 `Cookies`, as so:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+# use rocket::http::Cookies;
+# type Custom = rocket::http::Method;
+
 #[get("/")]
-fn bad(cookies: Cookies, custom: Custom) { .. }
+fn bad(cookies: Cookies, custom: Custom) { /* .. */ }
 ```
 
 Because the `cookies` guard will fire before the `custom` guard, the `custom`
@@ -619,8 +713,13 @@ guard will retrieve an instance of `Cookies` when one already exists for
 guards:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+# use rocket::http::Cookies;
+# type Custom = rocket::http::Method;
+
 #[get("/")]
-fn good(custom: Custom, cookies: Cookies) { .. }
+fn good(custom: Custom, cookies: Cookies) { /* .. */ }
 ```
 
 When using request guards that modify cookies on-demand, such as
@@ -628,6 +727,12 @@ When using request guards that modify cookies on-demand, such as
 `Cookies` instance before accessing the `FlashMessage`.
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::http::Cookies;
+use rocket::request::FlashMessage;
+
 #[get("/")]
 fn bad(cookies: Cookies, flash: FlashMessage) {
     let msg = flash.msg();
@@ -635,6 +740,12 @@ fn bad(cookies: Cookies, flash: FlashMessage) {
 ```
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::http::Cookies;
+# use rocket::request::FlashMessage;
+
 #[get("/")]
 fn good(cookies: Cookies, flash: FlashMessage) {
     std::mem::drop(cookies);
@@ -657,8 +768,13 @@ When a route indicates a payload-supporting method (`PUT`, `POST`, `DELETE`, and
 As an example, consider the following route:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type User = rocket::data::Data;
+
 #[post("/user", format = "application/json", data = "<user>")]
-fn new_user(user: Json<User>) -> T { ... }
+fn new_user(user: User) { /* ... */ }
 ```
 
 The `format` parameter in the `post` attribute declares that only incoming
@@ -669,17 +785,21 @@ for the most common `format` arguments. Instead of using the full Content-Type,
 "json"`. For a full list of available shorthands, see the
 [`ContentType::parse_flexible()`] documentation.
 
-When a route indicates a non-payload-supporting method (`HEAD`, `OPTIONS`, and,
-these purposes, `GET`) the `format` route parameter instructs Rocket to check
-against the `Accept` header of the incoming request. Only requests where the
-preferred media type in the `Accept` header matches the `format` parameter will
-match to the route.
+When a route indicates a non-payload-supporting method (`GET`, `HEAD`,
+`OPTIONS`) the `format` route parameter instructs Rocket to check against the
+`Accept` header of the incoming request. Only requests where the preferred media
+type in the `Accept` header matches the `format` parameter will match to the
+route.
 
 As an example, consider the following route:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+# type User = ();
+
 #[get("/user/<id>", format = "json")]
-fn user(id: usize) -> Json<User> { ... }
+fn user(id: usize) -> User { /* .. */ }
 ```
 
 The `format` parameter in the `get` attribute declares that only incoming
@@ -698,11 +818,16 @@ an argument in the handler. The argument's type must implement the [`FromData`]
 trait. It looks like this, where `T` is assumed to implement `FromData`:
 
 ```rust
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# type T = rocket::data::Data;
+
 #[post("/", data = "<input>")]
-fn new(input: T) -> String { ... }
+fn new(input: T) { /* .. */ }
 ```
 
-Any type that implements [`FromData`] is also known as _data guard_.
+Any type that implements [`FromData`] is also known as _a data guard_.
 
 [`FromData`]: @api/rocket/data/trait.FromData.html
 
@@ -715,6 +840,11 @@ checkbox, and `description`, a text field. You can easily handle the form
 request in Rocket as follows:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::request::Form;
+
 #[derive(FromForm)]
 struct Task {
     complete: bool,
@@ -722,7 +852,7 @@ struct Task {
 }
 
 #[post("/todo", data = "<task>")]
-fn new(task: Form<Task>) -> String { ... }
+fn new(task: Form<Task>) { /* .. */ }
 ```
 
 The [`Form`] type implements the `FromData` trait as long as its generic
@@ -737,8 +867,14 @@ returned. As before, a forward or failure can be caught by using the `Option`
 and `Result` types:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::request::Form;
+# #[derive(FromForm)] struct Task { complete: bool, description: String, }
+
 #[post("/todo", data = "<task>")]
-fn new(task: Option<Form<Task>>) -> String { ... }
+fn new(task: Option<Form<Task>>) { /* .. */ }
 ```
 
 [`Form`]: @api/rocket/request/struct.Form.html
@@ -766,11 +902,20 @@ is also required to implement `FromForm`. For instance, we can simply replace
 `Form` with `LenientForm` above to get lenient parsing:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::request::LenientForm;
+
 #[derive(FromForm)]
-struct Task { .. }
+struct Task {
+    /* .. */
+    # complete: bool,
+    # description: String,
+}
 
 #[post("/todo", data = "<task>")]
-fn new(task: LenientForm<Task>) { .. }
+fn new(task: LenientForm<Task>) { /* .. */ }
 ```
 
 [`LenientForm`]: @api/rocket/request/struct.LenientForm.html
@@ -789,6 +934,9 @@ Since `type` is a reserved keyword in Rust, it cannot be used as the name of a
 field. To get around this, you can use field renaming as follows:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[derive(FromForm)]
 struct External {
     #[form(field = "type")]
@@ -808,6 +956,12 @@ a field in a form structure, and implement `FromFormValue` so that it only
 validates integers over that age:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::http::RawStr;
+use rocket::request::FromFormValue;
+
 struct AdultAge(usize);
 
 impl<'v> FromFormValue<'v> for AdultAge {
@@ -832,6 +986,11 @@ valid form for that structure. You can use `Option` or `Result` types for fields
 to catch parse failures:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type AdultAge = usize;
+
 #[derive(FromForm)]
 struct Person {
     age: Option<AdultAge>
@@ -841,6 +1000,9 @@ struct Person {
 The `FromFormValue` trait can also be derived for enums with nullary fields:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
 #[derive(FromFormValue)]
 enum MyValue {
     First,
@@ -864,6 +1026,13 @@ Handling JSON data is no harder: simply use the
 [`rocket_contrib`]:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# extern crate rocket_contrib;
+# fn main() {}
+
+use serde::Deserialize;
+use rocket_contrib::json::Json;
+
 #[derive(Deserialize)]
 struct Task {
     description: String,
@@ -871,7 +1040,7 @@ struct Task {
 }
 
 #[post("/todo", data = "<task>")]
-fn new(task: Json<Task>) -> String { ... }
+fn new(task: Json<Task>) { /* .. */ }
 ```
 
 The only condition is that the generic type in `Json` implements the
@@ -888,9 +1057,15 @@ possible via the [`Data`](@api/rocket/data/struct.Data.html)
 type:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::Data;
+use rocket::response::Debug;
+
 #[post("/upload", format = "plain", data = "<data>")]
-fn upload(data: Data) -> io::Result<String> {
-    data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())
+fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
+    Ok(data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())?)
 }
 ```
 
@@ -934,14 +1109,24 @@ status code to catch. For instance, to declare a catcher for `404 Not Found`
 errors, you'd write:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::Request;
+
 #[catch(404)]
-fn not_found(req: &Request) -> T { .. }
+fn not_found(req: &Request) { /* .. */ }
 ```
 
 As with routes, the return type (here `T`) must implement `Responder`. A
 concrete implementation may look like:
 
 ```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::Request;
+
 #[catch(404)]
 fn not_found(req: &Request) -> String {
     format!("Sorry, '{}' is not a valid path.", req.uri())
@@ -955,7 +1140,15 @@ mounting a route: call the [`register()`] method with a list of catchers via the
 looks like:
 
 ```rust
-rocket::ignite().register(catchers![not_found])
+# #![feature(proc_macro_hygiene)]
+# #[macro_use] extern crate rocket;
+
+# use rocket::Request;
+# #[catch(404)] fn not_found(req: &Request) { /* .. */ }
+
+fn main() {
+    rocket::ignite().register(catchers![not_found]);
+}
 ```
 
 Unlike route request handlers, catchers take exactly zero or one parameter. If
