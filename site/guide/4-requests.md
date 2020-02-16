@@ -735,20 +735,15 @@ use rocket::request::FlashMessage;
 
 #[get("/")]
 fn bad(cookies: Cookies, flash: FlashMessage) {
+    // Oh no! `flash` holds a reference to `Cookies` too!
     let msg = flash.msg();
 }
-```
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::http::Cookies;
-# use rocket::request::FlashMessage;
 
 #[get("/")]
 fn good(cookies: Cookies, flash: FlashMessage) {
     std::mem::drop(cookies);
+
+    // Now, `flash` holds an _exclusive_ reference to `Cookies`. Whew.
     let msg = flash.msg();
 }
 ```

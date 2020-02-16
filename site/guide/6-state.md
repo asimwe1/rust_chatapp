@@ -331,6 +331,13 @@ fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
 }
 ```
 
+! note The above examples uses [Diesel] with some fictional `Logs` type.
+
+  The example above contains the use of a `Logs` type that is application
+  specific and not built into Rocket. It also uses [Diesel]'s query-building
+  syntax. Rocket does not provide an ORM. It is up to you to decide how to model
+  your application's data.
+
 If your application uses features of a database engine that are not available
 by default, for example support for `chrono` or `uuid`, you may enable those
 features by adding them in `Cargo.toml` like so:

@@ -205,7 +205,7 @@ We do this by checking the `Response` object directly:
 
 # use rocket::local::Client;
 use rocket::http::{ContentType, Status};
-
+#
 # let rocket = rocket::ignite().mount("/", routes![hello]);
 # let client = Client::new(rocket).expect("valid rocket instance");
 # let mut response = client.get("/").dispatch();
