@@ -93,10 +93,7 @@
 //! [testing chapter of the guide]: https://rocket.rs/v0.5/guide/testing/#testing
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
-// FIXME(rustdoc): We should be able to doc(inline) and not doc the
-// rocket_codegen crate at all. Alas, doc-inlining will currently 1) show hidden
-// proc-macros, and 2) result in proc-macros pointing to the wrong docs.
-#[doc(hidden)] pub use rocket_codegen::*;
+pub use rocket_codegen::*;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;

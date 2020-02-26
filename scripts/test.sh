@@ -41,7 +41,6 @@ function ensure_tab_free() {
 
 # Ensures there are no files with trailing whitespace.
 function ensure_trailing_whitespace_free() {
-  # FIXME: Some .stderr files contain trailing spaces
   local matches=$(git grep -E -I "\s+$" "${PROJECT_ROOT}" | grep -v -F '.stderr:')
   if ! [ -z "${matches}" ]; then
     echo "Trailing whitespace was found in the following:"
