@@ -8,15 +8,15 @@ we're happy to take the best ideas. If you have something in mind, please
 ## Getting Help
 
 If you find yourself having trouble developing Rocket applications, you can get
-help via the `#rocket` IRC channel on the [Mozilla IRC
-Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` and the bridged
-[Rocket room on Matrix](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org).
-If you're not familiar with IRC, we recommend chatting through [Matrix via
-Riot](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org) or via the [Kiwi
-web IRC client](https://kiwiirc.com/client/irc.mozilla.org/#rocket). You can
-learn more about IRC via Mozilla's [Getting Started with
-IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
-guide.
+help via chat at [`#rocket:mozilla.org`] on Matrix or the bridged [`#rocket`]
+IRC channel on Freenode at `chat.freenode.net`. We recommend joining us on
+[Matrix via Riot]. If your prefer IRC, you can join via the [Kiwi IRC client] or
+a client of your own.
+
+[`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
+[`#rocket`]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[Matrix via Riot]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
+[Kiwi IRC Client]: https://kiwiirc.com/client/chat.freenode.net/#rocket
 
 ## What's next?
 
