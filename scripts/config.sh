@@ -47,7 +47,7 @@ case $PRE_RELEASE in
     ;;
   false)
     ROCKET_VERSION="0.5.0-dev"
-    VERSION_CODENAME="$(echo "${ROCKET_VERSION}" | cut -d'.' -f1-2)"
+    VERSION_CODENAME="$(echo "v${ROCKET_VERSION}" | cut -d'.' -f1-2)"
     ;;
 esac
 
