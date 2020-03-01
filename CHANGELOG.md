@@ -1,3 +1,45 @@
+# Version 0.4.3 (Feb 29, 2019)
+
+## Core
+
+  * Added a new [`Debug`] `500` `Responder` that `Debug`-prints its contents on
+    response.
+  * Specialization on `Result` was deprecated. [`Debug`] can be used in place of
+    non-`Responder` errors.
+  * Fixed an issue that resulted in cookies not being set on error responses.
+  * Various `Debug` implementations on Rocket types now respect formatting
+    options.
+  * Added `Responder`s for various HTTP status codes: [`NoContent`],
+    [`Unauthorized`], [`Forbidden`], and [`Conflict`].
+  * `FromParam` is implemented for `NonZero` core types.
+
+## Codegen
+
+  * Docs for Rocket-generated macros are now hidden.
+  * Generated code now works even when prelude imports like `Some`, `Ok`, and
+    `Err` are shadowed.
+  * Error messages referring to responder types in routes now point to the type
+    correctly.
+
+## Docs
+
+  * All code examples in the guide are now tested and guaranteed to compile.
+  * All macros are documented in the `core` crate; `rocket_codegen` makes no
+    appearances.
+
+## Infrastructure
+
+  * CI was moved from Travis to Azure Pipelines; Windows support is tested.
+  * Rocket's chat moved to [Matrix] and [Freenode].
+
+[`Debug`]: https://api.rocket.rs/v0.4/rocket/response/struct.Debug.html
+[`NoContent`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.NoContent.html
+[`Unauthorized`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.Unauthorized.html
+[`Forbidden`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.Forbidden.html
+[`Conflict`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.Conflict.html
+[Matrix]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
+[Freenode]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+
 # Version 0.4.2 (Jun 28, 2019)
 
 ## Core
