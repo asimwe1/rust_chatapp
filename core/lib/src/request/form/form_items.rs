@@ -39,7 +39,7 @@ use crate::http::RawStr;
 ///
 /// This iterator returns values of the type [`FormItem`]. To access the
 /// associated key/value pairs of the form item, either directly access them via
-/// the [`key`](FormItem.key) and [`value`](FormItem.value) fields, use the
+/// the [`key`](FormItem::key) and [`value`](FormItem::value) fields, use the
 /// [`FormItem::key_value()`] method to get a tuple of the _raw_ `(key, value)`,
 /// or use the [`key_value_decoded()`](FormItem::key_value_decoded()) method to
 /// get a tuple of the decoded (`key`, `value`).

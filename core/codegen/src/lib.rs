@@ -161,16 +161,16 @@ macro_rules! route_attribute {
         ///
         /// There are 7 method-specific route attributes:
         ///
-        ///   * [`#[get]`] - `GET` specific route
-        ///   * [`#[put]`] - `PUT` specific route
-        ///   * [`#[post]`] - `POST` specific route
-        ///   * [`#[delete]`] - `DELETE` specific route
-        ///   * [`#[head]`] - `HEAD` specific route
-        ///   * [`#[options]`] - `OPTIONS` specific route
-        ///   * [`#[patch]`] - `PATCH` specific route
+        ///   * [`get`] - `GET` specific route
+        ///   * [`put`] - `PUT` specific route
+        ///   * [`post`] - `POST` specific route
+        ///   * [`delete`] - `DELETE` specific route
+        ///   * [`head`] - `HEAD` specific route
+        ///   * [`options`] - `OPTIONS` specific route
+        ///   * [`patch`] - `PATCH` specific route
         ///
-        /// Additionally, [`#[route]`] allows the method and path to be
-        /// explicitly specified:
+        /// Additionally, [`route`] allows the method and path to be explicitly
+        /// specified:
         ///
         /// ```rust
         /// # #![feature(proc_macro_hygiene)]
@@ -182,14 +182,14 @@ macro_rules! route_attribute {
         /// }
         /// ```
         ///
-        /// [`#[delete]`]: attr.delete.html
-        /// [`#[get]`]: attr.get.html
-        /// [`#[head]`]: attr.head.html
-        /// [`#[options]`]: attr.options.html
-        /// [`#[patch]`]: attr.patch.html
-        /// [`#[post]`]: attr.post.html
-        /// [`#[put]`]: attr.put.html
-        /// [`#[route]`]: attr.route.html
+        /// [`get`]: attr.get.html
+        /// [`put`]: attr.put.html
+        /// [`post`]: attr.post.html
+        /// [`delete`]: attr.delete.html
+        /// [`head`]: attr.head.html
+        /// [`options`]: attr.options.html
+        /// [`patch`]: attr.patch.html
+        /// [`route`]: attr.route.html
         ///
         /// # Grammar
         ///
@@ -267,7 +267,7 @@ macro_rules! route_attribute {
         ///
         /// [`FromParam`]: ../rocket/request/trait.FromParam.html
         /// [`FromSegments`]: ../rocket/request/trait.FromSegments.html
-        /// [`FromFormValue`]: ../rocket/request/form/trait.FromFormValue.html
+        /// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
         /// [`FromQuery`]: ../rocket/request/trait.FromQuery.html
         /// [`FromData`]: ../rocket/data/trait.FromData.html
         /// [`FromRequest`]: ../rocket/request/trait.FromRequest.html

@@ -106,7 +106,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// seen, the implementations will be used to display the value in a URI-safe
 /// manner.
 ///
-/// [`uri!`]: ../../../rocket_codegen/macro.uri.html
+/// [`uri!`]: ../../../rocket/macro.uri.html
 ///
 /// # Provided Implementations
 ///
@@ -201,11 +201,13 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// As long as every field in the structure (or enum) implements `UriDisplay`,
 /// the trait can be derived. The implementation calls
 /// [`Formatter::write_named_value()`] for every named field and
-/// [`Formatter::write_value()`] for every unnamed field. See the [`UriDisplay`
-/// derive] documentation for full details.
+/// [`Formatter::write_value()`] for every unnamed field. See the
+/// [`UriDisplay<Path>`] and [`UriDisplay<Query>`] derive documentation for full
+/// details.
 ///
 /// [`Ignorable`]: crate::uri::Ignorable
-/// [`UriDisplay` derive]: ../../../rocket_codegen/derive.UriDisplay.html
+/// [`UriDisplay<Path>`]: ../../derive.UriDisplayPath.html
+/// [`UriDisplay<Query>`]: ../../derive.UriDisplayQuery.html
 /// [`Formatter::write_named_value()`]: crate::uri::Formatter::write_named_value()
 /// [`Formatter::write_value()`]: crate::uri::Formatter::write_value()
 ///

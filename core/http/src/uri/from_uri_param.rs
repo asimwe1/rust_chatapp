@@ -187,7 +187,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// assert_eq!(uri.query(), Some("name=Robert%20Mike&nickname=Bob"));
 /// ```
 ///
-/// [`uri!`]: rocket_codegen::uri
+/// [`uri!`]: crate::uri
 /// [`UriDisplay`]: crate::uri::UriDisplay
 /// [`FromUriParam::Target`]: crate::uri::FromUriParam::Target
 /// [`Path`]: crate::uri::Path

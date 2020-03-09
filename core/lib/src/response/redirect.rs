@@ -41,8 +41,8 @@ use crate::http::Status;
 /// }
 /// ```
 ///
-/// [`Origin`]: crate::http::uri::Origin
-/// [`uri!`]: ../../rocket_codegen/macro.uri.html
+/// [`Origin`]: crate::::http::uri::Origin
+/// [`uri!`]: ../macro.uri.html
 #[derive(Debug)]
 pub struct Redirect(Status, Option<Uri<'static>>);
 

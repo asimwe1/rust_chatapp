@@ -159,7 +159,7 @@ simply including fields of these types.
 For more on using the `Responder` derive, see the [`Responder` derive]
 documentation.
 
-[`Responder` derive]: @api/rocket_codegen/derive.Responder.html
+[`Responder` derive]: @api/rocket/derive.Responder.html
 
 ## Implementations
 
@@ -647,11 +647,11 @@ See the [`FromUriParam`] documentation for further details.
 [`UriPart`]: @api/rocket/http/uri/trait.UriPart.html
 [`Uri`]: @api/rocket/http/uri/enum.Uri.html
 [`Redirect::to()`]: @api/rocket/response/struct.Redirect.html#method.to
-[`uri!`]: @api/rocket_codegen/macro.uri.html
+[`uri!`]: @api/rocket/macro.uri.html
 [`UriDisplay`]: @api/rocket/http/uri/trait.UriDisplay.html
 [`FromUriParam`]: @api/rocket/http/uri/trait.FromUriParam.html
 [`Path`]: @api/rocket/http/uri/enum.Path.html
 [`Query`]: @api/rocket/http/uri/enum.Query.html
 [`Ignorable`]: @api/rocket/http/uri/trait.Ignorable.html
-[`UriDisplayPath`]: @api/rocket_codegen/derive.UriDisplayPath.html
-[`UriDisplayQuery`]: @api/rocket_codegen/derive.UriDisplayQuery.html
+[`UriDisplayPath`]: @api/rocket/derive.UriDisplayPath.html
+[`UriDisplayQuery`]: @api/rocket/derive.UriDisplayQuery.html

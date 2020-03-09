@@ -1,6 +1,6 @@
 //! UUID parameter and form value parsing support.
 //!
-//! See the [`Uuid`](uuid::Uuid) type for further details.
+//! See the [`Uuid`] type for further details.
 //!
 //! # Enabling
 //!
