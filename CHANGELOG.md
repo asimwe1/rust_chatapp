@@ -1,3 +1,14 @@
+# Version 0.4.4 (Mar 09, 2020)
+
+## Core
+
+  * Removed use of unsupported `cfg(debug_assertions)` in `Cargo.toml`, allowing
+    for builds on latest nightlies.
+
+## Docs
+
+  * Fixed various broken links.
+
 # Version 0.4.3 (Feb 29, 2020)
 
 ## Core
