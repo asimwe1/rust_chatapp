@@ -212,12 +212,12 @@ impl Default for ExpectCt {
 impl Into<Header<'static>> for &ExpectCt {
     fn into(self) -> Header<'static> {
         let policy_string =  match self {
-            ExpectCt::Enforce(age) => format!("max-age={}, enforce", age.num_seconds()),
+            ExpectCt::Enforce(age) => format!("max-age={}, enforce", age.whole_seconds()),
             ExpectCt::Report(age, uri) => {
-                format!(r#"max-age={}, report-uri="{}""#, age.num_seconds(), uri)
+                format!(r#"max-age={}, report-uri="{}""#, age.whole_seconds(), uri)
             }
             ExpectCt::ReportAndEnforce(age, uri) => {
-                format!("max-age={}, enforce, report-uri=\"{}\"", age.num_seconds(), uri)
+                format!("max-age={}, enforce, report-uri=\"{}\"", age.whole_seconds(), uri)
             }
         };
 
@@ -298,11 +298,11 @@ impl Default for Hsts {
 impl Into<Header<'static>> for &Hsts {
     fn into(self) -> Header<'static> {
         let policy_string = match self {
-            Hsts::Enable(age) => format!("max-age={}", age.num_seconds()),
+            Hsts::Enable(age) => format!("max-age={}", age.whole_seconds()),
             Hsts::IncludeSubDomains(age) => {
-                format!("max-age={}; includeSubDomains", age.num_seconds())
+                format!("max-age={}; includeSubDomains", age.whole_seconds())
             }
-            Hsts::Preload(age) => format!("max-age={}; preload", age.num_seconds()),
+            Hsts::Preload(age) => format!("max-age={}; preload", age.whole_seconds()),
         };
 
         Header::new(Hsts::NAME, policy_string)

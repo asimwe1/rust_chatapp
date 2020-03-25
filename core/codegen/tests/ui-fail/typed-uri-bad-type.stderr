@@ -111,9 +111,9 @@ error[E0277]: the trait bound `S: rocket::http::uri::Ignorable<rocket::http::uri
 81  |     uri!(other_q: rest = _, id = 100);
     |     ---------------------------------- in this macro invocation
     | 
-   ::: $ROCKET/core/http/src/uri/uri_display.rs:467:40
+   ::: $ROCKET/core/http/src/uri/uri_display.rs:469:40
     |
-467 | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
+469 | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
     |                                        ------------ required by this bound in `rocket::http::uri::assert_ignorable`
     |
     = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -127,9 +127,9 @@ error[E0277]: the trait bound `usize: rocket::http::uri::Ignorable<rocket::http:
 83  |     uri!(other_q: rest = S, id = _);
     |     -------------------------------- in this macro invocation
     | 
-   ::: $ROCKET/core/http/src/uri/uri_display.rs:467:40
+   ::: $ROCKET/core/http/src/uri/uri_display.rs:469:40
     |
-467 | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
+469 | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
     |                                        ------------ required by this bound in `rocket::http::uri::assert_ignorable`
     |
     = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

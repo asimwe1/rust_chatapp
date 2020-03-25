@@ -95,13 +95,13 @@ mod helmet_tests {
             assert_header!(
                 response,
                 "Strict-Transport-Security",
-                format!("max-age={}", Duration::weeks(52).num_seconds())
+                format!("max-age={}", Duration::weeks(52).whole_seconds())
             );
 
             assert_header!(
                 response,
                 "Expect-CT",
-                format!("max-age={}, enforce", Duration::days(30).num_seconds())
+                format!("max-age={}, enforce", Duration::days(30).whole_seconds())
             );
 
             assert_header!(response, "Referrer-Policy", "no-referrer");

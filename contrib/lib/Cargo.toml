@@ -79,7 +79,7 @@ memcache = { version = "0.14", optional = true }
 r2d2-memcache = { version = "0.5", optional = true }
 
 # SpaceHelmet dependencies
-time = { version = "0.1.40", optional = true }
+time = { version = "0.2.9", optional = true }
 
 # Compression dependencies
 brotli = { version = "3.3", optional = true }
