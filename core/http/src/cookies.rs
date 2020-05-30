@@ -21,7 +21,7 @@ mod key {
 
     impl Key {
         pub fn generate() -> Self { Key }
-        pub fn from_master(_bytes: &[u8]) -> Self { Key }
+        pub fn derive_from(_bytes: &[u8]) -> Self { Key }
     }
 }
 

@@ -459,7 +459,7 @@ impl Config {
             _ => return Err(e)
         };
 
-        self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
+        self.secret_key = SecretKey::Provided(Key::derive_from(&bytes));
         Ok(())
     }
 
