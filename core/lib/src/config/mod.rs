@@ -154,8 +154,8 @@
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [`Rocket::config()`] `Rocket` and `get_` methods on
-//! [`Config`] structure.
+//! can be retrieved via the [`Rocket::config()`](crate::Rocket::config()) method
+//! on `Rocket` and `get_` methods on [`Config`] structure.
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
 //! a [launch fairing](crate::fairing::Fairing). If information about the

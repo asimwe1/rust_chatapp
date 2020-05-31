@@ -1,6 +1,6 @@
 //! Custom handler and options for static file serving.
 //!
-//! See the [`StaticFiles`](serve::StaticFiles) type for further details.
+//! See the [`StaticFiles`] type for further details.
 //!
 //! # Enabling
 //!
