@@ -25,14 +25,14 @@ percent-encoding = "1"
 hyper = { version = "0.10.13", default-features = false }
 time = "0.2.11"
 indexmap = "1.0"
-rustls = { version = "0.16", optional = true }
+rustls = { version = ">=0.16, <=0.17", optional = true }
 state = "0.4"
 cookie = { version = "0.14.0", features = ["percent-encode"] }
 pear = "0.1"
 unicode-xid = "0.2"
 
 [dependencies.hyper-sync-rustls]
-version = "=0.3.0-rc.6"
+version = ">=0.3.0-rc.6, <=0.3.0-rc.17"
 features = ["server"]
 optional = true
 
