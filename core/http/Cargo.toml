@@ -17,7 +17,7 @@ edition = "2018"
 [features]
 default = []
 tls = ["rustls", "hyper-sync-rustls"]
-private-cookies = ["cookie/secure"]
+private-cookies = ["cookie/private", "cookie/key-expansion"]
 
 [dependencies]
 smallvec = "1.0"
