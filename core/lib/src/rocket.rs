@@ -12,7 +12,7 @@ use state::Container;
 
 use crate::{logger, handler};
 use crate::ext::ReadExt;
-use crate::config::{self, Config, LoggedValue};
+use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
 use crate::response::{Body, Response};
@@ -344,16 +344,17 @@ impl Rocket {
 
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
-    /// reading the file, the defaults are used. See the [`config`]
-    /// documentation for more information on defaults.
+    /// reading the file, the defaults are used. See the
+    /// [`config`](crate::config) documentation for more information on
+    /// defaults.
     ///
     /// This method is typically called through the
     /// [`rocket::ignite()`](crate::ignite) alias.
     ///
     /// # Panics
     ///
-    /// If there is an error parsing the `Rocket.toml` file, this functions
-    /// prints a nice error message and then exits the process.
+    /// If there is an error reading configuration sources, this function prints
+    /// a nice error message and then exits the process.
     ///
     /// # Examples
     ///
@@ -362,10 +363,22 @@ impl Rocket {
     /// rocket::ignite()
     /// # };
     /// ```
-    #[inline]
     pub fn ignite() -> Rocket {
-        // Note: init() will exit the process under config errors.
-        Rocket::configured(config::init())
+        Config::read()
+            .or_else(|e| match e {
+                ConfigError::IoError => {
+                    warn!("Failed to read 'Rocket.toml'. Using defaults.");
+                    Ok(FullConfig::active_default(None)?.take_active())
+                }
+                ConfigError::NotFound => Ok(FullConfig::active_default(None)?.take_active()),
+                _ => Err(e)
+            })
+            .map(Rocket::configured)
+            .unwrap_or_else(|e: ConfigError| {
+                logger::init(logger::LoggingLevel::Debug);
+                e.pretty_print();
+                std::process::exit(1)
+            })
     }
 
     /// Creates a new `Rocket` application using the supplied custom
