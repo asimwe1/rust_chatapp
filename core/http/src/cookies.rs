@@ -21,6 +21,7 @@ mod key {
 
     impl Key {
         pub fn generate() -> Self { Key }
+        pub fn try_generate() -> Option<Self> { Some(Key) }
         pub fn derive_from(_bytes: &[u8]) -> Self { Key }
     }
 }
