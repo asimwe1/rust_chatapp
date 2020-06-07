@@ -67,7 +67,8 @@ impl ConfigError {
                 info_!("{}", error);
             }
             BadFilePath(ref path, reason) => {
-                error!("configuration file path {} is invalid", Paint::default(path.display()).bold());
+                error!("configuration file path {} is invalid",
+                    Paint::default(path.display()).bold());
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {

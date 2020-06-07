@@ -188,11 +188,11 @@ mod builder;
 mod toml_ext;
 mod custom_values;
 
-use std::fs::{self, File};
+use std::env;
+use std::fs::File;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::env;
 
 use toml;
 
@@ -216,7 +216,8 @@ const GLOBAL_ENV_NAME: &str = "global";
 const ENV_VAR_PREFIX: &str = "ROCKET_";
 
 const CODEGEN_DEBUG_ENV: &str = "ROCKET_CODEGEN_DEBUG";
-const PREHANDLED_VARS: [&str; 3] = [CODEGEN_DEBUG_ENV, CONFIG_ENV, COLORS_ENV];
+const CONFIG_FILE_ENV: &str = "ROCKET_CONFIG_FILE";
+const PREHANDLED_VARS: [&str; 4] = [CODEGEN_DEBUG_ENV, CONFIG_FILE_ENV, CONFIG_ENV, COLORS_ENV];
 
 /// Wraps `std::result` with the error type of [`ConfigError`].
 pub type Result<T> = std::result::Result<T, ConfigError>;
@@ -270,18 +271,33 @@ impl FullConfig {
         })
     }
 
-    /// Iteratively search for `CONFIG_FILENAME` starting at the current working
-    /// directory and working up through its parents. Returns the path to the
-    /// file or an Error::NoKey if the file couldn't be found. If the current
-    /// working directory can't be determined, return `BadCWD`.
-    fn find() -> Result<PathBuf> {
+    /// Returns the path to the config file that should be parsed.
+    ///
+    /// If the environment variable `CONFIG_FILE_ENV` is set, that path is
+    /// assumed to be the config file. Assuming such a file exists, that path is
+    /// returned. If the file doesn't exist, an error is returned.
+    ///
+    /// If the variable isn't set, Iteratively search for `CONFIG_FILENAME`
+    /// starting at the current working directory and working up through its
+    /// parents. Returns the path to the discovered file.
+    fn find_config_path() -> Result<PathBuf> {
+        if let Some(path) = env::var_os(CONFIG_FILE_ENV) {
+            let config = Path::new(&path);
+            if config.metadata().map_or(false, |m| m.is_file()) {
+                return Ok(config.into());
+            } else {
+                let msg = "The user-supplied config file does not exist.";
+                return Err(ConfigError::BadFilePath(config.into(), msg));
+            }
+        }
+
         let cwd = env::current_dir().map_err(|_| ConfigError::NotFound)?;
         let mut current = cwd.as_path();
 
         loop {
-            let manifest = current.join(CONFIG_FILENAME);
-            if fs::metadata(&manifest).is_ok() {
-                return Ok(manifest)
+            let config = current.join(CONFIG_FILENAME);
+            if config.metadata().map_or(false, |m| m.is_file()) {
+                return Ok(config);
             }
 
             match current.parent() {
@@ -434,7 +450,7 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{FullConfig, Config, ConfigError, ConfigBuilder};
+    use super::{FullConfig, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
     use super::Environment::*;

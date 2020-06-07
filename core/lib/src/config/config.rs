@@ -103,7 +103,7 @@ impl Config {
     /// # }
     /// ```
     pub fn read() -> Result<Config> {
-        Self::read_from(&FullConfig::find()?)
+        Self::read_from(&FullConfig::find_config_path()?)
     }
 
     /// This method is exactly like [`Config::read()`] except it uses the file
