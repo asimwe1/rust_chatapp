@@ -35,12 +35,12 @@ struct Context<'a> {
 
 impl<'a> Context<'a> {
     pub fn err(conn: &DbConn, msg: &'a str) -> Context<'a> {
-        Context{msg: Some(("error", msg)), tasks: Task::all(conn).unwrap_or_default()}
+        Context { msg: Some(("error", msg)), tasks: Task::all(conn).unwrap_or_default() }
     }
 
     pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'a str)>) -> Context<'a> {
         match Task::all(conn) {
-            Ok(tasks) => Context { msg, tasks},
+            Ok(tasks) => Context { msg, tasks },
             Err(e) => {
                 error_!("DB Task::all() error: {}", e);
                 Context {
