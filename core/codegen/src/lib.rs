@@ -2,8 +2,8 @@
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
+#![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 #![warn(rust_2018_idioms)]
 
