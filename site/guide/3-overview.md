@@ -72,10 +72,12 @@ fn world() -> &'static str {  // <- request handler
 ```
 
 This declares the `world` route to match against the static path `"/world"` on
-incoming `GET` requests. The `world` route is simple, but additional route
-parameters are necessary when building more interesting applications. The
-[Requests](../requests) section describes the available options for
-constructing routes.
+incoming `GET` requests. Instead of `#[get]`, we could have used `#[post]` or
+`#[put]` for other HTTP methods, or `#[catch]` for serving [custom error
+pages](../requests/#error-catchers). Additionally, other route parameters may be
+necessary when building more interesting applications. The
+[Requests](../requests) chapter, which follows this one, has further details on
+routing and error handling.
 
 ## Mounting
 
