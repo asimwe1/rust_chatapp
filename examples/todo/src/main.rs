@@ -114,6 +114,7 @@ fn rocket() -> Rocket {
         .attach(Template::fairing())
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

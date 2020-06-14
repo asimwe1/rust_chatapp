@@ -69,9 +69,10 @@ const FLASH_COOKIE_DELIM: char = ':';
 ///          .unwrap_or_else(|| "Welcome!".to_string())
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().mount("/", routes![login, index]).launch();
+///     rocket::ignite().mount("/", routes![login, index]).launch().await;
 /// # }
 /// }
 /// ```
