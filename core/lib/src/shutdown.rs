@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
@@ -26,13 +26,13 @@ use tokio::sync::mpsc;
 ///
 /// #[rocket::main]
 /// async fn main() {
-///     # if false {
-///     rocket::ignite()
+///     let result = rocket::ignite()
 ///         .mount("/", routes![shutdown])
 ///         .launch()
-///         .await
-///         .expect("server failed unexpectedly");
-///     # }
+///         .await;
+///
+///     // If the server shut down (by visting `/shutdown`), `result` is `Ok`.
+///     result.expect("server failed unexpectedly");
 /// }
 /// ```
 #[derive(Debug, Clone)]

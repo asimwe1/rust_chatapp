@@ -238,9 +238,9 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 
 ! note
 
-  Rocket 0.5 uses the tokio (0.2) runtime. The runtime is started for you
-  if you use `#[rocket::main]`, but you can still `launch()` a rocket
-  instance on a custom-built `Runtime`.
+  Rocket 0.5 uses the tokio (0.2) runtime. The runtime is started for you if you
+  use `#[rocket::launch]` or `#[rocket::main]`, but you can still `launch()` a
+  rocket instance on a custom-built `Runtime`.
 
 ### Cooperative Multitasking
 

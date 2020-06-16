@@ -44,8 +44,8 @@ const FLASH_COOKIE_DELIM: char = ':';
 ///
 /// # Example
 ///
-/// The following complete Rocket application illustrates the use of a `Flash`
-/// message on both the request and response sides.
+/// The following routes illustrate the use of a `Flash` message on both the
+/// request and response sides.
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene)]
@@ -67,13 +67,6 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// fn index(flash: Option<FlashMessage>) -> String {
 ///     flash.map(|msg| format!("{}: {}", msg.name(), msg.msg()))
 ///          .unwrap_or_else(|| "Welcome!".to_string())
-/// }
-///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().mount("/", routes![login, index]).launch().await;
-/// # }
 /// }
 /// ```
 ///

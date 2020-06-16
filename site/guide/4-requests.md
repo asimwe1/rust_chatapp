@@ -232,7 +232,7 @@ fn main() {
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
-application with the routes mounted at the root path, as is done in `main`
+application with the routes mounted at the root path, as is done in `rocket()`
 above, requests to `/user/<id>` (such as `/user/123`, `/user/Bob`, and so on)
 will be routed as follows:
 

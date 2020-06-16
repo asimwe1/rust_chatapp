@@ -35,7 +35,7 @@ use yansi::Color::*;
 /// Catchers should rarely be used directly. Instead, they are typically
 /// declared using the `catch` decorator, as follows:
 ///
-/// ```rust
+/// ```rust,no_run
 /// #![feature(proc_macro_hygiene)]
 ///
 /// #[macro_use] extern crate rocket;
@@ -52,11 +52,9 @@ use yansi::Color::*;
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
 ///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().register(catchers![internal_error, not_found]).launch().await;
-/// # }
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite().register(catchers![internal_error, not_found])
 /// }
 /// ```
 ///
