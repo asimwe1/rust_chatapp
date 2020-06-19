@@ -44,16 +44,39 @@ pub struct AdHoc {
     kind: AdHocKind,
 }
 
+// macro_rules! Async {
+//     ($kind:ident <$l:lifetime> ($($param:ty),*) -> $r:ty) => (
+//         dyn for<$l> $kind($($param),*) -> futures::future::BoxFuture<$l, $r>
+//             + Send + 'static
+//     );
+//     ($kind:ident ($($param:ty),*) -> $r:ty) => (
+//         dyn $kind($($param),*) -> futures::future::BoxFuture<'static, $r>
+//             + Send + Sync + 'static
+//     );
+//     ($kind:ident <$l:lifetime> ($($param:ty),*)) => (
+//         Async!($kind <$l> ($($param),*) -> ())
+//     );
+//     ($kind:ident ($($param:ty),*)) => (
+//         Async!($kind ($($param),*) -> ())
+//     );
+// }
+
 enum AdHocKind {
     /// An ad-hoc **attach** fairing. Called when the fairing is attached.
-    Attach(Mutex<Option<Box<dyn FnOnce(Rocket) -> BoxFuture<'static, Result<Rocket, Rocket>> + Send + 'static>>>),
+    Attach(Mutex<Option<Box<dyn FnOnce(Rocket)
+        -> BoxFuture<'static, Result<Rocket, Rocket>> + Send + 'static>>>),
+
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
     Launch(Mutex<Option<Box<dyn FnOnce(&Manifest) + Send + 'static>>>),
+
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()> + Send + Sync + 'static>),
+    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data)
+        -> BoxFuture<'a, ()> + Send + Sync + 'static>),
+
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
-    Response(Box<dyn for<'a> Fn(&'a Request<'_>, &'a mut Response<'_>) -> BoxFuture<'a, ()> + Send + Sync + 'static>),
+    Response(Box<dyn for<'a> Fn(&'a Request<'_>, &'a mut Response<'_>)
+        -> BoxFuture<'a, ()> + Send + Sync + 'static>),
 }
 
 impl AdHoc {
@@ -73,7 +96,10 @@ impl AdHoc {
         F: FnOnce(Rocket) -> Fut + Send + 'static,
         Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket)))))) }
+        AdHoc {
+            name,
+            kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket))))))
+        }
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
@@ -117,6 +143,17 @@ impl AdHoc {
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
+    // // FIXME: Can the generated future hold references to the request with this?
+    // pub fn on_request<F, Fut>(name: &'static str, f: F) -> AdHoc
+    // where
+    //     F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> Fut + Send + Sync + 'static,
+    //     Fut: Future<Output=()> + Send + 'static,
+    // {
+    //     AdHoc {
+    //         name,
+    //         kind: AdHocKind::Request(Box::new(|req, data| Box::pin(f(req, data))))
+    //     }
+    // }
 
     /// Constructs an `AdHoc` response fairing named `name`. The function `f`
     /// will be called and the returned `Future` will be `await`ed by Rocket

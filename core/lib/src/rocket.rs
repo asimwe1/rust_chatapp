@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-use std::convert::{From, TryInto};
+use std::{io, mem};
 use std::cmp::min;
-use std::io;
-use std::mem;
 use std::sync::Arc;
+use std::collections::HashMap;
 
-use futures::future::{Future, FutureExt, BoxFuture};
 use futures::stream::StreamExt;
+use futures::future::{Future, FutureExt, BoxFuture};
 use tokio::sync::{mpsc, oneshot};
 
 use yansi::Paint;
@@ -143,8 +141,13 @@ impl Manifest {
         }
 
         let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
-            let response = hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            tx.send(response).map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "Client disconnected before the response was started"))
+            let response = hyp_res.body(body)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            tx.send(response).map_err(|_| {
+                let msg =  "Client disconnected before the response was started";
+                io::Error::new(io::ErrorKind::BrokenPipe, msg)
+            })
         };
 
         match response.body() {
@@ -153,23 +156,22 @@ impl Manifest {
                 send_response(hyp_res, hyper::Body::empty())?;
             }
             Some(body) => {
-                let (body, chunk_size) = match body {
-                    Body::Chunked(body, chunk_size) => {
-                        (body, chunk_size.try_into().expect("u64 -> usize overflow"))
-                    }
-                    Body::Sized(body, size) => {
-                        hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
-                        (body, 4096usize)
-                    }
+                if let Some(s) = body.size().await {
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, s.to_string());
+                }
+
+                let chunk_size = match *body {
+                    Body::Chunked(_, chunk_size) => chunk_size as usize,
+                    Body::Sized(_, _) => crate::response::DEFAULT_CHUNK_SIZE,
                 };
 
                 let (mut sender, hyp_body) = hyper::Body::channel();
                 send_response(hyp_res, hyp_body)?;
 
-                let mut stream = body.into_bytes_stream(chunk_size);
-
+                let mut stream = body.as_reader().into_bytes_stream(chunk_size);
                 while let Some(next) = stream.next().await {
-                    sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    sender.send_data(next?).await
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 }
             }
         };

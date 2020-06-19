@@ -17,7 +17,7 @@ type Selector = Method;
 pub(crate) fn dummy_handler<'r>(
     r: &'r Request<'_>, _: crate::Data
 ) -> BoxFuture<'r, crate::handler::Outcome<'r>> {
-    crate::Outcome::from(r, ())
+    crate::Outcome::from(r, ()).pin()
 }
 
 #[derive(Default)]

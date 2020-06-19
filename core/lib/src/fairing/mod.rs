@@ -287,7 +287,7 @@ pub use self::info_kind::{Info, Kind};
 ///             let body = format!("Get: {}\nPost: {}", get_count, post_count);
 ///             res.set_status(Status::Ok);
 ///             res.set_header(ContentType::Plain);
-///             res.set_sized_body(Cursor::new(body));
+///             res.set_sized_body(body.len(), Cursor::new(body));
 ///         }
 ///     }
 /// }

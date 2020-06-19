@@ -44,13 +44,13 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// ```rust,no_run
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
-/// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
+/// use rocket::handler::{self, Handler, Outcome};
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
 ///
 /// impl Handler for CustomHandler {
-///     fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
+///     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
@@ -184,7 +184,7 @@ pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> ErrorHandlerFuture<'r>;
 /// Type type of `Future` returned by an error handler.
 pub type ErrorHandlerFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
-impl<'r> Outcome<'r> {
+impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is
@@ -195,20 +195,18 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     ///     Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from<T: Responder<'r> + Send + 'r>(req: &'r Request<'_>, responder: T) -> HandlerFuture<'r> {
-        Box::pin(async move {
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(status) => outcome::Outcome::Failure(status)
-            }
-        })
+    pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'o> {
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(status) => outcome::Outcome::Failure(status)
+        }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -221,23 +219,21 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     ///     Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn try_from<T, E>(req: &'r Request<'_>, result: Result<T, E>) -> HandlerFuture<'r>
-        where T: Responder<'r> + Send + 'r, E: std::fmt::Debug + Send + 'r
+    pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'o>
+        where R: Responder<'r, 'o>, E: std::fmt::Debug
     {
-        Box::pin(async move {
-            let responder = result.map_err(crate::response::Debug);
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(status) => outcome::Outcome::Failure(status)
-            }
-        })
+        let responder = result.map_err(crate::response::Debug);
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(status) => outcome::Outcome::Failure(status)
+        }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -250,22 +246,20 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     ///     Outcome::from_or_forward(req, data, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from_or_forward<T: 'r>(req: &'r Request<'_>, data: Data, responder: T) -> HandlerFuture<'r>
-        where T: Responder<'r> + Send
+    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data, responder: R) -> Outcome<'o>
+        where R: Responder<'r, 'o>
     {
-        Box::pin(async move {
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(_) => outcome::Outcome::Forward(data)
-            }
-        })
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(_) => outcome::Outcome::Forward(data)
+        }
     }
 
     /// Return an `Outcome` of `Failure` with the status code `code`. This is
@@ -278,13 +272,11 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     /// use rocket::http::Status;
     ///
-    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> HandlerFuture<'r> {
-    ///     Box::pin(async move {
-    ///         Outcome::failure(Status::BadRequest)
-    ///     })
+    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> Outcome<'r> {
+    ///     Outcome::failure(Status::BadRequest)
     /// }
     /// ```
     #[inline(always)]
@@ -302,12 +294,10 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn always_forward<'r>(_: &'r Request, data: Data) -> HandlerFuture<'r> {
-    ///     Box::pin(async move {
-    ///         Outcome::forward(data)
-    ///     })
+    /// fn always_forward<'r>(_: &'r Request, data: Data) -> Outcome<'r> {
+    ///     Outcome::forward(data)
     /// }
     /// ```
     #[inline(always)]

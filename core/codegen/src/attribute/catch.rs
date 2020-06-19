@@ -87,7 +87,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         // let #catcher: #fn_sig = #user_catcher_fn_name;
         let #catcher = #user_catcher_fn_name;
         #responder_stmt
-        ::rocket::response::Responder::respond_to(___responder, #req).await?
+        ::rocket::response::Responder::respond_to(___responder, #req)?
     });
 
     // Generate the catcher, keeping the user's input around.

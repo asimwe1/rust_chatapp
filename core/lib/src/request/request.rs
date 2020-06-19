@@ -294,7 +294,11 @@ impl<'r> Request<'r> {
         match guard.take() {
             Some(jar) => {
                 let mutex = &self.state.cookies;
-                Cookies::new(jar, self.state.config.secret_key(), move |jar| *mutex.lock().expect("cookies lock") = Some(jar))
+                let on_drop = move |jar| {
+                    *mutex.lock().expect("cookies lock") = Some(jar);
+                };
+
+                Cookies::new(jar, self.state.config.secret_key(), on_drop)
             }
             None => {
                 error_!("Multiple `Cookies` instances are active at once.");
@@ -535,6 +539,13 @@ impl<'r> Request<'r> {
         where T: FromRequest<'a, 'r> + 'z, 'a: 'z, 'r: 'z
     {
         T::from_request(self)
+    }
+
+    #[inline(always)]
+    pub fn managed_state<T>(&self) -> Option<&'r T>
+        where T: Send + Sync + 'static
+    {
+        self.state.managed.try_get::<T>()
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached

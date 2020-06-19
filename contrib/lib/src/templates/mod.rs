@@ -141,7 +141,7 @@ use serde_json::{Value, to_value};
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use rocket::{Manifest, State};
+use rocket::Manifest;
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
@@ -389,20 +389,19 @@ impl Template {
 /// Returns a response with the Content-Type derived from the template's
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
-#[rocket::async_trait]
-impl<'r> Responder<'r> for Template {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for Template {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let (render, content_type) = {
-            let ctxt = req.guard::<State<'_, ContextManager>>().await.succeeded().ok_or_else(|| {
+            let ctxt = req.managed_state::<ContextManager>().ok_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");
                 info_!("See the `Template` documentation for more information.");
                 Status::InternalServerError
-            })?.inner().context();
+            })?.context();
 
             self.finalize(&ctxt)?
         };
 
-        Content(content_type, render).respond_to(req).await
+        Content(content_type, render).respond_to(req)
     }
 }

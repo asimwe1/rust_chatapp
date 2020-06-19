@@ -153,10 +153,10 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(req: &'r Request<'_>) -> futures::future::BoxFuture<'r, response::Result<'r>> {
-                status::Custom(Status::from_code($code).unwrap(),
-                    content::Html(error_page_template!($code, $name, $description))
-                ).respond_to(req)
+            fn $fn_name<'r>(req: &'r Request<'_>) -> crate::handler::ErrorHandlerFuture<'r> {
+                let status = Status::from_code($code).unwrap();
+                let html = content::Html(error_page_template!($code, $name, $description));
+                Box::pin(async move { status::Custom(status, html).respond_to(req) })
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));
@@ -172,7 +172,7 @@ pub mod defaults {
     use std::collections::HashMap;
 
     use crate::request::Request;
-    use crate::response::{self, content, status, Responder};
+    use crate::response::{content, status, Responder};
     use crate::http::Status;
 
     pub fn get() -> HashMap<u16, Catcher> {
@@ -243,4 +243,3 @@ pub mod defaults {
         }
     }
 }
-
