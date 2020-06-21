@@ -8,7 +8,7 @@ use std::env;
 use rocket::{Request, Handler, Route, Data, Catcher, try_outcome};
 use rocket::http::{Status, RawStr};
 use rocket::response::{Responder, status::Custom};
-use rocket::handler::{Outcome, HandlerFuture, ErrorHandlerFuture};
+use rocket::handler::{Outcome, HandlerFuture, CatcherFuture};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
 use rocket::tokio::fs::File;
@@ -66,7 +66,7 @@ fn get_upload<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
     Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok()).pin()
 }
 
-fn not_found_handler<'r>(req: &'r Request) -> ErrorHandlerFuture<'r> {
+fn not_found_handler<'r>(req: &'r Request) -> CatcherFuture<'r> {
     let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
     Box::pin(async move { res.respond_to(req) })
 }
@@ -82,17 +82,17 @@ impl CustomHandler {
     }
 }
 
+// FIXME: Will this work?
+
+#[rocket::async_trait]
 impl Handler for CustomHandler {
-    fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         let self_data = self.data;
-        let id_outcome = req.get_param::<&RawStr>(0)
+        let id = req.get_param::<&RawStr>(0)
             .and_then(|res| res.ok())
             .or_forward(data);
 
-        Box::pin(async move {
-            let id = try_outcome!(id_outcome);
-            Outcome::from(req, format!("{} - {}", self_data, id))
-        })
+        Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
     }
 }
 

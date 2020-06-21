@@ -18,7 +18,7 @@ use std::path::{PathBuf, Path};
 
 use rocket::{Request, Data, Route};
 use rocket::http::{Method, uri::Segments, ext::IntoOwned};
-use rocket::handler::{Handler, HandlerFuture, Outcome};
+use rocket::handler::{Handler, Outcome};
 use rocket::response::{NamedFile, Redirect};
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
@@ -276,34 +276,34 @@ impl Into<Vec<Route>> for StaticFiles {
     }
 }
 
-async fn handle_dir<'r, P>(opt: Options, req: &'r Request<'_>, data: Data, path: P) -> Outcome<'r>
+async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> Outcome<'r>
     where P: AsRef<Path>
 {
-    if opt.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
-        let new_path = req.uri().map_path(|p| p.to_owned() + "/")
+    if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
+        let new_path = r.uri().map_path(|p| p.to_owned() + "/")
             .expect("adding a trailing slash to a known good path results in a valid path")
             .into_owned();
 
-        return Outcome::from_or_forward(req, data, Redirect::permanent(new_path));
+        return Outcome::from_or_forward(r, d, Redirect::permanent(new_path));
     }
 
     if !opt.contains(Options::Index) {
-        return Outcome::forward(data);
+        return Outcome::forward(d);
     }
 
-    let file = NamedFile::open(path.as_ref().join("index.html")).await.ok();
-    Outcome::from_or_forward(req, data, file)
+    let file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
+    Outcome::from_or_forward(r, d, file)
 }
 
+#[rocket::async_trait]
 impl Handler for StaticFiles {
-    fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         // If this is not the route with segments, handle it only if the user
         // requested a handling of index files.
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            let result = handle_dir(self.options, req, data, &self.root);
-            return Box::pin(async move { result.await });
+            return handle_dir(self.options, req, data, &self.root).await;
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -314,12 +314,10 @@ impl Handler for StaticFiles {
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
-        Box::pin(async move {
-            match path {
-                Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
-                Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
-                None => Outcome::forward(data),
-            }
-        })
+        match path {
+            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
+            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
+            None => Outcome::forward(data),
+        }
     }
 }

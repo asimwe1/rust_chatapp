@@ -51,7 +51,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let status_code = status.0.code;
 
     // Variables names we'll use and reuse.
-    define_vars_and_mods!(req, catcher, _Box, Request, Response, ErrorHandlerFuture);
+    define_vars_and_mods!(req, catcher, _Box, Request, Response, CatcherFuture);
 
     // Determine the number of parameters that will be passed in.
     let (_fn_sig, inputs) = match catch.function.sig.inputs.len() {
@@ -96,7 +96,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
 
         /// Rocket code generated wrapping catch function.
         #[doc(hidden)]
-        #vis fn #generated_fn_name<'_b>(#req: &'_b #Request) -> #ErrorHandlerFuture<'_b> {
+        #vis fn #generated_fn_name<'_b>(#req: &'_b #Request) -> #CatcherFuture<'_b> {
             #_Box::pin(async move {
                 let __response = #catcher_response;
                 #Response::build()

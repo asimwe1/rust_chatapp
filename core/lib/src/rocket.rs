@@ -674,7 +674,7 @@ impl Rocket {
     /// use rocket::http::Method::*;
     ///
     /// fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    ///     Outcome::from(req, "Hello!")
+    ///     Outcome::from(req, "Hello!").pin()
     /// }
     ///
     /// # let _ = async { // We don't actually want to launch the server in an example.
