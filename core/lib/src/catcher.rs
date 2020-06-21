@@ -84,11 +84,11 @@ impl Catcher {
     ///
     /// fn handle_404<'r>(req: &'r Request) -> ErrorHandlerFuture<'r> {
     ///    let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
-    ///    res.respond_to(req)
+    ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
     /// fn handle_500<'r>(req: &'r Request) -> ErrorHandlerFuture<'r> {
-    ///     "Whoops, we messed up!".respond_to(req)
+    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req) })
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);

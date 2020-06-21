@@ -44,18 +44,18 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// ```rust,no_run
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
-/// use rocket::handler::{self, Handler, Outcome};
+/// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
 ///
 /// impl Handler for CustomHandler {
-///     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+///     fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
 ///             Kind::Complex => Outcome::from(req, "complex"),
-///         }
+///         }.pin()
 ///     }
 /// }
 ///
@@ -142,7 +142,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// generate a response. Otherwise, if the return value is `Forward(Data)`,
     /// the next matching route is attempted. If there are no other matching
     /// routes, the `404` error catcher is invoked.
-    fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> HandlerFuture<'r>;
+    fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> HandlerFuture<'r>;
 }
 
 /// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
@@ -173,7 +173,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
     where for<'r> F: Fn(&'r Request<'_>, Data) -> HandlerFuture<'r>
 {
     #[inline(always)]
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
+    fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
         self(req, data)
     }
 }
