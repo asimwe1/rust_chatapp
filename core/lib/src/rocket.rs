@@ -3,8 +3,10 @@ use std::cmp::min;
 use std::sync::Arc;
 use std::collections::HashMap;
 
+#[allow(unused_imports)]
+use futures::future::FutureExt;
 use futures::stream::StreamExt;
-use futures::future::{Future, FutureExt, BoxFuture};
+use futures::future::{Future, BoxFuture};
 use tokio::sync::{mpsc, oneshot};
 
 use yansi::Paint;
