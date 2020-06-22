@@ -17,18 +17,18 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, ContentType};
 
     #[rocket::async_test]
     async fn method_eval() {
         let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch().await;
 
-        assert_eq!(response.body_string().await, Some("OK".into()));
+        assert_eq!(response.into_string().await, Some("OK".into()));
     }
 
     #[rocket::async_test]

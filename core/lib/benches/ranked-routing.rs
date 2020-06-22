@@ -36,7 +36,7 @@ mod benches {
 
     use super::rocket;
     use self::test::Bencher;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Accept, ContentType};
 
     fn client(_rocket: rocket::Rocket) -> Option<Client> {
@@ -46,14 +46,15 @@ mod benches {
     #[bench]
     fn accept_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut requests = vec![];
-        requests.push(client.get("/").header(Accept::JSON));
-        requests.push(client.get("/").header(Accept::HTML));
-        requests.push(client.get("/").header(Accept::Plain));
+        let requests = vec![
+            client.get("/").header(Accept::JSON),
+            client.get("/").header(Accept::HTML),
+            client.get("/").header(Accept::Plain),
+        ];
 
         b.iter(|| {
-            for request in requests.iter_mut() {
-                request.mut_dispatch();
+            for request in &requests {
+                request.clone().dispatch();
             }
         });
     }
@@ -61,14 +62,15 @@ mod benches {
     #[bench]
     fn content_type_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut requests = vec![];
-        requests.push(client.post("/").header(ContentType::JSON));
-        requests.push(client.post("/").header(ContentType::HTML));
-        requests.push(client.post("/").header(ContentType::Plain));
+        let requests = vec![
+            client.post("/").header(ContentType::JSON),
+            client.post("/").header(ContentType::HTML),
+            client.post("/").header(ContentType::Plain),
+        ];
 
         b.iter(|| {
-            for request in requests.iter_mut() {
-                request.mut_dispatch();
+            for request in &requests {
+                request.clone().dispatch();
             }
         });
     }

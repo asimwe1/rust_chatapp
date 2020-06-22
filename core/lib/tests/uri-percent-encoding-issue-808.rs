@@ -29,7 +29,7 @@ fn rocket() -> rocket::Rocket {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, uri::Uri};
 
     #[rocket::async_test]
@@ -52,8 +52,8 @@ mod tests {
     async fn uri_percent_encoding_get() {
         let client = Client::new(rocket()).await.unwrap();
         let name = Uri::percent_encode(NAME);
-        let mut response = client.get(format!("/hello/{}", name)).dispatch().await;
+        let response = client.get(format!("/hello/{}", name)).dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await.unwrap(), format!("Hello, {}!", NAME));
+        assert_eq!(response.into_string().await.unwrap(), format!("Hello, {}!", NAME));
     }
 }

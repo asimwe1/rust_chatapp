@@ -148,7 +148,7 @@ First, we'll create a `test` module with the proper imports:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[test]
@@ -217,7 +217,7 @@ use rocket::http::{ContentType, Status};
 # let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
-assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+assert_eq!(response.into_string().await, Some("Hello, world!".into()));
 ```
 
 That's it! Altogether, this looks like:
@@ -240,7 +240,7 @@ fn rocket() -> rocket::Rocket {
 # */
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     # /*
@@ -250,7 +250,7 @@ mod test {
         let client = Client::new(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+        assert_eq!(response.into_string().await, Some("Hello, world!".into()));
     }
 }
 

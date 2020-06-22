@@ -263,7 +263,7 @@ impl Rocket {
             })
         };
 
-        match response.body() {
+        match response.body_mut() {
             None => {
                 hyp_res = hyp_res.header(header::CONTENT_LENGTH, "0");
                 send_response(hyp_res, hyper::Body::empty())?;
@@ -1112,6 +1112,7 @@ impl Cargo {
     ///
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
+    ///
     /// let cargo = rocket.inspect().await;
     /// assert_eq!(cargo.state::<MyState>(), Some(&MyState("hello!")));
     /// # });

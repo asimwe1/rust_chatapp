@@ -3,7 +3,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::{Request, Data, Outcome::*};
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::request::Form;
 use rocket::data::{self, FromDataSimple};
 use rocket::http::{RawStr, ContentType, Status};
@@ -46,16 +46,16 @@ async fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
     let client = Client::new(rocket).await.unwrap();
 
-    let mut response = client.post("/f")
+    let response = client.post("/f")
         .header(ContentType::Form)
         .body("field=this%20is%20here")
         .dispatch().await;
 
-    assert_eq!(response.body_string().await.unwrap(), "this is here");
+    assert_eq!(response.into_string().await.unwrap(), "this is here");
 
-    let mut response = client.post("/s").body("this is here").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "this is here");
+    let response = client.post("/s").body("this is here").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "this is here");
 
-    let mut response = client.post("/s").body("this%20is%20here").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "this%20is%20here");
+    let response = client.post("/s").body("this%20is%20here").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "this%20is%20here");
 }

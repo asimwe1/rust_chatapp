@@ -1,9 +1,9 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 async fn test(uri: String, expected: String) {
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut response = client.get(&uri).dispatch().await;
-    assert_eq!(response.body_string().await, Some(expected));
+    let response = client.get(&uri).dispatch().await;
+    assert_eq!(response.into_string().await, Some(expected));
 }
 
 #[rocket::async_test]

@@ -16,19 +16,19 @@ fn bug(form_data: Form<FormData>) -> String {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::ContentType;
     use rocket::http::Status;
 
     async fn check_decoding(raw: &str, decoded: &str) {
         let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .header(ContentType::Form)
             .body(format!("form_data={}", raw))
             .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(Some(decoded.to_string()), response.body_string().await);
+        assert_eq!(Some(decoded.to_string()), response.into_string().await);
     }
 
     #[rocket::async_test]

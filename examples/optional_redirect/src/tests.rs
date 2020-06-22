@@ -1,11 +1,11 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Status;
 
 async fn test_200(uri: &str, expected_body: &str) {
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut response = client.get(uri).dispatch().await;
+    let response = client.get(uri).dispatch().await;
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string().await, Some(expected_body.to_string()));
+    assert_eq!(response.into_string().await, Some(expected_body.to_string()));
 }
 
 async fn test_303(uri: &str, expected_location: &str) {

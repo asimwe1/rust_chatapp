@@ -22,7 +22,7 @@ mod benches {
 
     use super::rocket;
     use self::test::Bencher;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Accept, ContentType};
 
     fn client(_rocket: rocket::Rocket) -> Option<Client> {
@@ -32,28 +32,28 @@ mod benches {
     #[bench]
     fn accept_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut request = client.get("/").header(Accept::JSON);
-        b.iter(|| { request.mut_dispatch(); });
+        let request = client.get("/").header(Accept::JSON);
+        b.iter(|| { request.clone().dispatch(); });
     }
 
     #[bench]
     fn wrong_accept_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut request = client.get("/").header(Accept::HTML);
-        b.iter(|| { request.mut_dispatch(); });
+        let request = client.get("/").header(Accept::HTML);
+        b.iter(|| { request.clone().dispatch(); });
     }
 
     #[bench]
     fn content_type_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut request = client.post("/").header(ContentType::JSON);
-        b.iter(|| { request.mut_dispatch(); });
+        let request = client.post("/").header(ContentType::JSON);
+        b.iter(|| { request.clone().dispatch(); });
     }
 
     #[bench]
     fn wrong_content_type_format(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut request = client.post("/").header(ContentType::Plain);
-        b.iter(|| { request.mut_dispatch(); });
+        let request = client.post("/").header(ContentType::Plain);
+        b.iter(|| { request.clone().dispatch(); });
     }
 }

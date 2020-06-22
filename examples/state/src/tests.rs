@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Status;
 
 async fn register_hit(client: &Client) {
@@ -7,8 +7,8 @@ async fn register_hit(client: &Client) {
 }
 
 async fn get_count(client: &Client) -> usize {
-    let mut response = client.get("/count").dispatch().await;
-    response.body_string().await.and_then(|s| s.parse().ok()).unwrap()
+    let response = client.get("/count").dispatch().await;
+    response.into_string().await.and_then(|s| s.parse().ok()).unwrap()
 }
 
 #[rocket::async_test]

@@ -23,7 +23,7 @@ fn used(flash: Option<FlashMessage<'_, '_>>) -> Option<String> {
 }
 
 mod flash_lazy_remove_tests {
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]
@@ -48,8 +48,8 @@ mod flash_lazy_remove_tests {
         assert_eq!(response.status(), Status::Ok);
 
         // Now use it.
-        let mut response = client.get("/use").dispatch().await;
-        assert_eq!(response.body_string().await, Some(FLASH_MESSAGE.into()));
+        let response = client.get("/use").dispatch().await;
+        assert_eq!(response.into_string().await, Some(FLASH_MESSAGE.into()));
 
         // Now it should be gone.
         let response = client.get("/unused").dispatch().await;
