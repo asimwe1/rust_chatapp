@@ -24,7 +24,7 @@ use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
-use crate::ext::{AsyncReadExt, async_replace_with};
+use crate::ext::AsyncReadExt;
 use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
 
 use crate::http::{Method, Status, Header};
@@ -109,6 +109,21 @@ impl Rocket {
         self
     }
 
+    // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
+    fn dummy() -> Rocket {
+        Rocket {
+            manifest: vec![],
+            config: Config::development(),
+            router: Router::new(),
+            default_catchers: HashMap::new(),
+            catchers: HashMap::new(),
+            managed_state: Container::new(),
+            fairings: Fairings::new(),
+            shutdown_handle: ShutdownHandle(mpsc::channel(1).0),
+            shutdown_receiver: None,
+        }
+    }
+
     // Instead of requiring the user to individually `await` each call to
     // `attach()`, some operations are queued in `self.pending`. Functions that
     // want to provide read access to any data from the Cargo, such as
@@ -133,7 +148,8 @@ impl Rocket {
                     PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
                     PreLaunchOp::Register(catchers) => self._register(catchers),
                     PreLaunchOp::Attach(fairing) => {
-                        async_replace_with(self, |rocket| rocket._attach(fairing)).await;
+                        let rocket = mem::replace(self, Rocket::dummy());
+                        *self = rocket._attach(fairing).await;
                         self.manifest.append(&mut manifest);
                         manifest = mem::replace(&mut self.manifest, vec![]);
                     }

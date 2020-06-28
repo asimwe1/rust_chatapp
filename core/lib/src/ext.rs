@@ -2,7 +2,7 @@ use std::io::{self, Cursor};
 use std::pin::Pin;
 use std::task::{Poll, Context};
 
-use futures::{ready, Future, future::BoxFuture, stream::Stream};
+use futures::{ready, future::BoxFuture, stream::Stream};
 use tokio::io::{AsyncRead, AsyncReadExt as _};
 
 use crate::http::hyper;
@@ -110,54 +110,4 @@ impl AsyncRead for AsyncReadBody {
             }
         }
     }
-}
-
-// The code below was adapted from the `replace_with` crate and reproduced here
-// under the rights granted by the MIT license. The code is copyright the
-// `replace_with` developers. See LICENSE-MIT for the full text.
-
-struct OnUnwind<F: FnOnce()>(std::mem::ManuallyDrop<F>);
-
-impl<F: FnOnce()> Drop for OnUnwind<F> {
-    #[inline(always)]
-    fn drop(&mut self) {
-        (unsafe { std::ptr::read(&*self.0) })();
-    }
-}
-
-#[inline(always)]
-pub async fn async_on_unwind<F, Fut, T, P: FnOnce()>(f: F, p: P) -> T
-    where F: FnOnce() -> Fut, Fut: Future<Output = T>,
-{
-    let x = OnUnwind(std::mem::ManuallyDrop::new(p));
-    let t = f().await;
-    let _ = unsafe { std::ptr::read(&*x.0) };
-    std::mem::forget(x);
-    t
-}
-
-#[inline]
-pub async fn async_replace_with_or_else<T, Fut, F, D>(dest: &mut T, d: D, f: F)
-    where Fut: Future<Output = T>,
-          F: FnOnce(T) -> Fut,
-          D: FnOnce() -> T,
-{
-    unsafe {
-        let old = std::ptr::read(dest);
-        let new = async_on_unwind(
-            || async move { f(old).await },
-            || std::ptr::write(dest, d()),
-        ).await;
-
-        std::ptr::write(dest, new);
-    }
-}
-
-
-#[inline]
-pub async fn async_replace_with<T, Fut, F>(dest: &mut T, f: F)
-    where Fut: Future<Output = T>,
-          F: FnOnce(T) -> Fut,
-{
-    async_replace_with_or_else(dest, || std::process::abort(), f).await
 }
