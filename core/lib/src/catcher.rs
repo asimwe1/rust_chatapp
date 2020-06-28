@@ -123,6 +123,15 @@ impl fmt::Display for Catcher {
     }
 }
 
+impl fmt::Debug for Catcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Catcher")
+            .field("code", &self.code)
+            .field("default", &self.is_default)
+            .finish()
+    }
+}
+
 macro_rules! error_page_template {
     ($code:expr, $name:expr, $description:expr) => (
         concat!(r#"
