@@ -8,6 +8,7 @@ use futures::future::FutureExt;
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
 use tokio::sync::{mpsc, oneshot};
+use ref_cast::RefCast;
 
 use yansi::Paint;
 use state::Container;
@@ -56,6 +57,7 @@ enum PreLaunchOp {
 /// A frozen view into the contents of an instance of `Rocket`.
 ///
 /// Obtained via [`Rocket::inspect()`].
+#[derive(RefCast)]
 #[repr(transparent)]
 pub struct Cargo(Rocket);
 
@@ -150,10 +152,7 @@ impl Rocket {
             panic!("internal error: immutable launch state with manifest");
         }
 
-        // This is simply a `newtype`-like transformation. The
-        // `repr(transparent)` on `Cargo` ensures that this is safe and
-        // correct. Note that this exact pattern appears often in `std`.
-        unsafe { &*(self as *const Rocket as *const Cargo) }
+        Cargo::ref_cast(self)
     }
 }
 
