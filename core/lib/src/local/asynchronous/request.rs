@@ -5,11 +5,14 @@ use crate::http::{Status, Method, uri::Origin, ext::IntoOwned};
 
 use super::{Client, LocalResponse};
 
-struct_request! { [
+/// An `async` local request as returned by [`Client`](super::Client).
+///
+/// For details, see [the top-level documentation](../index.html#localrequest).
+///
 /// ## Example
 ///
-/// The following snippet uses the available builder methods to construct a
-/// `POST` request to `/` with a JSON body:
+/// The following snippet uses the available builder methods to construct and
+/// dispatch a `POST` request to `/` with a JSON body:
 ///
 /// ```rust
 /// use rocket::local::asynchronous::{Client, LocalRequest};
@@ -22,15 +25,15 @@ struct_request! { [
 ///     .remote("127.0.0.1:8000".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
+///
+/// let response = req.dispatch().await;
 /// # });
 /// ```
-]
 pub struct LocalRequest<'c> {
     client: &'c Client,
     request: Request<'c>,
     data: Vec<u8>,
     uri: Cow<'c, str>,
-}
 }
 
 impl<'c> LocalRequest<'c> {
@@ -65,33 +68,26 @@ impl<'c> LocalRequest<'c> {
         &mut self.data
     }
 
-    // This method should _never_ be publicly exposed!
-    #[inline(always)]
-    fn long_lived_request<'a>(&mut self) -> &'a mut Request<'c> {
-        // FIXME: Whatever. I'll kill this.
-        unsafe { &mut *(&mut self.request as *mut _) }
-    }
-
     // Performs the actual dispatch.
-    // TODO.async: @jebrosen suspects there might be actual UB in here after all,
-    //             and now we just went and mixed threads into it
     async fn _dispatch(mut self) -> LocalResponse<'c> {
         // First, validate the URI, returning an error response (generated from
         // an error catcher) immediately if it's invalid.
+        let rocket = self.client.rocket();
         if let Ok(uri) = Origin::parse(&self.uri) {
             self.request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", self.uri);
-            let res = self.client.rocket()
-                .handle_error(Status::BadRequest, self.long_lived_request());
-
-            return LocalResponse { _request: self.request, inner: res.await };
+            return LocalResponse::new(self.request, move |req| {
+                rocket.handle_error(Status::BadRequest, req)
+            }).await
         }
 
         // Actually dispatch the request.
-        let response = self.client.rocket()
-            .dispatch(self.long_lived_request(), Data::local(self.data))
-            .await;
+        let data = Data::local(self.data);
+        let token = rocket.preprocess_request(&mut self.request, &data).await;
+        let response = LocalResponse::new(self.request, move |request| {
+            rocket.dispatch(token, request, data)
+        }).await;
 
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.
@@ -110,8 +106,11 @@ impl<'c> LocalRequest<'c> {
             }
         }
 
-        LocalResponse { _request: self.request, inner: response }
+        response
     }
+
+    pub_request_impl!("# use rocket::local::asynchronous::Client;
+        use rocket::local::asynchronous::LocalRequest;" async await);
 }
 
 impl<'c> Clone for LocalRequest<'c> {
@@ -125,4 +124,8 @@ impl<'c> Clone for LocalRequest<'c> {
     }
 }
 
-impl_request!("use rocket::local::asynchronous::Client;" @async await LocalRequest);
+impl std::fmt::Debug for LocalRequest<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self._request().fmt(f)
+    }
+}
