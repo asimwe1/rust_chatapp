@@ -103,7 +103,7 @@ use rocket::http::{ContentType, Status};
 
 let rocket = rocket::ignite().mount("/", routes![hello]);
 let client = Client::new(rocket).expect("valid rocket instance");
-let mut response = client.get("/").dispatch().await;
+let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
@@ -148,7 +148,7 @@ First, we'll create a `test` module with the proper imports:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
     #[test]
@@ -166,12 +166,6 @@ You can also move the body of the `test` module into its own file, say
 ```
 
 ### Testing
-
-First, note the `#[rocket::async_test]` attribute. Rust does not support `async
-fn` for tests, so an asynchronous runtime needs to be set up. In most
-applications this is done by `launch()`, but we are deliberately not calling
-that in tests! Instead, we use `#[rocket::async_test]`, which runs the test
-inside a runtime.
 
 To test our "Hello, world!" application, we create a `Client` for our
 `Rocket` instance. It's okay to use methods like `expect` and `unwrap` during
@@ -217,7 +211,7 @@ use rocket::http::{ContentType, Status};
 # let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
-assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+assert_eq!(response.into_string(), Some("Hello, world!".into()));
 ```
 
 That's it! Altogether, this looks like:
@@ -240,7 +234,7 @@ fn rocket() -> rocket::Rocket {
 # */
 mod test {
     use super::rocket;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
     # /*
@@ -248,9 +242,9 @@ mod test {
     # */ pub
     fn hello_world() {
         let client = Client::new(rocket()).expect("valid rocket instance");
-        let mut response = client.get("/").dispatch().await;
+        let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+        assert_eq!(response.into_string(), Some("Hello, world!".into()));
     }
 }
 
