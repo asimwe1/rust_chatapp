@@ -523,7 +523,9 @@ impl Rocket {
         #[derive(Clone)]
         struct TokioExecutor;
 
-        impl<Fut> hyper::Executor<Fut> for TokioExecutor where Fut: Future + Send + 'static, Fut::Output: Send {
+        impl<Fut> hyper::Executor<Fut> for TokioExecutor
+            where Fut: Future + Send + 'static, Fut::Output: Send
+        {
             fn execute(&self, fut: Fut) {
                 tokio::spawn(fut);
             }
@@ -945,9 +947,9 @@ impl Rocket {
 
     /// Returns a `Future` that drives the server, listening for and dispatching
     /// requests to mounted routes and catchers. The `Future` completes when the
-    /// server is shut down, via a [`ShutdownHandle`], or encounters a fatal
-    /// error.  If the `ctrl_c_shutdown` feature is enabled, the server will
-    /// also shut down once `Ctrl-C` is pressed.
+    /// server is shut down via a [`ShutdownHandle`], encounters a fatal error,
+    /// or if the the `ctrlc` configuration option is set, when `Ctrl+C` is
+    /// pressed.
     ///
     /// # Error
     ///
@@ -969,6 +971,7 @@ impl Rocket {
     /// ```
     pub async fn launch(mut self) -> Result<(), crate::error::Error> {
         use std::net::ToSocketAddrs;
+        use futures::future::Either;
         use crate::error::Error::Launch;
 
         self.prelaunch_check().await.map_err(crate::error::Error::Launch)?;
@@ -979,70 +982,53 @@ impl Rocket {
             Err(e) => return Err(Launch(e.into())),
         };
 
-        #[cfg(feature = "ctrl_c_shutdown")]
-        let (
-            shutdown_handle,
-            (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver)
-        ) = (
-            self.shutdown_handle.clone(),
-            oneshot::channel(),
-        );
+        // FIXME: Make `ctrlc` a known `Rocket` config option.
+        // If `ctrl-c` shutdown is enabled, we `select` on `the ctrl-c` signal
+        // and server. Otherwise, we only wait on the `server`, hence `pending`.
+        let shutdown_handle = self.shutdown_handle.clone();
+        let shutdown_signal = match self.config.get_bool("ctrlc") {
+            Ok(false) => futures::future::pending().boxed(),
+            _ => tokio::signal::ctrl_c().boxed(),
+        };
 
         let server = {
             macro_rules! listen_on {
                 ($expr:expr) => {{
                     let listener = match $expr {
                         Ok(ok) => ok,
-                        Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
+                        Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err))))
                     };
                     self.listen_on(listener)
                 }};
             }
 
-            #[cfg(feature = "tls")]
-            {
+            #[cfg(feature = "tls")] {
                 if let Some(tls) = self.config.tls.clone() {
                     listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
                 } else {
                     listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
                 }
             }
-            #[cfg(not(feature = "tls"))]
-            {
-                listen_on!(crate::http::private::bind_tcp(addr).await)
+            #[cfg(not(feature = "tls"))] {
+                listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
             }
         };
 
-        #[cfg(feature = "ctrl_c_shutdown")]
-        let server = server.inspect(|_| {
-            let _ = cancel_ctrl_c_listener_sender.send(());
-        });
-
-        #[cfg(feature = "ctrl_c_shutdown")]
-        {
-            tokio::spawn(async move {
-                use futures::future::{select, Either};
-
-                let either = select(
-                    tokio::signal::ctrl_c().boxed(),
-                    cancel_ctrl_c_listener_receiver,
-                ).await;
-
-                match either {
-                    Either::Left((Ok(()), _)) | Either::Right((_, _)) => shutdown_handle.shutdown(),
-                    Either::Left((Err(err), _)) => {
-                        // Signal handling isn't strictly necessary, so we can skip it
-                        // if necessary. It's a good idea to let the user know we're
-                        // doing so in case they are expecting certain behavior.
-                        let message = "Not listening for shutdown keybinding.";
-                        warn!("{}", Paint::yellow(message));
-                        info_!("Error: {}", err);
-                    }
-                }
-            });
+        match futures::future::select(shutdown_signal, server).await {
+            Either::Left((Ok(()), server)) => {
+                // Ctrl-was pressed. Signal shutdown, wait for the server.
+                shutdown_handle.shutdown();
+                server.await
+            }
+            Either::Left((Err(err), server)) => {
+                // Error setting up ctrl-c signal. Let the user know.
+                warn!("Failed to enable `ctrl+c` graceful signal shutdown.");
+                info_!("Error: {}", err);
+                server.await
+            }
+            // Server shut down before Ctrl-C; return the result.
+            Either::Right((result, _)) => result,
         }
-
-        server.await
     }
 }
 

@@ -113,28 +113,24 @@ impl Listener for TlsListener {
     }
 }
 
-pub fn bind_tls(address: SocketAddr, cert_chain: Vec<Certificate>, key: PrivateKey)
-    -> Pin<Box<dyn Future<Output=Result<TlsListener, io::Error>> + Send>>
-{
-    Box::pin(async move {
-        let listener = TcpListener::bind(address).await?;
+pub async fn bind_tls(
+    address: SocketAddr,
+    cert_chain: Vec<Certificate>,
+    key: PrivateKey
+) -> io::Result<TlsListener> {
+    let listener = TcpListener::bind(address).await?;
 
-        let client_auth = rustls::NoClientAuth::new();
-        let mut tls_config = ServerConfig::new(client_auth);
-        let cache = rustls::ServerSessionMemoryCache::new(1024);
-        tls_config.set_persistence(cache);
-        tls_config.ticketer = rustls::Ticketer::new();
-        tls_config.set_single_cert(cert_chain, key).expect("invalid key");
+    let client_auth = rustls::NoClientAuth::new();
+    let mut tls_config = ServerConfig::new(client_auth);
+    let cache = rustls::ServerSessionMemoryCache::new(1024);
+    tls_config.set_persistence(cache);
+    tls_config.ticketer = rustls::Ticketer::new();
+    tls_config.set_single_cert(cert_chain, key).expect("invalid key");
 
+    let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+    let state = TlsListenerState::Listening;
 
-        let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-
-        Ok(TlsListener {
-            listener,
-            acceptor,
-            state: TlsListenerState::Listening,
-        })
-    })
+    Ok(TlsListener { listener, acceptor, state })
 }
 
 impl Connection for TlsStream<TcpStream> {

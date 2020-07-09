@@ -24,7 +24,7 @@ pub trait Listener {
     fn local_addr(&self) -> Option<SocketAddr>;
 
     /// Try to accept an incoming Connection if ready
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<Result<Self::Connection, io::Error>>;
+    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>>;
 }
 
 /// A 'Connection' represents an open connection to a client
@@ -125,7 +125,10 @@ impl<L: Listener + Unpin> Accept for Incoming<L> {
     type Conn = L::Connection;
     type Error = io::Error;
 
-    fn poll_accept(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<Option<io::Result<Self::Conn>>> {
         self.poll_next(cx).map(Some)
     }
 }
@@ -154,10 +157,8 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
     }
 }
 
-pub fn bind_tcp(address: SocketAddr) -> Pin<Box<dyn Future<Output=Result<TcpListener, io::Error>> + Send>> {
-    Box::pin(async move {
-        Ok(TcpListener::bind(address).await?)
-    })
+pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
+    Ok(TcpListener::bind(address).await?)
 }
 
 impl Listener for TcpListener {
@@ -167,7 +168,7 @@ impl Listener for TcpListener {
         self.local_addr().ok()
     }
 
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<Result<Self::Connection, io::Error>> {
+    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>> {
         self.poll_accept(cx).map_ok(|(stream, _addr)| stream)
     }
 }
