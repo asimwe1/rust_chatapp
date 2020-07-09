@@ -250,12 +250,22 @@ impl FullConfig {
     }
 
     /// Return the default configuration for all environments and marks the
+    /// active environment (from `CONFIG_ENV`) as active. Overrides the defaults
+    /// with values from the `ROCKET_{PARAM}` environment variables. Doesn't
+    /// read any other sources.
+    pub fn env_default() -> Result<FullConfig> {
+        let mut config = Self::active_default_with_path(None)?;
+        config.override_from_env()?;
+        Ok(config)
+    }
+
+    /// Return the default configuration for all environments and marks the
     /// active environment (from `CONFIG_ENV`) as active. This doesn't read
     /// `filename`, nor any other config values from any source; it simply uses
     /// `filename` to set up the config path property in the returned `Config`.
-    pub fn active_default<'a, P: Into<Option<&'a Path>>>(filename: P) -> Result<FullConfig> {
+    fn active_default_with_path(path: Option<&Path>) -> Result<FullConfig> {
         let mut defaults = HashMap::new();
-        if let Some(path) = filename.into() {
+        if let Some(path) = path {
             defaults.insert(Development, Config::default_from(Development, &path)?);
             defaults.insert(Staging, Config::default_from(Staging, &path)?);
             defaults.insert(Production, Config::default_from(Production, &path)?);
@@ -405,7 +415,7 @@ impl FullConfig {
         };
 
         // Create a config with the defaults; set the env to the active one.
-        let mut config = FullConfig::active_default(filename.as_ref())?;
+        let mut config = FullConfig::active_default_with_path(Some(filename.as_ref()))?;
 
         // Store all of the global overrides, if any, for later use.
         let mut global = None;
@@ -483,10 +493,8 @@ mod test {
         );
     }
 
-    fn active_default() -> Result<FullConfig>  {
-        let mut config = FullConfig::active_default(None)?;
-        config.override_from_env()?;
-        Ok(config)
+    fn env_default() -> Result<FullConfig>  {
+        FullConfig::env_default()
     }
 
     fn default_config(env: Environment) -> ConfigBuilder {
@@ -501,25 +509,25 @@ mod test {
         // First, without an environment. Should get development defaults on
         // debug builds and productions defaults on non-debug builds.
         env::remove_var(CONFIG_ENV);
-        #[cfg(debug_assertions)] check_config!(active_default(), default_config(Development));
-        #[cfg(not(debug_assertions))] check_config!(active_default(), default_config(Production));
+        #[cfg(debug_assertions)] check_config!(env_default(), default_config(Development));
+        #[cfg(not(debug_assertions))] check_config!(env_default(), default_config(Production));
 
         // Now with an explicit dev environment.
         for env in &["development", "dev"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Development));
+            check_config!(env_default(), default_config(Development));
         }
 
         // Now staging.
         for env in &["stage", "staging"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Staging));
+            check_config!(env_default(), default_config(Staging));
         }
 
         // Finally, production.
         for env in &["prod", "production"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Production));
+            check_config!(env_default(), default_config(Production));
         }
     }
 
@@ -531,7 +539,7 @@ mod test {
         for env in &["", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 "] {
             env::set_var(CONFIG_ENV, env);
             let err = ConfigError::BadEnv(env.to_string());
-            assert!(active_default().err().map_or(false, |e| e == err));
+            assert!(env_default().err().map_or(false, |e| e == err));
         }
 
         // Test that a bunch of invalid environment names give the right error.
@@ -1094,12 +1102,12 @@ mod test {
             // Check that it overrides the active config.
             for env in &Environment::ALL {
                 env::set_var(CONFIG_ENV, env.to_string());
-                let rconfig = active_default().unwrap();
+                let rconfig = env_default().unwrap();
                 check_value!(&*key.to_lowercase(), val, rconfig.active());
             }
 
             // And non-active configs.
-            let rconfig = active_default().unwrap();
+            let rconfig = env_default().unwrap();
             for env in &Environment::ALL {
                 check_value!(&*key.to_lowercase(), val, rconfig.get(*env));
             }

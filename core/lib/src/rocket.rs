@@ -344,9 +344,9 @@ impl Rocket {
 
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
-    /// reading the file, the defaults are used. See the
-    /// [`config`](crate::config) documentation for more information on
-    /// defaults.
+    /// reading the file, the defaults, overridden by any environment-based
+    /// paramparameters, are used. See the [`config`](crate::config)
+    /// documentation for more information on defaults.
     ///
     /// This method is typically called through the
     /// [`rocket::ignite()`](crate::ignite) alias.
@@ -368,9 +368,9 @@ impl Rocket {
             .or_else(|e| match e {
                 ConfigError::IoError => {
                     warn!("Failed to read 'Rocket.toml'. Using defaults.");
-                    Ok(FullConfig::active_default(None)?.take_active())
+                    Ok(FullConfig::env_default()?.take_active())
                 }
-                ConfigError::NotFound => Ok(FullConfig::active_default(None)?.take_active()),
+                ConfigError::NotFound => Ok(FullConfig::env_default()?.take_active()),
                 _ => Err(e)
             })
             .map(Rocket::configured)
