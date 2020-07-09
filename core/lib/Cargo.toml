@@ -43,7 +43,7 @@ atomic = "0.4"
 
 [dependencies.tokio]
 version = "0.2.9"
-features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal"]
+features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
 
 [build-dependencies]
 yansi = "0.5"
