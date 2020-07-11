@@ -6,11 +6,10 @@ mod paste_id;
 #[cfg(test)] mod tests;
 
 use std::io;
-use std::fs::File;
-use std::path::PathBuf;
 
 use rocket::Data;
-use rocket::response::{content, Debug};
+use rocket::response::{content::Plain, Debug};
+use rocket::tokio::fs::File;
 
 use crate::paste_id::PasteID;
 
@@ -23,14 +22,14 @@ async fn upload(paste: Data) -> Result<String, Debug<io::Error>> {
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = HOST, id = id);
 
-    paste.stream_to_file(PathBuf::from(filename)).await?;
+    paste.stream_to_file(filename).await?;
     Ok(url)
 }
 
 #[get("/<id>")]
-fn retrieve(id: PasteID<'_>) -> Option<content::Plain<File>> {
+async fn retrieve(id: PasteID<'_>) -> Option<Plain<File>> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).map(|f| content::Plain(f)).ok()
+    File::open(&filename).await.map(Plain).ok()
 }
 
 #[get("/")]

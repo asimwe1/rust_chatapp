@@ -213,9 +213,6 @@ mkdir upload
 For the `upload` route, we'll need to `use` a few items:
 
 ```rust
-use std::io;
-use std::path::PathBuf;
-
 use rocket::Data;
 use rocket::http::RawStr;
 use rocket::response::Debug;
@@ -266,8 +263,6 @@ Here's our version (in `src/main.rs`):
 #     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
 # }
 
-use std::path::PathBuf;
-
 use rocket::Data;
 use rocket::response::Debug;
 
@@ -278,7 +273,7 @@ async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
     // Write the paste out to the file and return the URL.
-    paste.stream_to_file(PathBuf::from(filename)).await?;
+    paste.stream_to_file(filename).await?;
     Ok(url)
 }
 ```
@@ -335,13 +330,13 @@ paste doesn't exist.
 ```rust
 # #[macro_use] extern crate rocket;
 
-use std::fs::File;
 use rocket::http::RawStr;
+use rocket::tokio::fs::File;
 
 #[get("/<id>")]
-fn retrieve(id: &RawStr) -> Option<File> {
+async fn retrieve(id: &RawStr) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).ok()
+    File::open(&filename).await.ok()
 }
 ```
 
@@ -420,14 +415,14 @@ the `retrieve` route, preventing attacks on the `retrieve` route:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# use std::fs::File;
+# use rocket::tokio::fs::File;
 
 # type PasteId = usize;
 
 #[get("/<id>")]
-fn retrieve(id: PasteId) -> Option<File> {
+async fn retrieve(id: PasteId) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).ok()
+    File::open(&filename).await.ok()
 }
 ```
 
