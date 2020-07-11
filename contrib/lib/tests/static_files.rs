@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[cfg(feature = "serve")]
 mod static_tests {
     use std::{io::Read, fs::File};

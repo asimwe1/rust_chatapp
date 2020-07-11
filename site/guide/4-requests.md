@@ -208,7 +208,6 @@ be manually set with the `rank` attribute. To illustrate, consider the following
 routes:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::http::RawStr;
@@ -287,7 +286,6 @@ Query segments can be declared static or dynamic in much the same way as path
 segments:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -422,7 +420,6 @@ For instance, the following dummy handler makes use of three request guards,
 named in the route attribute.
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -451,7 +448,6 @@ headers, you might create an `ApiKey` type that implements `FromRequest` and
 then use it as a request guard:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 # type ApiKey = rocket::http::Method;
@@ -533,7 +529,6 @@ following three routes, each leading to an administrative control panel at
 `/admin`:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -614,7 +609,6 @@ methods are suffixed with `_private`. These methods are: [`get_private`],
 [`add_private`], and [`remove_private`]. An example of their usage is below:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -809,7 +803,6 @@ an argument in the handler. The argument's type must implement the [`FromData`]
 trait. It looks like this, where `T` is assumed to implement `FromData`:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # type T = rocket::data::Data;
@@ -1149,7 +1142,6 @@ mounting a route: call the [`register()`] method with a list of catchers via the
 looks like:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::Request;

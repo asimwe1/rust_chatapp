@@ -137,9 +137,9 @@ error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http:
 5   | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -150,9 +150,9 @@ error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http:
 5   | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo1`
@@ -164,9 +164,9 @@ error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http:
 5   | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo1`
@@ -178,9 +178,9 @@ error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http:
 12  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -191,9 +191,9 @@ error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http:
 12  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo2`
@@ -205,9 +205,9 @@ error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http:
 12  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo2`
@@ -219,9 +219,9 @@ error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http:
 19  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -232,9 +232,9 @@ error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http:
 19  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo3`
@@ -246,9 +246,9 @@ error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http:
 19  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo3`
@@ -260,9 +260,9 @@ error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http:
 26  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -273,9 +273,9 @@ error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http:
 26  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo4`
@@ -287,9 +287,9 @@ error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http:
 26  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo4`
@@ -301,9 +301,9 @@ error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http:
 35  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -314,9 +314,9 @@ error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http:
 35  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo5`
@@ -328,9 +328,9 @@ error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http:
 35  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo5`
@@ -342,9 +342,9 @@ error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http:
 42  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -355,9 +355,9 @@ error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http:
 42  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo6`
@@ -369,9 +369,9 @@ error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http:
 42  | #[derive(UriDisplayQuery)]
     |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo6`
@@ -383,9 +383,9 @@ error[E0277]: the trait bound `Foo7: rocket::http::uri::UriDisplay<rocket::http:
 52  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo7`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -396,9 +396,9 @@ error[E0277]: the trait bound `Foo7: rocket::http::uri::UriDisplay<rocket::http:
 52  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo7`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo7`
@@ -410,9 +410,9 @@ error[E0277]: the trait bound `Foo8: rocket::http::uri::UriDisplay<rocket::http:
 58  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo8`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -423,9 +423,9 @@ error[E0277]: the trait bound `Foo8: rocket::http::uri::UriDisplay<rocket::http:
 58  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo8`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo8`
@@ -437,9 +437,9 @@ error[E0277]: the trait bound `Foo9: rocket::http::uri::UriDisplay<rocket::http:
 64  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo9`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -450,9 +450,9 @@ error[E0277]: the trait bound `Foo9: rocket::http::uri::UriDisplay<rocket::http:
 64  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo9`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo9`
@@ -464,9 +464,9 @@ error[E0277]: the trait bound `Foo10: rocket::http::uri::UriDisplay<rocket::http
 70  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo10`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
@@ -477,9 +477,9 @@ error[E0277]: the trait bound `Foo10: rocket::http::uri::UriDisplay<rocket::http
 70  | #[derive(UriDisplayPath)]
     |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo10`
     | 
-   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:196:18
+   ::: $ROCKET/core/http/src/uri/from_uri_param.rs:195:18
     |
-196 |     type Target: UriDisplay<P>;
+195 |     type Target: UriDisplay<P>;
     |                  ------------- required by this bound in `rocket::http::uri::FromUriParam`
     |
     = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo10`

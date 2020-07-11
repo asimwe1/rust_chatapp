@@ -82,7 +82,6 @@ These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use std::io::Cursor;
@@ -117,7 +116,6 @@ To solidify an intuition for how Rocket applications are tested, we walk through
 how to test the "Hello, world!" application below:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 #[get("/")]
@@ -192,7 +190,6 @@ Here, we want to ensure two things:
 We do this by checking the `Response` object directly:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")]
@@ -212,7 +209,6 @@ assert_eq!(response.into_string(), Some("Hello, world!".into()));
 That's it! Altogether, this looks like:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 #[get("/")]

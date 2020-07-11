@@ -396,7 +396,6 @@ fairings. To attach the template fairing, simply call
 `.attach(Template::fairing())` on an instance of `Rocket` as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket_contrib::templates::Template;
@@ -467,7 +466,6 @@ fn person(name: String, age: Option<u8>) { /* .. */ }
 URIs to `person` can be created as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/person/<name>?<age>")]
@@ -534,7 +532,6 @@ in the query part of a URI, derive using [`UriDisplayQuery`].
 As an example, consider the following form structure and route:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -556,7 +553,6 @@ automatically generated, allowing for URIs to `add_user` to be generated using
 `uri!`:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::http::RawStr;
@@ -630,7 +626,6 @@ Conversions _nest_. For instance, a value of type `T` can be supplied when a
 value of type `Option<Form<T>>` is expected:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::http::RawStr;

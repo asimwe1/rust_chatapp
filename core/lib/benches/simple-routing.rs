@@ -1,6 +1,4 @@
 #![feature(test)]
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::config::{Environment, Config, LoggingLevel};

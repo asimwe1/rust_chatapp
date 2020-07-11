@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[cfg(feature = "templates")]
 #[macro_use] extern crate rocket;
 

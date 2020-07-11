@@ -41,7 +41,6 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
@@ -70,7 +69,6 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
@@ -104,7 +102,6 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///

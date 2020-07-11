@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use]
 #[cfg(feature = "private-cookies")]
 extern crate rocket;

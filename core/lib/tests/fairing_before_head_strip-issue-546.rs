@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 const RESPONSE_STRING: &'static str = "This is the body. Hello, world!";

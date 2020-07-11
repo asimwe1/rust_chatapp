@@ -6,8 +6,8 @@ extern crate version_check;
 use yansi::{Paint, Color::{Red, Yellow, Blue}};
 
 // Specifies the minimum nightly version needed to compile Rocket.
-const MIN_DATE: &'static str = "2018-10-05";
-const MIN_VERSION: &'static str = "1.31.0-nightly";
+const MIN_DATE: &'static str = "2020-05-20";
+const MIN_VERSION: &'static str = "1.45.0-nightly";
 
 macro_rules! err {
     ($version:expr, $date:expr, $msg:expr) => (

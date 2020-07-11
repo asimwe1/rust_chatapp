@@ -2,8 +2,6 @@
 // normalize-stderr-test: "and \d+ others" -> "and $$N others"
 // normalize-stderr-test: "::: (.*)/core/lib" -> "::: $$ROCKET/core/lib"
 
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[derive(Responder)]

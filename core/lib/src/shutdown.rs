@@ -13,7 +13,6 @@ use tokio::sync::mpsc;
 /// # Example
 ///
 /// ```rust,no_run
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::shutdown::ShutdownHandle;

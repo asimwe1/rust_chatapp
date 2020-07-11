@@ -8,7 +8,6 @@ use crate::request::{FormItems, FormItem, Form, LenientForm, FromForm};
 /// generation for every trailing query parameter, `<params..>` below:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # use rocket::request::Form;
@@ -82,7 +81,6 @@ impl<'q> Iterator for Query<'q> {
 /// route:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
 ///

@@ -78,7 +78,6 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// guard.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::http::Method;
 /// # type A = Method; type B = Method; type C = Method; type T = ();
@@ -188,7 +187,6 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// `sensitive` handler.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Outcome;
@@ -244,7 +242,6 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
@@ -309,7 +306,6 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// used, as illustrated below:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};

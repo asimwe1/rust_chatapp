@@ -50,8 +50,6 @@ And finally, create a skeleton Rocket application to work off of in
 `src/main.rs`:
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[rocket::launch]
@@ -108,7 +106,6 @@ Remember that routes first need to be mounted before Rocket dispatches requests
 to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # #[get("/")] fn index() { }
 
@@ -281,7 +278,6 @@ async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
 Ensure that the route is mounted at the root path:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")] fn index() {}
@@ -343,7 +339,6 @@ async fn retrieve(id: &RawStr) -> Option<File> {
 Make sure that the route is mounted at the root path:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")] fn index() {}

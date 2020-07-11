@@ -13,7 +13,6 @@ use crate::request::FormItems;
 /// validation.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// #[derive(FromForm)]
@@ -30,7 +29,6 @@ use crate::request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;

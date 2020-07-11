@@ -11,7 +11,6 @@ use crate::request::Request;
 /// as illustrated below with `T`:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// #
@@ -152,7 +151,6 @@ use crate::request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]

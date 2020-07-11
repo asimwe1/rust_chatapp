@@ -12,7 +12,6 @@ use crate::templates::ContextManager;
 /// used as a request guard in any request handler.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::templates::{Template, Metadata};
@@ -46,7 +45,6 @@ impl Metadata<'_> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// #
@@ -67,7 +65,6 @@ impl Metadata<'_> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// #

@@ -94,7 +94,6 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// managed state and a static route, as follows:
 ///
 /// ```rust,no_run
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Copy, Clone)]

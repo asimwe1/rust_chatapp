@@ -686,7 +686,6 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust,no_run
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
@@ -740,7 +739,6 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Request;
     ///
@@ -782,7 +780,6 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
@@ -820,7 +817,6 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -907,7 +903,6 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # use std::{thread, time::Duration};
     /// #
     /// # rocket::async_test(async {
@@ -1069,7 +1064,6 @@ impl Cargo {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -1128,7 +1122,6 @@ impl Cargo {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;

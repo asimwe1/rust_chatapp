@@ -37,7 +37,6 @@
 //!      of the template file minus the last two extensions, from a handler.
 //!
 //!      ```rust
-//!      # #![feature(proc_macro_hygiene)]
 //!      # #[macro_use] extern crate rocket;
 //!      # #[macro_use] extern crate rocket_contrib;
 //!      # fn context() {  }
@@ -184,7 +183,6 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// returned from a request handler directly:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// # fn context() {  }

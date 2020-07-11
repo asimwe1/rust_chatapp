@@ -48,7 +48,6 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// request and response sides.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;

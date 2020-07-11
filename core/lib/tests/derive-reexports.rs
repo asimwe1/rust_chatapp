@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 use rocket;
 
 use rocket::{get, routes};

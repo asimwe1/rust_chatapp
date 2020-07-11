@@ -29,8 +29,6 @@
 //! crate root:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
@@ -39,7 +37,6 @@
 //! Or, alternatively, selectively import from the top-level scope:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
 //! # extern crate rocket;
 //!
 //! use rocket::{get, routes};
@@ -152,7 +149,6 @@ macro_rules! route_attribute {
         /// functions:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// #
         /// #[get("/")]
@@ -175,7 +171,6 @@ macro_rules! route_attribute {
         /// specified:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// #
         /// #[route(GET, path = "/")]
@@ -236,7 +231,6 @@ macro_rules! route_attribute {
         /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// # use rocket::request::Form;
         /// # use std::path::PathBuf;
@@ -348,7 +342,6 @@ route_attribute!(options => Method::Options);
 /// This attribute can only be applied to free functions:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Request;
@@ -778,7 +771,6 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
 /// corresponding [`Route`] structures. For example, given the following routes:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[get("/")]
@@ -793,7 +785,6 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
 /// The `routes!` macro can be used as:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # use rocket::http::Method;
@@ -837,7 +828,6 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// catchers:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[catch(404)]
@@ -852,7 +842,6 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// The `catchers!` macro can be used as:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[catch(404)] fn not_found() { /* .. */ }
@@ -894,7 +883,6 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// For example, for the following route:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[get("/person/<name>?<age>")]
@@ -908,7 +896,6 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// A URI can be created as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[get("/person/<name>?<age>")]

@@ -144,7 +144,6 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 /// if the guard returns successfully.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
@@ -191,7 +190,6 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 /// `String` (an `&str`).
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[derive(Debug)]
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
@@ -444,7 +442,6 @@ impl<'a> FromData<'a> for Data {
 /// that you can retrieve it directly from a client's request body:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type Person = rocket::data::Data;
 /// #[post("/person", data = "<person>")]
@@ -456,7 +453,6 @@ impl<'a> FromData<'a> for Data {
 /// A `FromDataSimple` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]

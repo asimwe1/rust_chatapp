@@ -1,4 +1,3 @@
-#![feature(proc_macro_hygiene)]
 #![allow(dead_code)]
 
 #[macro_use] extern crate rocket;

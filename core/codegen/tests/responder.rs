@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 use rocket::local::asynchronous::Client;
 use rocket::response::Responder;
 use rocket::http::{Status, ContentType, Cookie};

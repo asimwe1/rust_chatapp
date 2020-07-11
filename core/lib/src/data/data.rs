@@ -20,7 +20,6 @@ const PEEK_BYTES: usize = 512;
 /// specifying the `data = "<var>"` route parameter as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
