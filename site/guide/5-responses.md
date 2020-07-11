@@ -185,14 +185,15 @@ use rocket::response::{self, Response, Responder};
 use rocket::http::ContentType;
 
 # struct String(std::string::String);
-impl<'a> Responder<'a> for String {
-    fn respond_to(self, _: &Request) -> response::Result<'a> {
+#[rocket::async_trait]
+impl<'r> Responder<'r, 'static> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Plain)
             # /*
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             # */
-            # .sized_body(Cursor::new(self.0))
+            # .sized_body(self.0.len(), Cursor::new(self.0))
             .ok()
     }
 }
@@ -230,8 +231,8 @@ found and a `404` when a file is not found in just 4, idiomatic lines:
 use rocket::response::NamedFile;
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
+async fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).await.ok()
 }
 ```
 
@@ -256,9 +257,9 @@ use rocket::response::NamedFile;
 use rocket::response::status::NotFound;
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
+async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
     let path = Path::new("static/").join(file);
-    NamedFile::open(&path).map_err(|e| NotFound(e.to_string()))
+    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 ```
 
@@ -306,14 +307,17 @@ example, to stream from a local Unix stream, we might write:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# #[cfg(unix)]
 # mod test {
-use std::os::unix::net::UnixStream;
+use std::net::SocketAddr;
+
 use rocket::response::{Stream, Debug};
 
+use rocket::tokio::net::TcpStream;
+
 #[get("/stream")]
-fn stream() -> Result<Stream<UnixStream>, Debug<std::io::Error>> {
-    Ok(UnixStream::connect("/path/to/my/socket").map(Stream::from)?)
+async fn stream() -> Result<Stream<TcpStream>, Debug<std::io::Error>> {
+    let addr = SocketAddr::from(([127, 0, 0, 1], 9999));
+    Ok(TcpStream::connect(addr).await.map(Stream::from)?)
 }
 # }
 ```

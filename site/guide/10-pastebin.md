@@ -268,13 +268,13 @@ Here's our version (in `src/main.rs`):
 #     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
 # }
 
-use std::path::Path;
+use std::path::PathBuf;
 
 use rocket::Data;
 use rocket::response::Debug;
 
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
+async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let id = PasteId::new(3);
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);

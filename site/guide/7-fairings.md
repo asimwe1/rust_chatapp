@@ -49,8 +49,8 @@ example, the following snippet attached two fairings, `req_fairing` and
 `res_fairing`, to a new Rocket instance:
 
 ```rust
-# let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| {});
-# let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| {});
+# let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
+# let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
 
 # if false {
 rocket::ignite()
@@ -157,6 +157,7 @@ struct Counter {
     post: AtomicUsize,
 }
 
+#[rocket::async_trait]
 impl Fairing for Counter {
     // This is a request and response fairing named "GET/POST Counter".
     fn info(&self) -> Info {
@@ -167,7 +168,7 @@ impl Fairing for Counter {
     }
 
     // Increment the counter for `GET` and `POST` requests.
-    fn on_request(&self, request: &mut Request, _: &Data) {
+    async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
         match request.method() {
             Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
             Method::Post => self.post.fetch_add(1, Ordering::Relaxed),
@@ -175,24 +176,22 @@ impl Fairing for Counter {
         };
     }
 
-    fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) -> BoxFuture<'a, ()> {
-        Box::pin(async move {
-            // Don't change a successful user's response, ever.
-            if response.status() != Status::NotFound {
-                return
-            }
+    async fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) {
+        // Don't change a successful user's response, ever.
+        if response.status() != Status::NotFound {
+            return
+        }
 
-            // Rewrite the response to return the current counts.
-            if request.method() == Method::Get && request.uri().path() == "/counts" {
-                let get_count = self.get.load(Ordering::Relaxed);
-                let post_count = self.post.load(Ordering::Relaxed);
-                let body = format!("Get: {}\nPost: {}", get_count, post_count);
+        // Rewrite the response to return the current counts.
+        if request.method() == Method::Get && request.uri().path() == "/counts" {
+            let get_count = self.get.load(Ordering::Relaxed);
+            let post_count = self.post.load(Ordering::Relaxed);
+            let body = format!("Get: {}\nPost: {}", get_count, post_count);
 
-                response.set_status(Status::Ok);
-                response.set_header(ContentType::Plain);
-                response.set_sized_body(Cursor::new(body));
-            }
-        })
+            response.set_status(Status::Ok);
+            response.set_header(ContentType::Plain);
+            response.set_sized_body(body.len(), Cursor::new(body));
+        }
     }
 }
 ```

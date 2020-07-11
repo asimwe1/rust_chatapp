@@ -201,15 +201,15 @@ use rocket::fairing::AdHoc;
 struct AssetsDir(String);
 
 #[get("/<asset..>")]
-fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
-    NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
+async fn assets(asset: PathBuf, assets_dir: State<'_, AssetsDir>) -> Option<NamedFile> {
+    NamedFile::open(Path::new(&assets_dir.0).join(asset)).await.ok()
 }
 
 fn main() {
     # if false {
     rocket::ignite()
         .mount("/", routes![assets])
-        .attach(AdHoc::on_attach("Assets Config", |mut rocket| {
+        .attach(AdHoc::on_attach("Assets Config", |mut rocket| async {
             let assets_dir = rocket.config().await
                 .get_str("assets_dir")
                 .unwrap_or("assets/")

@@ -166,8 +166,8 @@ this, a safe and secure static file server can be implemented in 4 lines:
 use rocket::response::NamedFile;
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
+async fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).await.ok()
 }
 ```
 
@@ -1058,8 +1058,8 @@ use rocket::Data;
 use rocket::response::Debug;
 
 #[post("/upload", format = "plain", data = "<data>")]
-fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
-    Ok(data.stream_to_file("/tmp/upload.txt").map(|n| n.to_string())?)
+async fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
+    Ok(data.stream_to_file("/tmp/upload.txt").await.map(|n| n.to_string())?)
 }
 ```
 
@@ -1083,24 +1083,18 @@ returned. The handler above is complete. It really is that simple! See the
 Rocket makes it easy to use `async/await` in routes.
 
 ```rust
-#[get("/weather")]
-async fn weather() -> String {
-    let response = reqwest::get("https://www.example.com").await;
-    response.text().await
+# #[macro_use] extern crate rocket;
+use rocket::tokio::time::{delay_for, Duration};
+#[get("/delay/<seconds>")]
+async fn delay(seconds: u64) -> String {
+    delay_for(Duration::from_secs(seconds)).await;
+    format!("Waited for {} seconds", seconds)
 }
 ```
 
 First, notice that the route function is an `async fn`. This enables
-the use of `await` inside the handler. `reqwest` is an asynchronous
-HTTP client, so we must `await` the response. Finally, we call
-the `text()` function, which asynchronously downloads the full
-response data from the server.
-
-! warning: You should _always_ set limits when reading incoming data.
-
-  Just like with client input, you should usually limit the amount
-  of data read from external APIs. The exact method will depend
-  on the library you are using to make requests.
+the use of `await` inside the handler. `delay_for` is an asynchronous
+function, so we must `await` it.
 
 ## Error Catchers
 

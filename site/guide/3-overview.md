@@ -259,11 +259,14 @@ stalls, or sometimes even deadlocks can occur.
   `tokio::task::spawn_blocking`:
 
   ```rust
+  # #[macro_use] extern crate rocket;
+  use rocket::tokio::task::spawn_blocking;
+
   #[get("/blocking_task")]
-  async fn blocking_task() -> String {
+  async fn blocking_task() -> Vec<u8> {
       // In a real application, we would use rocket::response::NamedFile
-      tokio::task::spawn_blocking(|| {
-          std::fs::read_file("data.txt")
-      }).await
+      spawn_blocking(|| {
+          std::fs::read("data.txt").expect("failed to read file")
+      }).await.unwrap()
   }
   ```
