@@ -5,6 +5,7 @@ use rocket::local::blocking::Client;
 use rocket::request::Form;
 use rocket::data::{self, FromDataSimple};
 use rocket::http::{RawStr, ContentType, Status};
+use rocket::tokio::io::AsyncReadExt;
 
 // Test that the data parameters works as expected.
 
@@ -20,8 +21,6 @@ impl FromDataSimple for Simple {
 
     fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
         Box::pin(async {
-            use tokio::io::AsyncReadExt;
-
             let mut string = String::new();
             let mut stream = data.open().take(64);
             if let Err(_) = stream.read_to_string(&mut string).await {

@@ -13,6 +13,7 @@ use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
 use rocket::http::{Status, RawStr, ContentType};
+use rocket::tokio::io::AsyncReadExt;
 
 // Use all of the code generation avaiable at once.
 
@@ -28,8 +29,6 @@ impl FromDataSimple for Simple {
 
     fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
         Box::pin(async move {
-            use tokio::io::AsyncReadExt;
-
             let mut string = String::new();
             let mut stream = data.open().take(64);
             stream.read_to_string(&mut string).await.unwrap();
