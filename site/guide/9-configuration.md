@@ -205,8 +205,8 @@ async fn assets(asset: PathBuf, assets_dir: State<'_, AssetsDir>) -> Option<Name
     NamedFile::open(Path::new(&assets_dir.0).join(asset)).await.ok()
 }
 
-fn main() {
-    # if false {
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![assets])
         .attach(AdHoc::on_attach("Assets Config", |mut rocket| async {
@@ -217,8 +217,6 @@ fn main() {
 
             Ok(rocket.manage(AssetsDir(assets_dir)))
         }))
-        .launch();
-    # }
 }
 ```
 
@@ -275,7 +273,8 @@ let config = Config::build(Environment::Staging)
 # /*
 rocket::custom(config)
     .mount("/", routes![/* .. */])
-    .launch();
+    .launch()
+    .await;
 # */
 ```
 

@@ -159,8 +159,8 @@ requests via the `launch` method. The method starts up the server and waits for
 incoming requests. When a request arrives, Rocket finds the matching route and
 dispatches the request to the route's handler.
 
-We typically call `launch` from the `main` function. Our complete _Hello,
-world!_ application thus looks like:
+We typically use `#[rocket::launch]`, which generates a `main` function.
+Our complete _Hello, world!_ application thus looks like:
 
 ```rust
 #![feature(proc_macro_hygiene)]
@@ -172,10 +172,9 @@ fn world() -> &'static str {
     "Hello, world!"
 }
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/hello", routes![world]).launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/hello", routes![world])
 }
 ```
 

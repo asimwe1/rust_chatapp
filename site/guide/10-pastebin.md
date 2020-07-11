@@ -54,10 +54,9 @@ And finally, create a skeleton Rocket application to work off of in
 
 #[macro_use] extern crate rocket;
 
-fn main() {
-    # if false {
-    rocket::ignite().launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite()
 }
 ```
 
@@ -113,10 +112,9 @@ to them. To mount the `index` route, modify the main function so that it reads:
 # #[macro_use] extern crate rocket;
 # #[get("/")] fn index() { }
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index]).launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index])
 }
 ```
 
@@ -294,10 +292,9 @@ Ensure that the route is mounted at the root path:
 # #[get("/")] fn index() {}
 # #[post("/")] fn upload() {}
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index, upload]).launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, upload])
 }
 ```
 
@@ -358,10 +355,9 @@ Make sure that the route is mounted at the root path:
 # #[post("/")] fn upload() {}
 # #[get("/<id>")] fn retrieve(id: String) {}
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, upload, retrieve])
 }
 ```
 

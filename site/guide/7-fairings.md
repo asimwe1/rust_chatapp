@@ -49,15 +49,15 @@ example, the following snippet attached two fairings, `req_fairing` and
 `res_fairing`, to a new Rocket instance:
 
 ```rust
-# let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
-# let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
+    # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
 
-# if false {
-rocket::ignite()
-    .attach(req_fairing)
-    .attach(res_fairing)
-    .launch();
-# }
+    rocket::ignite()
+        .attach(req_fairing)
+        .attach(res_fairing)
+}
 ```
 
 [`attach`]: @api/rocket/struct.Rocket.html#method.attach

@@ -125,14 +125,9 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
-}
-
-fn main() {
-    # if false {
-    rocket().launch();
-    # }
 }
 ```
 

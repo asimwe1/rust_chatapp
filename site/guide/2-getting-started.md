@@ -66,10 +66,9 @@ fn index() -> &'static str {
     "Hello, world!"
 }
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index]).launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index])
 }
 ```
 

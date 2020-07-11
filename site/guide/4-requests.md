@@ -222,12 +222,9 @@ fn user_int(id: isize) { /* ... */ }
 #[get("/user/<id>", rank = 3)]
 fn user_str(id: &RawStr) { /* ... */ }
 
-fn main() {
-    # if false {
-    rocket::ignite()
-        .mount("/", routes![user, user_int, user_str])
-        .launch();
-    # }
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![user, user_int, user_str])
 }
 ```
 
