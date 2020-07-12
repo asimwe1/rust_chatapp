@@ -54,7 +54,6 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust,no_run
-//!
 //! #[macro_use] extern crate rocket;
 //!
 //! #[get("/")]

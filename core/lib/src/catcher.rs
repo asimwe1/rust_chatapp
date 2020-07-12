@@ -36,7 +36,6 @@ use yansi::Color::*;
 /// declared using the `catch` decorator, as follows:
 ///
 /// ```rust,no_run
-///
 /// #[macro_use] extern crate rocket;
 ///
 /// use rocket::Request;
