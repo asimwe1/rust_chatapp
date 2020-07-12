@@ -84,7 +84,7 @@ vars_and_mods! {
     handler => rocket::handler,
     log => rocket::logger,
     Outcome => rocket::Outcome,
-    FromData => rocket::data::FromData,
+    FromTransformedData => rocket::data::FromTransformedData,
     Transform => rocket::data::Transform,
     Query => rocket::request::Query,
     Request => rocket::Request,
@@ -252,7 +252,7 @@ macro_rules! route_attribute {
         /// | path     | `<ident..>` | [`FromSegments`]  |
         /// | query    | `<ident>`   | [`FromFormValue`] |
         /// | query    | `<ident..>` | [`FromQuery`]     |
-        /// | data     | `<ident>`   | [`FromData`]      |
+        /// | data     | `<ident>`   | [`FromTransformedData`]      |
         ///
         /// The type of each function argument that _does not_ have a
         /// corresponding dynamic parameter is required to implement the
@@ -265,7 +265,7 @@ macro_rules! route_attribute {
         /// [`FromSegments`]: ../rocket/request/trait.FromSegments.html
         /// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
         /// [`FromQuery`]: ../rocket/request/trait.FromQuery.html
-        /// [`FromData`]: ../rocket/data/trait.FromData.html
+        /// [`FromTransformedData`]: ../rocket/data/trait.FromTransformedData.html
         /// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
         /// [`Route`]: ../rocket/struct.Route.html
         /// [`Responder`]: ../rocket/response/trait.Responder.html
@@ -297,7 +297,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromData` Outcomes] for further detail.
+        ///            `Failure`. See [`FromTransformedData` Outcomes] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -320,7 +320,7 @@ macro_rules! route_attribute {
         /// [`Outcome`]: ../rocket/enum.Outcome.html
         /// [`Response`]: ../rocket/struct.Response.html
         /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
-        /// [`FromData` Outcomes]: ../rocket/data/trait.FromData.html#outcomes
+        /// [`FromTransformedData` Outcomes]: ../rocket/data/trait.FromTransformedData.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))

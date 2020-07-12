@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use rocket::{Request, Outcome::*};
 use rocket::http::ext::Normalize;
 use rocket::local::blocking::Client;
-use rocket::data::{self, Data, FromDataSimple};
+use rocket::data::{self, Data, FromData};
 use rocket::request::Form;
 use rocket::http::{Status, RawStr, ContentType};
 use rocket::tokio::io::AsyncReadExt;
@@ -24,16 +24,15 @@ struct Inner<'r> {
 
 struct Simple(String);
 
-impl FromDataSimple for Simple {
+#[async_trait]
+impl FromData for Simple {
     type Error = ();
 
-    fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
-        Box::pin(async move {
-            let mut string = String::new();
-            let mut stream = data.open().take(64);
-            stream.read_to_string(&mut string).await.unwrap();
-            Success(Simple(string))
-        })
+    async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        let mut string = String::new();
+        let mut stream = data.open().take(64);
+        stream.read_to_string(&mut string).await.unwrap();
+        Success(Simple(string))
     }
 }
 

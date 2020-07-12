@@ -1,12 +1,12 @@
 use std::ops::Deref;
 
 use crate::request::{Request, form::{Form, FormDataError, FromForm}};
-use crate::data::{Data, Transformed, FromData, TransformFuture, FromDataFuture};
+use crate::data::{Data, Transformed, FromTransformedData, TransformFuture, FromDataFuture};
 use crate::http::uri::{Query, FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types leniently.
 ///
-/// This type implements the [`FromData`] trait, and like [`Form`], provides a
+/// This type implements the [`FromTransformedData`] trait, and like [`Form`], provides a
 /// generic means to parse arbitrary structures from incoming form data. Unlike
 /// `Form`, this type uses a _lenient_ parsing strategy: forms that contains a
 /// superset of the expected fields (i.e, extra fields) will parse successfully.
@@ -24,7 +24,7 @@ use crate::http::uri::{Query, FromUriParam};
 /// The usage of a `LenientForm` type is equivalent to that of [`Form`], so we
 /// defer details to its documentation.
 ///
-/// `LenientForm` implements `FromData`, so it can be used directly as a target
+/// `LenientForm` implements `FromTransformedData`, so it can be used directly as a target
 /// of the `data = "<param>"` route parameter. For instance, if some structure
 /// of type `T` implements the `FromForm` trait, an incoming form can be
 /// automatically parsed into the `T` structure with the following route and
@@ -93,7 +93,7 @@ impl<T> Deref for LenientForm<T> {
     }
 }
 
-impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for LenientForm<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for LenientForm<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;

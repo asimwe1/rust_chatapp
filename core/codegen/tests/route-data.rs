@@ -3,7 +3,7 @@
 use rocket::{Request, Data, Outcome::*};
 use rocket::local::blocking::Client;
 use rocket::request::Form;
-use rocket::data::{self, FromDataSimple};
+use rocket::data::{self, FromData};
 use rocket::http::{RawStr, ContentType, Status};
 use rocket::tokio::io::AsyncReadExt;
 
@@ -16,19 +16,18 @@ struct Inner<'r> {
 
 struct Simple(String);
 
-impl FromDataSimple for Simple {
+#[async_trait]
+impl FromData for Simple {
     type Error = ();
 
-    fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
-        Box::pin(async {
-            let mut string = String::new();
-            let mut stream = data.open().take(64);
-            if let Err(_) = stream.read_to_string(&mut string).await {
-                return Failure((Status::InternalServerError, ()));
-            }
+    async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        let mut string = String::new();
+        let mut stream = data.open().take(64);
+        if let Err(_) = stream.read_to_string(&mut string).await {
+            return Failure((Status::InternalServerError, ()));
+        }
 
-            Success(Simple(string))
-        })
+        Success(Simple(string))
     }
 }
 

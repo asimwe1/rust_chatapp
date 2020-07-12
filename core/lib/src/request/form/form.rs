@@ -4,12 +4,12 @@ use tokio::io::AsyncReadExt;
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
-use crate::data::{Outcome, Transform, Transformed, Data, FromData, TransformFuture, FromDataFuture};
+use crate::data::{Outcome, Transform, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
 use crate::http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
-/// This type implements the [`FromData`] trait. It provides a generic means to
+/// This type implements the [`FromTransformedData`] trait. It provides a generic means to
 /// parse arbitrary structures from incoming form data.
 ///
 /// # Strictness
@@ -27,7 +27,7 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// The trait can be automatically derived; see the [`FromForm`] documentation
 /// for more information on deriving or implementing the trait.
 ///
-/// Because `Form` implements `FromData`, it can be used directly as a target of
+/// Because `Form` implements `FromTransformedData`, it can be used directly as a target of
 /// the `data = "<param>"` route parameter as long as its generic type
 /// implements the `FromForm` trait:
 ///
@@ -183,7 +183,7 @@ impl<'f, T: FromForm<'f>> Form<T> {
 ///
 /// All relevant warnings and errors are written to the console in Rocket
 /// logging format.
-impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for Form<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;

@@ -90,7 +90,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// [request guard]: crate::request::FromRequest
 /// [request guards]: crate::request::FromRequest
-/// [data guards]: crate::data::FromData
+/// [data guards]: crate::data::FromTransformedData
 ///
 /// ## Fairing Callbacks
 ///

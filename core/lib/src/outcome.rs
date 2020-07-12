@@ -9,11 +9,11 @@
 //! processing next.
 //!
 //! The `Outcome` type is the return type of many of the core Rocket traits,
-//! including [`FromRequest`](crate::request::FromRequest), [`FromData`]
+//! including [`FromRequest`](crate::request::FromRequest), [`FromTransformedData`]
 //! [`Responder`]. It is also the return type of request handlers via the
 //! [`Response`](crate::response::Response) type.
 //!
-//! [`FromData`]: crate::data::FromData
+//! [`FromTransformedData`]: crate::data::FromTransformedData
 //! [`Responder`]: crate::response::Responder
 //!
 //! # Success
@@ -21,7 +21,7 @@
 //! A successful `Outcome<S, E, F>`, `Success(S)`, is returned from functions
 //! that complete successfully. The meaning of a `Success` outcome depends on
 //! the context. For instance, the `Outcome` of the `from_data` method of the
-//! [`FromData`] trait will be matched against the type expected by the user.
+//! [`FromTransformedData`] trait will be matched against the type expected by the user.
 //! For example, consider the following handler:
 //!
 //! ```rust,ignore
@@ -29,7 +29,7 @@
 //! fn hello(my_val: S) -> ... {  }
 //! ```
 //!
-//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
 //! `Success(S)`. If `from_data` returns a `Success`, the `Success` value will
 //! be unwrapped and the value will be used as the value of `my_val`.
 //!
@@ -50,7 +50,7 @@
 //! fn hello(my_val: Result<S, E>) -> ... {  }
 //! ```
 //!
-//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
 //! `Success(S)` and `Failure(E)`. If `from_data` returns a `Failure`, the
 //! `Failure` value will be unwrapped and the value will be used as the `Err`
 //! value of `my_val` while a `Success` will be unwrapped and used the `Ok`
@@ -71,7 +71,7 @@
 //! fn hello(my_val: S) -> ... {  }
 //! ```
 //!
-//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
 //! `Success(S)`, `Failure(E)`, and `Forward(F)`. If the `Outcome` is a
 //! `Forward`, the `hello` handler isn't called. Instead, the incoming request
 //! is forwarded, or passed on to, the next matching route, if any. Ultimately,

@@ -175,10 +175,10 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
 }
 
 fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
-    define_vars_and_mods!(req, data, FromData, Outcome, Transform);
+    define_vars_and_mods!(req, data, FromTransformedData, Outcome, Transform);
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     quote_spanned! { span =>
-        let __transform = <#ty as #FromData>::transform(#req, #data).await;
+        let __transform = <#ty as #FromTransformedData>::transform(#req, #data).await;
 
         #[allow(unreachable_patterns, unreachable_code)]
         let __outcome = match __transform {
@@ -195,7 +195,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
         };
 
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #FromData>::from_data(#req, __outcome).await {
+        let #ident: #ty = match <#ty as #FromTransformedData>::from_data(#req, __outcome).await {
             #Outcome::Success(__d) => __d,
             #Outcome::Forward(__d) => return #Outcome::Forward(__d),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),

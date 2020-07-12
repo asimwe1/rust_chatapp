@@ -16,7 +16,7 @@ const PEEK_BYTES: usize = 512;
 ///
 /// This type is the only means by which the body of a request can be retrieved.
 /// This type is not usually used directly. Instead, types that implement
-/// [`FromData`](crate::data::FromData) are used via code generation by
+/// [`FromTransformedData`](crate::data::FromTransformedData) are used via code generation by
 /// specifying the `data = "<var>"` route parameter as follows:
 ///
 /// ```rust
@@ -27,8 +27,8 @@ const PEEK_BYTES: usize = 512;
 /// # fn main() { }
 /// ```
 ///
-/// Above, `DataGuard` can be any type that implements `FromData`. Note that
-/// `Data` itself implements `FromData`.
+/// Above, `DataGuard` can be any type that implements `FromTransformedData`. Note that
+/// `Data` itself implements `FromTransformedData`.
 ///
 /// # Reading Data
 ///

@@ -22,13 +22,13 @@ error[E0277]: the trait bound `Q: rocket::request::FromQuery<'_>` is not satisfi
 15 | fn f3(foo: Q) {} //~ ERROR FromQuery
    |       ^^^^^^ the trait `rocket::request::FromQuery<'_>` is not implemented for `Q`
 
-error[E0277]: the trait bound `Q: rocket::data::FromDataSimple` is not satisfied
+error[E0277]: the trait bound `Q: rocket::data::FromData` is not satisfied
   --> $DIR/route-type-errors.rs:18:7
    |
 18 | fn f4(foo: Q) {} //~ ERROR FromData
-   |       ^^^^^^ the trait `rocket::data::FromDataSimple` is not implemented for `Q`
+   |       ^^^^^^ the trait `rocket::data::FromData` is not implemented for `Q`
    |
-   = note: required because of the requirements on the impl of `rocket::data::FromData<'_>` for `Q`
+   = note: required because of the requirements on the impl of `rocket::data::FromTransformedData<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not satisfied
   --> $DIR/route-type-errors.rs:21:7

@@ -1,8 +1,8 @@
 #[macro_use] extern crate rocket;
 
-use rocket::Outcome::*;
 use rocket::{Request, Data};
 use rocket::request::{self, FromRequest};
+use rocket::outcome::IntoOutcome;
 
 struct HasContentType;
 
@@ -10,26 +10,19 @@ struct HasContentType;
 impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
     type Error = ();
 
-    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        if request.content_type().is_some() {
-            Success(HasContentType)
-        } else {
-            Forward(())
-        }
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        req.content_type().map(|_| HasContentType).or_forward(())
     }
 }
 
-use rocket::data::{self, FromDataSimple};
+use rocket::data::{self, FromData};
 
-impl FromDataSimple for HasContentType {
+#[rocket::async_trait]
+impl FromData for HasContentType {
     type Error = ();
 
-    fn from_data(request: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, Self::Error> {
-        Box::pin(futures::future::ready(if request.content_type().is_some() {
-            Success(HasContentType)
-        } else {
-            Forward(data)
-        }))
+    async fn from_data(req: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        req.content_type().map(|_| HasContentType).or_forward(data)
     }
 }
 

@@ -6,4 +6,4 @@ mod from_data;
 
 pub use self::data::Data;
 pub use self::data_stream::DataStream;
-pub use self::from_data::{FromData, FromDataFuture, FromDataSimple, Outcome, Transform, Transformed, TransformFuture};
+pub use self::from_data::{FromTransformedData, FromDataFuture, FromData, Outcome, Transform, Transformed, TransformFuture};

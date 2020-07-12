@@ -20,7 +20,7 @@ use tokio::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Data, FromData, FromDataFuture, Transform::*, TransformFuture, Transformed};
+use rocket::data::{Data, FromTransformedData, FromDataFuture, Transform::*, TransformFuture, Transformed};
 use rocket::http::Status;
 use rocket::response::{self, content, Responder};
 
@@ -29,7 +29,7 @@ use serde::de::Deserialize;
 
 pub use rmp_serde::decode::Error;
 
-/// The `MsgPack` type: implements [`FromData`] and [`Responder`], allowing you
+/// The `MsgPack` type: implements [`FromTransformedData`] and [`Responder`], allowing you
 /// to easily consume and respond with MessagePack data.
 ///
 /// ## Receiving MessagePack
@@ -113,7 +113,7 @@ impl<T> MsgPack<T> {
 /// Default limit for MessagePack is 1MB.
 const LIMIT: u64 = 1 << 20;
 
-impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
+impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for MsgPack<T> {
     type Error = Error;
     type Owned = Vec<u8>;
     type Borrowed = [u8];

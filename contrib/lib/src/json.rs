@@ -22,7 +22,7 @@ use tokio::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Transform::*, Transformed, Data, FromData, TransformFuture, FromDataFuture};
+use rocket::data::{Transform::*, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
@@ -32,7 +32,7 @@ use serde::de::{Deserialize, Deserializer};
 #[doc(hidden)]
 pub use serde_json::{json_internal, json_internal_vec};
 
-/// The JSON type: implements [`FromData`] and [`Responder`], allowing you to
+/// The JSON type: implements [`FromTransformedData`] and [`Responder`], allowing you to
 /// easily consume and respond with JSON.
 ///
 /// ## Receiving JSON
@@ -128,7 +128,7 @@ pub enum JsonError<'a> {
     Parse(&'a str, serde_json::error::Error),
 }
 
-impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
+impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
     type Error = JsonError<'a>;
     type Owned = String;
     type Borrowed = str;
