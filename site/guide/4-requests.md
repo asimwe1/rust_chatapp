@@ -77,7 +77,7 @@ not just the world, we can declare a route like so:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# use rocket::http::RawStr;
+use rocket::http::RawStr;
 
 #[get("/hello/<name>")]
 fn hello(name: &RawStr) -> String {
@@ -536,7 +536,7 @@ following three routes, each leading to an administrative control panel at
 # type AdminUser = rocket::http::Method;
 # type User = rocket::http::Method;
 
-use rocket::response::{Flash, Redirect};
+use rocket::response::Redirect;
 
 #[get("/login")]
 fn login() -> Template { /* .. */ }
