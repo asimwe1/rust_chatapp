@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -38,9 +39,9 @@ struct MethodRouteAttribute {
 /// This structure represents the parsed `route` attribute and associated items.
 #[derive(Debug)]
 struct Route {
-    /// The status associated with the code in the `#[route(code)]` attribute.
+    /// The attribute: `#[get(path, ...)]`.
     attribute: RouteAttribute,
-    /// The function that was decorated with the `route` attribute.
+    /// The function the attribute decorated, i.e, the handler.
     function: syn::ItemFn,
     /// The non-static parameters declared in the route segments.
     segments: IndexSet<Segment>,
@@ -322,6 +323,9 @@ fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
 }
 
 fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
+    // Keep a global counter (+ thread ID later) to generate unique ids.
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
     let dynamic_args = route.segments.iter()
         .filter(|seg| seg.source == Source::Path || seg.source == Source::Query)
         .filter(|seg| seg.kind != Kind::Static)
@@ -330,14 +334,13 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
         .map(|(ident, _, ty)| quote!(#ident: #ty));
 
     let mut hasher = DefaultHasher::new();
-    let route_span = route.function.span();
-    route_span.source_file().path().hash(&mut hasher);
-    let line_column = route_span.start();
-    line_column.line.hash(&mut hasher);
-    line_column.column.hash(&mut hasher);
+    route.function.sig.ident.hash(&mut hasher);
+    route.attribute.path.origin.0.path().hash(&mut hasher);
+    std::process::id().hash(&mut hasher);
+    std::thread::current().id().hash(&mut hasher);
+    COUNTER.fetch_add(1, Ordering::AcqRel).hash(&mut hasher);
 
-    let mut generated_macro_name = route.function.sig.ident.prepend(URI_MACRO_PREFIX);
-    generated_macro_name.set_span(Span::call_site().into());
+    let generated_macro_name = route.function.sig.ident.prepend(URI_MACRO_PREFIX);
     let inner_generated_macro_name = generated_macro_name.append(&hasher.finish().to_string());
     let route_uri = route.attribute.path.origin.0.to_string();
 
