@@ -108,7 +108,7 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
 
 fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
     let uri_mod = quote!(rocket::http::uri);
-    let (span, ident_tmp) = (expr.span(), ident.prepend("tmp_"));
+    let (span, ident_tmp) = (expr.span(), ident.prepend("__tmp_"));
     let from_uri_param = if source == Source::Query {
         quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Query, _>)
     } else {
@@ -116,6 +116,7 @@ fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr
     };
 
     to.push(quote_spanned!(span =>
+        #[allow(non_snake_case)]
         let #ident_tmp = #expr;
         let #ident = <#ty as #from_uri_param>::from_uri_param(#ident_tmp);
     ));
