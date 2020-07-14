@@ -34,3 +34,16 @@ impl ReturnTypeExt for syn::ReturnType {
         }
     }
 }
+
+pub trait TokenStreamExt {
+    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
+}
+
+impl TokenStreamExt for crate::proc_macro2::TokenStream {
+    fn respanned(&self, span: crate::proc_macro2::Span) -> Self {
+        self.clone().into_iter().map(|mut token| {
+            token.set_span(span);
+            token
+        }).collect()
+    }
+}

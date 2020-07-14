@@ -15,17 +15,15 @@ error[E0277]: the trait bound `bool: rocket::response::Responder<'_, '_>` is not
    = note: required by `rocket::response::Responder::respond_to`
 
 error[E0308]: mismatched types
-  --> $DIR/catch_type_errors.rs:17:1
+  --> $DIR/catch_type_errors.rs:18:7
    |
-17 | #[catch(404)]
-   | ^^^^^^^^^^^^^ expected `bool`, found `&rocket::Request<'_>`
-   |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+18 | fn f3(_request: bool) -> usize {
+   |       ^^^^^^^^^^^^^^ expected `bool`, found `&rocket::Request<'_>`
 
 error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
-  --> $DIR/catch_type_errors.rs:19:26
+  --> $DIR/catch_type_errors.rs:18:26
    |
-19 | fn f3(_request: bool) -> usize {
+18 | fn f3(_request: bool) -> usize {
    |                          ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
    |
    = note: required by `rocket::response::Responder::respond_to`

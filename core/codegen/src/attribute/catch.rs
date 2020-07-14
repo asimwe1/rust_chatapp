@@ -3,7 +3,7 @@ use devise::{syn, Spanned, Result, FromMeta};
 use crate::proc_macro2::TokenStream as TokenStream2;
 
 use crate::http_codegen::Status;
-use crate::syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt};
+use crate::syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt, TokenStreamExt};
 use self::syn::{Attribute, parse::Parser};
 use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
@@ -44,49 +44,59 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
 
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
-    let mut user_catcher_fn_name = catch.function.sig.ident.clone();
+    let user_catcher_fn_name = catch.function.sig.ident.clone();
     let generated_struct_name = user_catcher_fn_name.prepend(CATCH_STRUCT_PREFIX);
     let generated_fn_name = user_catcher_fn_name.prepend(CATCH_FN_PREFIX);
     let (vis, status) = (&catch.function.vis, &catch.status);
     let status_code = status.0.code;
 
     // Variables names we'll use and reuse.
-    define_vars_and_mods!(req, catcher, _Box, Request, Response, CatcherFuture);
+    define_vars_and_mods!(catch.function.span().into() =>
+        req, _Box, Request, Response, CatcherFuture);
 
     // Determine the number of parameters that will be passed in.
-    let (_fn_sig, inputs) = match catch.function.sig.inputs.len() {
-        0 => (quote!(fn() -> _), quote!()),
-        1 => (quote!(fn(&#Request) -> _), quote!(#req)),
-        _ => return Err(catch.function.sig.inputs.span()
-                .error("invalid number of arguments: must be zero or one")
-                .help("catchers may optionally take an argument of type `&Request`"))
-    };
+    if catch.function.sig.inputs.len() > 1 {
+        return Err(catch.function.sig.inputs.span()
+            .error("invalid number of arguments: must be zero or one")
+            .help("catchers may optionally take an argument of type `&Request`"));
+    }
 
-    // Set the span of the function name to point to inputs so that a later type
-    // coercion failure points to the user's catcher's handler input.
-    user_catcher_fn_name.set_span(catch.function.sig.inputs.span().into());
+    // TODO: It would be nice if this worked! Alas, either there is a rustc bug
+    // that prevents this from working (error on `Output` type of `Future`), or
+    // this simply isn't possible with `async fn`.
+    // // Typecheck the catcher function if it has arguments.
+    // user_catcher_fn_name.set_span(catch.function.sig.inputs.span().into());
+    // let user_catcher_fn_call = catch.function.sig.inputs.first()
+    //     .map(|arg| {
+    //         let ty = quote!(fn(&#Request) -> _).respanned(Span::call_site().into());
+    //         let req = req.respanned(arg.span().into());
+    //         quote!({
+    //             let #user_catcher_fn_name: #ty = #user_catcher_fn_name;
+    //             #user_catcher_fn_name(#req)
+    //         })
+    //     })
+    //     .unwrap_or_else(|| quote!(#user_catcher_fn_name()));
+    //
+    // let catcher_response = quote_spanned!(return_type_span => {
+    //     let ___responder = #user_catcher_fn_call #dot_await;
+    //     ::rocket::response::Responder::respond_to(___responder, #req)?
+    // });
 
     // This ensures that "Responder not implemented" points to the return type.
     let return_type_span = catch.function.sig.output.ty()
         .map(|ty| ty.span().into())
         .unwrap_or(Span::call_site().into());
 
-    let responder_stmt = if catch.function.sig.asyncness.is_some() {
-        quote_spanned! { return_type_span =>
-            let ___responder = #catcher(#inputs).await;
-        }
-    } else {
-        quote_spanned! { return_type_span =>
-            let ___responder = #catcher(#inputs);
-        }
-    };
+    // Set the `req` span to that of the arg for a correct `Wrong type` span.
+    let input = catch.function.sig.inputs.first()
+        .map(|arg| req.respanned(arg.span().into()));
+
+    // We append `.await` to the function call if this is `async`.
+    let dot_await = catch.function.sig.asyncness
+        .map(|a| quote_spanned!(a.span().into() => .await));
 
     let catcher_response = quote_spanned!(return_type_span => {
-        // TODO.async: fix this
-        // // Emit this to force a type signature check.
-        // let #catcher: #fn_sig = #user_catcher_fn_name;
-        let #catcher = #user_catcher_fn_name;
-        #responder_stmt
+        let ___responder = #user_catcher_fn_name(#input) #dot_await;
         ::rocket::response::Responder::respond_to(___responder, #req)?
     });
 
