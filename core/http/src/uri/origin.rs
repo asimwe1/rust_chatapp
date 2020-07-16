@@ -2,7 +2,7 @@ use std::fmt::{self, Display};
 use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
-use crate::parse::{Indexed, IndexedStr};
+use crate::parse::{Indexed, Extent, IndexedStr};
 use crate::uri::{as_utf8_unchecked, Error, Segments};
 
 use state::Storage;
@@ -114,13 +114,13 @@ impl<'a> Origin<'a> {
     #[inline]
     pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
-        path: Indexed<'a, [u8]>,
-        query: Option<Indexed<'a, [u8]>>
+        path: Extent<&'a [u8]>,
+        query: Option<Extent<&'a [u8]>>
     ) -> Origin<'a> {
         Origin {
             source: Some(as_utf8_unchecked(source)),
-            path: path.coerce(),
-            query: query.map(|q| q.coerce()),
+            path: path.into(),
+            query: query.map(|q| q.into()),
             segment_count: Storage::new()
         }
     }
@@ -134,8 +134,8 @@ impl<'a> Origin<'a> {
     {
         Origin {
             source: None,
-            path: Indexed::from(path),
-            query: query.map(Indexed::from),
+            path: Indexed::from(path.into()),
+            query: query.map(|q| Indexed::from(q.into())),
             segment_count: Storage::new()
         }
     }
@@ -340,13 +340,13 @@ impl<'a> Origin<'a> {
     #[inline]
     pub fn map_path<F: FnOnce(&str) -> String>(&self, f: F) -> Option<Self> {
         let path = f(self.path());
-        if !path.starts_with('/') || !path.bytes().all(crate::parse::uri::is_pchar) {
+        if !path.starts_with('/') || !path.bytes().all(|b| crate::parse::uri::is_pchar(&b)) {
             return None;
         }
 
         Some(Origin {
             source: self.source.clone(),
-            path: path.into(),
+            path: Cow::from(path).into(),
             query: self.query.clone(),
             segment_count: Storage::new(),
         })

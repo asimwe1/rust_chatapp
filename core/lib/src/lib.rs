@@ -90,7 +90,6 @@ pub use rocket_codegen::*;
 pub use async_trait::*;
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate pear;
 
 pub use futures;
 pub use tokio;

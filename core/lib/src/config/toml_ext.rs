@@ -3,17 +3,20 @@ use std::result::Result as StdResult;
 
 use crate::config::Value;
 
-use pear::{Result, parser, switch};
+use pear::macros::{parse, parser, switch};
 use pear::parsers::*;
 use pear::combinators::*;
 
+type Input<'a> = pear::input::Pear<&'a str>;
+type Result<'a, T> = pear::input::Result<T, Input<'a>>;
+
 #[inline(always)]
-pub fn is_whitespace(byte: char) -> bool {
-    byte == ' ' || byte == '\t'
+pub fn is_whitespace(&byte: &char) -> bool {
+    byte.is_ascii_whitespace()
 }
 
 #[inline(always)]
-fn is_not_separator(byte: char) -> bool {
+fn is_not_separator(&byte: &char) -> bool {
     match byte {
         ',' | '{' | '}' | '[' | ']' => false,
         _ => true
@@ -22,33 +25,33 @@ fn is_not_separator(byte: char) -> bool {
 
 // FIXME: Be more permissive here?
 #[inline(always)]
-fn is_ident_char(byte: char) -> bool {
+fn is_ident_char(&byte: &char) -> bool {
     byte.is_ascii_alphanumeric() || byte == '_' || byte == '-'
 }
 
 #[parser]
-fn array<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
-    Value::Array(collection('[', value, ',', ']')?)
+fn array<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
+    Value::Array(delimited_collect('[', value, ',', ']')?)
 }
 
 #[parser]
-fn key<'a>(input: &mut &'a str) -> Result<String, &'a str> {
+fn key<'a>(input: &mut Input<'a>) -> Result<'a, String> {
     take_some_while(is_ident_char)?.to_string()
 }
 
 #[parser]
-fn key_value<'a>(input: &mut &'a str) -> Result<(String, Value), &'a str> {
+fn key_value<'a>(input: &mut Input<'a>) -> Result<'a, (String, Value)> {
     let key = (surrounded(key, is_whitespace)?, eat('=')?).0.to_string();
     (key, surrounded(value, is_whitespace)?)
 }
 
 #[parser]
-fn table<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
-    Value::Table(collection('{', key_value, ',', '}')?)
+fn table<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
+    Value::Table(delimited_collect('{', key_value, ',', '}')?)
 }
 
 #[parser]
-fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
+fn value<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
     skip_while(is_whitespace)?;
     let val = switch! {
         eat_slice("true") => Value::Boolean(true),
@@ -72,8 +75,8 @@ fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
     val
 }
 
-pub fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
-    parse!(value: &mut input).map_err(|e| e.to_string())
+pub fn parse_simple_toml_value(input: &str) -> StdResult<Value, String> {
+    parse!(value: input).map_err(|e| e.to_string())
 }
 
 /// A simple wrapper over a `Value` reference with a custom implementation of

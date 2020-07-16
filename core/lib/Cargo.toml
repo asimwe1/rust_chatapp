@@ -35,11 +35,14 @@ state = "0.4.1"
 time = "0.2.11"
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
-pear = "0.1"
 atty = "0.2"
 async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.4"
+
+[dependencies.pear]
+git = "https://github.com/SergioBenitez/Pear.git"
+rev = "faee7c7e"
 
 [dependencies.tokio]
 version = "0.2.9"

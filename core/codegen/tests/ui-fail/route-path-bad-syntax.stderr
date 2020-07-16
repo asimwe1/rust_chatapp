@@ -1,4 +1,4 @@
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid path URI: expected token / but found a at index 0
  --> $DIR/route-path-bad-syntax.rs:5:8
   |
 5 | #[get("a")] //~ ERROR invalid path URI
@@ -6,7 +6,7 @@ error: invalid path URI: expected token '/' but found 'a' at index 0
   |
   = help: expected path in origin form: "/path/<param>"
 
-error: invalid path URI: expected token '/' but none was found at index 0
+error: invalid path URI: expected token / but none was found at index 0
  --> $DIR/route-path-bad-syntax.rs:9:8
   |
 9 | #[get("")] //~ ERROR invalid path URI
@@ -14,7 +14,7 @@ error: invalid path URI: expected token '/' but none was found at index 0
   |
   = help: expected path in origin form: "/path/<param>"
 
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid path URI: expected token / but found a at index 0
   --> $DIR/route-path-bad-syntax.rs:13:8
    |
 13 | #[get("a/b/c")] //~ ERROR invalid path URI
@@ -50,7 +50,7 @@ error: paths cannot contain empty segments
    |
    = note: expected '/a/b', found '/a/b//'
 
-error: invalid path URI: expected EOF but found '#' at index 3
+error: invalid path URI: expected EOF but found # at index 3
   --> $DIR/route-path-bad-syntax.rs:33:11
    |
 33 | #[get("/!@#$%^&*()")] //~ ERROR invalid path URI

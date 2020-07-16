@@ -68,12 +68,12 @@ pub const PATH_SET: AsciiSet;
 }
 
 #[inline(always)]
-pub fn is_pchar(c: u8) -> bool {
+pub fn is_pchar(&c: &u8) -> bool {
     PATH_CHARS[c as usize] == c
 }
 
 #[inline(always)]
-pub fn is_pchar_or_rchar(c: u8) -> bool {
+pub fn is_pchar_or_rchar(&c: &u8) -> bool {
     PATH_CHARS[c as usize] != 0
 }
 
@@ -108,7 +108,7 @@ const REG_CHARS: [u8; 256] = [
 ];
 
 #[inline(always)]
-pub fn is_reg_name_char(c: u8) -> bool {
+pub fn is_reg_name_char(&c: &u8) -> bool {
     REG_CHARS[c as usize] != 0
 }
 
