@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on: [push, pull_request]
 
@@ -7,28 +7,39 @@ env:
 
 jobs:
   test:
-    name: "${{ matrix.os.name }} ${{ matrix.test.name }}"
+    name: "${{ matrix.os.name }} ${{ matrix.test.name }} (${{ matrix.toolchain }})"
 
     strategy:
+      fail-fast: false
       matrix:
         os:
-          - name: Linux
-            distro: ubuntu-latest
-          - name: Windows
-            distro: windows-latest
-          - name: macOS
-            distro: macOS-latest
-        toolchain:
-          - nightly
+          - { name: Linux, distro: ubuntu-latest }
+          - { name: Windows, distro: windows-latest }
+          - { name: macOS, distro: macOS-latest }
         test:
-          - name: Debug
-            flag:
-          - name: Release
-            flag: "--release"
-          - name: Core
-            flag: "--core"
-          - name: Contrib
-            flag: "--contrib"
+          - { name: Debug, flag: }
+          - { name: Contrib, flag: "--contrib" }
+        toolchain: [stable]
+        allow-failures: [false]
+        include:
+          - toolchain: stable
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Core, flag: "--core" }
+            allow-failures: false
+          - toolchain: stable
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Release, flag: "--release" }
+            allow-failures: false
+          - toolchain: nightly
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Debug, flag: }
+            allow-failures: true
+          - toolchain: nightly
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Contrib, flag: "--contrib" }
+            allow-failures: true
+
+    continue-on-error: ${{ matrix.allow-failures }}
 
     runs-on: ${{ matrix.os.distro }}
 
