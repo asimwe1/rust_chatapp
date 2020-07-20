@@ -21,4 +21,6 @@ fn g0(_foo: rocket::Data) {}
 #[head("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
 fn g1(_foo: rocket::Data) {}
 
-fn main() {  }
+fn main() {
+    compile_error!("checking for warnings!")
+}

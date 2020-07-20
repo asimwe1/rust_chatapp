@@ -1,0 +1,70 @@
+error: expected `fn`
+  --- help: `#[catch]` can only be used on functions
+ --> $DIR/catch.rs:6:1
+  |
+6 | struct Catcher(String);
+  | ^^^^^^
+
+error: expected `fn`
+  --- help: `#[catch]` can only be used on functions
+  --> $DIR/catch.rs:11:7
+   |
+11 | const CATCH: &str = "Catcher";
+   |       ^^^^^
+
+error: invalid value: expected unsigned integer literal
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:15:9
+   |
+15 | #[catch("404")] //~ ERROR expected unsigned integer literal
+   |         ^^^^^
+
+error: unexpected keyed parameter: expected literal or identifier
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:19:9
+   |
+19 | #[catch(code = "404")] //~ ERROR unexpected keyed parameter
+   |         ^^^^
+
+error: unexpected keyed parameter: expected literal or identifier
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:23:9
+   |
+23 | #[catch(code = 404)] //~ ERROR unexpected keyed parameter
+   |         ^^^^
+
+error: status must be in range [100, 599]
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:27:9
+   |
+27 | #[catch(99)] //~ ERROR in range [100, 599]
+   |         ^^
+
+error: status must be in range [100, 599]
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:31:9
+   |
+31 | #[catch(600)] //~ ERROR in range [100, 599]
+   |         ^^^
+
+error: unexpected attribute parameter: `message`
+  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --> $DIR/catch.rs:35:14
+   |
+35 | #[catch(400, message = "foo")] //~ ERROR unexpected attribute parameter: `message`
+   |              ^^^^^^^
+
+error: invalid number of arguments: must be zero or one
+  --- help: catchers may optionally take an argument of type `&Request`
+  --> $DIR/catch.rs:40:7
+   |
+40 | fn f3(_request: &Request, other: bool) {
+   |       ^^^^^^^^
+
+warning: unused import: `rocket::Request`
+ --> $DIR/catch.rs:3:5
+  |
+3 | use rocket::Request;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default

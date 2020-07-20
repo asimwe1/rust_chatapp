@@ -1,5 +1,6 @@
 #[macro_use] extern crate rocket_contrib;
 
+#[allow(unused_imports)]
 use rocket_contrib::databases::diesel;
 
 #[database]

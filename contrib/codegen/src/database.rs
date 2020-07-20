@@ -26,9 +26,7 @@ const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to stru
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = crate::proc_macro2::TokenStream::from(attr);
-    let attr_span = attr_stream2.span();
-    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)
-        .map_err(|_| attr_span.error("expected string literal"))?;
+    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)?;
 
     let input = crate::syn::parse::<DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
