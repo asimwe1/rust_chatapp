@@ -77,7 +77,7 @@ Rocket ships with an extensive number of examples in the `examples/` directory
 which can be compiled and run with Cargo. For instance, the following sequence
 of commands builds and runs the `Hello, world!` example:
 
-```
+```sh
 cd examples/hello_world
 cargo run
 ```

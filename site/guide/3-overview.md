@@ -251,13 +251,16 @@ stalls, or sometimes even deadlocks can occur.
 
   ```rust
   # #[macro_use] extern crate rocket;
+  use std::io;
   use rocket::tokio::task::spawn_blocking;
+  use rocket::response::Debug;
 
   #[get("/blocking_task")]
-  async fn blocking_task() -> Vec<u8> {
-      // In a real application, we would use rocket::response::NamedFile
-      spawn_blocking(|| {
-          std::fs::read("data.txt").expect("failed to read file")
-      }).await.unwrap()
+  async fn blocking_task() -> Result<Vec<u8>, Debug<io::Error>> {
+      // In a real app, we'd use rocket::response::NamedFile or tokio::fs::File.
+      let io_result = spawn_blocking(|| std::fs::read("data.txt")).await
+        .map_err(|join_err| io::Error::new(io::ErrorKind::Interrupted, join_err))?;
+
+      Ok(io_result?)
   }
   ```
