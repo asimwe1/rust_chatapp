@@ -7,31 +7,31 @@ error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is no
   = note: required by `rocket::response::Responder::respond_to`
 
 error[E0277]: the trait bound `bool: rocket::response::Responder<'_, '_>` is not satisfied
-  --> $DIR/catch_type_errors.rs:12:30
+  --> $DIR/catch_type_errors.rs:11:30
    |
-12 | fn f2(_request: &Request) -> bool {
+11 | fn f2(_request: &Request) -> bool {
    |                              ^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `bool`
    |
    = note: required by `rocket::response::Responder::respond_to`
 
 error[E0308]: mismatched types
-  --> $DIR/catch_type_errors.rs:18:7
+  --> $DIR/catch_type_errors.rs:16:17
    |
-18 | fn f3(_request: bool) -> usize {
-   |       ^^^^^^^^ expected `bool`, found `&rocket::Request<'_>`
+16 | fn f3(_request: bool) -> usize {
+   |                 ^^^^ expected `bool`, found `&rocket::Request<'_>`
 
 error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
-  --> $DIR/catch_type_errors.rs:18:26
+  --> $DIR/catch_type_errors.rs:16:26
    |
-18 | fn f3(_request: bool) -> usize {
+16 | fn f3(_request: bool) -> usize {
    |                          ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
    |
    = note: required by `rocket::response::Responder::respond_to`
 
 error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
-  --> $DIR/catch_type_errors.rs:25:12
+  --> $DIR/catch_type_errors.rs:21:12
    |
-25 | fn f4() -> usize {
+21 | fn f4() -> usize {
    |            ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
    |
    = note: required by `rocket::response::Responder::respond_to`

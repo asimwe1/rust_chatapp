@@ -86,6 +86,7 @@ vars_and_mods! {
     FromTransformedData => rocket::data::FromTransformedData,
     Transform => rocket::data::Transform,
     Query => rocket::request::Query,
+    FromFormValue => rocket::request::FromFormValue,
     Request => rocket::Request,
     Response => rocket::response::Response,
     Data => rocket::Data,
@@ -136,7 +137,7 @@ macro_rules! emit {
             let debug_tokens = proc_macro2::Span::call_site()
                 .note("emitting Rocket code generation debug output")
                 .note(tokens.to_string())
-                .emit_as_tokens();
+                .emit_as_item_tokens();
 
             tokens.extend(debug_tokens);
         }

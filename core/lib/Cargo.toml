@@ -42,7 +42,7 @@ atomic = "0.4"
 
 [dependencies.pear]
 git = "https://github.com/SergioBenitez/Pear.git"
-rev = "faee7c7e"
+rev = "4b68055"
 
 [dependencies.tokio]
 version = "0.2.9"

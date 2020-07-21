@@ -37,7 +37,7 @@ ref-cast = "1.0"
 
 [dependencies.pear]
 git = "https://github.com/SergioBenitez/Pear.git"
-rev = "faee7c7e"
+rev = "4b68055"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }

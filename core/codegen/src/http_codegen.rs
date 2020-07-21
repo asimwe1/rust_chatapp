@@ -85,7 +85,7 @@ impl FromMeta for MediaType {
             // FIXME(diag: warning)
             meta.value_span()
                 .warning(format!("'{}' is not a known media type", mt))
-                .emit_as_tokens();
+                .emit_as_item_tokens();
         }
 
         Ok(MediaType(mt))

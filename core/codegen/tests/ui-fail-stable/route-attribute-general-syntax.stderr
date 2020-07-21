@@ -1,206 +1,206 @@
 error: missing expected parameter: `path`
- --> $DIR/route-attribute-general-syntax.rs:5:1
+ --> $DIR/route-attribute-general-syntax.rs:4:1
   |
-5 | #[get()] //~ ERROR missing expected parameter
+4 | #[get()]
   | ^^^^^^^^
   |
   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
   --- help: #[get] can only be used on functions
-  --> $DIR/route-attribute-general-syntax.rs:11:1
-   |
-11 | struct S;
-   | ^^^^^^
+ --> $DIR/route-attribute-general-syntax.rs:9:1
+  |
+9 | struct S;
+  | ^^^^^^
 
 error: expected `fn`
   --- help: #[get] can only be used on functions
-  --> $DIR/route-attribute-general-syntax.rs:16:1
+  --> $DIR/route-attribute-general-syntax.rs:12:1
    |
-16 | enum A {  }
+12 | enum A {  }
    | ^^^^
 
 error: expected `fn`
   --- help: #[get] can only be used on functions
-  --> $DIR/route-attribute-general-syntax.rs:21:1
+  --> $DIR/route-attribute-general-syntax.rs:15:1
    |
-21 | trait Foo {  }
+15 | trait Foo {  }
    | ^^^^^
 
 error: expected `fn`
   --- help: #[get] can only be used on functions
-  --> $DIR/route-attribute-general-syntax.rs:26:1
+  --> $DIR/route-attribute-general-syntax.rs:18:1
    |
-26 | impl S {  }
+18 | impl S {  }
    | ^^^^
 
 error: expected key/value pair
-  --> $DIR/route-attribute-general-syntax.rs:32:12
+  --> $DIR/route-attribute-general-syntax.rs:21:12
    |
-32 | #[get("/", 123)] //~ ERROR expected
+21 | #[get("/", 123)]
    |            ^^^
 
 error: expected key/value pair
-  --> $DIR/route-attribute-general-syntax.rs:35:12
+  --> $DIR/route-attribute-general-syntax.rs:24:12
    |
-35 | #[get("/", "/")] //~ ERROR expected
+24 | #[get("/", "/")]
    |            ^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-  --> $DIR/route-attribute-general-syntax.rs:38:7
+  --> $DIR/route-attribute-general-syntax.rs:27:7
    |
-38 | #[get(data = "<foo>", "/")] //~ ERROR unexpected keyed parameter
+27 | #[get(data = "<foo>", "/")]
    |       ^^^^
 
 error: unexpected attribute parameter: `unknown`
-  --> $DIR/route-attribute-general-syntax.rs:41:12
+  --> $DIR/route-attribute-general-syntax.rs:30:12
    |
-41 | #[get("/", unknown = "foo")] //~ ERROR unexpected
+30 | #[get("/", unknown = "foo")]
    |            ^^^^^^^
 
 error: malformed attribute
   --- help: expected syntax: #[get(key = value, ..)]
-  --> $DIR/route-attribute-general-syntax.rs:44:1
+  --> $DIR/route-attribute-general-syntax.rs:33:1
    |
-44 | #[get("/", ...)] //~ ERROR malformed
+33 | #[get("/", ...)]
    | ^^^^^^^^^^^^^^^^
    |
    = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: handler arguments cannot be ignored
   --- help: all handler arguments must be of the form: `ident: Type`
-  --> $DIR/route-attribute-general-syntax.rs:51:7
+  --> $DIR/route-attribute-general-syntax.rs:39:7
    |
-51 | fn c1(_: usize) {} //~ ERROR cannot be ignored
+39 | fn c1(_: usize) {}
    |       ^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:56:7
+  --> $DIR/route-attribute-general-syntax.rs:43:7
    |
-56 | #[get(100)] //~ ERROR expected string
+43 | #[get(100)]
    |       ^^^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:59:7
+  --> $DIR/route-attribute-general-syntax.rs:46:7
    |
-59 | #[get('/')] //~ ERROR expected string
+46 | #[get('/')]
    |       ^^^
 
 error: invalid value: expected integer literal
-  --> $DIR/route-attribute-general-syntax.rs:62:19
+  --> $DIR/route-attribute-general-syntax.rs:49:19
    |
-62 | #[get("/", rank = "1")] //~ ERROR expected integer
+49 | #[get("/", rank = "1")]
    |                   ^^^
 
 error: invalid value: expected integer literal
-  --> $DIR/route-attribute-general-syntax.rs:65:19
+  --> $DIR/route-attribute-general-syntax.rs:52:19
    |
-65 | #[get("/", rank = '1')] //~ ERROR expected integer
+52 | #[get("/", rank = '1')]
    |                   ^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:70:21
+  --> $DIR/route-attribute-general-syntax.rs:57:21
    |
-70 | #[get("/", format = "applicationx-custom")] //~ ERROR invalid or unknown media type
+57 | #[get("/", format = "applicationx-custom")]
    |                     ^^^^^^^^^^^^^^^^^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:73:21
+  --> $DIR/route-attribute-general-syntax.rs:60:21
    |
-73 | #[get("/", format = "")] //~ ERROR invalid or unknown media type
+60 | #[get("/", format = "")]
    |                     ^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:76:21
+  --> $DIR/route-attribute-general-syntax.rs:63:21
    |
-76 | #[get("/", format = "//")] //~ ERROR invalid or unknown media type
+63 | #[get("/", format = "//")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:79:21
+  --> $DIR/route-attribute-general-syntax.rs:66:21
    |
-79 | #[get("/", format = "/")] //~ ERROR invalid or unknown media type
+66 | #[get("/", format = "/")]
    |                     ^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:82:21
+  --> $DIR/route-attribute-general-syntax.rs:69:21
    |
-82 | #[get("/", format = "a/")] //~ ERROR invalid or unknown media type
+69 | #[get("/", format = "a/")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:85:21
+  --> $DIR/route-attribute-general-syntax.rs:72:21
    |
-85 | #[get("/", format = "/a")] //~ ERROR invalid or unknown media type
+72 | #[get("/", format = "/a")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:88:21
+  --> $DIR/route-attribute-general-syntax.rs:75:21
    |
-88 | #[get("/", format = "/a/")] //~ ERROR invalid or unknown media type
+75 | #[get("/", format = "/a/")]
    |                     ^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:91:21
+  --> $DIR/route-attribute-general-syntax.rs:78:21
    |
-91 | #[get("/", format = "a/b/")] //~ ERROR invalid or unknown media type
+78 | #[get("/", format = "a/b/")]
    |                     ^^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:94:21
+  --> $DIR/route-attribute-general-syntax.rs:81:21
    |
-94 | #[get("/", format = "unknown")] //~ ERROR unknown media type
+81 | #[get("/", format = "unknown")]
    |                     ^^^^^^^^^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:97:21
+  --> $DIR/route-attribute-general-syntax.rs:84:21
    |
-97 | #[get("/", format = 12)] //~ ERROR expected string
+84 | #[get("/", format = 12)]
    |                     ^^
 
 error: invalid value: expected string literal
-   --> $DIR/route-attribute-general-syntax.rs:100:21
-    |
-100 | #[get("/", format = 'j')] //~ ERROR expected string
-    |                     ^^^
+  --> $DIR/route-attribute-general-syntax.rs:87:21
+   |
+87 | #[get("/", format = 'j')]
+   |                     ^^^
 
 error: invalid or unknown media type
-   --> $DIR/route-attribute-general-syntax.rs:103:21
-    |
-103 | #[get("/", format = "text//foo")] //~ ERROR invalid or unknown media type
-    |                     ^^^^^^^^^^^
+  --> $DIR/route-attribute-general-syntax.rs:90:21
+   |
+90 | #[get("/", format = "text//foo")]
+   |                     ^^^^^^^^^^^
 
 error: invalid HTTP method for route handlers
   --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-   --> $DIR/route-attribute-general-syntax.rs:108:9
-    |
-108 | #[route(CONNECT, "/")] //~ ERROR invalid HTTP method for route
-    |         ^^^^^^^
+  --> $DIR/route-attribute-general-syntax.rs:95:9
+   |
+95 | #[route(CONNECT, "/")]
+   |         ^^^^^^^
 
 error: invalid HTTP method
   --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-   --> $DIR/route-attribute-general-syntax.rs:112:9
-    |
-112 | #[route(FIX, "/")] //~ ERROR invalid HTTP method
-    |         ^^^
+  --> $DIR/route-attribute-general-syntax.rs:98:9
+   |
+98 | #[route(FIX, "/")]
+   |         ^^^
 
 error: expected identifier, found string literal
   --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-   --> $DIR/route-attribute-general-syntax.rs:116:9
+   --> $DIR/route-attribute-general-syntax.rs:101:9
     |
-116 | #[route("hi", "/")] //~ ERROR expected identifier
+101 | #[route("hi", "/")]
     |         ^^^^
 
 error: expected identifier, found string literal
   --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-   --> $DIR/route-attribute-general-syntax.rs:120:9
+   --> $DIR/route-attribute-general-syntax.rs:104:9
     |
-120 | #[route("GET", "/")] //~ ERROR expected identifier
+104 | #[route("GET", "/")]
     |         ^^^^^
 
 error: expected identifier, found integer literal
   --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-   --> $DIR/route-attribute-general-syntax.rs:124:9
+   --> $DIR/route-attribute-general-syntax.rs:107:9
     |
-124 | #[route(120, "/")] //~ ERROR expected identifier
+107 | #[route(120, "/")]
     |         ^^^

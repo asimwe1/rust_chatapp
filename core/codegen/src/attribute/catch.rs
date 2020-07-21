@@ -63,7 +63,7 @@ pub fn _catch(
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 1 {
-        return Err(catch.function.sig.inputs.span()
+        return Err(catch.function.sig.paren_token.span
             .error("invalid number of arguments: must be zero or one")
             .help("catchers may optionally take an argument of type `&Request`"));
     }
@@ -72,7 +72,7 @@ pub fn _catch(
     // that prevents this from working (error on `Output` type of `Future`), or
     // this simply isn't possible with `async fn`.
     // // Typecheck the catcher function if it has arguments.
-    // user_catcher_fn_name.set_span(catch.function.sig.inputs.span().into());
+    // user_catcher_fn_name.set_span(catch.function.sig.paren_token.span.into());
     // let user_catcher_fn_call = catch.function.sig.inputs.first()
     //     .map(|arg| {
     //         let ty = quote!(fn(&#Request) -> _).respanned(Span::call_site().into());
@@ -96,7 +96,10 @@ pub fn _catch(
 
     // Set the `req` span to that of the arg for a correct `Wrong type` span.
     let input = catch.function.sig.inputs.first()
-        .map(|arg| req.respanned(arg.span().into()));
+        .map(|arg| match arg {
+            syn::FnArg::Receiver(_) => req.respanned(arg.span()),
+            syn::FnArg::Typed(a) => req.respanned(a.ty.span())
+        });
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
@@ -138,5 +141,5 @@ pub fn catch_attribute(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream
 ) -> TokenStream {
-    _catch(args, input).unwrap_or_else(|d| d.emit_as_tokens())
+    _catch(args, input).unwrap_or_else(|d| d.emit_as_item_tokens())
 }
