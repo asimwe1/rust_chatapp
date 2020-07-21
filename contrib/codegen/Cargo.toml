@@ -20,7 +20,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "57d6eb80" }
+devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "952866f" }
 
 [build-dependencies]
 yansi = "0.5"
