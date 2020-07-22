@@ -78,6 +78,18 @@ necessary when building more interesting applications. The
 [Requests](../requests) chapter, which follows this one, has further details on
 routing and error handling.
 
+! note: We prefer `#[macro_use]`, but you may prefer explicit imports.
+
+  Throughout this guide and the majority of Rocket's documentation, we import
+  `rocket` explicitly with `#[macro_use]` even though the Rust 2018 edition
+  makes explicitly importing crates optional. However, explicitly importing with
+  `#[macro_use]` imports macros globally, allowing you to use Rocket's macros
+  anywhere in your application without importing them explicitly.
+
+  You may instead prefer to import macros explicitly or refer to them with
+  absolute paths: `use rocket::get;` or `#[rocket::get]`. The [`hello_2018`
+  example](@example/hello_2018) showcases this alternative.
+
 ## Mounting
 
 Before Rocket can dispatch requests to a route, the route needs to be _mounted_:
