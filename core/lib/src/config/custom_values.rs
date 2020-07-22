@@ -2,7 +2,7 @@ use std::fmt;
 
 #[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey};
 
-use crate::http::private::Key;
+use crate::http::private::cookie::Key;
 use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};
 use crate::data::Limits;
 
@@ -23,7 +23,7 @@ impl SecretKey {
     #[inline]
     pub(crate) fn is_generated(&self) -> bool {
         match *self {
-            #[cfg(feature = "private-cookies")]
+            #[cfg(feature = "secrets")]
             SecretKey::Generated(_) => true,
             _ => false
         }
@@ -31,15 +31,17 @@ impl SecretKey {
 }
 
 impl fmt::Display for SecretKey {
+    #[cfg(feature = "secrets")]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        #[cfg(feature = "private-cookies")]
         match *self {
             SecretKey::Generated(_) => write!(f, "generated"),
             SecretKey::Provided(_) => write!(f, "provided"),
         }
+    }
 
-        #[cfg(not(feature = "private-cookies"))]
-        write!(f, "private-cookies disabled")
+    #[cfg(not(feature = "secrets"))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "private-cookies disabled".fmt(f)
     }
 }
 

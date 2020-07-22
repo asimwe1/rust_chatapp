@@ -1,7 +1,7 @@
 use std::io;
 use tokio::io::AsyncReadExt;
 
-use crate::{Response, local::asynchronous};
+use crate::{Response, local::asynchronous, http::CookieJar};
 
 use super::Client;
 
@@ -58,6 +58,10 @@ pub struct LocalResponse<'c> {
 impl LocalResponse<'_> {
     fn _response(&self) -> &Response<'_> {
         &self.inner._response()
+    }
+
+    pub(crate) fn _cookies(&self) -> &CookieJar<'_> {
+        self.inner._cookies()
     }
 
     fn _into_string(self) -> Option<String> {

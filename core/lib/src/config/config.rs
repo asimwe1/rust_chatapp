@@ -4,11 +4,11 @@ use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
 
+use crate::http::private::cookie::Key;
 use crate::config::Environment::*;
 use crate::config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use crate::config::{FullConfig, Table, Value, Array, Datetime};
 use crate::data::Limits;
-use crate::http::private::Key;
 
 use super::custom_values::*;
 

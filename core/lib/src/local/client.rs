@@ -54,7 +54,7 @@ macro_rules! pub_client_impl {
     ///
     /// This is typically the desired mode of operation for a `Client` as it
     /// removes the burden of manually tracking cookies. Under some
-    /// circumstances, however, disabling this tracking may be desired. The
+    /// circumstances, however, disabling tracking may be desired. The
     /// [`untracked()`](Client::untracked()) method creates a `Client` that
     /// _will not_ track cookies.
     ///
@@ -131,6 +131,29 @@ macro_rules! pub_client_impl {
     #[inline(always)]
     pub fn cargo(&self) -> &Cargo {
         self._cargo()
+    }
+
+    /// Returns a cookie jar containing all of the cookies this client is
+    /// currently tracking.
+    ///
+    /// If cookie tracking is disabled, the returned jar will always be empty.
+    /// Otherwise, it will contains all of the cookies collected from responses
+    /// to requests dispatched by this client that have not expired.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $import]
+    ///
+    /// # Client::_test(|client, _, _| {
+    /// let client: &Client = client;
+    /// let cookie = client.cookies();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn cookies(&self) -> crate::http::CookieJar<'_> {
+        let key = self.rocket().config.secret_key();
+        crate::http::CookieJar::from(self._cookies().clone(), key)
     }
 
     req_method!($import, "GET", get, Method::Get);

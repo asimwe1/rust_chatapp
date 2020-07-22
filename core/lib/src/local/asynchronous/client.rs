@@ -1,9 +1,8 @@
-use std::sync::RwLock;
 use std::borrow::Cow;
 
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
 use crate::rocket::{Rocket, Cargo};
-use crate::http::{Method, private::CookieJar};
+use crate::http::{private::cookie, Method};
 use crate::error::LaunchError;
 
 /// An `async` client to construct and dispatch local requests.
@@ -14,19 +13,17 @@ use crate::error::LaunchError;
 ///
 /// ## Multithreaded Synchronization Pitfalls
 ///
-/// Unlike its [`blocking`](crate::local::blocking) variant, this `async` `Client`
-/// implements `Sync`. However, using it in a multithreaded environment while
-/// tracking cookies can result in surprising, non-deterministic behavior. This
-/// is because while cookie modifications are serialized, the exact ordering
-/// depends on when requests are dispatched. Specifically, when cookie tracking
-/// is enabled, all request dispatches are serialized, which in-turn serializes
-/// modifications to the internally tracked cookies.
+/// Unlike its [`blocking`](crate::local::blocking) variant, this `async`
+/// `Client` implements `Sync`. However, using it in a multithreaded environment
+/// while tracking cookies can result in surprising, non-deterministic behavior.
+/// This is because while cookie modifications are serialized, the ordering
+/// depends on the ordering of request dispatch.
 ///
 /// If possible, refrain from sharing a single instance of `Client` across
 /// multiple threads. Instead, prefer to create a unique instance of `Client`
-/// per thread. If it's not possible, ensure that either you are not depending
-/// on cookies, the ordering of their modifications, or both, or have arranged
-/// for dispatches to occur in a deterministic ordering.
+/// per thread. If this is not possible, ensure that you are not depending on
+/// the ordering of cookie modifications or have arranged for request dispatch
+/// to occur in a deterministic manner.
 ///
 /// ## Example
 ///
@@ -47,7 +44,8 @@ use crate::error::LaunchError;
 /// ```
 pub struct Client {
     cargo: Cargo,
-    pub(in super) cookies: Option<RwLock<CookieJar>>,
+    pub(in super) tracked: bool,
+    pub(in super) cookies: cookie::CookieJar,
 }
 
 impl Client {
@@ -56,13 +54,9 @@ impl Client {
         tracked: bool
     ) -> Result<Client, LaunchError> {
         rocket.prelaunch_check().await?;
+        let cargo = rocket.into_cargo().await;
 
-        let cookies = match tracked {
-            true => Some(RwLock::new(CookieJar::new())),
-            false => None
-        };
-
-        Ok(Client { cargo: rocket.into_cargo().await, cookies })
+        Ok(Client { cargo, tracked, cookies: cookie::CookieJar::new() })
     }
 
     // WARNING: This is unstable! Do not use this method outside of Rocket!
@@ -82,6 +76,11 @@ impl Client {
     #[inline(always)]
     pub(crate) fn _cargo(&self) -> &Cargo {
         &self.cargo
+    }
+
+    #[inline(always)]
+    pub(crate) fn _cookies(&self) -> &cookie::CookieJar {
+        &self.cookies
     }
 
     #[inline(always)]

@@ -3,6 +3,7 @@
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
+#![cfg_attr(nightly, feature(doc_cfg))]
 
 #![warn(rust_2018_idioms)]
 
@@ -35,19 +36,11 @@
 //!
 //! ## Usage
 //!
-//! First, depend on `rocket` in `Cargo.toml`:
+//! Depend on `rocket` in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! rocket = "0.5.0-dev"
-//! ```
-//!
-//! Then, add the following to the top of your `main.rs` file:
-//!
-//! ```rust
-//! #[macro_use] extern crate rocket;
-//! # #[get("/")] fn hello() { }
-//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
 //! ```
 //!
 //! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
@@ -66,6 +59,20 @@
 //!     rocket::ignite().mount("/", routes![hello])
 //! }
 //! ```
+//!
+//! ## Features
+//!
+//! The `secrets` feature, which enables [private cookies], is enabled by
+//! default. This necessitates pulling in additional dependencies. To avoid
+//! these dependencies when your application does not use private cookies,
+//! disable the `secrets` feature:
+//!
+//! ```toml
+//! [dependencies]
+//! rocket = { version = "0.5.0-dev", default-features = false }
+//! ```
+//!
+//! [private cookies]: crate::http::CookieJar#private-cookies
 //!
 //! ## Configuration
 //!

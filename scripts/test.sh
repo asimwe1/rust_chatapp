@@ -106,7 +106,7 @@ if [ "$1" = "--contrib" ]; then
   popd > /dev/null 2>&1
 elif [ "$1" = "--core" ]; then
   FEATURES=(
-    private-cookies # this is already tested since it's the default feature
+    secrets
     tls
   )
 
@@ -117,7 +117,6 @@ elif [ "$1" = "--core" ]; then
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing core [${feature}]..."
-
     $CARGO test --no-default-features --features "${feature}"
   done
 

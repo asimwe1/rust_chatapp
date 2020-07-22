@@ -14,11 +14,12 @@ fn test_submit() {
         .dispatch();
 
     let cookie_headers: Vec<_> = response.headers().get("Set-Cookie").collect();
-    let location_headers: Vec<_> = response.headers().get("Location").collect();
+    assert_eq!(cookie_headers.len(), 1);
+    assert!(cookie_headers[0].starts_with("message=Hello%20from%20Rocket!"));
 
-    assert_eq!(response.status(), Status::SeeOther);
-    assert_eq!(cookie_headers, vec!["message=Hello%20from%20Rocket!".to_string()]);
+    let location_headers: Vec<_> = response.headers().get("Location").collect();
     assert_eq!(location_headers, vec!["/".to_string()]);
+    assert_eq!(response.status(), Status::SeeOther);
 }
 
 fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {

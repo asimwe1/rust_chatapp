@@ -1,13 +1,9 @@
-#[macro_use]
-#[cfg(feature = "private-cookies")]
-extern crate rocket;
+#[cfg(feature = "secrets")]
+mod private_cookies {
+    use rocket::http::CookieJar;
 
-#[cfg(feature = "private-cookies")]
-mod private_cookie_test {
-    use rocket::http::Cookies;
-
-    #[get("/")]
-    fn return_private_cookie(mut cookies: Cookies) -> Option<String> {
+    #[rocket::get("/")]
+    fn return_private_cookie(cookies: &CookieJar<'_>) -> Option<String> {
         match cookies.get_private("cookie_name") {
             Some(cookie) => Some(cookie.value().into()),
             None => None,
@@ -16,9 +12,9 @@ mod private_cookie_test {
 
     mod tests {
         use super::*;
+        use rocket::routes;
         use rocket::local::blocking::Client;
-        use rocket::http::Cookie;
-        use rocket::http::Status;
+        use rocket::http::{Cookie, Status};
 
         #[test]
         fn private_cookie_is_returned() {

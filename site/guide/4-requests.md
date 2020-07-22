@@ -438,7 +438,7 @@ more about request guards and implementing them, see the [`FromRequest`]
 documentation.
 
 [`FromRequest`]: @api/rocket/request/trait.FromRequest.html
-[`Cookies`]: @api/rocket/http/enum.Cookies.html
+[`CookieJar`]: @api/rocket/http/struct.CookieJar.html
 
 ### Custom Guards
 
@@ -568,34 +568,33 @@ it always succeeds. The user is redirected to a log in page.
 
 ## Cookies
 
-[`Cookies`] is an important, built-in request guard: it allows you to get, set,
-and remove cookies. Because `Cookies` is a request guard, an argument of its
-type can simply be added to a handler:
+A reference to a [`CookieJar`] is an important, built-in request guard: it
+allows you to get, set, and remove cookies. Because `&CookieJar` is a request
+guard, an argument of its type can simply be added to a handler:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
-use rocket::http::Cookies;
+use rocket::http::CookieJar;
 
 #[get("/")]
-fn index(cookies: Cookies) -> Option<String> {
-    cookies.get("message")
-        .map(|value| format!("Message: {}", value))
+fn index(cookies: &CookieJar<'_>) -> Option<String> {
+    cookies.get("message").map(|crumb| format!("Message: {}", crumb.value()))
 }
 ```
 
 This results in the incoming request's cookies being accessible from the
 handler. The example above retrieves a cookie named `message`. Cookies can also
-be set and removed using the `Cookies` guard. The [cookies example] on GitHub
-illustrates further use of the `Cookies` type to get and set cookies, while the
-[`Cookies`] documentation contains complete usage information.
+be set and removed using the `CookieJar` guard. The [cookies example] on GitHub
+illustrates further use of the `CookieJar` type to get and set cookies, while
+the [`CookieJar`] documentation contains complete usage information.
 
 [cookies example]: @example/cookies
 
 ### Private Cookies
 
-Cookies added via the [`Cookies::add()`] method are set _in the clear._ In other
-words, the value set is visible by the client. For sensitive data, Rocket
+Cookies added via the [`CookieJar::add()`] method are set _in the clear._ In
+other words, the value set is visible to the client. For sensitive data, Rocket
 provides _private_ cookies.
 
 Private cookies are just like regular cookies except that they are encrypted
@@ -612,37 +611,25 @@ methods are suffixed with `_private`. These methods are: [`get_private`],
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-use rocket::http::{Cookie, Cookies};
+use rocket::http::{Cookie, CookieJar};
 use rocket::response::{Flash, Redirect};
 
 /// Retrieve the user's ID, if any.
 #[get("/user_id")]
-fn user_id(mut cookies: Cookies) -> Option<String> {
+fn user_id(cookies: &CookieJar<'_>) -> Option<String> {
     cookies.get_private("user_id")
-        .map(|cookie| format!("User ID: {}", cookie.value()))
+        .map(|crumb| format!("User ID: {}", crumb.value()))
 }
 
 /// Remove the `user_id` cookie.
 #[post("/logout")]
-fn logout(mut cookies: Cookies) -> Flash<Redirect> {
+fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
     cookies.remove_private(Cookie::named("user_id"));
     Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 ```
 
-[`Cookies::add()`]: @api/rocket/http/enum.Cookies.html#method.add
-
-Support for private cookies, which depends on the [`ring`] library, can be
-omitted at build time by disabling Rocket's default features, in-turn disabling
-the default `private-cookies` feature. To do so, modify your `Cargo.toml` file
-so that you depend on `rocket` as follows:
-
-```toml
-[dependencies]
-rocket = { version = "0.5.0-dev", default-features = false }
-```
-
-[`ring`]: https://github.com/briansmith/ring
+[`CookieJar::add()`]: @api/rocket/http/struct.CookieJar.html#method.add
 
 ### Secret Key
 
@@ -662,81 +649,9 @@ can be generated with the command `openssl rand -base64 32`.
 For more information on configuration, see the [Configuration](../configuration)
 section of the guide.
 
-[`get_private`]: @api/rocket/http/enum.Cookies.html#method.get_private
-[`add_private`]: @api/rocket/http/enum.Cookies.html#method.add_private
-[`remove_private`]: @api/rocket/http/enum.Cookies.html#method.remove_private
-
-### One-At-A-Time
-
-For safety reasons, Rocket currently requires that at most one `Cookies`
-instance be active at a time. It's uncommon to run into this restriction, but it
-can be confusing to handle if it does crop up.
-
-If this does happen, Rocket will emit messages to the console that look as
-follows:
-
-```text
-=> Error: Multiple `Cookies` instances are active at once.
-=> An instance of `Cookies` must be dropped before another can be retrieved.
-=> Warning: The retrieved `Cookies` instance will be empty.
-```
-
-The messages will be emitted when a violating handler is called. The issue can
-be resolved by ensuring that two instances of `Cookies` cannot be active at once
-due to the offending handler. A common error is to have a handler that uses a
-`Cookies` request guard as well as a `Custom` request guard that retrieves
-`Cookies`, as so:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-# use rocket::http::Cookies;
-# type Custom = rocket::http::Method;
-
-#[get("/")]
-fn bad(cookies: Cookies, custom: Custom) { /* .. */ }
-```
-
-Because the `cookies` guard will fire before the `custom` guard, the `custom`
-guard will retrieve an instance of `Cookies` when one already exists for
-`cookies`. This scenario can be fixed by simply swapping the order of the
-guards:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-# use rocket::http::Cookies;
-# type Custom = rocket::http::Method;
-
-#[get("/")]
-fn good(custom: Custom, cookies: Cookies) { /* .. */ }
-```
-
-When using request guards that modify cookies on-demand, such as
-`FlashMessage`, a similar problem occurs. The fix in this case is to `drop` the
-`Cookies` instance before accessing the `FlashMessage`.
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::http::Cookies;
-use rocket::request::FlashMessage;
-
-#[get("/")]
-fn bad(cookies: Cookies, flash: FlashMessage) {
-    // Oh no! `flash` holds a reference to `Cookies` too!
-    let msg = flash.msg();
-}
-
-#[get("/")]
-fn good(cookies: Cookies, flash: FlashMessage) {
-    std::mem::drop(cookies);
-
-    // Now, `flash` holds an _exclusive_ reference to `Cookies`. Whew.
-    let msg = flash.msg();
-}
-```
+[`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
+[`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
+[`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
 
 ## Format
 

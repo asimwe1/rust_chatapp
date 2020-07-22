@@ -30,10 +30,14 @@ indexmap = "1.0"
 state = "0.4"
 tokio-rustls = { version = "0.14.0", optional = true }
 tokio = { version = "0.2.9", features = ["sync", "tcp", "time"] }
-cookie = { version = "0.14.0", features = ["percent-encode"] }
 unicode-xid = "0.2"
 log = "0.4"
 ref-cast = "1.0"
+
+[dependencies.cookie]
+git = "https://github.com/SergioBenitez/cookie-rs.git"
+rev = "3795f2e"
+features = ["percent-encode"]
 
 [dependencies.pear]
 git = "https://github.com/SergioBenitez/Pear.git"
@@ -41,3 +45,6 @@ rev = "4b68055"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }
+
+[build-dependencies]
+version_check = "0.9"

@@ -30,8 +30,8 @@ use super::{Client, LocalResponse};
 /// # });
 /// ```
 pub struct LocalRequest<'c> {
-    client: &'c Client,
-    request: Request<'c>,
+    pub(in super) client: &'c Client,
+    pub(in super) request: Request<'c>,
     data: Vec<u8>,
     uri: Cow<'c, str>,
 }
@@ -47,11 +47,10 @@ impl<'c> LocalRequest<'c> {
         let origin = Origin::parse(&uri).unwrap_or_else(|_| Origin::dummy());
         let request = Request::new(client.rocket(), method, origin.into_owned());
 
-        // Set up any cookies we know about.
-        if let Some(ref jar) = client.cookies {
-            let cookies = jar.read().expect("LocalRequest::new() read lock");
-            for cookie in cookies.iter() {
-                request.cookies().add_original(cookie.clone().into_owned());
+        // Add any cookies we know about.
+        if client.tracked {
+            for crumb in client.cookies.iter() {
+                request.cookies().add_original(crumb.into_cookie());
             }
         }
 
@@ -86,24 +85,24 @@ impl<'c> LocalRequest<'c> {
         // Actually dispatch the request.
         let mut data = Data::local(self.data);
         let token = rocket.preprocess_request(&mut self.request, &mut data).await;
-        let response = LocalResponse::new(self.request, move |request| {
-            rocket.dispatch(token, request, data)
+        let response = LocalResponse::new(self.request, move |req| {
+            rocket.dispatch(token, req, data)
         }).await;
 
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.
-        if let Some(ref jar) = self.client.cookies {
-            let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
+        if self.client.tracked {
+            let jar = &self.client.cookies;
             let current_time = time::OffsetDateTime::now_utc();
-            for cookie in response.cookies() {
+            for cookie in response.cookies().iter() {
                 if let Some(expires) = cookie.expires() {
                     if expires <= current_time {
-                        jar.force_remove(cookie);
+                        jar.force_remove(&cookie);
                         continue;
                     }
                 }
 
-                jar.add(cookie.into_owned());
+                jar.add(cookie.into_cookie());
             }
         }
 

@@ -2,9 +2,9 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 use crate::error::LaunchError;
-use crate::http::Method;
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
 use crate::rocket::{Rocket, Cargo};
+use crate::http::Method;
 
 /// A `blocking` client to construct and dispatch local requests.
 ///
@@ -65,6 +65,11 @@ impl Client {
     #[inline(always)]
     fn _cargo(&self) -> &Cargo {
         self.inner._cargo()
+    }
+
+    #[inline(always)]
+    fn _cookies(&self) -> &cookie::CookieJar {
+        self.inner._cookies()
     }
 
     #[inline(always)]

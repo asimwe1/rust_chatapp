@@ -225,9 +225,9 @@ impl Drop for LaunchError {
 
 use crate::http::uri;
 use crate::http::ext::IntoOwned;
-use crate::http::route::{Error as SegmentError};
+use crate::http::route::Error as SegmentError;
 
-/// Error returned by [`set_uri()`](crate::Route::set_uri()) on invalid URIs.
+/// Error returned by [`Route::map_base()`] on invalid URIs.
 #[derive(Debug)]
 pub enum RouteUriError {
     /// The base (mount point) or route path contains invalid segments.

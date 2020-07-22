@@ -1,10 +1,9 @@
 use std::fmt;
 
 use crate::Header;
-use cookie::Delta;
 
+pub use cookie::{Cookie, CookieCrumb, SameSite, Iter};
 #[doc(hidden)] pub use self::key::*;
-pub use cookie::{Cookie, CookieJar, SameSite};
 
 /// Types and methods to manage a `Key` when private cookies are enabled.
 #[cfg(feature = "private-cookies")]
@@ -27,18 +26,17 @@ mod key {
 
 /// Collection of one or more HTTP cookies.
 ///
-/// The `Cookies` type allows for retrieval of cookies from an incoming request
-/// as well as modifications to cookies to be reflected by Rocket on outgoing
-/// responses. `Cookies` is a smart-pointer; it internally borrows and refers to
-/// the collection of cookies active during a request's life-cycle.
+/// The `CookieJar` type allows for retrieval of cookies from an incoming
+/// request as well as modifications to cookies to be reflected by Rocket on
+/// outgoing responses.
 ///
 /// # Usage
 ///
-/// A type of `Cookies` can be retrieved via its `FromRequest` implementation as
-/// a request guard or via the [`Request::cookies()`] method. Individual cookies
-/// can be retrieved via the [`get()`] and [`get_private()`] methods. Cookies
-/// can be added or removed via the [`add()`], [`add_private()`], [`remove()`],
-/// and [`remove_private()`] methods.
+/// A type of `&CookieJar` can be retrieved via its `FromRequest` implementation
+/// as a request guard or via the [`Request::cookies()`] method. Individual
+/// cookies can be retrieved via the [`get()`] and [`get_private()`] methods.
+/// Cookies can be added or removed via the [`add()`], [`add_private()`],
+/// [`remove()`], and [`remove_private()`] methods.
 ///
 /// [`Request::cookies()`]: rocket::Request::cookies()
 /// [`get()`]: #method.get
@@ -50,27 +48,27 @@ mod key {
 ///
 /// ## Examples
 ///
-/// The following short snippet shows `Cookies` being used as a request guard in
-/// a handler to retrieve the value of a "message" cookie.
+/// The following example shows `&CookieJar` being used as a request guard in a
+/// handler to retrieve the value of a "message" cookie.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::http::Cookies;
+/// use rocket::http::CookieJar;
 ///
 /// #[get("/message")]
-/// fn message(cookies: Cookies) -> Option<String> {
-///     cookies.get("message").map(|c| format!("Message: {}", c.value()))
+/// fn message(jar: &CookieJar<'_>) -> Option<String> {
+///     jar.get("message").map(|c| format!("Message: {}", c.value()))
 /// }
 /// # fn main() {  }
 /// ```
 ///
-/// The following snippet shows `Cookies` being retrieved from a `Request` in a
-/// custom request guard implementation for `User`. A [private cookie]
+/// The following snippet shows `&CookieJar` being retrieved from a `Request` in
+/// a custom request guard implementation for `User`. A [private cookie]
 /// containing a user's ID is retrieved. If the cookie exists and the ID parses
 /// as an integer, a `User` structure is validated. Otherwise, the guard
 /// forwards.
 ///
-/// [private cookie]: Cookies::add_private()
+/// [private cookie]: #method.add_private
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -89,7 +87,7 @@ mod key {
 ///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()
 ///             .get_private("user_id")
-///             .and_then(|cookie| cookie.value().parse().ok())
+///             .and_then(|c| c.value().parse().ok())
 ///             .map(|id| User(id))
 ///             .or_forward(())
 ///     }
@@ -106,7 +104,7 @@ mod key {
 /// manufactured by clients. If you prefer, you can think of private cookies as
 /// being signed and encrypted.
 ///
-/// Private cookies can be retrieved, added, and removed from a `Cookies`
+/// Private cookies can be retrieved, added, and removed from a `CookieJar`
 /// collection via the [`get_private()`], [`add_private()`], and
 /// [`remove_private()`] methods.
 ///
@@ -125,194 +123,82 @@ mod key {
 /// is usually done through tools like `openssl`. Using `openssl`, for instance,
 /// a 256-bit base64 key can be generated with the command `openssl rand -base64
 /// 32`.
-pub enum Cookies<'a> {
-    #[doc(hidden)]
-    Jarred(CookieJar, &'a Key, Box<dyn FnOnce(CookieJar) + Send + 'a>),
-    #[doc(hidden)]
-    Empty(CookieJar)
+#[derive(Clone)]
+pub struct CookieJar<'a> {
+    jar: cookie::CookieJar,
+    key: &'a Key,
 }
 
-impl<'a> Cookies<'a> {
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[inline]
-    #[doc(hidden)]
-    pub fn new<F: FnOnce(CookieJar) + Send + 'a>(jar: CookieJar, key: &'a Key, on_drop: F) -> Cookies<'a> {
-        Cookies::Jarred(jar, key, Box::new(on_drop))
-    }
-
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn empty() -> Cookies<'static> {
-        Cookies::Empty(CookieJar::new())
-    }
-
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn parse_cookie(cookie_str: &str) -> Option<Cookie<'static>> {
-        Cookie::parse_encoded(cookie_str).map(|c| c.into_owned()).ok()
-    }
-
-    /// Adds an original `cookie` to this collection.
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[inline]
-    #[doc(hidden)]
-    pub fn add_original(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _, _) = *self {
-            jar.add_original(cookie)
-        }
-    }
-
+impl<'a> CookieJar<'a> {
     /// Returns a reference to the `Cookie` inside this container with the name
     /// `name`. If no such cookie exists, returns `None`.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::Cookies;
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
     ///
-    /// fn handler(cookies: Cookies) {
-    ///     let cookie = cookies.get("name");
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     let cookie = jar.get("name");
     /// }
     /// ```
-    pub fn get(&self, name: &str) -> Option<&Cookie<'static>> {
-        match *self {
-            Cookies::Jarred(ref jar, _, _) => jar.get(name),
-            Cookies::Empty(_) => None
-        }
+    pub fn get(&self, name: &str) -> Option<CookieCrumb> {
+        self.jar.get(name)
     }
 
-    /// Adds `cookie` to this collection.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{Cookie, Cookies};
-    ///
-    /// fn handler(mut cookies: Cookies) {
-    ///     cookies.add(Cookie::new("name", "value"));
-    ///
-    ///     let cookie = Cookie::build("name", "value")
-    ///         .path("/")
-    ///         .secure(true)
-    ///         .finish();
-    ///
-    ///     cookies.add(cookie);
-    /// }
-    /// ```
-    pub fn add(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _, _) = *self {
-            jar.add(cookie)
-        }
-    }
-
-    /// Removes `cookie` from this collection and generates a "removal" cookies
-    /// to send to the client on response. For correctness, `cookie` must
-    /// contain the same `path` and `domain` as the cookie that was initially
-    /// set. Failure to provide the initial `path` and `domain` will result in
-    /// cookies that are not properly removed.
-    ///
-    /// A "removal" cookie is a cookie that has the same name as the original
-    /// cookie but has an empty value, a max-age of 0, and an expiration date
-    /// far in the past.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{Cookie, Cookies};
-    ///
-    /// fn handler(mut cookies: Cookies) {
-    ///     cookies.remove(Cookie::named("name"));
-    /// }
-    /// ```
-    pub fn remove(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _, _) = *self {
-            jar.remove(cookie)
-        }
-    }
-
-    /// Removes all delta cookies.
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[inline]
-    #[doc(hidden)]
-    pub fn reset_delta(&mut self) {
-        match *self {
-            Cookies::Jarred(ref mut jar, ..) => jar.reset_delta(),
-            Cookies::Empty(ref mut jar) => jar.reset_delta()
-        }
-    }
-
-    /// Returns an iterator over all of the cookies present in this collection.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::Cookies;
-    ///
-    /// fn handler(cookies: Cookies) {
-    ///     for c in cookies.iter() {
-    ///         println!("Name: '{}', Value: '{}'", c.name(), c.value());
-    ///     }
-    /// }
-    /// ```
-    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
-        match *self {
-            Cookies::Jarred(ref jar, _, _) => jar.iter(),
-            Cookies::Empty(ref jar) => jar.iter()
-        }
-    }
-
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[inline]
-    #[doc(hidden)]
-    pub fn delta(&self) -> Delta<'_> {
-        match *self {
-            Cookies::Jarred(ref jar, _, _) => jar.delta(),
-            Cookies::Empty(ref jar) => jar.delta()
-        }
-    }
-}
-
-impl<'a> Drop for Cookies<'a> {
-    fn drop(&mut self) {
-        if let Cookies::Jarred(ref mut jar, _, ref mut on_drop) = *self {
-            let jar = std::mem::replace(jar, CookieJar::new());
-            let on_drop = std::mem::replace(on_drop, Box::new(|_| {}));
-            on_drop(jar);
-        }
-    }
-}
-
-#[cfg(feature = "private-cookies")]
-impl Cookies<'_> {
     /// Returns a reference to the `Cookie` inside this collection with the name
     /// `name` and authenticates and decrypts the cookie's value, returning a
     /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
     /// cookie fails to authenticate or decrypt, `None` is returned.
     ///
-    /// This method is only available when the `private-cookies` feature is
-    /// enabled.
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     let cookie = jar.get_private("name");
+    /// }
+    /// ```
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+    pub fn get_private(&self, name: &str) -> Option<Cookie<'static>> {
+        self.jar.private(&*self.key).get(name)
+    }
+
+    /// Adds `cookie` to this collection.
+    ///
+    /// Unless a value is set for the given property, the following defaults are
+    /// set on `cookie` before being added to `self`:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Strict`
     ///
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::Cookies;
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, SameSite, CookieJar};
     ///
-    /// fn handler(mut cookies: Cookies) {
-    ///     let cookie = cookies.get_private("name");
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     jar.add(Cookie::new("first", "value"));
+    ///
+    ///     let cookie = Cookie::build("other", "value_two")
+    ///         .path("/")
+    ///         .secure(true)
+    ///         .same_site(SameSite::Lax);
+    ///
+    ///     jar.add(cookie.finish());
     /// }
     /// ```
-    pub fn get_private(&mut self, name: &str) -> Option<Cookie<'static>> {
-        match *self {
-            Cookies::Jarred(ref mut jar, key, _) => jar.private(key).get(name),
-            Cookies::Empty(_) => None
-        }
+    pub fn add(&self, mut cookie: Cookie<'static>) {
+        Self::set_defaults(&mut cookie);
+        self.jar.add(cookie)
     }
 
     /// Adds `cookie` to the collection. The cookie's value is encrypted with
@@ -321,7 +207,7 @@ impl Cookies<'_> {
     /// [`get_private`](#method.get_private) and removed using
     /// [`remove_private`](#method.remove_private).
     ///
-    /// Unless a value is supplied for the given key, the following defaults are
+    /// Unless a value is set for the given property, the following defaults are
     /// set on `cookie` before being added to `self`:
     ///
     ///    * `path`: `"/"`
@@ -332,49 +218,174 @@ impl Cookies<'_> {
     /// These defaults ensure maximum usability and security. For additional
     /// security, you may wish to set the `secure` flag.
     ///
-    /// This method is only available when the `private-cookies` feature is
-    /// enabled.
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     jar.add_private(Cookie::new("name", "value"));
+    /// }
+    /// ```
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+    pub fn add_private(&self, mut cookie: Cookie<'static>) {
+        Self::set_private_defaults(&mut cookie);
+        self.jar.private(&*self.key).add(cookie)
+    }
+
+    /// Removes `cookie` from this collection and generates a "removal" cookies
+    /// to send to the client on response. For correctness, `cookie` must
+    /// contain the same `path` and `domain` as the cookie that was initially
+    /// set. Failure to provide the initial `path` and `domain` will result in
+    /// cookies that are not properly removed. For convenience, if a path is not
+    /// set on `cookie`, the `"/"` path will automatically be set.
+    ///
+    /// A "removal" cookie is a cookie that has the same name as the original
+    /// cookie but has an empty value, a max-age of 0, and an expiration date
+    /// far in the past.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{Cookie, Cookies};
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
     ///
-    /// fn handler(mut cookies: Cookies) {
-    ///     cookies.add_private(Cookie::new("name", "value"));
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     jar.remove(Cookie::named("name"));
     /// }
     /// ```
-    pub fn add_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key, _) = *self {
-            Cookies::set_private_defaults(&mut cookie);
-            jar.private(key).add(cookie)
+    pub fn remove(&self, mut cookie: Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
         }
+
+        self.jar.remove(cookie)
+    }
+
+    /// Removes the private `cookie` from the collection.
+    ///
+    /// For correct removal, the passed in `cookie` must contain the same `path`
+    /// and `domain` as the cookie that was initially set. If a path is not set
+    /// on `cookie`, the `"/"` path will automatically be set.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     jar.remove_private(Cookie::named("name"));
+    /// }
+    /// ```
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+    pub fn remove_private(&self, mut cookie: Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
+        }
+
+        self.jar.private(&*self.key).remove(cookie)
+    }
+
+    /// Returns an iterator over all of the cookies present in this collection.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     for c in jar.iter() {
+    ///         println!("Name: {:?}, Value: {:?}", c.name(), c.value());
+    ///     }
+    /// }
+    /// ```
+    pub fn iter(&self) -> impl Iterator<Item = CookieCrumb> + '_ {
+        self.jar.iter()
+    }
+}
+
+/// WARNING: These is unstable! Do not use outside of Rocket!
+#[doc(hidden)]
+impl<'a> CookieJar<'a> {
+    #[inline(always)]
+    pub fn new(key: &'a Key) -> CookieJar<'a> {
+        CookieJar { jar: cookie::CookieJar::new(), key }
+    }
+
+    #[inline(always)]
+    pub fn from(jar: cookie::CookieJar, key: &'a Key) -> CookieJar<'a> {
+        CookieJar { jar, key }
+    }
+
+    /// Removes all delta cookies.
+    #[inline(always)]
+    pub fn reset_delta(&self) {
+        self.jar.reset_delta()
+    }
+
+    #[inline(always)]
+    pub fn delta(&self) -> cookie::Delta {
+        self.jar.delta()
+    }
+
+    /// Adds an original `cookie` to this collection.
+    #[inline(always)]
+    pub fn add_original(&self, cookie: Cookie<'static>) {
+        self.jar.add_original(cookie)
     }
 
     /// Adds an original, private `cookie` to the collection.
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
-    pub fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key, _) = *self {
-            Cookies::set_private_defaults(&mut cookie);
-            jar.private(key).add_original(cookie)
+    #[inline(always)]
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+    pub fn add_original_private(&self, cookie: Cookie<'static>) {
+        self.jar.private(&*self.key).add_original(cookie);
+    }
+
+    /// For each property mentioned below, this method checks if there is a
+    /// provided value and if there is none, sets a default value. Default
+    /// values are:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Strict`
+    ///
+    fn set_defaults(cookie: &mut Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
+        }
+
+        if cookie.same_site().is_none() {
+            cookie.set_same_site(SameSite::Strict);
         }
     }
 
-    /// For each property mentioned below, this method checks
-    /// if there is a provided value and if there is none, sets
-    /// a default value.
-    /// Default values are:
+    /// For each property mentioned below, this method checks if there is a
+    /// provided value and if there is none, sets a default value. Default
+    /// values are:
     ///
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     fn set_private_defaults(cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
+        }
+
+        if cookie.same_site().is_none() {
+            cookie.set_same_site(SameSite::Strict);
         }
 
         if cookie.http_only().is_none() {
@@ -384,48 +395,12 @@ impl Cookies<'_> {
         if cookie.expires().is_none() {
             cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
         }
-
-        if cookie.same_site().is_none() {
-            cookie.set_same_site(SameSite::Strict);
-        }
-    }
-
-    /// Removes the private `cookie` from the collection.
-    ///
-    /// For correct removal, the passed in `cookie` must contain the same `path`
-    /// and `domain` as the cookie that was initially set. If a path is not set
-    /// on `cookie`, the `"/"` path will automatically be set.
-    ///
-    /// This method is only available when the `private-cookies` feature is
-    /// enabled.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{Cookie, Cookies};
-    ///
-    /// fn handler(mut cookies: Cookies) {
-    ///     cookies.remove_private(Cookie::named("name"));
-    /// }
-    /// ```
-    pub fn remove_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key, _) = *self {
-            if cookie.path().is_none() {
-                cookie.set_path("/");
-            }
-
-            jar.private(key).remove(cookie)
-        }
     }
 }
 
-impl fmt::Debug for Cookies<'_> {
+impl fmt::Debug for CookieJar<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Cookies::Jarred(ref jar, _, _) => jar.fmt(f),
-            Cookies::Empty(ref jar) => jar.fmt(f)
-        }
+        self.jar.fmt(f)
     }
 }
 
@@ -437,6 +412,18 @@ impl From<Cookie<'_>> for Header<'static> {
 
 impl From<&Cookie<'_>> for Header<'static> {
     fn from(cookie: &Cookie<'_>) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
+impl From<CookieCrumb> for Header<'static> {
+    fn from(cookie: CookieCrumb) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
+impl From<&CookieCrumb> for Header<'static> {
+    fn from(cookie: &CookieCrumb) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }

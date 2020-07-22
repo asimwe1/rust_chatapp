@@ -118,9 +118,7 @@ macro_rules! pub_request_impl {
 
     /// Add all of the cookies in `cookies` to this request.
     ///
-    /// # Examples
-    ///
-    /// Add `user_id` cookie:
+    /// # Example
     ///
     /// ```rust
     #[doc = $import]
@@ -133,7 +131,9 @@ macro_rules! pub_request_impl {
     /// # });
     /// ```
     #[inline]
-    pub fn cookies(self, cookies: Vec<crate::http::Cookie<'_>>) -> Self {
+    pub fn cookies<'a, C>(self, cookies: C) -> Self
+        where C: IntoIterator<Item = crate::http::Cookie<'a>>
+    {
         for cookie in cookies {
             self._request().cookies().add_original(cookie.into_owned());
         }
@@ -143,10 +143,7 @@ macro_rules! pub_request_impl {
 
     /// Add a [private cookie] to this request.
     ///
-    /// This method is only available when the `private-cookies` feature is
-    /// enabled.
-    ///
-    /// [private cookie]: crate::http::Cookies::add_private()
+    /// [private cookie]: crate::http::CookieJar::add_private()
     ///
     /// # Examples
     ///
@@ -161,8 +158,9 @@ macro_rules! pub_request_impl {
     /// let req = request.private_cookie(Cookie::new("user_id", "sb"));
     /// # });
     /// ```
+    #[cfg(feature = "secrets")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[inline]
-    #[cfg(feature = "private-cookies")]
     pub fn private_cookie(self, cookie: crate::http::Cookie<'static>) -> Self {
         self._request().cookies().add_original_private(cookie);
         self

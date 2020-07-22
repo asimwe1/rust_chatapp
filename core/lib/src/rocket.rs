@@ -359,8 +359,8 @@ impl Rocket {
 
             // Set the cookies. Note that error responses will only include
             // cookies set by the error handler. See `handle_error` for more.
-            for cookie in request.cookies().delta() {
-                response.adjoin_header(cookie);
+            for crumb in request.cookies().delta() {
+                response.adjoin_header(crumb)
             }
 
             response
@@ -651,7 +651,7 @@ impl Rocket {
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
-            warn!("environment is 'production', but no `secret_key` is configured");
+            warn!("environment is 'production' but no `secret_key` is configured");
         }
 
         for (name, value) in config.extras() {

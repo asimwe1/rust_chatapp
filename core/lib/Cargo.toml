@@ -19,9 +19,9 @@ edition = "2018"
 all-features = true
 
 [features]
-default = ["private-cookies"]
+default = ["secrets"]
 tls = ["rocket_http/tls"]
-private-cookies = ["rocket_http/private-cookies"]
+secrets = ["rocket_http/private-cookies"]
 
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
@@ -40,6 +40,11 @@ async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.4"
 ubyte = "0.9.1"
+
+[dependencies.cookie]
+git = "https://github.com/SergioBenitez/cookie-rs.git"
+rev = "3795f2e"
+features = ["percent-encode"]
 
 [dependencies.pear]
 git = "https://github.com/SergioBenitez/Pear.git"
