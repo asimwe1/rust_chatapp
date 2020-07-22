@@ -52,7 +52,7 @@ And finally, create a skeleton Rocket application to work off of in
 ```rust
 #[macro_use] extern crate rocket;
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
 }
@@ -109,7 +109,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 # #[macro_use] extern crate rocket;
 # #[get("/")] fn index() { }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index])
 }
@@ -283,7 +283,7 @@ Ensure that the route is mounted at the root path:
 # #[get("/")] fn index() {}
 # #[post("/")] fn upload() {}
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload])
 }
@@ -345,7 +345,7 @@ Make sure that the route is mounted at the root path:
 # #[post("/")] fn upload() {}
 # #[get("/<id>")] fn retrieve(id: String) {}
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload, retrieve])
 }

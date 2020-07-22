@@ -7,11 +7,10 @@
 
 use std::path::PathBuf;
 
-use rocket::{Request, Outcome::*};
 use rocket::http::ext::Normalize;
 use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromData};
-use rocket::request::Form;
+use rocket::request::{Request, Form};
 use rocket::http::{Status, RawStr, ContentType};
 use rocket::tokio::io::AsyncReadExt;
 
@@ -32,7 +31,7 @@ impl FromData for Simple {
         let mut string = String::new();
         let mut stream = data.open().take(64);
         stream.read_to_string(&mut string).await.unwrap();
-        Success(Simple(string))
+        data::Outcome::Success(Simple(string))
     }
 }
 

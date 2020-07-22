@@ -1,14 +1,12 @@
-extern crate rocket;
-
 #[cfg(test)]
 mod tests;
 
 use std::env;
 
-use rocket::{Request, Handler, Route, Data, Catcher, try_outcome};
+use rocket::{Request, Route, Data, Catcher, try_outcome};
 use rocket::http::{Status, RawStr};
 use rocket::response::{Responder, status::Custom};
-use rocket::handler::{Outcome, HandlerFuture, CatcherFuture};
+use rocket::handler::{Handler, Outcome, HandlerFuture, CatcherFuture};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
 use rocket::tokio::fs::File;
@@ -81,8 +79,6 @@ impl CustomHandler {
         vec![Route::new(Get, "/<id>", Self { data })]
     }
 }
-
-// FIXME: Will this work?
 
 #[rocket::async_trait]
 impl Handler for CustomHandler {

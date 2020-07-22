@@ -82,14 +82,14 @@ vars_and_mods! {
     response => rocket::response,
     handler => rocket::handler,
     log => rocket::logger,
-    Outcome => rocket::Outcome,
+    Outcome => rocket::outcome::Outcome,
     FromTransformedData => rocket::data::FromTransformedData,
     Transform => rocket::data::Transform,
     Query => rocket::request::Query,
     FromFormValue => rocket::request::FromFormValue,
-    Request => rocket::Request,
+    Request => rocket::request::Request,
     Response => rocket::response::Response,
-    Data => rocket::Data,
+    Data => rocket::data::Data,
     StaticRouteInfo => rocket::StaticRouteInfo,
     SmallVec => rocket::http::private::SmallVec,
     HandlerFuture => rocket::handler::HandlerFuture,
@@ -322,7 +322,7 @@ macro_rules! route_attribute {
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
         /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
-        /// [`Outcome`]: ../rocket/enum.Outcome.html
+        /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
         /// [`Response`]: ../rocket/struct.Response.html
         /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
         /// [`FromTransformedData` Outcomes]: ../rocket/data/trait.FromTransformedData.html#outcomes
@@ -878,9 +878,9 @@ pub fn catchers(input: TokenStream) -> TokenStream {
     emit!(bang::catchers_macro(input))
 }
 
-/// Type safe generation of route URIs.
+/// Type-safe, URI-safe generation of an [`Origin`] URI from a route.
 ///
-/// The `uri!` macro creates a type-safe, URL safe URI given a route and values
+/// The `uri!` macro creates a type-safe, URL-safe URI given a route and values
 /// for the route's URI parameters. The inputs to the macro are the path to a
 /// route, a colon, and one argument for each dynamic parameter (parameters in
 /// `<>`) in the route's path and query.

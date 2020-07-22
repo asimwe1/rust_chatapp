@@ -294,7 +294,7 @@ use rocket_contrib::databases::diesel;
 #[database("sqlite_logs")]
 struct LogsDbConn(diesel::SqliteConnection);
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().attach(LogsDbConn::fairing())
 }

@@ -25,7 +25,7 @@ use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
-use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
+use crate::shutdown::{Shutdown, ShutdownManaged};
 
 use crate::http::{Method, Status, Header};
 use crate::http::private::{Listener, Connection, Incoming};
@@ -42,7 +42,7 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
     pub(crate) managed_state: Container,
     fairings: Fairings,
-    shutdown_handle: ShutdownHandle,
+    shutdown_handle: Shutdown,
     shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
@@ -122,7 +122,7 @@ impl Rocket {
             catchers: HashMap::new(),
             managed_state: Container::new(),
             fairings: Fairings::new(),
-            shutdown_handle: ShutdownHandle(mpsc::channel(1).0),
+            shutdown_handle: Shutdown(mpsc::channel(1).0),
             shutdown_receiver: None,
         }
     }
@@ -652,8 +652,8 @@ impl Rocket {
 
         let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-        let shutdown_handle = ShutdownHandle(shutdown_sender);
-        managed_state.set(ShutdownHandleManaged(shutdown_handle.clone()));
+        let shutdown_handle = Shutdown(shutdown_sender);
+        managed_state.set(ShutdownManaged(shutdown_handle.clone()));
 
         Rocket {
             config, managed_state, shutdown_handle,
@@ -693,7 +693,7 @@ impl Rocket {
     ///     "Hello!"
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().mount("/hello", routes![hi])
     /// }
@@ -752,7 +752,7 @@ impl Rocket {
     ///     format!("I couldn't find '{}'. Try something else?", req.uri())
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().register(catchers![internal_error, not_found])
     /// }
@@ -790,7 +790,7 @@ impl Rocket {
     ///     format!("The stateful value is: {}", state.0)
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
@@ -821,7 +821,7 @@ impl Rocket {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Launch Message", |_| {
@@ -896,9 +896,8 @@ impl Rocket {
         self.inspect().await.config()
     }
 
-    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
-    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
-    /// request guard.
+    /// Returns a handle which can be used to gracefully terminate this instance
+    /// of Rocket. In routes, use the [`Shutdown`] request guard.
     ///
     /// # Example
     ///
@@ -907,7 +906,7 @@ impl Rocket {
     /// #
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().await.shutdown_handle();
+    /// let handle = rocket.inspect().await.shutdown();
     ///
     /// # if false {
     /// thread::spawn(move || {
@@ -922,7 +921,7 @@ impl Rocket {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn shutdown_handle(&self) -> ShutdownHandle {
+    pub fn shutdown(&self) -> Shutdown {
         self.shutdown_handle.clone()
     }
 
@@ -943,16 +942,17 @@ impl Rocket {
 
     /// Returns a `Future` that drives the server, listening for and dispatching
     /// requests to mounted routes and catchers. The `Future` completes when the
-    /// server is shut down via a [`ShutdownHandle`], encounters a fatal error,
-    /// or if the the `ctrlc` configuration option is set, when `Ctrl+C` is
-    /// pressed.
+    /// server is shut down via [`Shutdown`], encounters a fatal error, or if
+    /// the the `ctrlc` configuration option is set, when `Ctrl+C` is pressed.
     ///
     /// # Error
     ///
     /// If there is a problem starting the application, an [`Error`] is
-    /// returned. Note that a value of type `Error` panics if dropped
-    /// without first being inspected. See the [`Error`] documentation for
-    /// more information.
+    /// returned. Note that a value of type `Error` panics if dropped without
+    /// first being inspected. See the [`Error`] documentation for more
+    /// information.
+    ///
+    /// [`Error`]: crate::error::Error
     ///
     /// # Example
     ///
@@ -1126,7 +1126,7 @@ impl Cargo {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Config Printer", |cargo| {

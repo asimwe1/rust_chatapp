@@ -60,7 +60,7 @@
 //! #[database("sqlite_logs")]
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
-//! #[rocket::launch]
+//! #[launch]
 //! fn rocket() -> rocket::Rocket {
 //!     rocket::ignite().attach(LogsDbConn::fairing())
 //! }
@@ -138,14 +138,14 @@
 //! The example below does just this:
 //!
 //! ```rust
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
 //!
 //! # #[cfg(feature = "diesel_sqlite_pool")]
 //! # mod test {
 //! use std::collections::HashMap;
 //! use rocket::config::{Config, Environment, Value};
 //!
-//! #[rocket::launch]
+//! #[launch]
 //! fn rocket() -> rocket::Rocket {
 //!     let mut database_config = HashMap::new();
 //!     let mut databases = HashMap::new();
@@ -246,7 +246,7 @@
 //! together, a use of the `#[database]` attribute looks as follows:
 //!
 //! ```rust
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
 //! # #[cfg(feature = "diesel_sqlite_pool")]
@@ -259,7 +259,7 @@
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
-//! #[rocket::launch]
+//! #[launch]
 //! fn rocket() -> rocket::Rocket {
 //! #     let mut db_config = HashMap::new();
 //! #     let mut databases = HashMap::new();

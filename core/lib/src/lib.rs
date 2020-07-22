@@ -61,7 +61,7 @@
 //!     "Hello, world!"
 //! }
 //!
-//! #[rocket::launch]
+//! #[launch]
 //! fn rocket() -> rocket::Rocket {
 //!     rocket::ignite().mount("/", routes![hello])
 //! }
@@ -104,7 +104,6 @@ pub mod data;
 pub mod handler;
 pub mod fairing;
 pub mod error;
-pub mod shutdown;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -117,6 +116,7 @@ pub mod http {
     pub use rocket_http::*;
 }
 
+mod shutdown;
 mod router;
 mod rocket;
 mod codegen;
@@ -124,15 +124,14 @@ mod catcher;
 mod ext;
 
 #[doc(inline)] pub use crate::response::Response;
-#[doc(inline)] pub use crate::handler::{Handler, ErrorHandler};
 #[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatchInfo};
-#[doc(inline)] pub use crate::outcome::Outcome;
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
 pub use crate::catcher::Catcher;
 pub use crate::rocket::{Cargo, Rocket};
+pub use crate::shutdown::Shutdown;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {

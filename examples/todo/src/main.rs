@@ -101,7 +101,7 @@ async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
     }
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())

@@ -307,7 +307,6 @@ pub use self::info_kind::{Info, Kind};
 /// # use std::future::Future;
 /// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
-/// # use rocket::Outcome;
 /// # use rocket::{Request, Data, Response};
 /// # use rocket::fairing::{Fairing, Info, Kind};
 /// # use rocket::http::Status;
@@ -359,8 +358,8 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
-///             TimerStart(Some(time)) => Outcome::Success(StartTime(time)),
-///             TimerStart(None) => Outcome::Failure((Status::InternalServerError, ())),
+///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
+///             TimerStart(None) => request::Outcome::Failure((Status::InternalServerError, ())),
 ///         }
 ///     }
 /// }

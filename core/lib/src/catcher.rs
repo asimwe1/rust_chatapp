@@ -50,7 +50,7 @@ use yansi::Color::*;
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
 ///
-/// #[rocket::launch]
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite().register(catchers![internal_error, not_found])
 /// }

@@ -61,7 +61,7 @@ fn not_found(request: &Request<'_>) -> Html<String> {
     Html(html)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])

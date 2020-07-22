@@ -35,7 +35,7 @@ fn sink(sink: Result<Form<FormInput<'_>>, FormError<'_>>) -> String {
     }
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![sink]).mount("/", StaticFiles::from("static/"))
 }

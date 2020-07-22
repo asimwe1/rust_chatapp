@@ -145,15 +145,15 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             type Error = ();
 
             async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                use ::rocket::{Outcome, http::Status};
+                use ::rocket::http::Status;
 
                 let guard = request.guard::<::rocket::State<'_, #pool_type>>();
                 let pool = ::rocket::try_outcome!(guard.await).0.clone();
 
                 #spawn_blocking(move || {
                     match pool.get() {
-                        Ok(conn) => Outcome::Success(#guard_type(conn)),
-                        Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
+                        Ok(conn) => #request::Outcome::Success(#guard_type(conn)),
+                        Err(_) => #request::Outcome::Failure((Status::ServiceUnavailable, ())),
                     }
                 }).await.expect("failed to spawn a blocking task to get a pooled connection")
             }

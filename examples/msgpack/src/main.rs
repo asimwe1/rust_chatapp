@@ -22,7 +22,7 @@ fn create(data: MsgPack<Message<'_>>) -> String {
     data.contents.to_string()
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/message", routes![get, create])
 }

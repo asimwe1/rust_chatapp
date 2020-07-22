@@ -48,7 +48,7 @@ fn index() -> &'static str {
     "
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload, retrieve])
 }

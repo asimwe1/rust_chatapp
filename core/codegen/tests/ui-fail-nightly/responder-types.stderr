@@ -53,4 +53,4 @@ error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is no
 28 | fn foo() -> usize { 0 }
    |             ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
    |
-   = note: required by `rocket::handler::<impl rocket::Outcome<rocket::Response<'o>, rocket::http::Status, rocket::Data>>::from`
+   = note: required by `rocket::handler::<impl rocket::outcome::Outcome<rocket::Response<'o>, rocket::http::Status, rocket::Data>>::from`

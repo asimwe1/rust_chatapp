@@ -131,11 +131,11 @@ impl std::ops::BitOr for Options {
 /// requests for a directory (the default), you might write the following:
 ///
 /// ```rust,no_run
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// #[rocket::launch]
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite().mount("/public", StaticFiles::from("/static"))
 /// }
@@ -154,11 +154,11 @@ impl std::ops::BitOr for Options {
 /// the `static` subdirectory of your crate at `/`, you might write:
 ///
 /// ```rust,no_run
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// #[rocket::launch]
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
@@ -187,11 +187,11 @@ impl StaticFiles {
     /// `/static`.
     ///
     /// ```rust,no_run
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().mount("/static", StaticFiles::from("/www/public"))
     /// }
@@ -200,11 +200,11 @@ impl StaticFiles {
     /// Exactly as before, but set the rank for generated routes to `30`.
     ///
     /// ```rust,no_run
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().mount("/static", StaticFiles::from("/www/public").rank(30))
     /// }
@@ -225,11 +225,11 @@ impl StaticFiles {
     /// index files and dot files.
     ///
     /// ```rust,no_run
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::ignite()

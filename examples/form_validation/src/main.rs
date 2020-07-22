@@ -75,7 +75,7 @@ fn user_page(username: &RawStr) -> String {
     format!("This is {}'s page.", username)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![user_page, login])

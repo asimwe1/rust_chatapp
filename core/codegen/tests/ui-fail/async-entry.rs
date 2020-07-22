@@ -24,12 +24,11 @@ mod main_d {
 mod main_f {
     #[rocket::main]
     async fn main() {
-
         rocket::ignite()
     }
 }
 
-// rocket::launch
+// launch
 
 mod launch_a {
     #[rocket::launch]

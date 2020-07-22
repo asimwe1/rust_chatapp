@@ -167,7 +167,7 @@ requests via the `launch` method. The method starts up the server and waits for
 incoming requests. When a request arrives, Rocket finds the matching route and
 dispatches the request to the route's handler.
 
-We typically use `#[rocket::launch]`, which generates a `main` function.
+We typically use `#[launch]`, which generates a `main` function.
 Our complete _Hello, world!_ application thus looks like:
 
 ```rust
@@ -178,7 +178,7 @@ fn world() -> &'static str {
     "Hello, world!"
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/hello", routes![world])
 }
@@ -242,7 +242,7 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 ! note
 
   Rocket 0.5 uses the tokio (0.2) runtime. The runtime is started for you if you
-  use `#[rocket::launch]` or `#[rocket::main]`, but you can still `launch()` a
+  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a
   rocket instance on a custom-built `Runtime`.
 
 ### Cooperative Multitasking

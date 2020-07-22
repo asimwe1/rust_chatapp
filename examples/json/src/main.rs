@@ -68,7 +68,7 @@ fn not_found() -> JsonValue {
     })
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])

@@ -114,7 +114,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// #[rocket::launch]
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![custom_handler])

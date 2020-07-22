@@ -123,16 +123,17 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///
 /// A data guard is a [request guard] that operates on a request's body data.
 /// Data guards validate, parse, and optionally convert request body data.
-/// Validation and parsing/conversion is implemented through `FromTransformedData`. In
-/// other words, every type that implements `FromTransformedData` is a data guard.
+/// Validation and parsing/conversion is implemented through
+/// `FromTransformedData`. In other words, every type that implements
+/// `FromTransformedData` is a data guard.
 ///
 /// Data guards are used as the target of the `data` route attribute parameter.
 /// A handler can have at most one data guard.
 ///
 /// For many data guards, implementing [`FromData`] will be simpler and
-/// sufficient. All types that implement `FromData` automatically
-/// implement `FromTransformedData`. Thus, when possible, prefer to implement
-/// [`FromData`] instead of `FromTransformedData`.
+/// sufficient. All types that implement `FromData` automatically implement
+/// `FromTransformedData`. Thus, when possible, prefer to implement [`FromData`]
+/// instead of `FromTransformedData`.
 ///
 /// [request guard]: crate::request::FromRequest
 ///
@@ -154,22 +155,23 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 /// # Transforming
 ///
 /// Data guards can optionally _transform_ incoming data before processing it
-/// via an implementation of the [`FromTransformedData::transform()`] method. This is
-/// useful when a data guard requires or could benefit from a reference to body
-/// data as opposed to an owned version. If a data guard has no need to operate
-/// on a reference to body data, [`FromData`] should be implemented
+/// via an implementation of the [`FromTransformedData::transform()`] method.
+/// This is useful when a data guard requires or could benefit from a reference
+/// to body data as opposed to an owned version. If a data guard has no need to
+/// operate on a reference to body data, [`FromData`] should be implemented
 /// instead; it is simpler to implement and less error prone. All types that
 /// implement `FromData` automatically implement `FromTransformedData`.
 ///
 /// When exercising a data guard, Rocket first calls the guard's
-/// [`FromTransformedData::transform()`] method and awaits on the returned future, then
-/// calls the guard's [`FromTransformedData::from_data()`] method and awaits on that
-/// returned future. Rocket stores data returned by [`FromTransformedData::transform()`] on
-/// the stack. If `transform` returns a [`Transform::Owned`], Rocket moves the
-/// data back to the data guard in the subsequent `from_data` call as a
-/// `Transform::Owned`. If instead `transform` returns a [`Transform::Borrowed`]
-/// variant, Rocket calls `borrow()` on the owned value, producing a borrow of
-/// the associated [`FromTransformedData::Borrowed`] type and passing it as a
+/// [`FromTransformedData::transform()`] method and awaits on the returned
+/// future, then calls the guard's [`FromTransformedData::from_data()`] method
+/// and awaits on that returned future. Rocket stores data returned by
+/// [`FromTransformedData::transform()`] on the stack. If `transform` returns a
+/// [`Transform::Owned`], Rocket moves the data back to the data guard in the
+/// subsequent `from_data` call as a `Transform::Owned`. If instead `transform`
+/// returns a [`Transform::Borrowed`] variant, Rocket calls `borrow()` on the
+/// owned value, producing a borrow of the associated
+/// [`FromTransformedData::Borrowed`] type and passing it as a
 /// `Transform::Borrowed`.
 ///
 /// ## Example
@@ -197,7 +199,7 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///
 /// use tokio::io::AsyncReadExt;
 ///
-/// use rocket::{Request, Data, Outcome::*};
+/// use rocket::{Request, Data};
 /// use rocket::data::{FromTransformedData, Outcome, Transform, Transformed, TransformFuture, FromDataFuture};
 /// use rocket::http::Status;
 ///
@@ -218,8 +220,8 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///             let mut stream = data.open().take(NAME_LIMIT);
 ///             let mut string = String::with_capacity((NAME_LIMIT / 2) as usize);
 ///             let outcome = match stream.read_to_string(&mut string).await {
-///                 Ok(_) => Success(string),
-///                 Err(e) => Failure((Status::InternalServerError, NameError::Io(e)))
+///                 Ok(_) => Outcome::Success(string),
+///                 Err(e) => Outcome::Failure((Status::InternalServerError, NameError::Io(e)))
 ///             };
 ///
 ///             // Returning `Borrowed` here means we get `Borrowed` in `from_data`.
@@ -237,11 +239,11 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///             // Perform a crude, inefficient parse.
 ///             let splits: Vec<&str> = string.split(" ").collect();
 ///             if splits.len() != 2 || splits.iter().any(|s| s.is_empty()) {
-///                 return Failure((Status::UnprocessableEntity, NameError::Parse));
+///                 return Outcome::Failure((Status::UnprocessableEntity, NameError::Parse));
 ///             }
 ///
 ///             // Return successfully.
-///             Success(Name { first: splits[0], last: splits[1] })
+///             Outcome::Success(Name { first: splits[0], last: splits[1] })
 ///         })
 ///     }
 /// }
@@ -418,17 +420,18 @@ impl<'a> FromTransformedData<'a> for Data {
     }
 }
 
-/// A simple, less complex variant of [`FromTransformedData`].
+/// A varaint of [`FromTransformedData`] for data guards that don't require
+/// transformations.
 ///
 /// When transformation of incoming data isn't required, data guards should
-/// implement this trait instead of [`FromTransformedData`]. Any type that implements
-/// `FromData` automatically implements `FromTransformedData`. For a description of
-/// data guards, see the [`FromTransformedData`] documentation.
+/// implement this trait instead of [`FromTransformedData`]. Any type that
+/// implements `FromData` automatically implements `FromTransformedData`. For a
+/// description of data guards, see the [`FromTransformedData`] documentation.
 ///
 /// ## Async Trait
 ///
-/// [`FromData`] is an _async_ trait. Implementations of `FromData` must
-/// be decorated with an attribute of `#[rocket::async_trait]`:
+/// [`FromData`] is an _async_ trait. Implementations of `FromData` must be
+/// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
 /// use rocket::request::Request;
@@ -482,8 +485,8 @@ impl<'a> FromTransformedData<'a> for Data {
 /// #
 /// use std::io::Read;
 ///
-/// use rocket::{Request, Data, Outcome, Outcome::*};
-/// use rocket::data::{self, FromData, FromDataFuture};
+/// use rocket::{Request, Data};
+/// use rocket::data::{self, Outcome, FromData, FromDataFuture};
 /// use rocket::http::{Status, ContentType};
 /// use rocket::tokio::io::AsyncReadExt;
 ///
@@ -494,34 +497,34 @@ impl<'a> FromTransformedData<'a> for Data {
 /// impl FromData for Person {
 ///     type Error = String;
 ///
-///     async fn from_data(req: &Request<'_>, data: Data) -> data::Outcome<Self, String> {
+///     async fn from_data(req: &Request<'_>, data: Data) -> Outcome<Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Forward(data);
+///             return Outcome::Forward(data);
 ///         }
 ///
 ///         // Read the data into a String.
 ///         let mut string = String::new();
 ///         let mut reader = data.open().take(LIMIT);
 ///         if let Err(e) = reader.read_to_string(&mut string).await {
-///             return Failure((Status::InternalServerError, format!("{:?}", e)));
+///             return Outcome::Failure((Status::InternalServerError, format!("{:?}", e)));
 ///         }
 ///
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
 ///             Some(i) => (string[..i].to_string(), &string[(i + 1)..]),
-///             None => return Failure((Status::UnprocessableEntity, "':'".into()))
+///             None => return Outcome::Failure((Status::UnprocessableEntity, "':'".into()))
 ///         };
 ///
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(_) => return Failure((Status::UnprocessableEntity, "Age".into()))
+///             Err(_) => return Outcome::Failure((Status::UnprocessableEntity, "Age".into()))
 ///         };
 ///
 ///         // Return successfully.
-///         Success(Person { name, age })
+///         Outcome::Success(Person { name, age })
 ///     }
 /// }
 /// # #[post("/person", data = "<person>")]

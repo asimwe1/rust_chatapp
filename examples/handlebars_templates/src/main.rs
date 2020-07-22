@@ -65,7 +65,7 @@ fn wow_helper(
     Ok(())
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, hello, about])

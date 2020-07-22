@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{Request, Data, Outcome::*};
+use rocket::{Request, Data};
 use rocket::local::blocking::Client;
 use rocket::request::Form;
 use rocket::data::{self, FromData};
@@ -24,10 +24,10 @@ impl FromData for Simple {
         let mut string = String::new();
         let mut stream = data.open().take(64);
         if let Err(_) = stream.read_to_string(&mut string).await {
-            return Failure((Status::InternalServerError, ()));
+            return data::Outcome::Failure((Status::InternalServerError, ()));
         }
 
-        Success(Simple(string))
+        data::Outcome::Success(Simple(string))
     }
 }
 
