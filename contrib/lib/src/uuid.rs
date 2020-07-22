@@ -14,11 +14,13 @@
 //! features = ["uuid"]
 //! ```
 
-pub extern crate uuid as uuid_crate;
+pub extern crate _uuid as uuid_crate;
 
 use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
+
+use serde::{Deserialize, Serialize};
 
 use rocket::request::FromParam;
 use rocket::form::{self, FromFormField, ValueField};
@@ -63,7 +65,8 @@ type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 /// fn user(id: Uuid) -> String {
 ///     format!("User ID: {}", id)
 /// }
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Uuid(uuid_crate::Uuid);
 
 impl Uuid {
@@ -182,5 +185,17 @@ mod test {
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
         Uuid::from_param(uuid_str.into()).unwrap();
+    }
+
+    #[test]
+    fn test_ser_de() {
+        // The main reason for this test is to test that UUID only serializes as
+        // a string token, not anything else. Like a Struct with a named field...
+        use serde_test::{Token, assert_tokens, Configure};
+        let uuid: Uuid = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2".parse().unwrap();
+
+        assert_tokens(&uuid.readable(), &[
+            Token::Str("c1aa1e3b-9614-4895-9ebd-705255fa5bc2"),
+        ]);
     }
 }
