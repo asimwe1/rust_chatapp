@@ -25,7 +25,7 @@ use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
-use crate::shutdown::{Shutdown, ShutdownManaged};
+use crate::shutdown::Shutdown;
 
 use crate::http::{Method, Status, Header};
 use crate::http::private::{Listener, Connection, Incoming};
@@ -35,15 +35,15 @@ use crate::http::uri::Origin;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    manifest: Vec<PreLaunchOp>,
     pub(crate) config: Config,
+    pub(crate) managed_state: Container,
+    manifest: Vec<PreLaunchOp>,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    pub(crate) managed_state: Container,
     fairings: Fairings,
-    shutdown_handle: Shutdown,
     shutdown_receiver: Option<mpsc::Receiver<()>>,
+    pub(crate) shutdown_handle: Shutdown,
 }
 
 /// An operation that occurs prior to launching a Rocket instance.
@@ -652,11 +652,10 @@ impl Rocket {
 
         let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-        let shutdown_handle = Shutdown(shutdown_sender);
-        managed_state.set(ShutdownManaged(shutdown_handle.clone()));
 
         Rocket {
-            config, managed_state, shutdown_handle,
+            config, managed_state,
+            shutdown_handle: Shutdown(shutdown_sender),
             manifest: vec![],
             router: Router::new(),
             default_catchers: catcher::defaults::get(),

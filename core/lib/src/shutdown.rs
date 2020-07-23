@@ -55,9 +55,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Shutdown {
 
     #[inline]
     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(request.state.managed.get::<ShutdownManaged>().0.clone())
+        Outcome::Success(request.state.shutdown.clone())
     }
 }
-
-// Use this type in managed state to avoid placing `Shutdown` in it.
-pub(crate) struct ShutdownManaged(pub Shutdown);
