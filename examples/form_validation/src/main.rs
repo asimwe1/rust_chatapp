@@ -6,7 +6,7 @@ use rocket::response::Redirect;
 use rocket::request::{Form, FromFormValue};
 use rocket::http::RawStr;
 
-use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 #[derive(Debug)]
 struct StrongPassword<'r>(&'r str);
@@ -79,5 +79,5 @@ fn user_page(username: &RawStr) -> String {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![user_page, login])
-        .mount("/", StaticFiles::from("static/"))
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
 }

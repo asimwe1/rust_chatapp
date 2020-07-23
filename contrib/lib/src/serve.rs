@@ -21,6 +21,44 @@ use rocket::http::{Method, uri::Segments, ext::IntoOwned};
 use rocket::handler::{Handler, Outcome};
 use rocket::response::{NamedFile, Redirect};
 
+/// Generates a crate-relative version of `$path`.
+///
+/// This macro is primarily intended for use with [`StaticFiles`] to serve files
+/// from a path relative to the crate root. The macro accepts one parameter,
+/// `$path`, an absolute or relative path. It returns a path (an `&'static str`)
+/// prefixed with the path to the crate root. Use `Path::new()` to retrieve an
+/// `&'static Path`.
+///
+/// See the [relative paths `StaticFiles`
+/// documentation](`StaticFiles`#relative-paths) for an example.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket_contrib::serve::{StaticFiles, crate_relative};
+///
+/// let manual = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
+/// let automatic = crate_relative!("static");
+/// assert_eq!(manual, automatic);
+///
+/// use std::path::Path;
+///
+/// let manual = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
+/// let automatic_1 = Path::new(crate_relative!("static"));
+/// let automatic_2 = Path::new(crate_relative!("/static"));
+/// assert_eq!(manual, automatic_1);
+/// assert_eq!(automatic_1, automatic_2);
+/// ```
+#[macro_export]
+macro_rules! crate_relative {
+    ($path:expr) => {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
+    };
+}
+
+#[doc(inline)]
+pub use crate_relative;
+
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
 /// The valid options are:
@@ -146,22 +184,22 @@ impl std::ops::BitOr for Options {
 /// `/public/<directory>` will be handled by returning the contents of
 /// `/static/<directory>/index.html`.
 ///
-/// `/static` is an absolute path. If your static files are stored relative to
-/// your crate and your project is managed by Cargo, you should either use a
-/// relative path and ensure that your server is started in the crate's root
-/// directory or use the `CARGO_MANIFEST_DIR` environment variable to create an
-/// absolute path relative to your crate root. For example, to serve files in
-/// the `static` subdirectory of your crate at `/`, you might write:
+/// ## Relative Paths
+///
+/// In the example above, `/static` is an absolute path. If your static files
+/// are stored relative to your crate and your project is managed by Cargo, use
+/// the [`crate_relative!`] macro to obtain a path that is relative to your
+/// crate's root. For example, to serve files in the `static` subdirectory of
+/// your crate at `/`, you might write:
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
-/// use rocket_contrib::serve::StaticFiles;
+/// use rocket_contrib::serve::{StaticFiles, crate_relative};
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite()
-///         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
+///     rocket::ignite().mount("/", StaticFiles::from(crate_relative!("/static")))
 /// }
 /// ```
 #[derive(Clone)]

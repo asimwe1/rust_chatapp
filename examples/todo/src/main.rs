@@ -11,7 +11,7 @@ use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{templates::Template, serve::StaticFiles};
+use rocket_contrib::{templates::Template, serve::{StaticFiles, crate_relative}};
 use diesel::SqliteConnection;
 
 use crate::task::{Task, Todo};
@@ -106,7 +106,7 @@ fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
         .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
-        .mount("/", StaticFiles::from("static/"))
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing())
