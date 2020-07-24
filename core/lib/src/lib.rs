@@ -91,6 +91,8 @@ pub use async_trait::*;
 
 #[macro_use] extern crate log;
 
+#[doc(hidden)]
+pub use yansi;
 pub use futures;
 pub use tokio;
 

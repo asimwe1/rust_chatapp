@@ -219,6 +219,10 @@ impl StaticFiles {
     /// [`StaticFiles::new()`]. To choose a different rank for generated routes,
     /// use [`StaticFiles::rank()`].
     ///
+    /// # Panics
+    ///
+    /// Panics if `path` does not exist or is not a directory.
+    ///
     /// # Example
     ///
     /// Serve the static files in the `/www/public` local directory on path
@@ -255,6 +259,10 @@ impl StaticFiles {
     /// `path` with `options` enabled. By default, the handler's routes have a
     /// rank of `10`. To choose a different rank, use [`StaticFiles::rank()`].
     ///
+    /// # Panics
+    ///
+    /// Panics if `path` does not exist or is not a directory.
+    ///
     /// # Example
     ///
     /// Serve the static files in the `/www/public` local directory on path
@@ -276,14 +284,23 @@ impl StaticFiles {
     /// }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        StaticFiles { root: path.as_ref().into(), options, rank: Self::DEFAULT_RANK }
+        use rocket::yansi::Paint;
+
+        let path = path.as_ref();
+        if !path.is_dir() {
+            error!("`StaticFiles` supplied with invalid path");
+            info_!("'{}' is not a directory", Paint::white(path.display()));
+            panic!("refusing to continue due to invalid static files path");
+        }
+
+        StaticFiles { root: path.into(), options, rank: Self::DEFAULT_RANK }
     }
 
     /// Sets the rank for generated routes to `rank`.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
