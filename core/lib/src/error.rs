@@ -211,7 +211,7 @@ use crate::http::route::Error as SegmentError;
 #[derive(Debug)]
 pub enum RouteUriError {
     /// The base (mount point) or route path contains invalid segments.
-    Segment,
+    Segment(String, String),
     /// The route URI is not a valid URI.
     Uri(uri::Error<'static>),
     /// The base (mount point) contains dynamic segments.
@@ -219,8 +219,8 @@ pub enum RouteUriError {
 }
 
 impl<'a> From<(&'a str, SegmentError<'a>)> for RouteUriError {
-    fn from(_: (&'a str, SegmentError<'a>)) -> Self {
-        RouteUriError::Segment
+    fn from((seg, err): (&'a str, SegmentError<'a>)) -> Self {
+        RouteUriError::Segment(seg.into(), err.to_string())
     }
 }
 
@@ -233,8 +233,8 @@ impl<'a> From<uri::Error<'a>> for RouteUriError {
 impl fmt::Display for RouteUriError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RouteUriError::Segment => {
-                write!(f, "The URI contains malformed dynamic route path segments.")
+            RouteUriError::Segment(seg, err) => {
+                write!(f, "Malformed segment '{}': {}", Paint::white(seg), err)
             }
             RouteUriError::DynamicBase => {
                 write!(f, "The mount point contains dynamic parameters.")
