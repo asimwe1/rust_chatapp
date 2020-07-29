@@ -191,6 +191,12 @@ pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> CatcherFuture<'r>;
 /// Type type of `Future` returned by an error handler.
 pub type CatcherFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
+// A handler to use when one is needed temporarily. Don't use outside of Rocket!
+#[doc(hidden)]
+pub fn dummy<'r>(r: &'r Request<'_>, _: Data) -> HandlerFuture<'r> {
+    Outcome::from(r, ()).pin()
+}
+
 impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///

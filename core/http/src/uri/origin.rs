@@ -63,8 +63,8 @@ use state::Storage;
 /// # }
 /// ```
 ///
-/// The [`Origin::to_normalized()`](crate::uri::Origin::to_normalized()) method can be
-/// used to normalize any `Origin`:
+/// The [`Origin::into_normalized()`](crate::uri::Origin::into_normalized())
+/// method can be used to normalize any `Origin`:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -80,7 +80,7 @@ use state::Storage;
 /// # for i in 0..(invalid.len() / 2) {
 /// #     let abnormal = Origin::parse(invalid[i]).unwrap();
 /// #     let expected = Origin::parse(invalid[i + (invalid.len() / 2)]).unwrap();
-/// #     assert_eq!(abnormal.to_normalized(), expected);
+/// #     assert_eq!(abnormal.into_normalized(), expected);
 /// # }
 /// ```
 #[derive(Clone, Debug)]
@@ -170,8 +170,8 @@ impl<'a> Origin<'a> {
     }
 
     // Parses an `Origin` that may contain `<` or `>` characters which are
-    // invalid according to the RFC but used by Rocket's routing URIs Don't use
-    // this outside of Rocket!
+    // invalid according to the RFC but used by Rocket's routing URIs.
+    // Don't use this outside of Rocket!
     #[doc(hidden)]
     pub fn parse_route(string: &'a str) -> Result<Origin<'a>, Error<'a>> {
         crate::parse::uri::route_origin_from_str(string)
@@ -179,8 +179,9 @@ impl<'a> Origin<'a> {
 
     /// Parses the string `string` into an `Origin`. Parsing will never
     /// allocate. This method should be used instead of
-    /// [`Origin::parse()`](crate::uri::Origin::parse()) when the source URI is already
-    /// a `String`. Returns an `Error` if `string` is not a valid origin URI.
+    /// [`Origin::parse()`](crate::uri::Origin::parse()) when the source URI is
+    /// already a `String`. Returns an `Error` if `string` is not a valid origin
+    /// URI.
     ///
     /// # Example
     ///
@@ -266,13 +267,13 @@ impl<'a> Origin<'a> {
     /// let abnormal = Origin::parse("/a/b/c//d").unwrap();
     /// assert!(!abnormal.is_normalized());
     ///
-    /// let normalized = abnormal.to_normalized();
+    /// let normalized = abnormal.into_normalized();
     /// assert!(normalized.is_normalized());
     /// assert_eq!(normalized, Origin::parse("/a/b/c/d").unwrap());
     /// ```
-    pub fn to_normalized(&self) -> Origin<'_> {
+    pub fn into_normalized(mut self) -> Self {
         if self.is_normalized() {
-            Origin::new(self.path(), self.query())
+            self
         } else {
             let mut new_path = String::with_capacity(self.path().len());
             for segment in self.segments() {
@@ -284,7 +285,9 @@ impl<'a> Origin<'a> {
                 new_path.push('/');
             }
 
-            Origin::new(new_path, self.query())
+            // Note: normalization preserves segmments!
+            self.path = Indexed::from(Cow::Owned(new_path));
+            self
         }
     }
 
@@ -624,7 +627,7 @@ mod tests {
     fn normalized() {
         let uri_to_string = |s| Origin::parse(s)
             .unwrap()
-            .to_normalized()
+            .into_normalized()
             .to_string();
 
         assert_eq!(uri_to_string("/"), "/".to_string());

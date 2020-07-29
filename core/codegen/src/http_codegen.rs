@@ -181,7 +181,7 @@ impl FromMeta for Origin {
             })?;
 
         if !uri.is_normalized() {
-            let normalized = uri.to_normalized();
+            let normalized = uri.clone().into_normalized();
             return Err(string.span().error("paths cannot contain empty segments")
                 .note(format!("expected '{}', found '{}'", normalized, uri)));
         }

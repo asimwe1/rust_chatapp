@@ -73,12 +73,14 @@ impl Rocket {
               Paint::blue(&base),
               Paint::magenta(":"));
 
-        for mut route in routes {
-            let path = route.uri.clone();
-            if let Err(e) = route.set_uri(base.clone(), path) {
-                error_!("{}", e);
-                panic!("Invalid route URI.");
-            }
+        for route in routes {
+            let old_route = route.clone();
+            let route = route.map_base(|old| format!("{}{}", base, old))
+                .unwrap_or_else(|e| {
+                    error_!("Route `{}` has a malformed URI.", old_route);
+                    error_!("{}", e);
+                    panic!("Invalid route URI.");
+                });
 
             info_!("{}", route);
             self.router.add(route);
@@ -720,12 +722,12 @@ impl Rocket {
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         let base_uri = Origin::parse_owned(base.to_string())
             .unwrap_or_else(|e| {
-                error_!("Invalid origin URI '{}' used as mount point.", base);
+                error!("Invalid mount point URI: {}.", Paint::white(base));
                 panic!("Error: {}", e);
             });
 
         if base_uri.query().is_some() {
-            error_!("Mount point '{}' contains query string.", base);
+            error!("Mount point '{}' contains query string.", base);
             panic!("Invalid mount point.");
         }
 

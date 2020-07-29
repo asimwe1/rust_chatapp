@@ -209,7 +209,7 @@ fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
 
     let path = format!("{}/{}", mount_point, internal.route_uri.path());
     let query = internal.route_uri.query();
-    Origin::new(path, query).to_normalized().into_owned()
+    Origin::new(path, query).into_normalized().into_owned()
 }
 
 pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
