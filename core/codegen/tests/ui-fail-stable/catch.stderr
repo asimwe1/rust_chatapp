@@ -12,59 +12,56 @@ error: expected `fn`
 9 | const CATCH: &str = "Catcher";
   |       ^^^^^
 
-error: invalid value: expected unsigned integer literal
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+error: expected integer or identifier, found string literal
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:11:9
    |
 11 | #[catch("404")]
    |         ^^^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:14:9
    |
 14 | #[catch(code = "404")]
    |         ^^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:17:9
    |
 17 | #[catch(code = 404)]
    |         ^^^^
 
 error: status must be in range [100, 599]
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:20:9
    |
 20 | #[catch(99)]
    |         ^^
 
 error: status must be in range [100, 599]
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:23:9
    |
 23 | #[catch(600)]
    |         ^^^
 
 error: unexpected attribute parameter: `message`
-  --- help: `#[catch]` expects a single status integer, e.g.: #[catch(404)]
+  --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:26:14
    |
 26 | #[catch(400, message = "foo")]
    |              ^^^^^^^
 
-error: invalid number of arguments: must be zero or one
-  --- help: catchers may optionally take an argument of type `&Request`
-  --> $DIR/catch.rs:30:6
+error[E0308]: mismatched types
+  --> $DIR/catch.rs:30:17
    |
 30 | fn f3(_request: &Request, other: bool) { }
-   |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                 ^ expected `&rocket::Request<'_>`, found struct `rocket::http::Status`
 
-warning: unused import: `rocket::Request`
- --> $DIR/catch.rs:3:5
-  |
-3 | use rocket::Request;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
+error[E0308]: mismatched types
+  --> $DIR/catch.rs:30:34
+   |
+30 | fn f3(_request: &Request, other: bool) { }
+   |                                  ^^^^ expected `bool`, found `&rocket::Request<'_>`

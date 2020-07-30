@@ -1,10 +1,10 @@
-//! Types and traits for request and error handlers and their return values.
+//! Types and traits for request handlers and their return values.
 
 use futures::future::BoxFuture;
 
 use crate::data::Data;
 use crate::request::Request;
-use crate::response::{self, Response, Responder};
+use crate::response::{Response, Responder};
 use crate::http::Status;
 use crate::outcome;
 
@@ -151,30 +151,6 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     async fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
 }
 
-/// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
-///
-/// This trait should _never_ (and cannot, due to coherence) be implemented by
-/// any type. Instead, implement `Clone`. All types that implement `Clone` and
-/// `Handler` automatically implement `Cloneable`.
-pub trait Cloneable {
-    /// Clones `self`.
-    fn clone_handler(&self) -> Box<dyn Handler>;
-}
-
-impl<T: Handler + Clone> Cloneable for T {
-    #[inline(always)]
-    fn clone_handler(&self) -> Box<dyn Handler> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn Handler> {
-    #[inline(always)]
-    fn clone(&self) -> Box<dyn Handler> {
-        self.clone_handler()
-    }
-}
-
 #[crate::async_trait]
 impl<F: Clone + Sync + Send + 'static> Handler for F
     where for<'x> F: Fn(&'x Request<'_>, Data) -> HandlerFuture<'x>
@@ -184,12 +160,6 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
         self(req, data).await
     }
 }
-
-/// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> CatcherFuture<'r>;
-
-/// Type type of `Future` returned by an error handler.
-pub type CatcherFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
 // A handler to use when one is needed temporarily. Don't use outside of Rocket!
 #[doc(hidden)]
@@ -316,5 +286,31 @@ impl<'r, 'o: 'r> Outcome<'o> {
     #[inline(always)]
     pub fn forward(data: Data) -> Outcome<'static> {
         outcome::Outcome::Forward(data)
+    }
+}
+
+mod private {
+    pub trait Sealed {}
+    impl<T: super::Handler + Clone> Sealed for T {}
+}
+
+/// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
+///
+/// This trait cannot be implemented by any type. Instead, all types that
+/// implement `Clone` and `Handler` automatically implement `Cloneable`.
+pub trait Cloneable: private::Sealed {
+    #[doc(hidden)]
+    fn clone_handler(&self) -> Box<dyn Handler>;
+}
+
+impl<T: Handler + Clone> Cloneable for T {
+    fn clone_handler(&self) -> Box<dyn Handler> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Handler> {
+    fn clone(&self) -> Box<dyn Handler> {
+        self.clone_handler()
     }
 }

@@ -74,6 +74,7 @@ macro_rules! vars_and_mods {
 
 vars_and_mods! {
     req => __req,
+    status => __status,
     catcher => __catcher,
     data => __data,
     error => __error,
@@ -92,8 +93,9 @@ vars_and_mods! {
     Data => rocket::data::Data,
     StaticRouteInfo => rocket::StaticRouteInfo,
     SmallVec => rocket::http::private::SmallVec,
+    Status => rocket::http::Status,
     HandlerFuture => rocket::handler::HandlerFuture,
-    CatcherFuture => rocket::handler::CatcherFuture,
+    ErrorHandlerFuture => rocket::catcher::ErrorHandlerFuture,
     _Option => ::std::option::Option,
     _Result => ::std::result::Result,
     _Some => ::std::option::Option::Some,
@@ -350,10 +352,16 @@ route_attribute!(options => Method::Options);
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Request;
+/// use rocket::http::Status;
 ///
 /// #[catch(404)]
 /// fn not_found(req: &Request) -> String {
 ///     format!("Sorry, {} does not exist.", req.uri())
+/// }
+///
+/// #[catch(default)]
+/// fn default(status: Status, req: &Request) -> String {
+///     format!("{} - {} ({})", status.code, status.reason, req.uri())
 /// }
 /// ```
 ///
@@ -362,19 +370,19 @@ route_attribute!(options => Method::Options);
 /// The grammar for the `#[catch]` attributes is defined as:
 ///
 /// ```text
-/// catch := STATUS
+/// catch := STATUS | 'default'
 ///
 /// STATUS := valid HTTP status code (integer in [200, 599])
 /// ```
 ///
 /// # Typing Requirements
 ///
-/// The decorated function must take exactly zero or one argument. If the
-/// decorated function takes an argument, the argument's type must be
-/// [`&Request`].
+/// The decorated function may take zero, one, or two arguments. It's type
+/// signature must be one of the following, where `R:`[`Responder`]:
 ///
-/// The return type of the decorated function must implement the [`Responder`]
-/// trait.
+///   * `fn() -> R`
+///   * `fn(`[`&Request`]`) -> R`
+///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
 ///
 /// # Semantics
 ///
@@ -383,16 +391,18 @@ route_attribute!(options => Method::Options);
 ///   1. An [`ErrorHandler`].
 ///
 ///      The generated handler calls the decorated function, passing in the
-///      [`&Request`] value if requested. The returned value is used to generate
-///      a [`Response`] via the type's [`Responder`] implementation.
+///      [`Status`] and [`&Request`] values if requested. The returned value is
+///      used to generate a [`Response`] via the type's [`Responder`]
+///      implementation.
 ///
 ///   2. A static structure used by [`catchers!`] to generate a [`Catcher`].
 ///
-///      The static structure (and resulting [`Catcher`]) is populated
-///      with the name (the function's name) and status code from the
-///      route attribute. The handler is set to the generated handler.
+///      The static structure (and resulting [`Catcher`]) is populated with the
+///      name (the function's name) and status code from the route attribute or
+///      `None` if `default`. The handler is set to the generated handler.
 ///
 /// [`&Request`]: ../rocket/struct.Request.html
+/// [`Status`]: ../rocket/http/struct.Status.html
 /// [`ErrorHandler`]: ../rocket/type.ErrorHandler.html
 /// [`catchers!`]: macro.catchers.html
 /// [`Catcher`]: ../rocket/struct.Catcher.html
@@ -842,6 +852,9 @@ pub fn routes(input: TokenStream) -> TokenStream {
 ///     #[catch(400)]
 ///     pub fn unauthorized() { /* .. */ }
 /// }
+///
+/// #[catch(default)]
+/// fn default_catcher() { /* .. */ }
 /// ```
 ///
 /// The `catchers!` macro can be used as:
@@ -850,18 +863,21 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[catch(404)] fn not_found() { /* .. */ }
+/// # #[catch(default)] fn default_catcher() { /* .. */ }
 /// # mod inner {
 /// #     #[catch(400)] pub fn unauthorized() { /* .. */ }
 /// # }
-/// #
-/// let my_catchers = catchers![not_found, inner::unauthorized];
-/// assert_eq!(my_catchers.len(), 2);
+/// let my_catchers = catchers![not_found, inner::unauthorized, default_catcher];
+/// assert_eq!(my_catchers.len(), 3);
 ///
 /// let not_found = &my_catchers[0];
-/// assert_eq!(not_found.code, 404);
+/// assert_eq!(not_found.code, Some(404));
 ///
 /// let unauthorized = &my_catchers[1];
-/// assert_eq!(unauthorized.code, 400);
+/// assert_eq!(unauthorized.code, Some(400));
+///
+/// let default = &my_catchers[2];
+/// assert_eq!(default.code, None);
 /// ```
 ///
 /// The grammar for `catchers!` is defined as:

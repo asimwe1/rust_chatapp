@@ -141,7 +141,7 @@ impl Route {
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
     pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
+        where S: AsRef<str>, H: Handler
     {
         let mut route = Route::ranked(0, method, path, handler);
         route.rank = default_rank(&route);

@@ -17,9 +17,9 @@ use crate::{logger, handler};
 use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
+use crate::catcher::Catcher;
 use crate::response::{Body, Response};
 use crate::router::{Router, Route};
-use crate::catcher::{self, Catcher};
 use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
@@ -39,7 +39,7 @@ pub struct Rocket {
     pub(crate) managed_state: Container,
     manifest: Vec<PreLaunchOp>,
     router: Router,
-    default_catchers: HashMap<u16, Catcher>,
+    default_catcher: Option<Catcher>,
     catchers: HashMap<u16, Catcher>,
     fairings: Fairings,
     shutdown_receiver: Option<mpsc::Receiver<()>>,
@@ -91,14 +91,17 @@ impl Rocket {
     fn _register(&mut self, catchers: Vec<Catcher>) {
         info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
 
-        for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
-                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
-            } else {
-                info_!("{}", c);
-            }
+        for catcher in catchers {
+            info_!("{}", catcher);
 
-            self.catchers.insert(c.code, c);
+            let existing = match catcher.code {
+                Some(code) => self.catchers.insert(code, catcher),
+                None => self.default_catcher.replace(catcher)
+            };
+
+            if let Some(existing) = existing {
+                warn_!("Replacing existing '{}' catcher.", existing);
+            }
         }
     }
 
@@ -120,7 +123,7 @@ impl Rocket {
             manifest: vec![],
             config: Config::development(),
             router: Router::new(),
-            default_catchers: HashMap::new(),
+            default_catcher: None,
             catchers: HashMap::new(),
             managed_state: Container::new(),
             fairings: Fairings::new(),
@@ -459,19 +462,25 @@ impl Rocket {
             req.cookies().reset_delta();
 
             // Try to get the active catcher but fallback to user's 500 catcher.
-            let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
-                error_!("No catcher found for {}. Using 500 catcher.", status);
-                self.catchers.get(&500).expect("500 catcher.")
-            });
+            let code = Paint::red(status.code);
+            let response = if let Some(catcher) = self.catchers.get(&status.code) {
+                catcher.handler.handle(status, req).await
+            } else if let Some(ref default) =  self.default_catcher {
+                warn_!("No {} catcher found. Using default catcher.", code);
+                default.handler.handle(status, req).await
+            } else {
+                warn_!("No {} or default catcher found. Using Rocket default catcher.", code);
+                crate::catcher::default(status, req)
+            };
 
-            // Dispatch to the user's catcher. If it fails, use the default 500.
-            match catcher.handle(req).await {
-                Ok(r) => return r,
+            // Dispatch to the catcher. If it fails, use the Rocket default 500.
+            match response {
+                Ok(r) => r,
                 Err(err_status) => {
-                    error_!("Catcher failed with status: {}!", err_status);
-                    warn_!("Using default 500 error catcher.");
-                    let default = self.default_catchers.get(&500).expect("Default 500");
-                    default.handle(req).await.expect("Default 500 response.")
+                    error_!("Catcher unexpectedly failed with {}.", err_status);
+                    warn_!("Using Rocket's default 500 error catcher.");
+                    let default = crate::catcher::default(Status::InternalServerError, req);
+                    default.expect("Rocket has default 500 response")
                 }
             }
         }
@@ -660,8 +669,8 @@ impl Rocket {
             shutdown_handle: Shutdown(shutdown_sender),
             manifest: vec![],
             router: Router::new(),
-            default_catchers: catcher::defaults::get(),
-            catchers: catcher::defaults::get(),
+            default_catcher: None,
+            catchers: HashMap::new(),
             fairings: Fairings::new(),
             shutdown_receiver: Some(shutdown_receiver),
         }

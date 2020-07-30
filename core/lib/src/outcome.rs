@@ -683,6 +683,9 @@ macro_rules! try_outcome {
     });
 }
 
+#[doc(inline)]
+pub use try_outcome;
+
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Outcome::{}", self.formatting().1)

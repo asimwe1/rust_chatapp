@@ -1088,27 +1088,26 @@ function, so we must `await` it.
 
 ## Error Catchers
 
-Routing may fail for a variety of reasons. These include:
+Application processing is fallible. Errors arise from the following sources:
 
-  * A guard fails.
-  * A handler returns a [`Responder`](../responses/#responder) that fails.
-  * No routes matched.
+  * A failing guard.
+  * A failing responder.
+  * A routing failure.
 
-If any of these conditions occur, Rocket returns an error to the client. To do
-so, Rocket invokes the _catcher_ corresponding to the error's status code.
+If any of these occur, Rocket returns an error to the client. To generate the
+error, Rocket invokes the _catcher_ corresponding to the error's status code.
 Catchers are similar to routes except in that:
 
   1. Catchers are only invoked on error conditions.
   2. Catchers are declared with the `catch` attribute.
   3. Catchers are _registered_ with [`register()`] instead of [`mount()`].
   4. Any modifications to cookies are cleared before a catcher is invoked.
-  5. Error catchers cannot invoke guards of any sort.
+  5. Error catchers cannot invoke guards.
+  6. Error catchers should not fail to produce a response.
 
-Rocket provides default catchers for all of the standard HTTP error codes. To
-override a default catcher, or declare a catcher for a custom status code, use
-the [`catch`] attribute, which takes a single integer corresponding to the HTTP
-status code to catch. For instance, to declare a catcher for `404 Not Found`
-errors, you'd write:
+To declare a catcher for a given status code, use the [`catch`] attribute, which
+takes a single integer corresponding to the HTTP status code to catch. For
+instance, to declare a catcher for `404 Not Found` errors, you'd write:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -1120,8 +1119,10 @@ use rocket::Request;
 fn not_found(req: &Request) { /* .. */ }
 ```
 
-As with routes, the return type (here `T`) must implement `Responder`. A
-concrete implementation may look like:
+Catchers may take zero, one, or two arguments. If the catcher takes one
+argument, it must be of type [`&Request`]. It it takes two, they must be of type
+[`Status`] and [`&Request`], in that order. As with routes, the return type must
+implement `Responder`. A concrete implementation may look like:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -1152,12 +1153,38 @@ fn main() {
 }
 ```
 
-Unlike route request handlers, catchers take exactly zero or one parameter. If
-the catcher takes a parameter, it must be of type [`&Request`]. The [error
-catcher example](@example/errors) on GitHub illustrates their use in full.
+### Default Catchers
+
+If no catcher for a given status code has been registered, Rocket calls the
+_default_ catcher. Rocket provides a default catcher for all applications
+automatically, so providing one is usually unnecessary. Rocket's built-in
+default catcher can handle all errors. It produces HTML or JSON, depending on
+the value of the `Accept` header. As such, a default catcher, or catchers in
+general, only need to be registered if an error needs to be handled in a custom
+fashion.
+
+Declaring a default catcher is done with `#[catch(default)]`:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::Request;
+use rocket::http::Status;
+
+#[catch(default)]
+fn default_catcher(status: Status, request: &Request) { /* .. */ }
+```
+
+It must similarly be registered with [`register()`].
+
+The [error catcher example](@example/errors) illustrates their use in full,
+while the [`Catcher`] API documentation provides further details.
 
 [`catch`]: @api/rocket/attr.catch.html
 [`register()`]: @api/rocket/struct.Rocket.html#method.register
 [`mount()`]: @api/rocket/struct.Rocket.html#method.mount
 [`catchers!`]: @api/rocket/macro.catchers.html
 [`&Request`]: @api/rocket/struct.Request.html
+[`Status`]: @api/rocket/http/struct.Status.html
+[`Catcher`]: @api/rocket/catcher/struct.Catcher.html
