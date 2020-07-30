@@ -5,7 +5,7 @@ mod paste_id;
 
 use std::io;
 
-use rocket::Data;
+use rocket::data::{Data, ToByteUnit};
 use rocket::response::{content::Plain, Debug};
 use rocket::tokio::fs::File;
 
@@ -20,7 +20,7 @@ async fn upload(paste: Data) -> Result<String, Debug<io::Error>> {
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = HOST, id = id);
 
-    paste.stream_to_file(filename).await?;
+    paste.open(128.kibibytes()).stream_to_file(filename).await?;
     Ok(url)
 }
 

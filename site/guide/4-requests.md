@@ -1037,36 +1037,39 @@ The only condition is that the generic type in `Json` implements the
 
 Sometimes you just want to handle incoming data directly. For example, you might
 want to stream the incoming data out to a file. Rocket makes this as simple as
-possible via the [`Data`](@api/rocket/data/struct.Data.html)
-type:
+possible via the [`Data`](@api/rocket/data/struct.Data.html) type:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-use rocket::Data;
+use rocket::data::{Data, ToByteUnit};
 use rocket::response::Debug;
 
 #[post("/upload", format = "plain", data = "<data>")]
 async fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
-    Ok(data.stream_to_file("/tmp/upload.txt").await.map(|n| n.to_string())?)
+    let bytes_written = data.open(128.kibibytes())
+        .stream_to_file("/tmp/upload.txt")
+        .await?;
+
+    Ok(bytes_written.to_string())
 }
 ```
 
 The route above accepts any `POST` request to the `/upload` path with
-`Content-Type: text/plain`  The incoming data is streamed out to
-`tmp/upload.txt`, and the number of bytes written is returned as a plain text
-response if the upload succeeds. If the upload fails, an error response is
-returned. The handler above is complete. It really is that simple! See the
-[GitHub example code](@example/raw_upload) for the full crate.
+`Content-Type: text/plain`  At most 128KiB (`128 << 10` bytes) of the incoming
+data are streamed out to `tmp/upload.txt`, and the number of bytes written is
+returned as a plain text response if the upload succeeds. If the upload fails,
+an error response is returned. The handler above is complete. It really is that
+simple! See the [GitHub example code](@example/raw_upload) for the full crate.
 
-! warning: You should _always_ set limits when reading incoming data.
+! note: Rocket requires setting limits when reading incoming data.
 
-  To prevent DoS attacks, you should limit the amount of data you're willing to
-  accept. The [`take()`] reader adapter makes doing this easy:
-  `data.open().take(LIMIT)`.
-
-  [`take()`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.take
+  To aid in preventing DoS attacks, Rocket requires you to specify, as a
+  [`ByteUnit`](@api/rocket/data/struct.ByteUnit.html), the amount of data you're
+  willing to accept from the client when `open`ing a data stream. The
+  [`ToByteUnit`](@api/rocket/data/trait.ToByteUnit.html) trait makes specifying
+  such a value as idiomatic as `128.kibibytes()`.
 
 ## Async Routes
 

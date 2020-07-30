@@ -9,10 +9,9 @@ use std::path::PathBuf;
 
 use rocket::http::ext::Normalize;
 use rocket::local::blocking::Client;
-use rocket::data::{self, Data, FromData};
+use rocket::data::{self, Data, FromData, ToByteUnit};
 use rocket::request::{Request, Form};
 use rocket::http::{Status, RawStr, ContentType};
-use rocket::tokio::io::AsyncReadExt;
 
 // Use all of the code generation available at once.
 
@@ -28,9 +27,7 @@ impl FromData for Simple {
     type Error = ();
 
     async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
-        let mut string = String::new();
-        let mut stream = data.open().take(64);
-        stream.read_to_string(&mut string).await.unwrap();
+        let string = data.open(64.bytes()).stream_to_string().await.unwrap();
         data::Outcome::Success(Simple(string))
     }
 }

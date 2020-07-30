@@ -7,7 +7,7 @@ use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 use crate::http::Status;
 use crate::request::Request;
-use crate::data::Data;
+use crate::data::{Data, ByteUnit};
 
 /// Type alias for the `Outcome` of a `FromTransformedData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
@@ -197,13 +197,12 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
 /// use std::io::{self, Read};
 ///
-/// use tokio::io::AsyncReadExt;
-///
-/// use rocket::{Request, Data};
-/// use rocket::data::{FromTransformedData, Outcome, Transform, Transformed, TransformFuture, FromDataFuture};
+/// use rocket::Request;
+/// use rocket::data::{Data, Outcome, FromDataFuture, ByteUnit};
+/// use rocket::data::{FromTransformedData, Transform, Transformed, TransformFuture};
 /// use rocket::http::Status;
 ///
-/// const NAME_LIMIT: u64 = 256;
+/// const NAME_LIMIT: ByteUnit = ByteUnit::Byte(256);
 ///
 /// enum NameError {
 ///     Io(io::Error),
@@ -217,10 +216,8 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///
 ///     fn transform<'r>(_: &'r Request, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
 ///         Box::pin(async move {
-///             let mut stream = data.open().take(NAME_LIMIT);
-///             let mut string = String::with_capacity((NAME_LIMIT / 2) as usize);
-///             let outcome = match stream.read_to_string(&mut string).await {
-///                 Ok(_) => Outcome::Success(string),
+///             let outcome = match data.open(NAME_LIMIT).stream_to_string().await {
+///                 Ok(string) => Outcome::Success(string),
 ///                 Err(e) => Outcome::Failure((Status::InternalServerError, NameError::Io(e)))
 ///             };
 ///
@@ -231,9 +228,9 @@ pub type FromDataFuture<'fut, T, E> = BoxFuture<'fut, Outcome<T, E>>;
 ///
 ///     fn from_data(_: &'a Request, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
 ///         Box::pin(async move {
-///             // Retrieve a borrow to the now transformed `String` (an &str). This
-///             // is only correct because we know we _always_ return a `Borrowed` from
-///             // `transform` above.
+///             // Retrieve a borrow to the now transformed `String` (an &str).
+///             // This is only correct because we know we _always_ return a
+///             // `Borrowed` from `transform` above.
 ///             let string = try_outcome!(outcome.borrowed());
 ///
 ///             // Perform a crude, inefficient parse.
@@ -407,7 +404,7 @@ pub trait FromTransformedData<'a>: Sized {
 impl<'a> FromTransformedData<'a> for Data {
     type Error = std::convert::Infallible;
     type Owned = Data;
-    type Borrowed = ();
+    type Borrowed = Data;
 
     #[inline(always)]
     fn transform<'r>(_: &'r Request<'_>, data: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
@@ -486,12 +483,12 @@ impl<'a> FromTransformedData<'a> for Data {
 /// use std::io::Read;
 ///
 /// use rocket::{Request, Data};
-/// use rocket::data::{self, Outcome, FromData, FromDataFuture};
+/// use rocket::data::{self, Outcome, FromData, FromDataFuture, ByteUnit};
 /// use rocket::http::{Status, ContentType};
 /// use rocket::tokio::io::AsyncReadExt;
 ///
 /// // Always use a limit to prevent DoS attacks.
-/// const LIMIT: u64 = 256;
+/// const LIMIT: ByteUnit = ByteUnit::Byte(256);
 ///
 /// #[rocket::async_trait]
 /// impl FromData for Person {
@@ -505,11 +502,10 @@ impl<'a> FromTransformedData<'a> for Data {
 ///         }
 ///
 ///         // Read the data into a String.
-///         let mut string = String::new();
-///         let mut reader = data.open().take(LIMIT);
-///         if let Err(e) = reader.read_to_string(&mut string).await {
-///             return Outcome::Failure((Status::InternalServerError, format!("{:?}", e)));
-///         }
+///         let string = match data.open(LIMIT).stream_to_string().await {
+///             Ok(string) => string,
+///             Err(e) => return Outcome::Failure((Status::InternalServerError, format!("{}", e)))
+///         };
 ///
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
@@ -550,7 +546,7 @@ pub trait FromData: Sized {
 impl<'a, T: FromData + 'a> FromTransformedData<'a> for T {
     type Error = T::Error;
     type Owned = Data;
-    type Borrowed = ();
+    type Borrowed = Data;
 
     #[inline(always)]
     fn transform<'r>(_: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
@@ -612,12 +608,8 @@ impl FromData for String {
 
     #[inline(always)]
     async fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
-        use tokio::io::AsyncReadExt;
-
-        let mut string = String::new();
-        let mut reader = data.open();
-        match reader.read_to_string(&mut string).await {
-            Ok(_) => Success(string),
+        match data.open(ByteUnit::max_value()).stream_to_string().await {
+            Ok(string) => Success(string),
             Err(e) => Failure((Status::BadRequest, e)),
         }
     }
@@ -632,7 +624,7 @@ impl FromData for Vec<u8> {
     async fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
         use tokio::io::AsyncReadExt;
 
-        let mut stream = data.open();
+        let mut stream = data.open(ByteUnit::max_value());
         let mut buf = Vec::new();
         match stream.read_to_end(&mut buf).await {
             Ok(_) => Success(buf),

@@ -84,8 +84,8 @@ impl<'c> LocalRequest<'c> {
         }
 
         // Actually dispatch the request.
-        let data = Data::local(self.data);
-        let token = rocket.preprocess_request(&mut self.request, &data).await;
+        let mut data = Data::local(self.data);
+        let token = rocket.preprocess_request(&mut self.request, &mut data).await;
         let response = LocalResponse::new(self.request, move |request| {
             rocket.dispatch(token, request, data)
         }).await;

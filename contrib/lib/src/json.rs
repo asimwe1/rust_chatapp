@@ -18,13 +18,12 @@ use std::ops::{Deref, DerefMut};
 use std::io;
 use std::iter::FromIterator;
 
-use tokio::io::AsyncReadExt;
-
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Transform::*, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
-use rocket::response::{self, Responder, content};
+use rocket::data::{Data, ByteUnit, Transform::*, Transformed};
+use rocket::data::{FromTransformedData, TransformFuture, FromDataFuture};
 use rocket::http::Status;
+use rocket::response::{self, Responder, content};
 
 use serde::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};
@@ -111,9 +110,6 @@ impl<T> Json<T> {
     }
 }
 
-/// Default limit for JSON is 1MB.
-const LIMIT: u64 = 1 << 20;
-
 /// An error returned by the [`Json`] data guard when incoming data fails to
 /// serialize as JSON.
 #[derive(Debug)]
@@ -128,6 +124,8 @@ pub enum JsonError<'a> {
     Parse(&'a str, serde_json::error::Error),
 }
 
+const DEFAULT_LIMIT: ByteUnit = ByteUnit::Mebibyte(1);
+
 impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
     type Error = JsonError<'a>;
     type Owned = String;
@@ -135,11 +133,9 @@ impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
 
     fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
-            let size_limit = r.limits().get("json").unwrap_or(LIMIT);
-            let mut s = String::with_capacity(512);
-            let mut reader = d.open().take(size_limit);
-            match reader.read_to_string(&mut s).await {
-                Ok(_) => Borrowed(Success(s)),
+            let size_limit = r.limits().get("json").unwrap_or(DEFAULT_LIMIT);
+            match d.open(size_limit).stream_to_string().await {
+                Ok(s) => Borrowed(Success(s)),
                 Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
             }
         })

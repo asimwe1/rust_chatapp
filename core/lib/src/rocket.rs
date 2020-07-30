@@ -1,5 +1,4 @@
 use std::{io, mem};
-use std::cmp::min;
 use std::sync::Arc;
 use std::collections::HashMap;
 
@@ -211,10 +210,10 @@ async fn hyper_service_fn(
         };
 
         // Retrieve the data from the hyper body.
-        let data = Data::from_hyp(h_body).await;
+        let mut data = Data::from_hyp(h_body).await;
 
         // Dispatch the request to get a response, then write that response out.
-        let token = rocket.preprocess_request(&mut req, &data).await;
+        let token = rocket.preprocess_request(&mut req, &mut data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
     });
@@ -303,16 +302,16 @@ impl Rocket {
     pub(crate) async fn preprocess_request(
         &self,
         req: &mut Request<'_>,
-        data: &Data
+        data: &mut Data
     ) -> Token {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
-        let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
+        let peek_buffer = data.peek(max_len).await;
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
 
-        if is_form && req.method() == Method::Post && data_len >= min_len {
-            if let Ok(form) = std::str::from_utf8(&data.peek()[..min(data_len, max_len)]) {
+        if is_form && req.method() == Method::Post && peek_buffer.len() >= min_len {
+            if let Ok(form) = std::str::from_utf8(peek_buffer) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
                     .filter(|item| item.key.as_str() == "_method")
                     .map(|item| item.value.parse())

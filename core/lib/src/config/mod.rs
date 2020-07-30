@@ -198,7 +198,6 @@ use std::path::{Path, PathBuf};
 
 use toml;
 
-pub use self::custom_values::Limits;
 pub use toml::value::{Array, Map, Table, Value, Datetime};
 pub use self::error::ConfigError;
 pub use self::environment::Environment;

@@ -12,14 +12,12 @@ use atomic::Atomic;
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::Rocket;
-use crate::shutdown::Shutdown;
-use crate::router::Route;
-use crate::config::{Config, Limits};
+use crate::{Rocket, Config, Shutdown, Route};
 use crate::http::{hyper, uri::{Origin, Segments}};
 use crate::http::{Method, Header, HeaderMap, Cookies};
 use crate::http::{RawStr, ContentType, Accept, MediaType};
 use crate::http::private::{Indexed, SmallVec, CookieJar};
+use crate::data::Limits;
 
 type Indices = (usize, usize);
 
@@ -513,7 +511,7 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Returns the configured application receive limits.
+    /// Returns the configured application data limits.
     ///
     /// # Example
     ///

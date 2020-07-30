@@ -3,7 +3,8 @@ mod tests;
 
 use std::env;
 
-use rocket::{Request, Route, Data};
+use rocket::{Request, Route};
+use rocket::data::{Data, ToByteUnit};
 use rocket::http::{Status, RawStr, Method::*};
 use rocket::response::{Responder, status::Custom};
 use rocket::handler::{Handler, Outcome, HandlerFuture};
@@ -47,7 +48,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
 
         let file = File::create(env::temp_dir().join("upload.txt")).await;
         if let Ok(file) = file {
-            if let Ok(n) = data.stream_to(file).await {
+            if let Ok(n) = data.open(2.mebibytes()).stream_to(file).await {
                 return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
             }
 

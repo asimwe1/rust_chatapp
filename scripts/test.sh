@@ -70,7 +70,9 @@ echo ":: Checking for trailing whitespace..."
 ensure_trailing_whitespace_free
 
 echo ":: Updating dependencies..."
-$CARGO update
+if ! $CARGO update ; then
+  echo "   WARNING: Update failed! Proceeding with possibly outdated deps..."
+fi
 
 if [ "$1" = "--contrib" ]; then
   FEATURES=(
