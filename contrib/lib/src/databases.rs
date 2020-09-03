@@ -191,6 +191,23 @@
 //! database. This corresponds to the database name set as the database's
 //! configuration key.
 //!
+//! The macro generates a [`FromRequest`] implementation for the decorated type,
+//! allowing the type to be used as a request guard. This implementation
+//! retrieves a connection from the database pool or fails with a
+//! `Status::ServiceUnavailable` if connecting to the database times out.
+//!
+//! The macro will also generate two inherent methods on the decorated type:
+//!
+//!   * `fn fairing() -> impl Fairing`
+//!
+//!      Returns a fairing that initializes the associated database connection
+//!      pool.
+//!
+//!   * `async fn get_one(&Cargo) -> Option<Self>`
+//!
+//!     Retrieves a connection wrapper from the configured pool. Returns `Some`
+//!     as long as `Self::fairing()` has been attached.
+//!
 //! The attribute can only be applied to unit-like structs with one type. The
 //! internal type of the structure must implement [`Poolable`].
 //!
@@ -220,23 +237,6 @@
 //! struct MyPgDatabase(postgres::Client);
 //! # }
 //! ```
-//!
-//! The macro generates a [`FromRequest`] implementation for the decorated type,
-//! allowing the type to be used as a request guard. This implementation
-//! retrieves a connection from the database pool or fails with a
-//! `Status::ServiceUnavailable` if connecting to the database times out.
-//!
-//! The macro will also generate two inherent methods on the decorated type:
-//!
-//!   * `fn fairing() -> impl Fairing`
-//!
-//!      Returns a fairing that initializes the associated database connection
-//!      pool.
-//!
-//!   * `async fn get_one(&Cargo) -> Option<Self>`
-//!
-//!     Retrieves a connection wrapper from the configured pool. Returns `Some`
-//!     as long as `Self::fairing()` has been attached.
 //!
 //! The fairing returned from the generated `fairing()` method _must_ be
 //! attached for the request guard implementation to succeed. Putting the pieces
@@ -322,37 +322,6 @@
 //! # }
 //! ```
 //!
-//! `run()` takes the connection by value. To make multiple calls to run,
-//! obtain a second connection first with `clone()`:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[macro_use] extern crate rocket_contrib;
-//! #
-//! # #[cfg(feature = "diesel_sqlite_pool")]
-//! # mod test {
-//! # use rocket_contrib::databases::diesel;
-//! # type Data = ();
-//! #[database("my_db")]
-//! struct MyDatabase(diesel::SqliteConnection);
-//!
-//! fn load_from_db(conn: &diesel::SqliteConnection) -> Data {
-//!     // Do something with connection, return some data.
-//!     # ()
-//! }
-//!
-//! #[get("/")]
-//! async fn my_handler(mut conn: MyDatabase) -> Data {
-//!     let cloned = conn.clone().await.expect("");
-//!     cloned.run(|c| load_from_db(c)).await;
-//!
-//!     // Do something else
-//!     conn.run(|c| load_from_db(c)).await;
-//! }
-//! # }
-//! ```
-//!
-//!
 //! # Database Support
 //!
 //! Built-in support is provided for many popular databases and drivers. Support
@@ -418,10 +387,11 @@ use std::sync::Arc;
 
 use rocket::config::{self, Value};
 use rocket::fairing::{AdHoc, Fairing};
+use rocket::request::{Request, Outcome, FromRequest};
+use rocket::outcome::IntoOutcome;
 use rocket::http::Status;
-use rocket::request::Outcome;
 
-use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore, Mutex};
 
 use self::r2d2::ManageConnection;
 
@@ -827,29 +797,25 @@ pub struct ConnectionPool<K, C: Poolable> {
 /// types are properly checked.
 #[doc(hidden)]
 pub struct Connection<K, C: Poolable> {
-    pool: ConnectionPool<K, C>,
-    connection: Option<r2d2::PooledConnection<C::Manager>>,
-    _permit: Option<OwnedSemaphorePermit>,
+    connection: Arc<Mutex<Option<r2d2::PooledConnection<C::Manager>>>>,
+    permit: Option<OwnedSemaphorePermit>,
     _marker: PhantomData<fn() -> K>,
 }
 
-// A wrapper around spawn_blocking that propagates panics to the calling code
+// A wrapper around spawn_blocking that propagates panics to the calling code.
 async fn run_blocking<F, R>(job: F) -> R
-where
-    F: FnOnce() -> R + Send + 'static,
-    R: Send + 'static,
+    where F: FnOnce() -> R + Send + 'static, R: Send + 'static,
 {
     match tokio::task::spawn_blocking(job).await {
         Ok(ret) => ret,
         Err(e) => match e.try_into_panic() {
             Ok(panic) => std::panic::resume_unwind(panic),
-            Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
+            Err(_) => unreachable!("spawn_blocking tasks are never cancelled"),
         }
     }
 }
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
-    #[inline]
     pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl Fairing {
         AdHoc::on_attach(fairing_name, move |mut rocket| async move {
             let config = database_config(config_name, rocket.config().await);
@@ -881,9 +847,9 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     async fn get(&self) -> Result<Connection<K, C>, ()> {
-        // TODO: timeout duration
+        // TODO: Make timeout configurable.
         let permit = match tokio::time::timeout(
-            self.pool.connection_timeout(),
+            std::time::Duration::from_secs(5),
             self.semaphore.clone().acquire_owned()
         ).await {
             Ok(p) => p,
@@ -893,18 +859,14 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
             }
         };
 
+        // TODO: Make timeout configurable.
         let pool = self.pool.clone();
-
-        // TODO: timeout duration
-        match run_blocking(move || pool.get_timeout(std::time::Duration::from_secs(0))).await {
-            Ok(c) => {
-                Ok(Connection {
-                    pool: self.clone(),
-                    connection: Some(c),
-                    _permit: Some(permit),
-                    _marker: PhantomData,
-                })
-            }
+        match run_blocking(move || pool.get_timeout(std::time::Duration::from_secs(5))).await {
+            Ok(c) => Ok(Connection {
+                connection: Arc::new(Mutex::new(Some(c))),
+                permit: Some(permit),
+                _marker: PhantomData,
+            }),
             Err(e) => {
                 error_!("Failed to get a database connection: {}", e);
                 Err(())
@@ -924,64 +886,49 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 }
 
-impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
-    fn clone(&self) -> Self {
-        Self {
-            pool: self.pool.clone(),
-            semaphore: self.semaphore.clone(),
-            _marker: PhantomData,
-        }
-    }
-}
-
 impl<K: 'static, C: Poolable> Connection<K, C> {
     #[inline]
-    pub async fn run<F, R>(self, f: F) -> R
+    pub async fn run<F, R>(&self, f: F) -> R
         where F: FnOnce(&mut C) -> R + Send + 'static,
               R: Send + 'static,
     {
+        let mut connection = self.connection.clone().lock_owned().await;
         run_blocking(move || {
-            // 'self' contains a semaphore permit that should be held throughout
-            // this entire spawned task. Explicitly move it, so that a
-            // refactoring won't accidentally release the permit too early.
-            let mut this: Self = self;
-
-            let mut conn = this.connection.take()
+            let conn = connection.as_mut()
                 .expect("internal invariant broken: self.connection is Some");
-
-            f(&mut conn)
+            f(conn)
         }).await
-    }
-
-    #[inline]
-    pub async fn clone(&mut self) -> Result<Self, ()> {
-        self.pool.get().await
     }
 }
 
 impl<K, C: Poolable> Drop for Connection<K, C> {
     fn drop(&mut self) {
-        if let Some(conn) = self.connection.take() {
-            tokio::task::spawn_blocking(|| drop(conn));
-        }
+        let connection = self.connection.clone();
+        let permit = self.permit.take();
+        tokio::spawn(async move {
+            let mut connection = connection.lock_owned().await;
+            tokio::task::spawn_blocking(move || {
+                if let Some(conn) = connection.take() {
+                    drop(conn);
+                }
+                // NB: Explicitly dropping the permit here so that it's only
+                // released after the connection is.
+                drop(permit);
+            })
+        });
     }
 }
 
 #[rocket::async_trait]
-impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for Connection<K, C> {
+impl<'a, 'r, K: 'static, C: Poolable> FromRequest<'a, 'r> for Connection<K, C> {
     type Error = ();
 
     #[inline]
-    async fn from_request(request: &'a rocket::request::Request<'r>) -> Outcome<Self, ()> {
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, ()> {
         match request.managed_state::<ConnectionPool<K, C>>() {
-            Some(inner) => {
-                match inner.get().await {
-                    Ok(c) => Outcome::Success(c),
-                    Err(()) => Outcome::Failure((Status::ServiceUnavailable, ())),
-                }
-            }
+            Some(c) => c.get().await.into_outcome(Status::ServiceUnavailable),
             None => {
-                error_!("Database fairing was not attached for {}", std::any::type_name::<K>());
+                error_!("Missing database fairing for `{}`", std::any::type_name::<K>());
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }
