@@ -11,16 +11,17 @@ use ref_cast::RefCast;
 
 use yansi::Paint;
 use state::Container;
+use figment::Figment;
 
 use crate::{logger, handler};
-use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
+use crate::config::Config;
 use crate::request::{Request, FormItems};
 use crate::data::Data;
 use crate::catcher::Catcher;
 use crate::response::{Body, Response};
 use crate::router::{Router, Route};
 use crate::outcome::Outcome;
-use crate::error::{LaunchError, LaunchErrorKind};
+use crate::error::{Error, ErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
@@ -35,6 +36,7 @@ use crate::http::uri::Origin;
 /// application.
 pub struct Rocket {
     pub(crate) config: Config,
+    pub(crate) figment: Figment,
     pub(crate) managed_state: Container,
     manifest: Vec<PreLaunchOp>,
     router: Router,
@@ -66,6 +68,9 @@ pub(crate) struct Token;
 impl Rocket {
     #[inline]
     fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
+        // info!("[$]🛰  [/m]mounting [b]{}[/]:", log::emoji(), base);
+        // info!("[$]🛰  [/m]mounting [b]{}[/]:", log::emoji(), base);
+        // info!("{}[m]Mounting [b]{}[/]:[/]", log::emoji("🛰  "), base);
         info!("{}{} {}{}",
               Paint::emoji("🛰  "),
               Paint::magenta("Mounting"),
@@ -107,6 +112,7 @@ impl Rocket {
     #[inline]
     async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
         // Attach (and run attach-) fairings, which requires us to move `self`.
+        trace_!("Running attach fairing: {:?}", fairing.info());
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
         self = fairings.attach(fairing, self).await;
 
@@ -119,8 +125,9 @@ impl Rocket {
     // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
     fn dummy() -> Rocket {
         Rocket {
+            config: Config::debug_default(),
+            figment: Figment::from(Config::debug_default()),
             manifest: vec![],
-            config: Config::development(),
             router: Router::new(),
             default_catcher: None,
             catchers: HashMap::new(),
@@ -145,7 +152,7 @@ impl Rocket {
         // process them as a stack to maintain proper ordering.
         let mut manifest = mem::replace(&mut self.manifest, vec![]);
         while !manifest.is_empty() {
-            trace_!("[MANIEST PROGRESS]: {:?}", manifest);
+            trace_!("[MANIEST PROGRESS ({} left)]: {:?}", manifest.len(), manifest);
             match manifest.remove(0) {
                 PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
                 PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
@@ -183,10 +190,9 @@ async fn hyper_service_fn(
     h_addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
-    // This future must return a hyper::Response, but that's not easy
-    // because the response body might borrow from the request. Instead,
-    // we do the body writing in another future that will send us
-    // the response metadata (and a body channel) beforehand.
+    // This future must return a hyper::Response, but the response body might
+    // borrow from the request. Instead, write the body in another future that
+    // sends the response metadata (and a body channel) prior.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
@@ -194,7 +200,10 @@ async fn hyper_service_fn(
         let (h_parts, h_body) = hyp_req.into_parts();
 
         // Convert the Hyper request into a Rocket request.
-        let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, &h_parts.uri, h_addr);
+        let req_res = Request::from_hyp(
+            &rocket, h_parts.method, h_parts.headers, &h_parts.uri, h_addr
+        );
+
         let mut req = match req_res {
             Ok(req) => req,
             Err(e) => {
@@ -218,6 +227,7 @@ async fn hyper_service_fn(
         rocket.issue_response(r, tx).await;
     });
 
+    // Receive the response written to `tx` by the task above.
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
@@ -228,14 +238,9 @@ impl Rocket {
         response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {
-        let result = self.write_response(response, tx);
-        match result.await {
-            Ok(()) => {
-                info_!("{}", Paint::green("Response succeeded."));
-            }
-            Err(e) => {
-                error_!("Failed to write response: {:?}.", e);
-            }
+        match self.write_response(response, tx).await {
+            Ok(()) => info_!("{}", Paint::green("Response succeeded.")),
+            Err(e) => error_!("Failed to write response: {:?}.", e),
         }
     }
 
@@ -254,12 +259,12 @@ impl Rocket {
             hyp_res = hyp_res.header(name, value);
         }
 
-        let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
-            let response = hyp_res.body(body)
+        let send_response = move |res: hyper::ResponseBuilder, body| -> io::Result<()> {
+            let response = res.body(body)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
             tx.send(response).map_err(|_| {
-                let msg =  "Client disconnected before the response was started";
+                let msg = "client disconnected before the response was started";
                 io::Error::new(io::ErrorKind::BrokenPipe, msg)
             })
         };
@@ -488,14 +493,13 @@ impl Rocket {
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
-    async fn listen_on<L>(mut self, listener: L) -> Result<(), crate::error::Error>
+    async fn listen_on<L>(mut self, listener: L) -> Result<(), Error>
         where L: Listener + Send + Unpin + 'static,
               <L as Listener>::Connection: Send + Unpin + 'static,
     {
-        // Determine the address and port we actually binded to.
-        self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
-        let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
-        let full_addr = format!("{}:{}", self.config.address, self.config.port);
+        // We do this twice if `listen_on` was called through `launch()` but
+        // only once if `listen_on()` gets called directly.
+        self.prelaunch_check().await?;
 
         // Freeze managed state for synchronization-free accesses later.
         self.managed_state.freeze();
@@ -504,31 +508,35 @@ impl Rocket {
         self.fairings.pretty_print_counts();
         self.fairings.handle_launch(self.cargo());
 
+        // Determine the address and port we actually bound to.
+        self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
+        let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
+        let full_addr = format!("{}:{}", self.config.address, self.config.port);
+
         launch_info!("{}{} {}{}",
                      Paint::emoji("🚀 "),
                      Paint::default("Rocket has launched from").bold(),
                      Paint::default(proto).bold().underline(),
                      Paint::default(&full_addr).bold().underline());
 
-        // Restore the log level back to what it originally was.
-        logger::pop_max_level();
-
-        // Set the keep-alive.
-        // TODO.async: implement keep-alive in Listener
-        // let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
-        // listener.set_keepalive(timeout);
+        // Determine keep-alives.
+        let http1_keepalive = self.config.keep_alive != 0;
+        let http2_keep_alive = match self.config.keep_alive {
+            0 => None,
+            n => Some(std::time::Duration::from_secs(n as u64))
+        };
 
         // We need to get this before moving `self` into an `Arc`.
-        let mut shutdown_receiver = self.shutdown_receiver
-            .take().expect("shutdown receiver has already been used");
+        let mut shutdown_receiver = self.shutdown_receiver.take()
+            .expect("shutdown receiver has already been used");
 
         let rocket = Arc::new(self);
-        let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
+        let service = hyper::make_service_fn(move |conn: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
-            let remote_addr = connection.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
+            let remote = conn.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
             async move {
                 Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), remote_addr, req)
+                    hyper_service_fn(rocket.clone(), remote, req)
                 }))
             }
         });
@@ -545,11 +553,13 @@ impl Rocket {
         }
 
         hyper::Server::builder(Incoming::from_listener(listener))
+            .http1_keepalive(http1_keepalive)
+            .http2_keep_alive_interval(http2_keep_alive)
             .executor(TokioExecutor)
             .serve(service)
             .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
             .await
-            .map_err(|e| crate::error::Error::Run(Box::new(e)))
+            .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))))
     }
 }
 
@@ -576,97 +586,43 @@ impl Rocket {
     /// # };
     /// ```
     pub fn ignite() -> Rocket {
-        Config::read()
-            .or_else(|e| match e {
-                ConfigError::IoError => {
-                    warn!("Failed to read 'Rocket.toml'. Using defaults.");
-                    Ok(FullConfig::env_default()?.take_active())
-                }
-                ConfigError::NotFound => Ok(FullConfig::env_default()?.take_active()),
-                _ => Err(e)
-            })
-            .map(Rocket::configured)
-            .unwrap_or_else(|e: ConfigError| {
-                logger::init(logger::LoggingLevel::Debug);
-                e.pretty_print();
-                std::process::exit(1)
-            })
+        Rocket::custom(Config::figment())
     }
 
-    /// Creates a new `Rocket` application using the supplied custom
-    /// configuration. The `Rocket.toml` file, if present, is ignored. Any
-    /// environment variables setting config parameters are ignored.
+    /// Creates a new `Rocket` application using the supplied configuration
+    /// provider. This method is typically called through the
+    /// [`rocket::custom()`] alias.
     ///
-    /// This method is typically called through the `rocket::custom` alias.
+    /// # Panics
+    ///
+    /// If there is an error reading configuration sources, this function prints
+    /// a nice error message and then exits the process.
     ///
     /// # Examples
     ///
-    /// ```rust
-    /// use rocket::config::{Config, Environment};
-    /// # use rocket::config::ConfigError;
+    /// ```rust,no_run
+    /// use figment::{Figment, providers::{Toml, Env, Format}};
     ///
-    /// # #[allow(dead_code)]
-    /// # fn try_config() -> Result<(), ConfigError> {
-    /// let config = Config::build(Environment::Staging)
-    ///     .address("1.2.3.4")
-    ///     .port(9234)
-    ///     .finalize()?;
+    /// #[rocket::launch]
+    /// fn rocket() -> _ {
+    ///     let figment = Figment::from(rocket::Config::default())
+    ///         .merge(Toml::file("MyApp.toml").nested())
+    ///         .merge(Env::prefixed("MY_APP_"));
     ///
-    /// # #[allow(unused_variables)]
-    /// let app = rocket::custom(config);
-    /// # Ok(())
-    /// # }
+    ///     rocket::custom(figment)
+    /// }
     /// ```
     #[inline]
-    pub fn custom(config: Config) -> Rocket {
-        Rocket::configured(config)
-    }
-
-    #[inline]
-    fn configured(config: Config) -> Rocket {
-        if logger::try_init(config.log_level, false) {
-            // Temporary weaken log level for launch info.
-            logger::push_max_level(logger::LoggingLevel::Normal);
-        }
-
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), config.environment);
-        launch_info_!("address: {}", Paint::default(&config.address).bold());
-        launch_info_!("port: {}", Paint::default(&config.port).bold());
-        launch_info_!("log: {}", Paint::default(config.log_level).bold());
-        launch_info_!("workers: {}", Paint::default(config.workers).bold());
-        launch_info_!("secret key: {}", Paint::default(&config.secret_key).bold());
-        launch_info_!("limits: {}", Paint::default(&config.limits).bold());
-
-        match config.keep_alive {
-            Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),
-            None => launch_info_!("keep-alive: {}", Paint::default("disabled").bold()),
-        }
-
-        let tls_configured = config.tls.is_some();
-        if tls_configured && cfg!(feature = "tls") {
-            launch_info_!("tls: {}", Paint::default("enabled").bold());
-        } else if tls_configured {
-            error_!("tls: {}", Paint::default("disabled").bold());
-            error_!("tls is configured, but the tls feature is disabled");
-        } else {
-            launch_info_!("tls: {}", Paint::default("disabled").bold());
-        }
-
-        if config.secret_key.is_generated() && config.environment.is_prod() {
-            warn!("environment is 'production' but no `secret_key` is configured");
-        }
-
-        for (name, value) in config.extras() {
-            launch_info_!("{} {}: {}",
-                          Paint::yellow("[extra]"), name,
-                          Paint::default(LoggedValue(value)).bold());
-        }
+    pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
+        let (config, figment) = (Config::from(&provider), Figment::from(provider));
+        logger::try_init(config.log_level, config.cli_colors, false);
+        config.pretty_print(figment.profile());
 
         let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-
         Rocket {
-            config, managed_state,
+            config, figment,
+            managed_state,
             shutdown_handle: Shutdown(shutdown_sender),
             manifest: vec![],
             router: Router::new(),
@@ -887,7 +843,27 @@ impl Rocket {
         self.inspect().await.state()
     }
 
-    /// Returns the active configuration.
+    /// Returns the figment.
+    ///
+    /// This function is equivalent to `.inspect().await.figment()` and is
+    /// provided as a convenience.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// println!("Rocket config: {:?}", rocket.config().await);
+    /// # });
+    /// ```
+    pub async fn figment(&mut self) -> &Figment {
+        self.inspect().await.figment()
+    }
+
+    /// Returns the config.
     ///
     /// This function is equivalent to `.inspect().await.config()` and is
     /// provided as a convenience.
@@ -938,14 +914,14 @@ impl Rocket {
 
     /// Perform "pre-launch" checks: verify that there are no routing colisions
     /// and that there were no fairing failures.
-    pub(crate) async fn prelaunch_check(&mut self) -> Result<(), LaunchError> {
+    pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
         self.actualize_manifest().await;
         if let Err(e) = self.router.collisions() {
-            return Err(LaunchError::new(LaunchErrorKind::Collision(e)));
+            return Err(Error::new(ErrorKind::Collision(e)));
         }
 
         if let Some(failures) = self.fairings.failures() {
-            return Err(LaunchError::new(LaunchErrorKind::FailedFairings(failures.to_vec())))
+            return Err(Error::new(ErrorKind::FailedFairings(failures.to_vec())))
         }
 
         Ok(())
@@ -963,8 +939,6 @@ impl Rocket {
     /// first being inspected. See the [`Error`] documentation for more
     /// information.
     ///
-    /// [`Error`]: crate::error::Error
-    ///
     /// # Example
     ///
     /// ```rust
@@ -976,49 +950,44 @@ impl Rocket {
     /// # }
     /// }
     /// ```
-    pub async fn launch(mut self) -> Result<(), crate::error::Error> {
+    pub async fn launch(mut self) -> Result<(), Error> {
         use std::net::ToSocketAddrs;
         use futures::future::Either;
-        use crate::error::Error::Launch;
+        use crate::http::private::bind_tcp;
 
-        self.prelaunch_check().await.map_err(crate::error::Error::Launch)?;
+        self.prelaunch_check().await?;
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        let addr = match full_addr.to_socket_addrs() {
-            Ok(mut addrs) => addrs.next().expect(">= 1 socket addr"),
-            Err(e) => return Err(Launch(e.into())),
-        };
+        let addr = full_addr.to_socket_addrs()
+            .map(|mut addrs| addrs.next().expect(">= 1 socket addr"))
+            .map_err(|e| Error::new(ErrorKind::Io(e)))?;
 
-        // FIXME: Make `ctrlc` a known `Rocket` config option.
         // If `ctrl-c` shutdown is enabled, we `select` on `the ctrl-c` signal
         // and server. Otherwise, we only wait on the `server`, hence `pending`.
         let shutdown_handle = self.shutdown_handle.clone();
-        let shutdown_signal = match self.config.get_bool("ctrlc") {
-            Ok(false) => futures::future::pending().boxed(),
-            _ => tokio::signal::ctrl_c().boxed(),
+        let shutdown_signal = match self.config.ctrlc {
+            true => tokio::signal::ctrl_c().boxed(),
+            false => futures::future::pending().boxed(),
         };
 
+        #[cfg(feature = "tls")]
         let server = {
-            macro_rules! listen_on {
-                ($expr:expr) => {{
-                    let listener = match $expr {
-                        Ok(ok) => ok,
-                        Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err))))
-                    };
-                    self.listen_on(listener)
-                }};
-            }
+            use crate::http::tls::bind_tls;
 
-            #[cfg(feature = "tls")] {
-                if let Some(tls) = self.config.tls.clone() {
-                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
-                } else {
-                    listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
-                }
+            if let Some(tls_config) = &self.config.tls {
+                let (certs, key) = tls_config.to_readers().map_err(ErrorKind::Io)?;
+                let l = bind_tls(addr, certs, key).await.map_err(ErrorKind::Bind)?;
+                self.listen_on(l).boxed()
+            } else {
+                let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
+                self.listen_on(l).boxed()
             }
-            #[cfg(not(feature = "tls"))] {
-                listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
-            }
+        };
+
+        #[cfg(not(feature = "tls"))]
+        let server = {
+            let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
+            self.listen_on(l).boxed()
         };
 
         match futures::future::select(shutdown_signal, server).await {
@@ -1029,7 +998,7 @@ impl Rocket {
             }
             Either::Left((Err(err), server)) => {
                 // Error setting up ctrl-c signal. Let the user know.
-                warn!("Failed to enable `ctrl+c` graceful signal shutdown.");
+                warn!("Failed to enable `ctrl-c` graceful signal shutdown.");
                 info_!("Error: {}", err);
                 server.await
             }
@@ -1126,6 +1095,21 @@ impl Cargo {
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
         self.0.managed_state.try_get()
+    }
+
+    /// Returns the figment for configured provider.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// let figment = rocket.inspect().await.figment();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn figment(&self) -> &Figment {
+        &self.0.figment
     }
 
     /// Returns the active configuration.

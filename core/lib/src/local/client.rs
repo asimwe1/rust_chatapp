@@ -58,7 +58,7 @@ macro_rules! pub_client_impl {
     /// # Errors
     ///
     /// If launching the `Rocket` instance would fail, excepting network errors,
-    /// the `LaunchError` is returned.
+    /// the `Error` is returned.
     ///
     /// ```rust,no_run
     #[doc = $import]
@@ -67,7 +67,7 @@ macro_rules! pub_client_impl {
     /// let client = Client::tracked(rocket);
     /// ```
     #[inline(always)]
-    pub $($prefix)? fn tracked(rocket: Rocket) -> Result<Self, LaunchError> {
+    pub $($prefix)? fn tracked(rocket: Rocket) -> Result<Self, Error> {
         Self::_new(rocket, true) $(.$suffix)?
     }
 
@@ -83,7 +83,7 @@ macro_rules! pub_client_impl {
     /// # Errors
     ///
     /// If launching the `Rocket` instance would fail, excepting network
-    /// errors, the `LaunchError` is returned.
+    /// errors, the `Error` is returned.
     ///
     /// ```rust,no_run
     #[doc = $import]
@@ -91,7 +91,7 @@ macro_rules! pub_client_impl {
     /// let rocket = rocket::ignite();
     /// let client = Client::untracked(rocket);
     /// ```
-    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, LaunchError> {
+    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, Error> {
         Self::_new(rocket, false) $(.$suffix)?
     }
 
@@ -100,7 +100,7 @@ macro_rules! pub_client_impl {
         since = "0.5",
         note = "choose between `Client::untracked()` and `Client::tracked()`"
     )]
-    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, LaunchError> {
+    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, Error> {
         Self::tracked(rocket) $(.$suffix)?
     }
 
@@ -159,7 +159,7 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub fn cookies(&self) -> crate::http::CookieJar<'_> {
-        let key = self.rocket().config.secret_key();
+        let key = &self.rocket().config.secret_key;
         let jar = self._with_raw_cookies(|jar| jar.clone());
         crate::http::CookieJar::from(jar, key)
     }

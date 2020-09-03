@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
 use crate::rocket::{Rocket, Cargo};
 use crate::http::{private::cookie, Method};
-use crate::error::LaunchError;
+use crate::error::Error;
 
 /// An `async` client to construct and dispatch local requests.
 ///
@@ -57,7 +57,7 @@ impl Client {
     pub(crate) async fn _new(
         mut rocket: Rocket,
         tracked: bool
-    ) -> Result<Client, LaunchError> {
+    ) -> Result<Client, Error> {
         rocket.prelaunch_check().await?;
         let cargo = rocket.into_cargo().await;
         let cookies = RwLock::new(cookie::CookieJar::new());

@@ -5,7 +5,7 @@ error: invalid path URI: expected token / but found a at index 0
 5 | #[get("a")]
   |       ^^^
 
-error: invalid path URI: expected token / but none was found at index 0
+error: invalid path URI: unexpected EOF: expected token / at index 0
   --- help: expected path in origin form: "/path/<param>"
  --> $DIR/route-path-bad-syntax.rs:8:7
   |

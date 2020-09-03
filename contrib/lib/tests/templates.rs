@@ -6,7 +6,7 @@ mod templates_tests {
     use std::path::{Path, PathBuf};
 
     use rocket::{Rocket, http::RawStr};
-    use rocket::config::{Config, Environment};
+    use rocket::config::Config;
     use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
@@ -27,11 +27,8 @@ mod templates_tests {
     }
 
     fn rocket() -> Rocket {
-        let config = Config::build(Environment::Development)
-            .extra("template_dir", template_root().to_str().expect("template directory"))
-            .expect("valid configuration");
-
-        rocket::custom(config).attach(Template::fairing())
+        rocket::custom(Config::figment().merge(("template_dir", template_root())))
+            .attach(Template::fairing())
             .mount("/", routes![template_check, is_reloading])
     }
 

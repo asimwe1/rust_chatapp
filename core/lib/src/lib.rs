@@ -55,24 +55,27 @@
 //! }
 //!
 //! #[launch]
-//! fn rocket() -> rocket::Rocket {
+//! fn rocket() -> _ {
 //!     rocket::ignite().mount("/", routes![hello])
 //! }
 //! ```
 //!
 //! ## Features
 //!
-//! The `secrets` feature, which enables [private cookies], is enabled by
-//! default. This necessitates pulling in additional dependencies. To avoid
-//! these dependencies when your application does not use private cookies,
-//! disable the `secrets` feature:
+//! There are two optional, disabled-by-default features:
+//!
+//!   * **secrets:** Enables support for [private cookies].
+//!   * **tls:** Enables support for [TLS].
+//!
+//! The features can be enabled in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0-dev", default-features = false }
+//! rocket = { version = "0.5.0-dev", features = ["secrets", "tls"] }
 //! ```
 //!
-//! [private cookies]: crate::http::CookieJar#private-cookies
+//! [private cookies]: https://rocket.rs/v0.5/guide/requests/#private-cookies
+//! [TLS]: https://rocket.rs/v0.5/guide/configuration/#tls
 //!
 //! ## Configuration
 //!
@@ -98,10 +101,13 @@ pub use async_trait::*;
 
 #[macro_use] extern crate log;
 
+/// These are public dependencies! Update docs if these are changed, especially
+/// figment's version number in docs.
 #[doc(hidden)]
 pub use yansi;
 pub use futures;
 pub use tokio;
+pub use figment;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
 #[macro_use] pub mod outcome;
@@ -132,6 +138,7 @@ mod rocket;
 mod codegen;
 mod ext;
 
+#[doc(hidden)] pub use log::{info, warn, error, debug};
 #[doc(inline)] pub use crate::response::Response;
 #[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatcherInfo};
 #[doc(inline)] pub use crate::data::Data;
@@ -148,9 +155,9 @@ pub fn ignite() -> Rocket {
 }
 
 /// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
-/// custom configuration.
-pub fn custom(config: Config) -> Rocket {
-    Rocket::custom(config)
+/// custom configuration provider.
+pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
+    Rocket::custom(provider)
 }
 
 // TODO.async: More thoughtful plan for async tests
@@ -170,6 +177,7 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     tokio::runtime::Builder::new()
         .threaded_scheduler()
+        .thread_name("rocket-worker-thread")
         .enable_all()
         .build()
         .expect("create tokio runtime")

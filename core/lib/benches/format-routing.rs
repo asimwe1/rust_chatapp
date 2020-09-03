@@ -2,7 +2,6 @@
 #[macro_use] extern crate bencher;
 
 use rocket::local::blocking::Client;
-use rocket::config::{Environment, Config, LoggingLevel};
 
 #[get("/", format = "application/json")]
 fn get() -> &'static str { "get" }
@@ -11,8 +10,8 @@ fn get() -> &'static str { "get" }
 fn post() -> &'static str { "post" }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap()).mount("/", routes![get, post])
+    rocket::custom(rocket::Config::figment().merge(("log_level", "off")))
+        .mount("/", routes![get, post])
 }
 
 use bencher::Bencher;

@@ -89,7 +89,7 @@ impl<'c> LocalResponse<'c> {
 
         async move {
             let response: Response<'c> = f(request).await;
-            let mut cookies = CookieJar::new(request.state.config.secret_key());
+            let mut cookies = CookieJar::new(&request.state.config.secret_key);
             for cookie in response.cookies() {
                 cookies.add_original(cookie.into_owned());
             }

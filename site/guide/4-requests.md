@@ -595,17 +595,25 @@ the [`CookieJar`] documentation contains complete usage information.
 
 Cookies added via the [`CookieJar::add()`] method are set _in the clear._ In
 other words, the value set is visible to the client. For sensitive data, Rocket
-provides _private_ cookies.
+provides _private_ cookies. Private cookies are similar to regular cookies
+except that they are encrypted using authenticated encryption, a form of
+encryption which simultaneously provides confidentiality, integrity, and
+authenticity. Thus, private cookies cannot be inspected, tampered with, or
+manufactured by clients. If you prefer, you can think of private cookies as
+being signed and encrypted.
 
-Private cookies are just like regular cookies except that they are encrypted
-using authenticated encryption, a form of encryption which simultaneously
-provides confidentiality, integrity, and authenticity. This means that private
-cookies cannot be inspected, tampered with, or manufactured by clients. If you
-prefer, you can think of private cookies as being signed and encrypted.
+Support for private cookies must be manually enabled via the `secrets` crate
+feature:
+
+```toml
+## in Cargo.toml
+rocket = { version = "0.5.0-dev", features = ["secrets"] }
+```
 
 The API for retrieving, adding, and removing private cookies is identical except
 methods are suffixed with `_private`. These methods are: [`get_private`],
-[`add_private`], and [`remove_private`]. An example of their usage is below:
+[`get_private_pending`], [`add_private`], and [`remove_private`]. An example of
+their usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -634,13 +642,11 @@ fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
 ### Secret Key
 
 To encrypt private cookies, Rocket uses the 256-bit key specified in the
-`secret_key` configuration parameter. If one is not specified, Rocket will
-automatically generate a fresh key. Note, however, that a private cookie can
-only be decrypted with the same key with which it was encrypted. As such, it is
-important to set a `secret_key` configuration parameter when using private
-cookies so that cookies decrypt properly after an application restart. Rocket
-emits a warning if an application is run in production without a configured
-`secret_key`.
+`secret_key` configuration parameter. When compiled in debug mode, a fresh key
+is generated automatically. In release mode, Rocket requires you to set a secret
+key if the `secrets` feature is enabled. Failure to do so results in a hard
+error at launch time. The value of the parameter may either be a 256-bit base64
+or hex string or a 32-byte slice.
 
 Generating a string suitable for use as a `secret_key` configuration value is
 usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
@@ -650,6 +656,7 @@ For more information on configuration, see the [Configuration](../configuration)
 section of the guide.
 
 [`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
+[`get_private_pending`]: @api/rocket/http/struct.CookieJar.html#method.get_private_pending
 [`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
 [`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
 

@@ -1,14 +1,10 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate bencher;
 
-use rocket::config::{Environment, Config, LoggingLevel};
 use rocket::http::RawStr;
 
 #[get("/")]
 fn hello_world() -> &'static str { "Hello, world!" }
-
-#[get("/")]
-fn get_index() -> &'static str { "index" }
 
 #[put("/")]
 fn put_index() -> &'static str { "index" }
@@ -29,15 +25,15 @@ fn index_c() -> &'static str { "index" }
 fn index_dyn_a(_a: &RawStr) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap()).mount("/", routes![hello_world])
+    let config = rocket::Config::figment().merge(("log_level", "off"));
+    rocket::custom(config).mount("/", routes![hello_world])
 }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap())
-        .mount("/", routes![get_index, put_index, post_index, index_a,
-               index_b, index_c, index_dyn_a])
+    hello_world_rocket()
+        .mount("/", routes![
+            put_index, post_index, index_a, index_b, index_c, index_dyn_a
+        ])
 }
 
 use bencher::Bencher;

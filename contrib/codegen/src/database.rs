@@ -71,13 +71,13 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
     let request = quote!(::rocket::request);
 
-    let generated_types = quote_spanned! { span =>
+    let request_guard_type = quote_spanned! { span =>
         /// The request guard type.
         #vis struct #guard_type(#databases::Connection<Self, #conn_type>);
     };
 
     Ok(quote! {
-        #generated_types
+        #request_guard_type
 
         impl #guard_type {
             /// Returns a fairing that initializes the associated database
@@ -110,8 +110,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
         impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
             type Error = ();
 
-            async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                <#databases::Connection<Self, #conn_type>>::from_request(request).await.map(Self)
+            async fn from_request(req: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+                <#databases::Connection<Self, #conn_type>>::from_request(req).await.map(Self)
             }
         }
     }.into())

@@ -92,14 +92,50 @@ impl AdHoc {
     /// let fairing = AdHoc::on_attach("No-Op", |rocket| async { Ok(rocket) });
     /// ```
     pub fn on_attach<F, Fut>(name: &'static str, f: F) -> AdHoc
-    where
-        F: FnOnce(Rocket) -> Fut + Send + 'static,
-        Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
+        where F: FnOnce(Rocket) -> Fut + Send + 'static,
+              Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
     {
         AdHoc {
             name,
             kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket))))))
         }
+    }
+
+    /// Constructs an `AdHoc` attach fairing that extracts a configuration of
+    /// type `T` from the configured provider and stores it in managed state. If
+    /// extractions fails, pretty-prints the error message and errors the attach
+    /// fairing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use serde::Deserialize;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[derive(Deserialize)]
+    /// struct Config {
+    ///     field: String,
+    ///     other: usize,
+    ///     /* and so on.. */
+    /// }
+    ///
+    /// let fairing = AdHoc::config::<Config>();
+    /// ```
+    pub fn config<'de, T>() -> AdHoc
+        where T: serde::Deserialize<'de> + Send + Sync + 'static
+    {
+        AdHoc::on_attach(std::any::type_name::<T>(), |mut rocket| async {
+            let figment = rocket.figment().await;
+            let app_config = match figment.extract::<T>() {
+                Ok(config) => config,
+                Err(e) => {
+                    crate::config::pretty_print_error(e);
+                    return Err(rocket);
+                }
+            };
+
+            Ok(rocket.manage(app_config))
+        })
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will

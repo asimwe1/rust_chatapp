@@ -12,9 +12,8 @@ mod databases_tests {
 #[cfg(all(feature = "databases", feature = "sqlite_pool"))]
 #[cfg(test)]
 mod rusqlite_integration_test {
-    use rocket::config::{Config, Environment, Value, Map};
-    use rocket_contrib::databases::rusqlite;
     use rocket_contrib::database;
+    use rocket_contrib::databases::rusqlite;
 
     use rusqlite::types::ToSql;
 
@@ -27,18 +26,19 @@ mod rusqlite_integration_test {
 
     #[rocket::async_test]
     async fn test_db() {
-        let mut test_db: Map<String, Value> = Map::new();
-        let mut test_db_opts: Map<String, Value> = Map::new();
-        test_db_opts.insert("url".into(), Value::String(":memory:".into()));
-        test_db.insert("test_db".into(), Value::Table(test_db_opts.clone()));
-        test_db.insert("test_db_2".into(), Value::Table(test_db_opts));
-        let config = Config::build(Environment::Development)
-            .extra("databases", Value::Table(test_db))
-            .finalize()
-            .unwrap();
+        use rocket::figment::{Figment, util::map};
 
-        let mut rocket = rocket::custom(config).attach(SqliteDb::fairing()).attach(SqliteDb2::fairing());
-        let conn = SqliteDb::get_one(rocket.inspect().await).await.expect("unable to get connection");
+        let options = map!["url" => ":memory:"];
+        let config = Figment::from(rocket::Config::default())
+            .merge(("databases", map!["test_db" => &options]))
+            .merge(("databases", map!["test_db_2" => &options]));
+
+        let mut rocket = rocket::custom(config)
+            .attach(SqliteDb::fairing())
+            .attach(SqliteDb2::fairing());
+
+        let conn = SqliteDb::get_one(rocket.inspect().await).await
+            .expect("unable to get connection");
 
         // Rusqlite's `transaction()` method takes `&mut self`; this tests that
         // the &mut method can be called inside the closure passed to `run()`.

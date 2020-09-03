@@ -95,7 +95,7 @@ impl<'r> Request<'r> {
                 managed: &rocket.managed_state,
                 shutdown: &rocket.shutdown_handle,
                 route: Atomic::new(None),
-                cookies: CookieJar::new(rocket.config.secret_key()),
+                cookies: CookieJar::new(&rocket.config.secret_key),
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(Container::new()),
@@ -749,7 +749,7 @@ impl<'r> Request<'r> {
 impl<'r> Request<'r> {
     // Only used by doc-tests! Needs to be `pub` because doc-test are external.
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::development());
+        let rocket = Rocket::custom(Config::default());
         let uri = Origin::parse(uri).expect("invalid URI in example");
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);

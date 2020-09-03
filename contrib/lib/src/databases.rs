@@ -40,7 +40,9 @@
 //! See [Provided](#provided) for a list of supported database and their
 //! associated feature name.
 //!
-//! In `Rocket.toml` or the equivalent via environment variables:
+//! In whichever configuration source you choose, configure a `databases`
+//! dictionary with an internal dictionary for each database, here `sqlite_logs`
+//! in a TOML source:
 //!
 //! ```toml
 //! [global.databases]
@@ -97,8 +99,9 @@
 //!
 //! ## Configuration
 //!
-//! Databases can be configured via various mechanisms: `Rocket.toml`,
-//! procedurally via `rocket::custom()`, or via environment variables.
+//! Databases can be configured as any other values. Using the default
+//! configuration provider, either via `Rocket.toml` or environment variables.
+//! You can also use a custom provider.
 //!
 //! ### `Rocket.toml`
 //!
@@ -138,31 +141,23 @@
 //! The example below does just this:
 //!
 //! ```rust
-//! #[macro_use] extern crate rocket;
+//! # #[cfg(feature = "diesel_sqlite_pool")] {
+//! use rocket::figment::{value::{Map, Value}, util::map};
 //!
-//! # #[cfg(feature = "diesel_sqlite_pool")]
-//! # mod test {
-//! use std::collections::HashMap;
-//! use rocket::config::{Config, Environment, Value};
+//! #[rocket::launch]
+//! fn rocket() -> _ {
+//!     let db: Map<_, Value> = map! {
+//!         "url" => "db.sqlite".into(),
+//!         "pool_size" => 10.into()
+//!     };
 //!
-//! #[launch]
-//! fn rocket() -> rocket::Rocket {
-//!     let mut database_config = HashMap::new();
-//!     let mut databases = HashMap::new();
+//!     let figment = rocket::Config::figment()
+//!         .merge(("databases", map!["my_db" => db]));
 //!
-//!     // This is the same as the following TOML:
-//!     // my_db = { url = "database.sqlite" }
-//!     database_config.insert("url", Value::from("database.sqlite"));
-//!     databases.insert("my_db", Value::from(database_config));
-//!
-//!     let config = Config::build(Environment::Development)
-//!         .extra("databases", databases)
-//!         .finalize()
-//!         .unwrap();
-//!
-//!     rocket::custom(config)
+//!     rocket::custom(figment)
 //! }
-//! # } fn main() {}
+//! # rocket();
+//! # }
 //! ```
 //!
 //! ### Environment Variables
@@ -246,33 +241,22 @@
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
-//! # #[cfg(feature = "diesel_sqlite_pool")]
-//! # mod test {
-//! # use std::collections::HashMap;
-//! # use rocket::config::{Config, Environment, Value};
-//! #
+//! # #[cfg(feature = "diesel_sqlite_pool")] {
+//! # use rocket::figment::{value::{Map, Value}, util::map};
 //! use rocket_contrib::databases::diesel;
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
 //! #[launch]
-//! fn rocket() -> rocket::Rocket {
-//! #     let mut db_config = HashMap::new();
-//! #     let mut databases = HashMap::new();
-//! #
-//! #     db_config.insert("url", Value::from("database.sqlite"));
-//! #     db_config.insert("pool_size", Value::from(10));
-//! #     databases.insert("my_db", Value::from(db_config));
-//! #
-//! #     let config = Config::build(Environment::Development)
-//! #         .extra("databases", databases)
-//! #         .finalize()
-//! #         .unwrap();
-//! #
-//!     rocket::custom(config).attach(MyDatabase::fairing())
+//! fn rocket() -> _ {
+//! #   let db: Map<_, Value> = map![
+//! #        "url" => "db.sqlite".into(), "pool_size" => 10.into()
+//! #   ];
+//! #   let figment = rocket::Config::figment().merge(("databases", map!["my_db" => db]));
+//!     rocket::custom(figment).attach(MyDatabase::fairing())
 //! }
-//! # } fn main() {}
+//! # }
 //! ```
 //!
 //! ## Handlers
@@ -376,22 +360,23 @@
 
 pub extern crate r2d2;
 
-#[cfg(any(feature = "diesel_sqlite_pool",
-          feature = "diesel_postgres_pool",
-          feature = "diesel_mysql_pool"))]
+#[cfg(any(
+    feature = "diesel_sqlite_pool",
+    feature = "diesel_postgres_pool",
+    feature = "diesel_mysql_pool"
+))]
 pub extern crate diesel;
 
-use std::fmt::{self, Display, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use rocket::config::{self, Value};
 use rocket::fairing::{AdHoc, Fairing};
 use rocket::request::{Request, Outcome, FromRequest};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Status;
 
 use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore, Mutex};
+use rocket::tokio::time::timeout;
 
 use self::r2d2::ManageConnection;
 
@@ -425,7 +410,7 @@ use self::r2d2::ManageConnection;
 /// [`database_config`]`("my_database", &config)`:
 ///
 /// ```rust,ignore
-/// DatabaseConfig {
+/// Config {
 ///     url: "dummy_db.sqlite",
 ///     pool_size: 10,
 ///     extras: {
@@ -434,16 +419,51 @@ use self::r2d2::ManageConnection;
 ///     },
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq)]
-pub struct DatabaseConfig<'a> {
-    /// The connection URL specified in the Rocket configuration.
-    pub url: &'a str,
-    /// The size of the pool to be initialized. Defaults to the number of
-    /// Rocket workers.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Config {
+    /// Connection URL specified in the Rocket configuration.
+    pub url: String,
+    /// Initial pool size. Defaults to the number of Rocket workers.
     pub pool_size: u32,
-    /// Any extra options that are included in the configuration, **excluding**
-    /// the url and pool_size.
-    pub extras: rocket::config::Map<String, Value>,
+    /// How long to wait, in seconds, for a new connection before timing out.
+    /// Defaults to `5`.
+    // FIXME: Use `time`.
+    pub timeout: u8,
+}
+
+use serde::{Serialize, Deserialize};
+use rocket::figment::{Figment, Error, providers::Serialized};
+
+impl Config {
+    /// Retrieves the database configuration for the database named `name`.
+    ///
+    /// This function is primarily used by the code generated by the `#[database]`
+    /// attribute.
+    ///
+    /// # Example
+    ///
+    /// Consider the following configuration:
+    ///
+    /// ```toml
+    /// [global.databases]
+    /// my_db = { url = "db/db.sqlite", pool_size = 25 }
+    /// my_other_db = { url = "mysql://root:root@localhost/database" }
+    /// ```
+    ///
+    /// The following example uses `database_config` to retrieve the configurations
+    /// for the `my_db` and `my_other_db` databases:
+    ///
+    /// ```rust
+    ///
+    /// ```
+    pub fn from(cargo: &rocket::Cargo, db: &str) -> Result<Config, Error> {
+        let db_key = format!("databases.{}", db);
+        let key = |name: &str| format!("{}.{}", db_key, name);
+        Figment::from(cargo.figment())
+            .merge(Serialized::default(&key("pool_size"), cargo.config().workers))
+            .merge(Serialized::default(&key("timeout"), 5))
+            .extract_inner::<Self>(&db_key)
+    }
 }
 
 /// A wrapper around `r2d2::Error`s or a custom database error type.
@@ -456,143 +476,6 @@ pub enum DbError<T> {
     Custom(T),
     /// The error returned by an r2d2 pool.
     PoolError(r2d2::Error),
-}
-
-/// Error returned on invalid database configurations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ConfigError {
-    /// The `databases` configuration key is missing or is empty.
-    MissingTable,
-    /// The requested database configuration key is missing from the active
-    /// configuration.
-    MissingKey,
-    /// The configuration associated with the key isn't a
-    /// [`Table`](rocket::config::Table).
-    MalformedConfiguration,
-    /// The required `url` key is missing.
-    MissingUrl,
-    /// The value for `url` isn't a string.
-    MalformedUrl,
-    /// The `pool_size` exceeds `u32::max_value()` or is negative.
-    InvalidPoolSize(i64),
-}
-
-/// Retrieves the database configuration for the database named `name`.
-///
-/// This function is primarily used by the code generated by the `#[database]`
-/// attribute.
-///
-/// # Example
-///
-/// Consider the following configuration:
-///
-/// ```toml
-/// [global.databases]
-/// my_db = { url = "db/db.sqlite", pool_size = 25 }
-/// my_other_db = { url = "mysql://root:root@localhost/database" }
-/// ```
-///
-/// The following example uses `database_config` to retrieve the configurations
-/// for the `my_db` and `my_other_db` databases:
-///
-/// ```rust
-/// # extern crate rocket;
-/// # extern crate rocket_contrib;
-/// #
-/// # use std::{collections::BTreeMap, mem::drop};
-/// # use rocket::{fairing::AdHoc, config::{Config, Environment, Value}};
-/// use rocket_contrib::databases::{database_config, ConfigError};
-///
-/// # let mut databases = BTreeMap::new();
-/// #
-/// # let mut my_db = BTreeMap::new();
-/// # my_db.insert("url".to_string(), Value::from("db/db.sqlite"));
-/// # my_db.insert("pool_size".to_string(), Value::from(25));
-/// #
-/// # let mut my_other_db = BTreeMap::new();
-/// # my_other_db.insert("url".to_string(),
-/// #     Value::from("mysql://root:root@localhost/database"));
-/// #
-/// # databases.insert("my_db".to_string(), Value::from(my_db));
-/// # databases.insert("my_other_db".to_string(), Value::from(my_other_db));
-/// #
-/// # let config = Config::build(Environment::Development)
-/// #     .extra("databases", databases)
-/// #     .expect("custom config okay");
-/// #
-/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| async {
-/// # {
-/// let rocket_config = rocket.config().await;
-/// let config = database_config("my_db", rocket_config).unwrap();
-/// assert_eq!(config.url, "db/db.sqlite");
-/// assert_eq!(config.pool_size, 25);
-///
-/// let other_config = database_config("my_other_db", rocket_config).unwrap();
-/// assert_eq!(other_config.url, "mysql://root:root@localhost/database");
-///
-/// let error = database_config("invalid_db", rocket_config).unwrap_err();
-/// assert_eq!(error, ConfigError::MissingKey);
-/// # }
-/// #
-/// #     Ok(rocket)
-/// # }));
-/// ```
-pub fn database_config<'a>(
-    name: &str,
-    from: &'a config::Config
-) -> Result<DatabaseConfig<'a>, ConfigError> {
-    // Find the first `databases` config that's a table with a key of 'name'
-    // equal to `name`.
-    let connection_config = from.get_table("databases")
-        .map_err(|_| ConfigError::MissingTable)?
-        .get(name)
-        .ok_or(ConfigError::MissingKey)?
-        .as_table()
-        .ok_or(ConfigError::MalformedConfiguration)?;
-
-    let maybe_url = connection_config.get("url")
-        .ok_or(ConfigError::MissingUrl)?;
-
-    let url = maybe_url.as_str().ok_or(ConfigError::MalformedUrl)?;
-
-    let pool_size = connection_config.get("pool_size")
-        .and_then(Value::as_integer)
-        .unwrap_or(from.workers as i64);
-
-    if pool_size < 1 || pool_size > u32::max_value() as i64 {
-        return Err(ConfigError::InvalidPoolSize(pool_size));
-    }
-
-    let mut extras = connection_config.clone();
-    extras.remove("url");
-    extras.remove("pool_size");
-
-    Ok(DatabaseConfig { url, pool_size: pool_size as u32, extras: extras })
-}
-
-impl<'a> Display for ConfigError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ConfigError::MissingTable => {
-                write!(f, "A table named `databases` was not found for this configuration")
-            },
-            ConfigError::MissingKey => {
-                write!(f, "An entry in the `databases` table was not found for this key")
-            },
-            ConfigError::MalformedConfiguration => {
-                write!(f, "The configuration for this database is malformed")
-            }
-            ConfigError::MissingUrl => {
-                write!(f, "The connection URL is missing for this database")
-            },
-            ConfigError::MalformedUrl => {
-                write!(f, "The specified connection URL is malformed")
-            },
-            ConfigError::InvalidPoolSize(invalid_size) => {
-                write!(f, "'{}' is not a valid value for `pool_size`", invalid_size)
-            },
-        }
-    }
 }
 
 /// Trait implemented by `r2d2`-based database adapters.
@@ -629,7 +512,7 @@ impl<'a> Display for ConfigError {
 /// `Poolable` for `foo::Connection`:
 ///
 /// ```rust
-/// use rocket_contrib::databases::{r2d2, DbError, DatabaseConfig, Poolable};
+/// use rocket_contrib::databases::{r2d2, DbError, Config, Poolable};
 /// # mod foo {
 /// #     use std::fmt;
 /// #     use rocket_contrib::databases::r2d2;
@@ -661,8 +544,8 @@ impl<'a> Display for ConfigError {
 ///     type Manager = foo::ConnectionManager;
 ///     type Error = DbError<foo::Error>;
 ///
-///     fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-///         let manager = foo::ConnectionManager::new(config.url)
+///     fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+///         let manager = foo::ConnectionManager::new(&config.url)
 ///             .map_err(DbError::Custom)?;
 ///
 ///         r2d2::Pool::builder()
@@ -692,7 +575,7 @@ pub trait Poolable: Send + Sized + 'static {
 
     /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
     /// the pool on success.
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error>;
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error>;
 }
 
 #[cfg(feature = "diesel_sqlite_pool")]
@@ -700,8 +583,8 @@ impl Poolable for diesel::SqliteConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::SqliteConnection>;
     type Error = r2d2::Error;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = diesel::r2d2::ConnectionManager::new(config.url);
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
@@ -711,8 +594,8 @@ impl Poolable for diesel::PgConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::PgConnection>;
     type Error = r2d2::Error;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = diesel::r2d2::ConnectionManager::new(config.url);
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
@@ -722,8 +605,8 @@ impl Poolable for diesel::MysqlConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::MysqlConnection>;
     type Error = r2d2::Error;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = diesel::r2d2::ConnectionManager::new(config.url);
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
@@ -734,7 +617,7 @@ impl Poolable for postgres::Client {
     type Manager = r2d2_postgres::PostgresConnectionManager<postgres::tls::NoTls>;
     type Error = DbError<postgres::Error>;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_postgres::PostgresConnectionManager::new(
             config.url.parse().map_err(DbError::Custom)?,
             postgres::tls::NoTls,
@@ -750,8 +633,8 @@ impl Poolable for mysql::Conn {
     type Manager = r2d2_mysql::MysqlConnectionManager;
     type Error = r2d2::Error;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let opts = mysql::OptsBuilder::from_opts(config.url);
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let opts = mysql::OptsBuilder::from_opts(&config.url);
         let manager = r2d2_mysql::MysqlConnectionManager::new(opts);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
@@ -762,9 +645,8 @@ impl Poolable for rusqlite::Connection {
     type Manager = r2d2_sqlite::SqliteConnectionManager;
     type Error = r2d2::Error;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_sqlite::SqliteConnectionManager::file(config.url);
-
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
@@ -774,8 +656,8 @@ impl Poolable for memcache::Client {
     type Manager = r2d2_memcache::MemcacheConnectionManager;
     type Error = DbError<memcache::MemcacheError>;
 
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_memcache::MemcacheConnectionManager::new(config.url);
+    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = r2d2_memcache::MemcacheConnectionManager::new(&*config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
@@ -786,9 +668,21 @@ impl Poolable for memcache::Client {
 /// types are properly checked.
 #[doc(hidden)]
 pub struct ConnectionPool<K, C: Poolable> {
+    config: Config,
     pool: r2d2::Pool<C::Manager>,
     semaphore: Arc<Semaphore>,
     _marker: PhantomData<fn() -> K>,
+}
+
+impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
+    fn clone(&self) -> Self {
+        ConnectionPool {
+            config: self.config.clone(),
+            pool: self.pool.clone(),
+            semaphore: self.semaphore.clone(),
+            _marker: PhantomData
+        }
+    }
 }
 
 /// Unstable internal details of generated code for the #[database] attribute.
@@ -816,30 +710,31 @@ async fn run_blocking<F, R>(job: F) -> R
 }
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
-    pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl Fairing {
+    pub fn fairing(fairing_name: &'static str, db_name: &'static str) -> impl Fairing {
         AdHoc::on_attach(fairing_name, move |mut rocket| async move {
-            let config = database_config(config_name, rocket.config().await);
-            let pool = config.map(|c| (c.pool_size, C::pool(c)));
+            let config = match Config::from(rocket.inspect().await, db_name) {
+                Ok(config) => config,
+                Err(config_error) => {
+                    rocket::error!("database configuration error for '{}'", db_name);
+                    error_!("{}", config_error);
+                    return Err(rocket);
+                }
+            };
 
-            match pool {
-                Ok((size, Ok(pool))) => {
+            match C::pool(&config) {
+                Ok(pool) => {
+                    let pool_size = config.pool_size;
                     let managed = ConnectionPool::<K, C> {
-                        pool,
-                        semaphore: Arc::new(Semaphore::new(size as usize)),
+                        config, pool,
+                        semaphore: Arc::new(Semaphore::new(pool_size as usize)),
                         _marker: PhantomData,
                     };
+
                     Ok(rocket.manage(managed))
                 },
-                Err(config_error) => {
-                    rocket::logger::error(
-                        &format!("Database configuration failure: '{}'", config_name));
-                    rocket::logger::error_(&config_error.to_string());
-                    Err(rocket)
-                },
-                Ok((_, Err(pool_error))) => {
-                    rocket::logger::error(
-                        &format!("Failed to initialize pool for '{}'", config_name));
-                    rocket::logger::error_(&format!("{:?}", pool_error));
+                Err(pool_error) => {
+                    rocket::error!("failed to initialize pool for '{}'", db_name);
+                    error_!("{:?}", pool_error);
                     Err(rocket)
                 },
             }
@@ -847,28 +742,24 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     async fn get(&self) -> Result<Connection<K, C>, ()> {
-        // TODO: Make timeout configurable.
-        let permit = match tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            self.semaphore.clone().acquire_owned()
-        ).await {
+        let duration = std::time::Duration::from_secs(self.config.timeout as u64);
+        let permit = match timeout(duration, self.semaphore.clone().acquire_owned()).await {
             Ok(p) => p,
             Err(_) => {
-                error_!("Failed to get a database connection within the timeout.");
+                error_!("database connection retrieval timed out");
                 return Err(());
             }
         };
 
-        // TODO: Make timeout configurable.
         let pool = self.pool.clone();
-        match run_blocking(move || pool.get_timeout(std::time::Duration::from_secs(5))).await {
+        match run_blocking(move || pool.get_timeout(duration)).await {
             Ok(c) => Ok(Connection {
                 connection: Arc::new(Mutex::new(Some(c))),
                 permit: Some(permit),
                 _marker: PhantomData,
             }),
             Err(e) => {
-                error_!("Failed to get a database connection: {}", e);
+                error_!("failed to get a database connection: {}", e);
                 Err(())
             }
         }
@@ -878,11 +769,13 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub async fn get_one(cargo: &rocket::Cargo) -> Option<Connection<K, C>> {
         match cargo.state::<Self>() {
             Some(pool) => pool.get().await.ok(),
-            None => {
-                error_!("Database fairing was not attached for {}", std::any::type_name::<K>());
-                None
-            }
+            None => None
         }
+    }
+
+    #[inline]
+    pub async fn get_pool(cargo: &rocket::Cargo) -> Option<Self> {
+        cargo.state::<Self>().map(|pool| pool.clone())
     }
 }
 
@@ -911,7 +804,8 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
                 if let Some(conn) = connection.take() {
                     drop(conn);
                 }
-                // NB: Explicitly dropping the permit here so that it's only
+
+                // Explicitly dropping the permit here so that it's only
                 // released after the connection is.
                 drop(permit);
             })
@@ -932,203 +826,5 @@ impl<'a, 'r, K: 'static, C: Poolable> FromRequest<'a, 'r> for Connection<K, C> {
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-    use rocket::{Config, config::{Environment, Value}};
-    use super::{ConfigError::*, database_config};
-
-    #[test]
-    fn no_database_entry_in_config_returns_error() {
-        let config = Config::build(Environment::Development)
-            .finalize()
-            .unwrap();
-        let database_config_result = database_config("dummy_db", &config);
-
-        assert_eq!(Err(MissingTable), database_config_result);
-    }
-
-    #[test]
-    fn no_matching_connection_returns_error() {
-        // Laboriously setup the config extras
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from("dummy_db.sqlite"));
-        connection_config.insert("pool_size".to_string(), Value::from(10));
-        database_extra.insert("dummy_db".to_string(), Value::from(connection_config));
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("real_db", &config);
-
-        assert_eq!(Err(MissingKey), database_config_result);
-    }
-
-    #[test]
-    fn incorrectly_structured_config_returns_error() {
-        let mut database_extra = BTreeMap::new();
-        let connection_config = vec!["url", "dummy_db.slqite"];
-        database_extra.insert("dummy_db".to_string(), Value::from(connection_config));
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("dummy_db", &config);
-
-        assert_eq!(Err(MalformedConfiguration), database_config_result);
-    }
-
-    #[test]
-    fn missing_connection_string_returns_error() {
-        let mut database_extra = BTreeMap::new();
-        let connection_config: BTreeMap<String, Value> = BTreeMap::new();
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("dummy_db", &config);
-
-        assert_eq!(Err(MissingUrl), database_config_result);
-    }
-
-    #[test]
-    fn invalid_connection_string_returns_error() {
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from(42));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("dummy_db", &config);
-
-        assert_eq!(Err(MalformedUrl), database_config_result);
-    }
-
-    #[test]
-    fn negative_pool_size_returns_error() {
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from("dummy_db.sqlite"));
-        connection_config.insert("pool_size".to_string(), Value::from(-1));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("dummy_db", &config);
-
-        assert_eq!(Err(InvalidPoolSize(-1)), database_config_result);
-    }
-
-    #[test]
-    fn pool_size_beyond_u32_max_returns_error() {
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        let over_max = (u32::max_value()) as i64 + 1;
-        connection_config.insert("url".to_string(), Value::from("dummy_db.sqlite"));
-        connection_config.insert("pool_size".to_string(), Value::from(over_max));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config_result = database_config("dummy_db", &config);
-
-        // The size of `0` is an overflow wrap-around
-        assert_eq!(Err(InvalidPoolSize(over_max)), database_config_result);
-    }
-
-    #[test]
-    fn happy_path_database_config() {
-        let url = "dummy_db.sqlite";
-        let pool_size = 10;
-
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from(url));
-        connection_config.insert("pool_size".to_string(), Value::from(pool_size));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config = database_config("dummy_db", &config).unwrap();
-
-        assert_eq!(url, database_config.url);
-        assert_eq!(pool_size, database_config.pool_size);
-        assert_eq!(0, database_config.extras.len());
-    }
-
-    #[test]
-    fn extras_do_not_contain_required_keys() {
-        let url = "dummy_db.sqlite";
-        let pool_size = 10;
-
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from(url));
-        connection_config.insert("pool_size".to_string(), Value::from(pool_size));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config = database_config("dummy_db", &config).unwrap();
-
-        assert_eq!(url, database_config.url);
-        assert_eq!(pool_size, database_config.pool_size);
-        assert_eq!(false, database_config.extras.contains_key("url"));
-        assert_eq!(false, database_config.extras.contains_key("pool_size"));
-    }
-
-    #[test]
-    fn extra_values_are_placed_in_extras_map() {
-        let url = "dummy_db.sqlite";
-        let pool_size = 10;
-        let tls_cert = "certs.pem";
-        let tls_key = "key.pem";
-
-        let mut database_extra = BTreeMap::new();
-        let mut connection_config = BTreeMap::new();
-        connection_config.insert("url".to_string(), Value::from(url));
-        connection_config.insert("pool_size".to_string(), Value::from(pool_size));
-        connection_config.insert("certs".to_string(), Value::from(tls_cert));
-        connection_config.insert("key".to_string(), Value::from(tls_key));
-        database_extra.insert("dummy_db", connection_config);
-
-        let config = Config::build(Environment::Development)
-            .extra("databases", database_extra)
-            .finalize()
-            .unwrap();
-
-        let database_config = database_config("dummy_db", &config).unwrap();
-
-        assert_eq!(url, database_config.url);
-        assert_eq!(pool_size, database_config.pool_size);
-        assert_eq!(true, database_config.extras.contains_key("certs"));
-        assert_eq!(true, database_config.extras.contains_key("key"));
     }
 }

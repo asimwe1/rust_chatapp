@@ -7,7 +7,7 @@ use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 use crate::http::Status;
 use crate::request::Request;
-use crate::data::{Data, ByteUnit};
+use crate::data::Data;
 
 /// Type alias for the `Outcome` of a `FromTransformedData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
@@ -417,7 +417,7 @@ impl<'a> FromTransformedData<'a> for Data {
     }
 }
 
-/// A varaint of [`FromTransformedData`] for data guards that don't require
+/// A variant of [`FromTransformedData`] for data guards that don't require
 /// transformations.
 ///
 /// When transformation of incoming data isn't required, data guards should
@@ -502,7 +502,8 @@ impl<'a> FromTransformedData<'a> for Data {
 ///         }
 ///
 ///         // Read the data into a String.
-///         let string = match data.open(LIMIT).stream_to_string().await {
+///         let limit = req.limits().get("person").unwrap_or(LIMIT);
+///         let string = match data.open(limit).stream_to_string().await {
 ///             Ok(string) => string,
 ///             Err(e) => return Outcome::Failure((Status::InternalServerError, format!("{}", e)))
 ///         };
@@ -602,7 +603,10 @@ impl<'a, T: FromTransformedData<'a> + 'a> FromTransformedData<'a> for Option<T> 
 }
 
 #[cfg(debug_assertions)]
+use crate::data::ByteUnit;
+
 #[crate::async_trait]
+#[cfg(debug_assertions)]
 impl FromData for String {
     type Error = std::io::Error;
 
@@ -615,8 +619,8 @@ impl FromData for String {
     }
 }
 
-#[cfg(debug_assertions)]
 #[crate::async_trait]
+#[cfg(debug_assertions)]
 impl FromData for Vec<u8> {
     type Error = std::io::Error;
 

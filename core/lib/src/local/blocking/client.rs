@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 
-use crate::error::LaunchError;
+use crate::error::Error;
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
 use crate::rocket::{Rocket, Cargo};
 use crate::http::Method;
@@ -31,7 +31,7 @@ pub struct Client {
 }
 
 impl Client {
-    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, Error> {
         let mut runtime = tokio::runtime::Builder::new()
             .basic_scheduler()
             .enable_all()

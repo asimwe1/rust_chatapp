@@ -1,7 +1,6 @@
 use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
 use rocket::Rocket;
-use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
 pub(crate) use self::context::ContextManager;
@@ -152,19 +151,31 @@ impl Fairing for TemplateFairing {
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
     async fn on_attach(&self, mut rocket: Rocket) -> Result<Rocket, Rocket> {
-        let config = rocket.config().await;
-        let mut template_root = config.root_relative(DEFAULT_TEMPLATE_DIR);
-        match config.get_str("template_dir") {
-            Ok(dir) => template_root = config.root_relative(dir),
-            Err(ConfigError::Missing(_)) => { /* ignore missing */ }
+        use rocket::figment::{Source, value::magic::RelativePathBuf};
+
+        let configured_dir = rocket.figment().await
+            .extract_inner::<RelativePathBuf>("template_dir")
+            .map(|path| path.relative());
+
+        let path = match configured_dir {
+            Ok(dir) => dir,
+            Err(e) if e.missing() => DEFAULT_TEMPLATE_DIR.into(),
             Err(e) => {
-                e.pretty_print();
-                warn_!("Using default templates directory '{:?}'", template_root);
+                rocket::config::pretty_print_error(e);
+                return Err(rocket);
             }
         };
 
-        match Context::initialize(template_root) {
+        let root = Source::from(&*path);
+        match Context::initialize(path) {
             Some(mut ctxt) => {
+                use rocket::{logger::PaintExt, yansi::Paint};
+                use crate::templates::Engines;
+
+                info!("{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
+                info_!("directory: {}", Paint::white(root));
+                info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
+
                 (self.custom_callback)(&mut ctxt.engines);
                 Ok(rocket.manage(ContextManager::new(ctxt)))
             }

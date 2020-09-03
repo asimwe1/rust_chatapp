@@ -14,7 +14,10 @@ edition = "2018"
 [features]
 # Internal use only.
 templates = ["serde", "serde_json", "glob", "notify"]
-databases = ["r2d2", "tokio/blocking", "tokio/rt-threaded", "rocket_contrib_codegen/database_attribute"]
+databases = [
+    "serde", "r2d2", "tokio/blocking", "tokio/rt-threaded",
+    "rocket_contrib_codegen/database_attribute"
+]
 
 # User-facing features.
 default = ["json", "serve"]

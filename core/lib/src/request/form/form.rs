@@ -2,13 +2,14 @@ use std::ops::Deref;
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
-use crate::data::{Outcome, Transform, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
+use crate::data::{Data, Outcome, Transform, Transformed, ToByteUnit};
+use crate::data::{TransformFuture, FromTransformedData, FromDataFuture};
 use crate::http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
-/// This type implements the [`FromTransformedData`] trait. It provides a generic means to
-/// parse arbitrary structures from incoming form data.
+/// This type implements the [`FromTransformedData`] trait. It provides a
+/// generic means to parse arbitrary structures from incoming form data.
 ///
 /// # Strictness
 ///
@@ -197,7 +198,8 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
                 return Transform::Borrowed(Forward(data));
             }
 
-            match data.open(request.limits().forms).stream_to_string().await {
+            let limit = request.limits().get("forms").unwrap_or(32.kibibytes());
+            match data.open(limit).stream_to_string().await {
                 Ok(form_string) => Transform::Borrowed(Success(form_string)),
                 Err(e) => {
                     let err = (Status::InternalServerError, FormDataError::Io(e));
@@ -207,10 +209,13 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
         })
     }
 
-    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
-        Box::pin(futures::future::ready(o.borrowed().and_then(|data| {
-            <Form<T>>::from_data(data, true).map(Form)
-        })))
+    fn from_data(
+        _: &'f Request<'_>,
+        o: Transformed<'f, Self>
+    ) -> FromDataFuture<'f, Self, Self::Error> {
+        Box::pin(async move {
+            o.borrowed().and_then(|data| <Form<T>>::from_data(data, true).map(Form))
+        })
     }
 }
 

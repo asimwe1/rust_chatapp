@@ -20,9 +20,16 @@ mod key {
     pub struct Key;
 
     impl Key {
+        pub fn from(_: &[u8]) -> Self { Key }
+        pub fn derive_from(_: &[u8]) -> Self { Key }
         pub fn generate() -> Self { Key }
         pub fn try_generate() -> Option<Self> { Some(Key) }
-        pub fn derive_from(_bytes: &[u8]) -> Self { Key }
+    }
+
+    impl PartialEq for Key {
+        fn eq(&self, _: &Self) -> bool {
+            true
+        }
     }
 }
 
@@ -121,7 +128,7 @@ mod key {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
+/// # #[cfg(feature = "private-cookies")] {
 /// use rocket::http::Status;
 /// use rocket::outcome::IntoOutcome;
 /// use rocket::request::{self, Request, FromRequest};
@@ -141,6 +148,7 @@ mod key {
 ///             .or_forward(())
 ///     }
 /// }
+/// # }
 /// # fn main() { }
 /// ```
 ///

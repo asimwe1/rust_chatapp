@@ -203,7 +203,7 @@ impl Fairing for SpaceHelmet {
 
     fn on_launch(&self, cargo: &Cargo) {
         if cargo.config().tls_enabled()
-            && !cargo.config().environment.is_dev()
+            && cargo.figment().profile() != rocket::Config::DEBUG_PROFILE
             && !self.is_enabled::<Hsts>()
         {
             warn_!("Space Helmet: deploying with TLS without enabling HSTS.");
