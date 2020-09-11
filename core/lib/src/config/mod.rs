@@ -206,11 +206,11 @@ pub use self::builder::ConfigBuilder;
 pub use crate::logger::LoggingLevel;
 pub(crate) use self::toml_ext::LoggedValue;
 
+use crate::logger::COLORS_ENV;
+use crate::http::uncased;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
-use crate::logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
-use crate::http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
@@ -365,12 +365,12 @@ impl FullConfig {
         for (key, val) in env::vars() {
             if key.len() < ENV_VAR_PREFIX.len() {
                 continue
-            } else if !uncased_eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
+            } else if !uncased::eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
                 continue
             }
 
             // Skip environment variables that are handled elsewhere.
-            if PREHANDLED_VARS.iter().any(|var| uncased_eq(&key, var)) {
+            if PREHANDLED_VARS.iter().any(|var| uncased::eq(&key, var)) {
                 continue
             }
 

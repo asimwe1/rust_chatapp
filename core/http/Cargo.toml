@@ -33,6 +33,7 @@ tokio = { version = "0.2.9", features = ["sync", "tcp", "time"] }
 unicode-xid = "0.2"
 log = "0.4"
 ref-cast = "1.0"
+uncased = "0.9"
 
 [dependencies.cookie]
 git = "https://github.com/SergioBenitez/cookie-rs.git"

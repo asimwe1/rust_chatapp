@@ -40,7 +40,14 @@ mod raw_str;
 mod parse;
 mod listener;
 
-pub mod uncased;
+/// Case-preserving, ASCII case-insensitive string types.
+///
+/// An _uncased_ string is case-preserving. That is, the string itself contains
+/// cased characters, but comparison (including ordering, equality, and hashing)
+/// is ASCII case-insensitive. **Note:** the `alloc` feature _is_ enabled.
+pub mod uncased {
+    #[doc(inline)] pub use uncased::*;
+}
 
 #[doc(hidden)]
 pub mod private {

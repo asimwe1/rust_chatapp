@@ -4,7 +4,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use crate::ext::IntoCollection;
-use crate::uncased::{uncased_eq, UncasedStr};
+use crate::uncased::UncasedStr;
 use crate::parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
@@ -210,7 +210,7 @@ macro_rules! from_extension {
         /// ```
         pub fn from_extension(ext: &str) -> Option<MediaType> {
             match ext {
-                $(x if uncased_eq(x, $ext) => Some(MediaType::$name)),*,
+                $(x if uncased::eq(x, $ext) => Some(MediaType::$name)),*,
                 _ => None
             }
         }
@@ -276,7 +276,7 @@ macro_rules! parse_flexible {
         /// ```
         pub fn parse_flexible(name: &str) -> Option<MediaType> {
             match name {
-                $(x if uncased_eq(x, $short) => Some(MediaType::$name)),*,
+                $(x if uncased::eq(x, $short) => Some(MediaType::$name)),*,
                 _ => MediaType::from_str(name).ok(),
             }
         }
