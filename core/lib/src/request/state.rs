@@ -183,3 +183,22 @@ impl<T: Send + Sync + 'static> Deref for State<'_, T> {
         self.0
     }
 }
+
+impl<T: Send + Sync + 'static> Clone for State<'_, T> {
+    fn clone(&self) -> Self {
+        State(self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn state_is_cloneable() {
+        struct Token(usize);
+
+        let rocket = crate::ignite().manage(Token(123));
+        let state = rocket.state::<Token>().unwrap();
+        assert_eq!(state.0, 123);
+        assert_eq!(state.clone().0, 123);
+    }
+}
