@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
@@ -48,8 +48,8 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// # fn main() {  }
 /// ```
 ///
-/// A type of `Form<T>` automatically dereferences into an `&T`, though you can
-/// also transform a `Form<T>` into a `T` by calling
+/// A type of `Form<T>` automatically dereferences into an `&T` or `&mut T`,
+/// though you can also transform a `Form<T>` into a `T` by calling
 /// [`into_inner()`](Form::into_inner()). Thanks to automatic dereferencing, you
 /// can access fields of `T` transparently through a `Form<T>`, as seen above
 /// with `user_input.value`.
@@ -143,6 +143,12 @@ impl<T> Deref for Form<T> {
 
     fn deref(&self) -> &T {
         &self.0
+    }
+}
+
+impl<T> DerefMut for Form<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
     }
 }
 
