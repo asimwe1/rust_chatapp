@@ -8,7 +8,7 @@ fn google() -> Redirect {
 }
 
 #[get("/rocket")]
-fn rocket() -> Redirect {
+fn redirect() -> Redirect {
     Redirect::to("https://rocket.rs:80")
 }
 
@@ -18,7 +18,7 @@ mod test_absolute_uris_okay {
 
     #[test]
     fn redirect_works() {
-        let rocket = rocket::ignite().mount("/", routes![google, rocket]);
+        let rocket = rocket::ignite().mount("/", routes![google, redirect]);
         let client = Client::new(rocket).unwrap();
 
         let response = client.get("/google").dispatch();

@@ -8,7 +8,7 @@ use crate::http::route::{RouteSegment, Kind, Source};
 use crate::syn::{Expr, Ident, Type, spanned::Spanned};
 use crate::http_codegen::Optional;
 use crate::syn_ext::IdentExt;
-use crate::bang::{prefix_last_segment, uri_parsing::*};
+use crate::bang::uri_parsing::*;
 use crate::proc_macro2::TokenStream;
 
 use crate::URI_MACRO_PREFIX;
@@ -21,6 +21,11 @@ macro_rules! p {
     ("parameter", $n:expr) => (p!(@go $n, "parameter", "parameters"));
     ($n:expr, "was") => (p!(@go $n, "1 was", format!("{} were", $n)));
     ($n:expr, "parameter") => (p!(@go $n, "1 parameter", format!("{} parameters", $n)));
+}
+
+pub fn prefix_last_segment(path: &mut syn::Path, prefix: &str) {
+    let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
+    last_seg.ident = last_seg.ident.prepend(prefix);
 }
 
 pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {

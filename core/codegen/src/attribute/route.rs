@@ -13,7 +13,7 @@ use crate::http_codegen::{Method, MediaType, RoutePath, DataSegment, Optional};
 use crate::attribute::segments::{Source, Kind, Segment};
 use crate::syn::{Attribute, parse::Parser};
 
-use crate::{ROUTE_FN_PREFIX, ROUTE_STRUCT_PREFIX, URI_MACRO_PREFIX, ROCKET_PARAM_PREFIX};
+use crate::{URI_MACRO_PREFIX, ROCKET_PARAM_PREFIX};
 
 /// The raw, parsed `#[route]` attribute.
 #[derive(Debug, FromMeta)]
@@ -408,11 +408,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, _Box, Request, Data, StaticRouteInfo, HandlerFuture);
+    define_vars_and_mods!(req, data, _Box, Request, Data, Route, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
-    let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
-    let generated_struct_name = user_handler_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let generated_internal_uri_macro = generate_internal_uri_macro(&route);
     let generated_respond_expr = generate_respond_expr(&route);
 
@@ -424,36 +422,48 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     Ok(quote! {
         #user_handler_fn
 
-        /// Rocket code generated wrapping route function.
         #[doc(hidden)]
-        #vis fn #generated_fn_name<'_b>(
-            #req: &'_b #Request,
-            #data: #Data
-        ) -> #HandlerFuture<'_b> {
-            #_Box::pin(async move {
-                #(#req_guard_definitions)*
-                #(#parameter_definitions)*
-                #data_stmt
+        #[allow(non_camel_case_types)]
+        /// Rocket code generated proxy structure.
+        #vis struct #user_handler_fn_name {  }
 
-                #generated_respond_expr
-            })
+        /// Rocket code generated proxy static conversion implementation.
+        impl From<#user_handler_fn_name> for #StaticRouteInfo {
+            fn from(_: #user_handler_fn_name) -> #StaticRouteInfo {
+                fn monomorphized_function<'_b>(
+                    #req: &'_b #Request,
+                    #data: #Data
+                ) -> #HandlerFuture<'_b> {
+                    #_Box::pin(async move {
+                        #(#req_guard_definitions)*
+                        #(#parameter_definitions)*
+                        #data_stmt
+
+                        #generated_respond_expr
+                    })
+                }
+
+                #StaticRouteInfo {
+                    name: stringify!(#user_handler_fn_name),
+                    method: #method,
+                    path: #path,
+                    handler: monomorphized_function,
+                    format: #format,
+                    rank: #rank,
+                }
+            }
+        }
+
+        /// Rocket code generated proxy conversion implementation.
+        impl From<#user_handler_fn_name> for #Route {
+            #[inline]
+            fn from(_: #user_handler_fn_name) -> #Route {
+                #StaticRouteInfo::from(#user_handler_fn_name {}).into()
+            }
         }
 
         /// Rocket code generated wrapping URI macro.
         #generated_internal_uri_macro
-
-        /// Rocket code generated static route info.
-        #[doc(hidden)]
-        #[allow(non_upper_case_globals)]
-        #vis static #generated_struct_name: #StaticRouteInfo =
-            #StaticRouteInfo {
-                name: stringify!(#user_handler_fn_name),
-                method: #method,
-                path: #path,
-                handler: #generated_fn_name,
-                format: #format,
-                rank: #rank,
-            };
     }.into())
 }
 

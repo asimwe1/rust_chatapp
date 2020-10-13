@@ -118,3 +118,23 @@ fn test_full_route() {
     assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }
+
+mod scopes {
+    mod other {
+        #[get("/world")]
+        pub fn world() -> &'static str {
+            "Hello, world!"
+        }
+    }
+
+    #[get("/hello")]
+    pub fn hello() -> &'static str {
+        "Hello, outside world!"
+    }
+
+    use other::world;
+
+    fn _rocket() -> rocket::Rocket {
+        rocket::ignite().mount("/", rocket::routes![hello, world])
+    }
+}
