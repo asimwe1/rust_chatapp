@@ -19,7 +19,7 @@ use super::{Client, LocalResponse};
 /// use rocket::http::{ContentType, Cookie};
 ///
 /// # rocket::async_test(async {
-/// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+/// let client = Client::tracked(rocket::ignite()).await.expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())
@@ -45,13 +45,15 @@ impl<'c> LocalRequest<'c> {
         // We try to validate the URI now so that the inner `Request` contains a
         // valid URI. If it doesn't, we set a dummy one.
         let origin = Origin::parse(&uri).unwrap_or_else(|_| Origin::dummy());
-        let request = Request::new(client.rocket(), method, origin.into_owned());
+        let mut request = Request::new(client.rocket(), method, origin.into_owned());
 
         // Add any cookies we know about.
         if client.tracked {
-            for crumb in client.cookies.iter() {
-                request.cookies().add_original(crumb.into_cookie());
-            }
+            client._with_raw_cookies(|jar| {
+                for cookie in jar.iter() {
+                    request.cookies_mut().add_original(cookie.clone());
+                }
+            })
         }
 
         LocalRequest { client, request, uri, data: vec![] }
@@ -92,18 +94,19 @@ impl<'c> LocalRequest<'c> {
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.
         if self.client.tracked {
-            let jar = &self.client.cookies;
-            let current_time = time::OffsetDateTime::now_utc();
-            for cookie in response.cookies().iter() {
-                if let Some(expires) = cookie.expires() {
-                    if expires <= current_time {
-                        jar.force_remove(&cookie);
-                        continue;
+            self.client._with_raw_cookies_mut(|jar| {
+                let current_time = time::OffsetDateTime::now_utc();
+                for cookie in response.cookies().iter() {
+                    if let Some(expires) = cookie.expires() {
+                        if expires <= current_time {
+                            jar.force_remove(cookie);
+                            continue;
+                        }
                     }
-                }
 
-                jar.add(cookie.into_cookie());
-            }
+                    jar.add_original(cookie.clone());
+                }
+            })
         }
 
         response

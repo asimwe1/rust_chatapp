@@ -29,7 +29,7 @@ mod limits_tests {
 
     #[test]
     fn large_enough() {
-        let client = Client::new(rocket_with_forms_limit(128)).unwrap();
+        let client = Client::tracked(rocket_with_forms_limit(128)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -40,7 +40,7 @@ mod limits_tests {
 
     #[test]
     fn just_large_enough() {
-        let client = Client::new(rocket_with_forms_limit(17)).unwrap();
+        let client = Client::tracked(rocket_with_forms_limit(17)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -51,7 +51,7 @@ mod limits_tests {
 
     #[test]
     fn much_too_small() {
-        let client = Client::new(rocket_with_forms_limit(4)).unwrap();
+        let client = Client::tracked(rocket_with_forms_limit(4)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -62,7 +62,7 @@ mod limits_tests {
 
     #[test]
     fn contracted() {
-        let client = Client::new(rocket_with_forms_limit(10)).unwrap();
+        let client = Client::tracked(rocket_with_forms_limit(10)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)

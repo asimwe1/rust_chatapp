@@ -66,7 +66,7 @@ mod templates_tests {
 
         #[test]
         fn test_template_metadata_with_tera() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
 
             let response = client.get("/tera/txt_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -107,7 +107,7 @@ mod templates_tests {
 
         #[test]
         fn test_template_metadata_with_handlebars() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
 
             let response = client.get("/hbs/test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -144,7 +144,7 @@ mod templates_tests {
             write_file(&reload_path, INITIAL_TEXT);
 
             // set up the client. if we can't reload templates, then just quit
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
             let res = client.get("/is_reloading").dispatch();
             if res.status() != Status::Ok {
                 return;

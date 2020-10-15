@@ -44,7 +44,7 @@ use bencher::Bencher;
 use rocket::local::blocking::Client;
 
 fn bench_hello_world(b: &mut Bencher) {
-    let client = Client::new(hello_world_rocket()).unwrap();
+    let client = Client::tracked(hello_world_rocket()).unwrap();
 
     b.iter(|| {
         client.get("/").dispatch();
@@ -52,7 +52,7 @@ fn bench_hello_world(b: &mut Bencher) {
 }
 
 fn bench_single_get_index(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     b.iter(|| {
         client.get("/").dispatch();
@@ -60,7 +60,7 @@ fn bench_single_get_index(b: &mut Bencher) {
 }
 
 fn bench_get_put_post_index(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
@@ -76,7 +76,7 @@ fn bench_get_put_post_index(b: &mut Bencher) {
 }
 
 fn bench_dynamic(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
@@ -92,7 +92,7 @@ fn bench_dynamic(b: &mut Bencher) {
 }
 
 fn bench_simple_routing(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];

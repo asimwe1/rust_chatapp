@@ -34,10 +34,11 @@ unicode-xid = "0.2"
 log = "0.4"
 ref-cast = "1.0"
 uncased = "0.9"
+parking_lot = "0.11"
 
 [dependencies.cookie]
 git = "https://github.com/SergioBenitez/cookie-rs.git"
-rev = "3795f2e"
+rev = "9675944"
 features = ["percent-encode"]
 
 [dependencies.pear]

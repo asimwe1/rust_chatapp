@@ -1130,7 +1130,5 @@ mod tests {
         assert_eq!(pool_size, database_config.pool_size);
         assert_eq!(true, database_config.extras.contains_key("certs"));
         assert_eq!(true, database_config.extras.contains_key("key"));
-
-        println!("{:#?}", database_config);
     }
 }

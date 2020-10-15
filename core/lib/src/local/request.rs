@@ -111,8 +111,8 @@ macro_rules! pub_request_impl {
     /// # });
     /// ```
     #[inline]
-    pub fn cookie(self, cookie: crate::http::Cookie<'_>) -> Self {
-        self._request().cookies().add_original(cookie.into_owned());
+    pub fn cookie(mut self, cookie: crate::http::Cookie<'_>) -> Self {
+        self._request_mut().cookies_mut().add_original(cookie.into_owned());
         self
     }
 
@@ -131,11 +131,11 @@ macro_rules! pub_request_impl {
     /// # });
     /// ```
     #[inline]
-    pub fn cookies<'a, C>(self, cookies: C) -> Self
+    pub fn cookies<'a, C>(mut self, cookies: C) -> Self
         where C: IntoIterator<Item = crate::http::Cookie<'a>>
     {
         for cookie in cookies {
-            self._request().cookies().add_original(cookie.into_owned());
+            self._request_mut().cookies_mut().add_original(cookie.into_owned());
         }
 
         self
@@ -161,8 +161,8 @@ macro_rules! pub_request_impl {
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[inline]
-    pub fn private_cookie(self, cookie: crate::http::Cookie<'static>) -> Self {
-        self._request().cookies().add_original_private(cookie);
+    pub fn private_cookie(mut self, cookie: crate::http::Cookie<'static>) -> Self {
+        self._request_mut().cookies_mut().add_original_private(cookie);
         self
     }
 

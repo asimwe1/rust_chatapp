@@ -28,7 +28,7 @@ mod many_cookie_jars_tests {
 
     #[test]
     fn test_mutli_add() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
         let response = client.post("/").dispatch();
         let cookies = response.cookies();
         assert_eq!(cookies.iter().count(), 2);
@@ -38,7 +38,7 @@ mod many_cookie_jars_tests {
 
     #[test]
     fn test_mutli_get() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
         let response = client.get("/")
             .cookie(Cookie::new("a", "a_val"))
             .cookie(Cookie::new("b", "hi!"))

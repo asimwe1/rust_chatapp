@@ -25,11 +25,11 @@ mod tests {
         let rocket = rocket::ignite()
             .mount("/", routes![index])
             .register(catchers![not_found])
-            .attach(AdHoc::on_request("Add Fairing Cookie", |req, _| Box::pin(async move {
+            .attach(AdHoc::on_request("Add Cookie", |req, _| Box::pin(async move {
                 req.cookies().add(Cookie::new("fairing", "woo"));
             })));
 
-        let client = Client::new(rocket).unwrap();
+        let client = Client::tracked(rocket).unwrap();
 
         // Check that the index returns the `index` and `fairing` cookie.
         let response = client.get("/").dispatch();

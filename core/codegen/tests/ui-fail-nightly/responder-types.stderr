@@ -14,9 +14,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    |
    = help: the following implementations were found:
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&CookieCrumb>>
              <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<CookieCrumb>>
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
@@ -35,9 +33,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    |
    = help: the following implementations were found:
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&CookieCrumb>>
              <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<CookieCrumb>>
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not satisfied
@@ -48,9 +44,7 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
    |
    = help: the following implementations were found:
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&CookieCrumb>>
              <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<CookieCrumb>>
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied

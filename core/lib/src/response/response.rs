@@ -731,7 +731,7 @@ impl<'r> Response<'r> {
         self.status = Some(Status::new(code, reason));
     }
 
-    /// Returns a vector of the cookies set in `self` as identified by the
+    /// Returns an iterator over the cookies in `self` as identified by the
     /// `Set-Cookie` header. Malformed cookies are skipped.
     ///
     /// # Example

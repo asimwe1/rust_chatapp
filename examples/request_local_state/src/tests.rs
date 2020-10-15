@@ -5,7 +5,7 @@ use rocket::local::blocking::Client;
 
 #[test]
 fn test() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     client.get("/sync").dispatch();
 
     let atomics = client.cargo().state::<Atomics>().unwrap();

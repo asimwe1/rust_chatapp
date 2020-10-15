@@ -20,7 +20,7 @@ use crate::http::Method;
 /// use rocket::local::blocking::Client;
 ///
 /// let rocket = rocket::ignite();
-/// let client = Client::new(rocket).expect("valid rocket");
+/// let client = Client::tracked(rocket).expect("valid rocket");
 /// let response = client.post("/")
 ///     .body("Hello, world!")
 ///     .dispatch();
@@ -49,7 +49,7 @@ impl Client {
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
         let rocket = crate::ignite();
-        let client = Client::new(rocket).expect("valid rocket");
+        let client = Client::untracked(rocket).expect("valid rocket");
         let request = client.get("/");
         let response = request.clone().dispatch();
         f(&client, request, response)
@@ -68,8 +68,10 @@ impl Client {
     }
 
     #[inline(always)]
-    fn _cookies(&self) -> &cookie::CookieJar {
-        self.inner._cookies()
+    pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
+        where F: FnOnce(&crate::http::private::cookie::CookieJar) -> T
+    {
+        self.inner._with_raw_cookies(f)
     }
 
     #[inline(always)]

@@ -7,7 +7,7 @@ use rocket_contrib::templates::Template;
 
 macro_rules! dispatch {
     ($method:expr, $path:expr, |$client:ident, $response:ident| $body:expr) => ({
-        let $client = Client::new(rocket()).unwrap();
+        let $client = Client::tracked(rocket()).unwrap();
         let $response = $client.req($method, $path).dispatch();
         $body
     })

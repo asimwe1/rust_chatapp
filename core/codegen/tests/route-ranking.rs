@@ -19,7 +19,7 @@ fn get3(_number: u64) -> &'static str { "3" }
 #[test]
 fn test_ranking() {
     let rocket = rocket::ignite().mount("/", routes![get0, get1, get2, get3]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.get("/0").dispatch();
     assert_eq!(response.into_string().unwrap(), "0");
@@ -44,7 +44,7 @@ fn test_rank_collision() {
     use rocket::error::LaunchErrorKind;
 
     let rocket = rocket::ignite().mount("/", routes![get0, get0b]);
-    let client_result = Client::new(rocket);
+    let client_result = Client::tracked(rocket);
     match client_result.as_ref().map_err(|e| e.kind()) {
         Err(LaunchErrorKind::Collision(..)) => { /* o.k. */ },
         Ok(_) => panic!("client succeeded unexpectedly"),

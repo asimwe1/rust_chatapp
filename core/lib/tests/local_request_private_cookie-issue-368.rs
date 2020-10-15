@@ -20,7 +20,7 @@ mod private_cookies {
         fn private_cookie_is_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).unwrap();
+            let client = Client::tracked(rocket).unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
             let response = req.dispatch();
 
@@ -32,7 +32,7 @@ mod private_cookies {
         fn regular_cookie_is_not_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).unwrap();
+            let client = Client::tracked(rocket).unwrap();
             let req = client.get("/").cookie(Cookie::new("cookie_name", "cookie_value"));
             let response = req.dispatch();
 

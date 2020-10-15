@@ -7,7 +7,7 @@ use rocket_contrib::templates::Template;
 
 #[test]
 fn test_submit() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.post("/submit")
         .header(ContentType::Form)
         .body("message=Hello from Rocket!")
@@ -24,7 +24,7 @@ fn test_submit() {
 
 fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     // Attach a cookie if one is given.
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = match optional_cookie {
         Some(cookie) => client.get("/").cookie(cookie).dispatch(),
         None => client.get("/").dispatch(),
@@ -36,7 +36,7 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 
 #[test]
 fn test_index() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();

@@ -40,11 +40,7 @@ async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.5"
 ubyte = "0.10"
-
-[dependencies.cookie]
-git = "https://github.com/SergioBenitez/cookie-rs.git"
-rev = "3795f2e"
-features = ["percent-encode"]
+parking_lot = "0.11"
 
 [dependencies.pear]
 git = "https://github.com/SergioBenitez/Pear.git"

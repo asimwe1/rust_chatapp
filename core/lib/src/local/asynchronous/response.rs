@@ -36,7 +36,7 @@ use crate::{Request, Response};
 ///
 /// # async fn read_body_manually() -> io::Result<()> {
 /// // Dispatch a `GET /` request.
-/// let client = Client::new(rocket()).await.expect("valid rocket");
+/// let client = Client::tracked(rocket()).await.expect("valid rocket");
 /// let mut response = client.get("/").dispatch().await;
 ///
 /// // Check metadata validity.
@@ -89,9 +89,9 @@ impl<'c> LocalResponse<'c> {
 
         async move {
             let response: Response<'c> = f(request).await;
-            let cookies = CookieJar::new(request.state.config.secret_key());
+            let mut cookies = CookieJar::new(request.state.config.secret_key());
             for cookie in response.cookies() {
-                cookies.add(cookie.into_owned());
+                cookies.add_original(cookie.into_owned());
             }
 
             LocalResponse { cookies, _request: boxed_req, response, }

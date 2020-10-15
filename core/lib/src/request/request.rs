@@ -832,6 +832,10 @@ impl<'r> Request<'r> {
         self.method.store(method, Ordering::Release)
     }
 
+    pub(crate) fn cookies_mut(&mut self) -> &mut CookieJar<'r> {
+        &mut self.state.cookies
+    }
+
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket,

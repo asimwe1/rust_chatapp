@@ -182,7 +182,6 @@ impl<R> Flash<R> {
 
         Cookie::build(FLASH_COOKIE_NAME, content)
             .max_age(Duration::minutes(5))
-            .path("/")
             .finish()
     }
 }
@@ -215,8 +214,7 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
     fn clear_cookie_if_needed(&self) {
         // Remove the cookie if it hasn't already been removed.
         if !self.consumed.swap(true, Ordering::Relaxed) {
-            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
-            self.inner.cookies().remove(cookie);
+            self.inner.cookies().remove(Cookie::named(FLASH_COOKIE_NAME));
         }
     }
 

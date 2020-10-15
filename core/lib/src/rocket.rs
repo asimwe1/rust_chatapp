@@ -347,7 +347,8 @@ impl Rocket {
                         request._set_method(Method::Get);
 
                         // Return early so we don't set cookies twice.
-                        let try_next: BoxFuture<'_, _> = Box::pin(self.route_and_process(request, data));
+                        let try_next: BoxFuture<'_, _> =
+                            Box::pin(self.route_and_process(request, data));
                         return try_next.await;
                     } else {
                         // No match was found and it can't be autohandled. 404.
@@ -359,8 +360,9 @@ impl Rocket {
 
             // Set the cookies. Note that error responses will only include
             // cookies set by the error handler. See `handle_error` for more.
-            for crumb in request.cookies().delta() {
-                response.adjoin_header(crumb)
+            let delta_jar = request.cookies().take_delta_jar();
+            for cookie in delta_jar.delta() {
+                response.adjoin_header(cookie);
             }
 
             response

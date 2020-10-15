@@ -33,7 +33,7 @@ use super::Client;
 ///
 /// # fn read_body_manually() -> io::Result<()> {
 /// // Dispatch a `GET /` request.
-/// let client = Client::new(rocket()).expect("valid rocket");
+/// let client = Client::tracked(rocket()).expect("valid rocket");
 /// let mut response = client.get("/").dispatch();
 ///
 /// // Check metadata validity.

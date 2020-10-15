@@ -1,8 +1,10 @@
 use std::fmt;
 
+use parking_lot::Mutex;
+
 use crate::Header;
 
-pub use cookie::{Cookie, CookieCrumb, SameSite, Iter};
+pub use cookie::{Cookie, SameSite, Iter};
 #[doc(hidden)] pub use self::key::*;
 
 /// Types and methods to manage a `Key` when private cookies are enabled.
@@ -26,21 +28,68 @@ mod key {
 
 /// Collection of one or more HTTP cookies.
 ///
-/// The `CookieJar` type allows for retrieval of cookies from an incoming
-/// request as well as modifications to cookies to be reflected by Rocket on
-/// outgoing responses.
+/// `CookieJar` allows for retrieval of cookies from an incoming request. It
+/// also tracks modifications (additions and removals) and marks them as
+/// pending.
+///
+/// # Pending
+///
+/// Changes to a `CookieJar` are _not_ visible via the normal [`get()`] and
+/// [`get_private()`] methods. This is typically the desired effect as a
+/// `CookieJar` always reflects the cookies in an incoming request. In cases
+/// where this is not desired, the [`get_pending()`] and
+/// [`get_private_pending()`] methods are available, which always return the
+/// latest changes.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::http::{CookieJar, Cookie};
+///
+/// #[get("/message")]
+/// fn message(jar: &CookieJar<'_>) {
+///     jar.add(Cookie::new("message", "hello!"));
+///     jar.add(Cookie::new("other", "bye!"));
+///
+///     // `get()` does not reflect changes.
+///     assert!(jar.get("other").is_none());
+///     # assert_eq!(jar.get("message").map(|c| c.value()), Some("hi"));
+///
+///     // `get_pending()` does.
+///     let other_pending = jar.get_pending("other");
+///     let message_pending = jar.get_pending("message");
+///     assert_eq!(other_pending.as_ref().map(|c| c.value()), Some("bye!"));
+///     assert_eq!(message_pending.as_ref().map(|c| c.value()), Some("hello!"));
+///     # jar.remove(Cookie::named("message"));
+///     # assert_eq!(jar.get("message").map(|c| c.value()), Some("hi"));
+///     # assert!(jar.get_pending("message").is_none());
+/// }
+/// # fn main() {
+/// #     use rocket::local::blocking::Client;
+/// #     let rocket = rocket::ignite().mount("/", routes![message]);
+/// #     let client = Client::tracked(rocket).unwrap();
+/// #     let response = client.get("/message")
+/// #         .cookie(Cookie::new("message", "hi"))
+/// #         .dispatch();
+/// #
+/// #     assert!(response.status().class().is_success());
+/// # }
+/// ```
 ///
 /// # Usage
 ///
 /// A type of `&CookieJar` can be retrieved via its `FromRequest` implementation
 /// as a request guard or via the [`Request::cookies()`] method. Individual
 /// cookies can be retrieved via the [`get()`] and [`get_private()`] methods.
-/// Cookies can be added or removed via the [`add()`], [`add_private()`],
-/// [`remove()`], and [`remove_private()`] methods.
+/// Pending changes can be observed via the [`get_pending()`] and
+/// [`get_private_pending()`] methods. Cookies can be added or removed via the
+/// [`add()`], [`add_private()`], [`remove()`], and [`remove_private()`]
+/// methods.
 ///
 /// [`Request::cookies()`]: rocket::Request::cookies()
 /// [`get()`]: #method.get
 /// [`get_private()`]: #method.get_private
+/// [`get_pending()`]: #method.get_pending
+/// [`get_private_pending()`]: #method.get_private_pending
 /// [`add()`]: #method.add
 /// [`add_private()`]: #method.add_private
 /// [`remove()`]: #method.remove
@@ -56,8 +105,8 @@ mod key {
 /// use rocket::http::CookieJar;
 ///
 /// #[get("/message")]
-/// fn message(jar: &CookieJar<'_>) -> Option<String> {
-///     jar.get("message").map(|c| format!("Message: {}", c.value()))
+/// fn message<'a>(jar: &'a CookieJar<'_>) -> Option<&'a str> {
+///     jar.get("message").map(|cookie| cookie.value())
 /// }
 /// # fn main() {  }
 /// ```
@@ -123,15 +172,43 @@ mod key {
 /// is usually done through tools like `openssl`. Using `openssl`, for instance,
 /// a 256-bit base64 key can be generated with the command `openssl rand -base64
 /// 32`.
-#[derive(Clone)]
 pub struct CookieJar<'a> {
     jar: cookie::CookieJar,
     key: &'a Key,
+    ops: Mutex<Vec<Op>>,
+}
+
+impl<'a> Clone for CookieJar<'a> {
+    fn clone(&self) -> Self {
+        CookieJar {
+            jar: self.jar.clone(),
+            key: self.key,
+            ops: Mutex::new(self.ops.lock().clone()),
+        }
+    }
+}
+
+#[derive(Clone)]
+enum Op {
+    Add(Cookie<'static>, bool),
+    Remove(Cookie<'static>, bool),
+}
+
+impl Op {
+    fn cookie(&self) -> &Cookie<'static> {
+        match self {
+            Op::Add(c, _) | Op::Remove(c, _) => c
+        }
+    }
 }
 
 impl<'a> CookieJar<'a> {
-    /// Returns a reference to the `Cookie` inside this container with the name
-    /// `name`. If no such cookie exists, returns `None`.
+    /// Returns a reference to the _original_ `Cookie` inside this container
+    /// with the name `name`. If no such cookie exists, returns `None`.
+    ///
+    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// removals to the cookie jar. To observe those changes, use
+    /// [`CookieJar::get_pending()`].
     ///
     /// # Example
     ///
@@ -144,14 +221,18 @@ impl<'a> CookieJar<'a> {
     ///     let cookie = jar.get("name");
     /// }
     /// ```
-    pub fn get(&self, name: &str) -> Option<CookieCrumb> {
+    pub fn get(&self, name: &str) -> Option<&Cookie<'static>> {
         self.jar.get(name)
     }
 
-    /// Returns a reference to the `Cookie` inside this collection with the name
-    /// `name` and authenticates and decrypts the cookie's value, returning a
-    /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
-    /// cookie fails to authenticate or decrypt, `None` is returned.
+    /// Retrives the _original_ `Cookie` inside this collection with the name
+    /// `name` and authenticates and decrypts the cookie's value. If the cookie
+    /// cannot be found, or the cookie fails to authenticate or decrypt, `None`
+    /// is returned.
+    ///
+    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// removals to the cookie jar. To observe those changes, use
+    /// [`CookieJar::get_private_pending()`].
     ///
     /// # Example
     ///
@@ -168,6 +249,55 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private(&self, name: &str) -> Option<Cookie<'static>> {
         self.jar.private(&*self.key).get(name)
+    }
+
+    /// Returns a reference to the _original or pending_ `Cookie` inside this
+    /// container with the name `name`. If no such cookie exists, returns
+    /// `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     let pending_cookie = jar.get_pending("name");
+    /// }
+    /// ```
+    pub fn get_pending(&self, name: &str) -> Option<Cookie<'static>> {
+        let ops = self.ops.lock();
+        for op in ops.iter().rev().filter(|op| op.cookie().name() == name) {
+            match op {
+                Op::Add(c, _) => return Some(c.clone()),
+                Op::Remove(_, _) => return None,
+            }
+        }
+
+        drop(ops);
+        self.get(name).map(|c| c.clone())
+    }
+
+    /// Retrives the _original or pending_ `Cookie` inside this collection with
+    /// the name `name` and authenticates and decrypts the cookie's value. If
+    /// the cookie cannot be found, or the cookie fails to authenticate or
+    /// decrypt, `None` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::{Cookie, CookieJar};
+    ///
+    /// #[get("/")]
+    /// fn handler(jar: &CookieJar<'_>) {
+    ///     let pending_cookie = jar.get_private_pending("name");
+    /// }
+    /// ```
+    pub fn get_private_pending(&self, name: &str) -> Option<Cookie<'static>> {
+        let cookie = self.get_pending(name)?;
+        self.jar.private(&*self.key).decrypt(cookie)
     }
 
     /// Adds `cookie` to this collection.
@@ -198,7 +328,7 @@ impl<'a> CookieJar<'a> {
     /// ```
     pub fn add(&self, mut cookie: Cookie<'static>) {
         Self::set_defaults(&mut cookie);
-        self.jar.add(cookie)
+        self.ops.lock().push(Op::Add(cookie, false));
     }
 
     /// Adds `cookie` to the collection. The cookie's value is encrypted with
@@ -233,7 +363,7 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn add_private(&self, mut cookie: Cookie<'static>) {
         Self::set_private_defaults(&mut cookie);
-        self.jar.private(&*self.key).add(cookie)
+        self.ops.lock().push(Op::Add(cookie, true));
     }
 
     /// Removes `cookie` from this collection and generates a "removal" cookies
@@ -263,7 +393,7 @@ impl<'a> CookieJar<'a> {
             cookie.set_path("/");
         }
 
-        self.jar.remove(cookie)
+        self.ops.lock().push(Op::Remove(cookie, false));
     }
 
     /// Removes the private `cookie` from the collection.
@@ -290,10 +420,14 @@ impl<'a> CookieJar<'a> {
             cookie.set_path("/");
         }
 
-        self.jar.private(&*self.key).remove(cookie)
+        self.ops.lock().push(Op::Remove(cookie, true));
     }
 
-    /// Returns an iterator over all of the cookies present in this collection.
+    /// Returns an iterator over all of the _original_ cookies present in this
+    /// collection.
+    ///
+    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// removals to the cookie jar.
     ///
     /// # Example
     ///
@@ -308,38 +442,64 @@ impl<'a> CookieJar<'a> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item = CookieCrumb> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
         self.jar.iter()
     }
 }
 
-/// WARNING: These is unstable! Do not use outside of Rocket!
+/// WARNING: These are unstable! Do not use outside of Rocket!
 #[doc(hidden)]
 impl<'a> CookieJar<'a> {
     #[inline(always)]
-    pub fn new(key: &'a Key) -> CookieJar<'a> {
-        CookieJar { jar: cookie::CookieJar::new(), key }
+    pub fn new(key: &'a Key) -> Self {
+        CookieJar {
+            jar: cookie::CookieJar::new(),
+            key, ops: Mutex::new(Vec::new()),
+        }
     }
 
     #[inline(always)]
     pub fn from(jar: cookie::CookieJar, key: &'a Key) -> CookieJar<'a> {
-        CookieJar { jar, key }
+        CookieJar { jar, key, ops: Mutex::new(Vec::new()) }
     }
 
     /// Removes all delta cookies.
     #[inline(always)]
     pub fn reset_delta(&self) {
-        self.jar.reset_delta()
+        self.ops.lock().clear();
     }
 
+    /// TODO: This could be faster by just returning the cookies directly via
+    /// an ordered hash-set of sorts.
     #[inline(always)]
-    pub fn delta(&self) -> cookie::Delta {
-        self.jar.delta()
+    pub fn take_delta_jar(&self) -> cookie::CookieJar {
+        let ops = std::mem::replace(&mut *self.ops.lock(), Vec::new());
+        let mut jar = cookie::CookieJar::new();
+
+        for op in ops {
+            match op {
+                Op::Add(c, false) => jar.add(c),
+                #[cfg(feature = "private-cookies")]
+                Op::Add(c, true) => jar.private_mut(self.key).add(c),
+                Op::Remove(mut c, _) => {
+                    if self.jar.get(c.name()).is_some() {
+                        c.make_removal();
+                        jar.add(c);
+                    } else {
+                        jar.remove(c);
+                    }
+                }
+                #[allow(unreachable_patterns)]
+                _ => unreachable!()
+            }
+        }
+
+        jar
     }
 
     /// Adds an original `cookie` to this collection.
     #[inline(always)]
-    pub fn add_original(&self, cookie: Cookie<'static>) {
+    pub fn add_original(&mut self, cookie: Cookie<'static>) {
         self.jar.add_original(cookie)
     }
 
@@ -347,8 +507,8 @@ impl<'a> CookieJar<'a> {
     #[inline(always)]
     #[cfg(feature = "private-cookies")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    pub fn add_original_private(&self, cookie: Cookie<'static>) {
-        self.jar.private(&*self.key).add_original(cookie);
+    pub fn add_original_private(&mut self, cookie: Cookie<'static>) {
+        self.jar.private_mut(&*self.key).add_original(cookie);
     }
 
     /// For each property mentioned below, this method checks if there is a
@@ -400,7 +560,16 @@ impl<'a> CookieJar<'a> {
 
 impl fmt::Debug for CookieJar<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.jar.fmt(f)
+        let pending: Vec<_> = self.ops.lock()
+            .iter()
+            .map(|c| c.cookie())
+            .cloned()
+            .collect();
+
+        f.debug_struct("CookieJar")
+            .field("original", &self.jar)
+            .field("pending", &pending)
+            .finish()
     }
 }
 
@@ -412,18 +581,6 @@ impl From<Cookie<'_>> for Header<'static> {
 
 impl From<&Cookie<'_>> for Header<'static> {
     fn from(cookie: &Cookie<'_>) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
-}
-
-impl From<CookieCrumb> for Header<'static> {
-    fn from(cookie: CookieCrumb) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
-}
-
-impl From<&CookieCrumb> for Header<'static> {
-    fn from(cookie: &CookieCrumb) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }

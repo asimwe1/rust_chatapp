@@ -330,7 +330,7 @@ impl Template {
     ///
     /// fn main() {
     ///     let rocket = rocket::ignite().attach(Template::fairing());
-    ///     let client = Client::new(rocket).expect("valid rocket");
+    ///     let client = Client::untracked(rocket).expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();

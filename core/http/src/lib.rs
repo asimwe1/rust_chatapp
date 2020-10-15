@@ -74,4 +74,4 @@ pub use crate::status::{Status, StatusClass};
 pub use crate::header::{Header, HeaderMap};
 pub use crate::raw_str::RawStr;
 pub use crate::media_type::MediaType;
-pub use crate::cookies::{Cookie, CookieJar, CookieCrumb, SameSite};
+pub use crate::cookies::{Cookie, CookieJar, SameSite};

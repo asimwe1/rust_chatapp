@@ -33,7 +33,7 @@ use rocket::local::blocking::Client;
 use rocket::http::{Accept, ContentType};
 
 fn accept_format(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let requests = vec![
         client.get("/").header(Accept::JSON),
         client.get("/").header(Accept::HTML),
@@ -48,7 +48,7 @@ fn accept_format(b: &mut Bencher) {
 }
 
 fn content_type_format(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let requests = vec![
         client.post("/").header(ContentType::JSON),
         client.post("/").header(ContentType::HTML),

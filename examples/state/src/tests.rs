@@ -13,7 +13,7 @@ fn get_count(client: &Client) -> usize {
 
 #[test]
 fn test_count() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
 
     // Count should start at 0.
     assert_eq!(get_count(&client), 0);
