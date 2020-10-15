@@ -295,6 +295,8 @@ impl<'a> CookieJar<'a> {
     ///     let pending_cookie = jar.get_private_pending("name");
     /// }
     /// ```
+    #[cfg(feature = "private-cookies")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private_pending(&self, name: &str) -> Option<Cookie<'static>> {
         let cookie = self.get_pending(name)?;
         self.jar.private(&*self.key).decrypt(cookie)
