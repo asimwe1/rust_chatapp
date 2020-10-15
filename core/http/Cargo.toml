@@ -35,6 +35,7 @@ log = "0.4"
 ref-cast = "1.0"
 uncased = "0.9"
 parking_lot = "0.11"
+either = "1"
 
 [dependencies.cookie]
 git = "https://github.com/SergioBenitez/cookie-rs.git"

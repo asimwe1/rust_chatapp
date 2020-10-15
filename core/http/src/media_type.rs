@@ -3,71 +3,13 @@ use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use either::Either;
+
 use crate::ext::IntoCollection;
 use crate::uncased::UncasedStr;
 use crate::parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
-
-#[derive(Debug, Clone)]
-struct MediaParam {
-    key: IndexedString,
-    value: IndexedString,
-}
-
-// FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
-#[derive(Debug, Clone)]
-pub enum MediaParams {
-    Static(&'static [(IndexedString, IndexedString)]),
-    Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
-}
-
-impl Default for MediaParams {
-    fn default() -> Self {
-        MediaParams::Dynamic(SmallVec::new())
-    }
-}
-
-impl Extend<(IndexedString, IndexedString)> for MediaParams {
-    fn extend<T: IntoIterator<Item = (IndexedString, IndexedString)>>(&mut self, iter: T) {
-        match self {
-            MediaParams::Static(..) => panic!("can't add to static collection!"),
-            MediaParams::Dynamic(ref mut v) => v.extend(iter)
-        }
-    }
-}
-
-impl PartialEq for MediaParams {
-    fn eq(&self, other: &MediaParams) -> bool {
-        #[inline(always)]
-        fn inner_types(params: &MediaParams) -> &[(IndexedString, IndexedString)] {
-            match *params {
-                MediaParams::Static(params) => params,
-                MediaParams::Dynamic(ref vec) => vec,
-            }
-        }
-
-        inner_types(self) == inner_types(other)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Source {
-    Known(&'static str),
-    Custom(Cow<'static, str>),
-    None
-}
-
-impl Source {
-    #[inline]
-    fn as_str(&self) -> Option<&str> {
-        match *self {
-            Source::Known(s) => Some(s),
-            Source::Custom(ref s) => Some(s.borrow()),
-            Source::None => None
-        }
-    }
-}
 
 /// An HTTP media type.
 ///
@@ -110,21 +52,33 @@ impl Source {
 #[derive(Debug, Clone)]
 pub struct MediaType {
     /// Storage for the entire media type string.
-    #[doc(hidden)]
-    pub source: Source,
+    pub(crate) source: Source,
     /// The top-level type.
-    #[doc(hidden)]
-    pub top: IndexedString,
+    pub(crate) top: IndexedString,
     /// The subtype.
-    #[doc(hidden)]
-    pub sub: IndexedString,
+    pub(crate) sub: IndexedString,
     /// The parameters, if any.
-    #[doc(hidden)]
-    pub params: MediaParams
+    pub(crate) params: MediaParams
 }
 
-macro_rules! media_str {
-    ($string:expr) => (Indexed::Concrete(Cow::Borrowed($string)))
+#[derive(Debug, Clone)]
+struct MediaParam {
+    key: IndexedString,
+    value: IndexedString,
+}
+
+// FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
+#[derive(Debug, Clone)]
+pub(crate) enum MediaParams {
+    Static(&'static [(&'static str, &'static str)]),
+    Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Source {
+    Known(&'static str),
+    Custom(Cow<'static, str>),
+    None
 }
 
 macro_rules! media_types {
@@ -136,12 +90,10 @@ macro_rules! media_types {
             $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
         ];
             #[allow(non_upper_case_globals)]
-            pub const $name: MediaType = MediaType {
-                source: Source::Known(concat!($t, "/", $s, $("; ", $k, "=", $v),*)),
-                top: media_str!($t),
-                sub: media_str!($s),
-                params: MediaParams::Static(&[$((media_str!($k), media_str!($v))),*])
-            };
+            pub const $name: MediaType = MediaType::new_known(
+                concat!($t, "/", $s, $("; ", $k, "=", $v),*),
+                $t, $s, &[$(($k, $v)),*]
+            );
         );
     )+
 
@@ -357,6 +309,50 @@ impl MediaType {
         }
     }
 
+    /// A `const` variant of [`MediaType::with_params()`]. Creates a new
+    /// `MediaType` with top-level type `top`, subtype `sub`, and parameters
+    /// `params`, which may be empty.
+    ///
+    /// # Example
+    ///
+    /// Create a custom `application/x-person` media type:
+    ///
+    /// ```rust
+    /// use rocket::http::MediaType;
+    ///
+    /// let custom = MediaType::const_new("application", "x-person", &[]);
+    /// assert_eq!(custom.top(), "application");
+    /// assert_eq!(custom.sub(), "x-person");
+    /// ```
+    #[inline]
+    pub const fn const_new(
+        top: &'static str,
+        sub: &'static str,
+        params: &'static [(&'static str, &'static str)]
+    ) -> MediaType {
+        MediaType {
+            source: Source::None,
+            top: Indexed::Concrete(Cow::Borrowed(top)),
+            sub: Indexed::Concrete(Cow::Borrowed(sub)),
+            params: MediaParams::Static(params),
+        }
+    }
+
+    #[inline]
+    pub(crate) const fn new_known(
+        source: &'static str,
+        top: &'static str,
+        sub: &'static str,
+        params: &'static [(&'static str, &'static str)]
+    ) -> MediaType {
+        MediaType {
+            source: Source::Known(source),
+            top: Indexed::Concrete(Cow::Borrowed(top)),
+            sub: Indexed::Concrete(Cow::Borrowed(sub)),
+            params: MediaParams::Static(params),
+        }
+    }
+
     known_shorthands!(parse_flexible);
 
     known_extensions!(from_extension);
@@ -501,16 +497,15 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a str)> + 'a {
-        let param_slice = match self.params {
-            MediaParams::Static(slice) => slice,
-            MediaParams::Dynamic(ref vec) => &vec[..],
-        };
-
-        param_slice.iter()
-            .map(move |&(ref key, ref val)| {
-                let source_str = self.source.as_str();
-                (key.from_source(source_str), val.from_source(source_str))
-            })
+        match self.params {
+            MediaParams::Static(ref slice) => Either::Left(slice.iter().cloned()),
+            MediaParams::Dynamic(ref vec) => {
+                Either::Right(vec.iter().map(move |&(ref key, ref val)| {
+                    let source_str = self.source.as_str();
+                    (key.from_source(source_str), val.from_source(source_str))
+                }))
+            }
+        }
     }
 
     known_media_types!(media_types);
@@ -558,6 +553,32 @@ impl fmt::Display for MediaType {
             }
 
             Ok(())
+        }
+    }
+}
+
+impl Default for MediaParams {
+    fn default() -> Self {
+        MediaParams::Dynamic(SmallVec::new())
+    }
+}
+
+impl Extend<(IndexedString, IndexedString)> for MediaParams {
+    fn extend<T: IntoIterator<Item = (IndexedString, IndexedString)>>(&mut self, iter: T) {
+        match self {
+            MediaParams::Static(..) => panic!("can't add to static collection!"),
+            MediaParams::Dynamic(ref mut v) => v.extend(iter)
+        }
+    }
+}
+
+impl Source {
+    #[inline]
+    fn as_str(&self) -> Option<&str> {
+        match *self {
+            Source::Known(s) => Some(s),
+            Source::Custom(ref s) => Some(s.borrow()),
+            Source::None => None
         }
     }
 }
