@@ -217,7 +217,7 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -266,7 +266,7 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, _: &Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, _: &mut Data) {
 ///         if req.method() == Method::Get {
 ///             self.get.fetch_add(1, Ordering::Relaxed);
 ///         } else if req.method() == Method::Post {
@@ -329,7 +329,7 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
+///     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
 ///         // Store a `TimerStart` instead of directly storing a `SystemTime`
 ///         // to ensure that this usage doesn't conflict with anything else
 ///         // that might store a `SystemTime` in request-local cache.
@@ -440,7 +440,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {}
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {}
 
     /// The response callback.
     ///
@@ -474,7 +474,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
         (self as &T).on_request(req, data).await;
     }
 

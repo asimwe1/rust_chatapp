@@ -126,23 +126,11 @@ pub struct TemplateFairing {
 #[rocket::async_trait]
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
-        // The on_request part of this fairing only applies in debug
-        // mode, so only register it in debug mode.
-        #[cfg(debug_assertions)]
-        let info = Info {
-            name: "Templates",
-            kind: Kind::Attach | Kind::Request,
-        };
+        // on_request only applies in debug mode, so only enable it in debug.
+        #[cfg(debug_assertions)] let kind = Kind::Attach | Kind::Request;
+        #[cfg(not(debug_assertions))] let kind = Kind::Attach;
 
-        // FIXME: We declare two `info` variables here, instead of just one with
-        // `cfg`s on `kind`, due to issue #63 in `async_trait`.
-        #[cfg(not(debug_assertions))]
-        let info = Info {
-            name: "Templates",
-            kind: Kind::Attach,
-        };
-
-        info
+        Info { kind, name: "Templates" }
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -184,7 +172,7 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &rocket::Data) {
+    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
         let cm = req.guard::<rocket::State<'_, ContextManager>>().await
             .expect("Template ContextManager registered in on_attach");
 
