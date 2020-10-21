@@ -5,7 +5,7 @@ authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
 """
-documentation = "https://api.rocket.rs/v0.5/rocket/"
+documentation = "https://api.rocket.rs/master/rocket/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"

@@ -1,6 +1,6 @@
 #![recursion_limit="256"]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_root_url = "https://api.rocket.rs/master")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
@@ -21,10 +21,10 @@
 //! automatic JSON (de)serialiazation, templating support, static file serving,
 //! and other useful features.
 //!
-//! [overview]: https://rocket.rs/v0.5/overview
-//! [full, detailed guide]: https://rocket.rs/v0.5/guide
-//! [quickstart]: https://rocket.rs/v0.5/guide/quickstart
-//! [getting started]: https://rocket.rs/v0.5/guide/getting-started
+//! [overview]: https://rocket.rs/master/overview
+//! [full, detailed guide]: https://rocket.rs/master/guide
+//! [quickstart]: https://rocket.rs/master/guide/quickstart
+//! [getting started]: https://rocket.rs/master/guide/getting-started
 //!
 //! ## Libraries
 //!
@@ -43,7 +43,7 @@
 //! rocket = "0.5.0-dev"
 //! ```
 //!
-//! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
+//! See the [guide](https://rocket.rs/master/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust,no_run
@@ -74,8 +74,8 @@
 //! rocket = { version = "0.5.0-dev", features = ["secrets", "tls"] }
 //! ```
 //!
-//! [private cookies]: https://rocket.rs/v0.5/guide/requests/#private-cookies
-//! [TLS]: https://rocket.rs/v0.5/guide/configuration/#tls
+//! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
+//! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //!
 //! ## Configuration
 //!
@@ -84,7 +84,7 @@
 //! configure Rocket, see the [configuration section] of the guide as well as
 //! the [`config`] module documentation.
 //!
-//! [configuration section]: https://rocket.rs/v0.5/guide/configuration/
+//! [configuration section]: https://rocket.rs/master/guide/configuration/
 //!
 //! ## Testing
 //!
@@ -93,7 +93,7 @@
 //! documentation and the [testing chapter of the guide] include detailed
 //! examples.
 //!
-//! [testing chapter of the guide]: https://rocket.rs/v0.5/guide/testing/#testing
+//! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 pub use rocket_codegen::*;

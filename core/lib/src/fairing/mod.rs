@@ -365,7 +365,7 @@ pub use self::info_kind::{Info, Kind};
 /// }
 /// ```
 ///
-/// [request-local state]: https://rocket.rs/v0.5/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait Fairing: Send + Sync + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this

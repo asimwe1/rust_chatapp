@@ -14,7 +14,7 @@ use crate::data::Limits;
 /// See the [module level docs](crate::config) as well as the [configuration
 /// guide] for further details.
 ///
-/// [configuration guide]: https://rocket.rs/v0.5/guide/configuration/
+/// [configuration guide]: https://rocket.rs/master/guide/configuration/
 ///
 /// # Defaults
 ///

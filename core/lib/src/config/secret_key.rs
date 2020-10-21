@@ -40,8 +40,8 @@ enum Kind {
 /// # */
 /// ```
 ///
-/// [private cookies]: https://rocket.rs/v0.5/guide/requests/#private-cookies
-/// [configuration guide]: https://rocket.rs/v0.5/guide/configuration/#secret-key
+/// [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
+/// [configuration guide]: https://rocket.rs/master/guide/configuration/#secret-key
 #[derive(PartialEq, Clone)]
 pub struct SecretKey {
     key: Key,

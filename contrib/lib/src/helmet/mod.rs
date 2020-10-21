@@ -4,7 +4,7 @@
 //! takes some inspiration from [helmetjs], a similar piece of middleware for
 //! [express].
 //!
-//! [fairing]: https://rocket.rs/v0.5/guide/fairings/
+//! [fairing]: https://rocket.rs/master/guide/fairings/
 //! [helmetjs]: https://helmetjs.github.io/
 //! [express]: https://expressjs.com
 //! [`SpaceHelmet`]: helmet::SpaceHelmet
