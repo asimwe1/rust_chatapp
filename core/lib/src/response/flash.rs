@@ -1,6 +1,7 @@
 use std::convert::AsRef;
 
 use time::Duration;
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 use crate::outcome::IntoOutcome;
 use crate::response::{self, Responder};
@@ -77,8 +78,8 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// receive the standard welcome message.
 #[derive(Debug)]
 pub struct Flash<R> {
-    name: String,
-    message: String,
+    pub name: String,
+    pub message: String,
     consumed: AtomicBool,
     inner: R,
 }
@@ -257,5 +258,14 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
                 _ => Err(())
             }
         }).into_outcome(Status::BadRequest)
+    }
+}
+
+impl<R> Serialize for Flash<R> {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        let mut flash = ser.serialize_struct("Flash", 2)?;
+        flash.serialize_field("name", &self.name)?;
+        flash.serialize_field("message", &self.message)?;
+        flash.end()
     }
 }
