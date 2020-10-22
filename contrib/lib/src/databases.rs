@@ -394,7 +394,7 @@ use self::r2d2::ManageConnection;
 #[cfg(feature = "memcache_pool")] pub extern crate memcache;
 #[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
 
-/// A default, helper `Config` for any `Poolable` type.
+/// A base `Config` for any `Poolable` type.
 ///
 /// For the following configuration:
 ///
@@ -419,6 +419,7 @@ use self::r2d2::ManageConnection;
 /// If you want to implement your own custom database adapter (or other
 /// database-like struct that can be pooled by `r2d2`) and need some more
 /// configurations options, you may need to define a custom `Config` struct.
+/// Note, however, that the configuration values in `Config` are required.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     /// Connection URL specified in the Rocket configuration.
@@ -748,35 +749,33 @@ async fn run_blocking<F, R>(job: F) -> R
     }
 }
 
+macro_rules! dberr {
+    ($msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => ({
+        rocket::error!(concat!("database ", $msg, " error for pool named `{}`"), $db_name);
+        error_!($efmt, $error);
+        return Err($rocket);
+    });
+}
+
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
-    pub fn fairing(fairing_name: &'static str, db_name: &'static str) -> impl Fairing {
+    pub fn fairing(fairing_name: &'static str, db: &'static str) -> impl Fairing {
         AdHoc::on_attach(fairing_name, move |mut rocket| async move {
             let cargo = rocket.inspect().await;
-            let config = match Config::from(db_name, cargo) {
+            let config = match Config::from(db, cargo) {
                 Ok(config) => config,
-                Err(config_error) => {
-                    rocket::error!("database configuration error for '{}'", db_name);
-                    error_!("{}", config_error);
-                    return Err(rocket);
-                }
+                Err(e) => dberr!("config", db, "{}", e, rocket),
             };
 
-            match C::pool(db_name, cargo) {
-                Ok(pool) => {
-                    let pool_size = config.pool_size;
-                    let managed = ConnectionPool::<K, C> {
-                        config, pool,
-                        semaphore: Arc::new(Semaphore::new(pool_size as usize)),
-                        _marker: PhantomData,
-                    };
-
-                    Ok(rocket.manage(managed))
-                },
-                Err(pool_error) => {
-                    rocket::error!("failed to initialize pool for '{}'", db_name);
-                    error_!("{:?}", pool_error);
-                    Err(rocket)
-                },
+            let pool_size = config.pool_size;
+            match C::pool(db, cargo) {
+                Ok(pool) => Ok(rocket.manage(ConnectionPool::<K, C> {
+                    pool, config,
+                    semaphore: Arc::new(Semaphore::new(pool_size as usize)),
+                    _marker: PhantomData,
+                })),
+                Err(Error::Config(e)) => dberr!("config", db, "{}", e, rocket),
+                Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
+                Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
             }
         })
     }
