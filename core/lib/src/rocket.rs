@@ -701,15 +701,14 @@ impl Rocket {
             (rocket, fairings)
         };
 
+        // TODO: Reuse a single thread to run all attach fairings.
         let (rocket, mut fairings) = match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
-                // println!("Using existing runtime...");
                 std::thread::spawn(move || {
                     handle.block_on(future)
                 }).join().unwrap()
             }
             Err(_) => {
-                // println!("Using new runtime.");
                 std::thread::spawn(|| {
                     futures::executor::block_on(future)
                 }).join().unwrap()
@@ -724,8 +723,46 @@ impl Rocket {
         self
     }
 
+    /// Returns the active configuration.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[launch]
+    /// fn rocket() -> rocket::Rocket {
+    ///     rocket::ignite()
+    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
+    ///             println!("Rocket launch config: {:?}", rocket.config());
+    ///         }))
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Returns the figment for configured provider.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let rocket = rocket::ignite();
+    /// let figment = rocket.figment();
+    ///
+    /// let port: u16 = figment.extract_inner("port").unwrap();
+    /// assert_eq!(port, rocket.config().port);
+    /// ```
+    #[inline(always)]
+    pub fn figment(&self) -> &Figment {
+        &self.figment
+    }
+
     /// Returns an iterator over all of the routes mounted on this instance of
-    /// Rocket.
+    /// Rocket. The order is unspecified.
     ///
     /// # Example
     ///
@@ -760,6 +797,35 @@ impl Rocket {
         self.router.routes()
     }
 
+    /// Returns an iterator over all of the catchers registered on this instance
+    /// of Rocket. The order is unspecified.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[catch(404)] fn not_found() -> &'static str { "Nothing here, sorry!" }
+    /// #[catch(500)] fn just_500() -> &'static str { "Whoops!?" }
+    /// #[catch(default)] fn some_default() -> &'static str { "Everything else." }
+    ///
+    /// fn main() {
+    ///     let mut rocket = rocket::ignite()
+    ///         .register(catchers![not_found, just_500, some_default]);
+    ///
+    ///     let mut codes: Vec<_> = rocket.catchers().map(|c| c.code).collect();
+    ///     codes.sort();
+    ///
+    ///     assert_eq!(codes, vec![None, Some(404), Some(500)]);
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn catchers(&self) -> impl Iterator<Item = &Catcher> + '_ {
+        self.catchers.values().chain(self.default_catcher.as_ref())
+    }
+
     /// Returns `Some` of the managed state value for the type `T` if it is
     /// being managed by `self`. Otherwise, returns `None`.
     ///
@@ -775,44 +841,6 @@ impl Rocket {
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
         self.managed_state.try_get()
-    }
-
-    /// Returns the figment for configured provider.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let rocket = rocket::ignite();
-    /// let figment = rocket.figment();
-    ///
-    /// let port: u16 = figment.extract_inner("port").unwrap();
-    /// assert_eq!(port, rocket.config().port);
-    /// ```
-    #[inline(always)]
-    pub fn figment(&self) -> &Figment {
-        &self.figment
-    }
-
-    /// Returns the active configuration.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::Rocket;
-    /// use rocket::fairing::AdHoc;
-    ///
-    /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
-    ///             println!("Rocket launch config: {:?}", rocket.config());
-    ///         }))
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn config(&self) -> &Config {
-        &self.config
     }
 
     /// Returns a handle which can be used to gracefully terminate this instance
