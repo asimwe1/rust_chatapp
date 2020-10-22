@@ -1,4 +1,4 @@
-use crate::{Cargo, Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind};
 use crate::logger::PaintExt;
 
@@ -52,9 +52,9 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub fn handle_launch(&self, cargo: &Cargo) {
+    pub fn handle_launch(&self, rocket: &Rocket) {
         for &i in &self.launch {
-            self.all_fairings[i].on_launch(cargo);
+            self.all_fairings[i].on_launch(rocket);
         }
     }
 

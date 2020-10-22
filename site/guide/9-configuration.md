@@ -190,8 +190,7 @@ ROCKET_DICT={key="abc",val=123}
 ## Extracting Values
 
 Your application can extract any configuration that implements [`Deserialize`]
-from the configured provider, which is exposed via [`Rocket::figment()`] and
-[`Cargo::figment()`]:
+from the configured provider, which is exposed via [`Rocket::figment()`]:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -201,9 +200,9 @@ use serde::Deserialize;
 
 
 #[launch]
-async fn rocket() -> _ {
-    let mut rocket = rocket::ignite();
-    let figment = rocket.figment().await;
+fn rocket() -> _ {
+    let rocket = rocket::ignite();
+    let figment = rocket.figment();
 
     #[derive(Deserialize)]
     struct Config {
@@ -256,7 +255,6 @@ fn rocket() -> _ {
 ```
 
 [`Rocket::figment()`]: @api/rocket/struct.Rocket.html#method.figment
-[`Cargo::figment()`]: @api/rocket/struct.Cargo.html#method.figment
 
 ## Custom Providers
 

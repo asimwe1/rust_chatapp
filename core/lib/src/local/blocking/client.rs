@@ -3,7 +3,7 @@ use std::cell::RefCell;
 
 use crate::error::Error;
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
-use crate::rocket::{Rocket, Cargo};
+use crate::rocket::Rocket;
 use crate::http::Method;
 
 /// A `blocking` client to construct and dispatch local requests.
@@ -63,8 +63,8 @@ impl Client {
     }
 
     #[inline(always)]
-    fn _cargo(&self) -> &Cargo {
-        self.inner._cargo()
+    fn _rocket(&self) -> &Rocket {
+        self.inner._rocket()
     }
 
     #[inline(always)]

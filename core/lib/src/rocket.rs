@@ -7,7 +7,6 @@ use futures::future::FutureExt;
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
 use tokio::sync::{mpsc, oneshot};
-use ref_cast::RefCast;
 
 use yansi::Paint;
 use state::Container;
@@ -38,7 +37,6 @@ pub struct Rocket {
     pub(crate) config: Config,
     pub(crate) figment: Figment,
     pub(crate) managed_state: Container,
-    manifest: Vec<PreLaunchOp>,
     router: Router,
     default_catcher: Option<Catcher>,
     catchers: HashMap<u16, Catcher>,
@@ -47,139 +45,8 @@ pub struct Rocket {
     pub(crate) shutdown_handle: Shutdown,
 }
 
-/// An operation that occurs prior to launching a Rocket instance.
-enum PreLaunchOp {
-    Mount(Origin<'static>, Vec<Route>),
-    Register(Vec<Catcher>),
-    Manage(&'static str, Box<dyn FnOnce(&mut Container) + Send + Sync + 'static>),
-    Attach(Box<dyn Fairing>),
-}
-
-/// A frozen view into the contents of an instance of `Rocket`.
-///
-/// Obtained via [`Rocket::inspect()`].
-#[derive(RefCast)]
-#[repr(transparent)]
-pub struct Cargo(Rocket);
-
 // A token returned to force the execution of one method before another.
 pub(crate) struct Token;
-
-impl Rocket {
-    #[inline]
-    fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
-        // info!("[$]🛰  [/m]mounting [b]{}[/]:", log::emoji(), base);
-        // info!("[$]🛰  [/m]mounting [b]{}[/]:", log::emoji(), base);
-        // info!("{}[m]Mounting [b]{}[/]:[/]", log::emoji("🛰  "), base);
-        info!("{}{} {}{}",
-              Paint::emoji("🛰  "),
-              Paint::magenta("Mounting"),
-              Paint::blue(&base),
-              Paint::magenta(":"));
-
-        for route in routes {
-            let old_route = route.clone();
-            let route = route.map_base(|old| format!("{}{}", base, old))
-                .unwrap_or_else(|e| {
-                    error_!("Route `{}` has a malformed URI.", old_route);
-                    error_!("{}", e);
-                    panic!("Invalid route URI.");
-                });
-
-            info_!("{}", route);
-            self.router.add(route);
-        }
-    }
-
-    #[inline]
-    fn _register(&mut self, catchers: Vec<Catcher>) {
-        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
-
-        for catcher in catchers {
-            info_!("{}", catcher);
-
-            let existing = match catcher.code {
-                Some(code) => self.catchers.insert(code, catcher),
-                None => self.default_catcher.replace(catcher)
-            };
-
-            if let Some(existing) = existing {
-                warn_!("Replacing existing '{}' catcher.", existing);
-            }
-        }
-    }
-
-    #[inline]
-    async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
-        // Attach (and run attach-) fairings, which requires us to move `self`.
-        trace_!("Running attach fairing: {:?}", fairing.info());
-        let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
-        self = fairings.attach(fairing, self).await;
-
-        // Note that `self.fairings` may now be non-empty! Move them to the end.
-        fairings.append(self.fairings);
-        self.fairings = fairings;
-        self
-    }
-
-    // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
-    fn dummy() -> Rocket {
-        Rocket {
-            config: Config::debug_default(),
-            figment: Figment::from(Config::debug_default()),
-            manifest: vec![],
-            router: Router::new(),
-            default_catcher: None,
-            catchers: HashMap::new(),
-            managed_state: Container::new(),
-            fairings: Fairings::new(),
-            shutdown_handle: Shutdown(mpsc::channel(1).0),
-            shutdown_receiver: None,
-        }
-    }
-
-    // Instead of requiring the user to individually `await` each call to
-    // `attach()`, some operations are queued in `self.pending`. Functions that
-    // want to provide read access to any data from the Cargo, such as
-    // `inspect()`, need to apply those pending operations first.
-    //
-    // This function returns a future that executes those pending operations,
-    // requiring only a single `await` at the call site. After completion,
-    // `self.pending` will be empty and `self.manifest` will reflect all pending
-    // changes.
-    async fn actualize_manifest(&mut self) {
-        // Note: attach fairings may add more ops to the `manifest`! We
-        // process them as a stack to maintain proper ordering.
-        let mut manifest = mem::replace(&mut self.manifest, vec![]);
-        while !manifest.is_empty() {
-            trace_!("[MANIEST PROGRESS ({} left)]: {:?}", manifest.len(), manifest);
-            match manifest.remove(0) {
-                PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
-                PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
-                PreLaunchOp::Register(catchers) => self._register(catchers),
-                PreLaunchOp::Attach(fairing) => {
-                    let rocket = mem::replace(self, Rocket::dummy());
-                    *self = rocket._attach(fairing).await;
-                    self.manifest.append(&mut manifest);
-                    manifest = mem::replace(&mut self.manifest, vec![]);
-                }
-            }
-        }
-    }
-
-    pub(crate) async fn into_cargo(mut self) -> Cargo {
-        self.actualize_manifest().await;
-        Cargo(self)
-    }
-
-    fn cargo(&self) -> &Cargo {
-        if !self.manifest.is_empty() {
-            panic!("internal error: immutable launch state with manifest");
-        }
-
-        Cargo::ref_cast(self)
-    }
-}
 
 // This function tries to hide all of the Hyper-ness from Rocket. It essentially
 // converts Hyper types into Rocket types, then calls the `dispatch` function,
@@ -506,7 +373,7 @@ impl Rocket {
 
         // Run the launch fairings.
         self.fairings.pretty_print_counts();
-        self.fairings.handle_launch(self.cargo());
+        self.fairings.handle_launch(&self);
 
         // Determine the address and port we actually bound to.
         self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
@@ -624,7 +491,6 @@ impl Rocket {
             config, figment,
             managed_state,
             shutdown_handle: Shutdown(shutdown_sender),
-            manifest: vec![],
             router: Router::new(),
             default_catcher: None,
             catchers: HashMap::new(),
@@ -697,7 +563,25 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        self.manifest.push(PreLaunchOp::Mount(base_uri, routes.into()));
+        info!("{}{} {}{}",
+              Paint::emoji("🛰  "),
+              Paint::magenta("Mounting"),
+              Paint::blue(&base_uri),
+              Paint::magenta(":"));
+
+        for route in routes.into() {
+            let old_route = route.clone();
+            let route = route.map_base(|old| format!("{}{}", base, old))
+                .unwrap_or_else(|e| {
+                    error_!("Route `{}` has a malformed URI.", old_route);
+                    error_!("{}", e);
+                    panic!("Invalid route URI.");
+                });
+
+            info_!("{}", route);
+            self.router.add(route);
+        }
+
         self
     }
 
@@ -726,7 +610,21 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        self.manifest.push(PreLaunchOp::Register(catchers));
+        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+
+        for catcher in catchers {
+            info_!("{}", catcher);
+
+            let existing = match catcher.code {
+                Some(code) => self.catchers.insert(code, catcher),
+                None => self.default_catcher.replace(catcher)
+            };
+
+            if let Some(existing) = existing {
+                warn_!("Replacing existing '{}' catcher.", existing);
+            }
+        }
+
         self
     }
 
@@ -765,14 +663,12 @@ impl Rocket {
     /// }
     /// ```
     #[inline]
-    pub fn manage<T: Send + Sync + 'static>(mut self, state: T) -> Self {
+    pub fn manage<T: Send + Sync + 'static>(self, state: T) -> Self {
         let type_name = std::any::type_name::<T>();
-        self.manifest.push(PreLaunchOp::Manage(type_name, Box::new(move |managed| {
-            if !managed.set::<T>(state) {
-                error!("State for type '{}' is already being managed!", type_name);
-                panic!("Aborting due to duplicately managed state.");
-            }
-        })));
+        if !self.managed_state.set(state) {
+            error!("State for type '{}' is already being managed!", type_name);
+            panic!("Aborting due to duplicately managed state.");
+        }
 
         self
     }
@@ -798,35 +694,74 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        self.manifest.push(PreLaunchOp::Attach(Box::new(fairing)));
+        let future = async move {
+            let fairing = Box::new(fairing);
+            let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+            let rocket = fairings.attach(fairing, self).await;
+            (rocket, fairings)
+        };
+
+        let (rocket, mut fairings) = match tokio::runtime::Handle::try_current() {
+            Ok(handle) => {
+                // println!("Using existing runtime...");
+                std::thread::spawn(move || {
+                    handle.block_on(future)
+                }).join().unwrap()
+            }
+            Err(_) => {
+                // println!("Using new runtime.");
+                std::thread::spawn(|| {
+                    futures::executor::block_on(future)
+                }).join().unwrap()
+            }
+        };
+
+        self = rocket;
+
+        // Note that `self.fairings` may now be non-empty! Move them to the end.
+        fairings.append(self.fairings);
+        self.fairings = fairings;
         self
     }
 
-    /// Access the current state of this `Rocket` instance.
-    ///
-    /// The `Cargo` type provides methods such as [`Cargo::routes()`]
-    /// and [`Cargo::state()`]. This method is called to get a `Cargo`
-    /// instance.
+    /// Returns an iterator over all of the routes mounted on this instance of
+    /// Rocket.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// let config = rocket.inspect().await.config();
-    /// # let _ = config;
-    /// # });
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[get("/hello")]
+    /// fn hello() -> &'static str {
+    ///     "Hello, world!"
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut rocket = rocket::ignite()
+    ///         .mount("/", routes![hello])
+    ///         .mount("/hi", routes![hello]);
+    ///
+    ///     for route in rocket.routes() {
+    ///         match route.base() {
+    ///             "/" => assert_eq!(route.uri.path(), "/hello"),
+    ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
+    ///             _ => unreachable!("only /hello, /hi/hello are expected")
+    ///         }
+    ///     }
+    ///
+    ///     assert_eq!(rocket.routes().count(), 2);
+    /// }
     /// ```
-    pub async fn inspect(&mut self) -> &Cargo {
-        self.actualize_manifest().await;
-        self.cargo()
+    #[inline(always)]
+    pub fn routes(&self) -> impl Iterator<Item = &Route> + '_ {
+        self.router.routes()
     }
 
     /// Returns `Some` of the managed state value for the type `T` if it is
     /// being managed by `self`. Otherwise, returns `None`.
-    ///
-    /// This function is equivalent to `.inspect().await.state()` and is
-    /// provided as a convenience.
     ///
     /// # Example
     ///
@@ -834,53 +769,50 @@ impl Rocket {
     /// #[derive(PartialEq, Debug)]
     /// struct MyState(&'static str);
     ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    /// assert_eq!(rocket.state::<MyState>().await, Some(&MyState("hello!")));
-    /// # });
+    /// let rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>(), Some(&MyState("hello!")));
     /// ```
-    pub async fn state<T: Send + Sync + 'static>(&mut self) -> Option<&T> {
-        self.inspect().await.state()
+    #[inline(always)]
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.managed_state.try_get()
     }
 
-    /// Returns the figment.
-    ///
-    /// This function is equivalent to `.inspect().await.figment()` and is
-    /// provided as a convenience.
+    /// Returns the figment for configured provider.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Rocket;
-    /// use rocket::fairing::AdHoc;
+    /// let rocket = rocket::ignite();
+    /// let figment = rocket.figment();
     ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// println!("Rocket config: {:?}", rocket.config().await);
-    /// # });
+    /// let port: u16 = figment.extract_inner("port").unwrap();
+    /// assert_eq!(port, rocket.config().port);
     /// ```
-    pub async fn figment(&mut self) -> &Figment {
-        self.inspect().await.figment()
+    #[inline(always)]
+    pub fn figment(&self) -> &Figment {
+        &self.figment
     }
 
-    /// Returns the config.
-    ///
-    /// This function is equivalent to `.inspect().await.config()` and is
-    /// provided as a convenience.
+    /// Returns the active configuration.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// println!("Rocket config: {:?}", rocket.config().await);
-    /// # });
+    /// #[launch]
+    /// fn rocket() -> rocket::Rocket {
+    ///     rocket::ignite()
+    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
+    ///             println!("Rocket launch config: {:?}", rocket.config());
+    ///         }))
+    /// }
     /// ```
-    pub async fn config(&mut self) -> &Config {
-        self.inspect().await.config()
+    #[inline(always)]
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 
     /// Returns a handle which can be used to gracefully terminate this instance
@@ -888,14 +820,12 @@ impl Rocket {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// # use std::{thread, time::Duration};
-    /// #
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().await.shutdown();
+    /// let handle = rocket.shutdown();
     ///
-    /// # if false {
     /// thread::spawn(move || {
     ///     thread::sleep(Duration::from_secs(10));
     ///     handle.shutdown();
@@ -904,7 +834,6 @@ impl Rocket {
     /// // Shuts down after 10 seconds
     /// let shutdown_result = rocket.launch().await;
     /// assert!(shutdown_result.is_ok());
-    /// # }
     /// # });
     /// ```
     #[inline(always)]
@@ -915,7 +844,6 @@ impl Rocket {
     /// Perform "pre-launch" checks: verify that there are no routing colisions
     /// and that there were no fairing failures.
     pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
-        self.actualize_manifest().await;
         if let Err(e) = self.router.collisions() {
             return Err(Error::new(ErrorKind::Collision(e)));
         }
@@ -1005,132 +933,5 @@ impl Rocket {
             // Server shut down before Ctrl-C; return the result.
             Either::Right((result, _)) => result,
         }
-    }
-}
-
-impl std::fmt::Debug for PreLaunchOp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) ->  std::fmt::Result {
-        use PreLaunchOp::*;
-        match self {
-            Mount(origin, routes) => f.debug_tuple("PreLaunchOp::Mount")
-                .field(&origin)
-                .field(&routes)
-                .finish(),
-            Register(catchers) => f.debug_tuple("PreLaunchOp::Register")
-                .field(&catchers)
-                .finish(),
-            Manage(name, _) => f.debug_tuple("PreLaunchOp::Manage")
-                .field(&name)
-                .finish(),
-            Attach(fairing) => f.debug_tuple("PreLaunchOp::Attach")
-                .field(&fairing.info())
-                .finish()
-        }
-    }
-}
-
-impl std::ops::Deref for Cargo {
-    type Target = Rocket;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Cargo {
-    /// Returns an iterator over all of the routes mounted on this instance of
-    /// Rocket.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::Rocket;
-    /// use rocket::fairing::AdHoc;
-    ///
-    /// #[get("/hello")]
-    /// fn hello() -> &'static str {
-    ///     "Hello, world!"
-    /// }
-    ///
-    /// fn main() {
-    /// # rocket::async_test(async {
-    ///     let mut rocket = rocket::ignite()
-    ///         .mount("/", routes![hello])
-    ///         .mount("/hi", routes![hello]);
-    ///
-    ///     for route in rocket.inspect().await.routes() {
-    ///         match route.base() {
-    ///             "/" => assert_eq!(route.uri.path(), "/hello"),
-    ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
-    ///             _ => unreachable!("only /hello, /hi/hello are expected")
-    ///         }
-    ///     }
-    ///
-    ///     assert_eq!(rocket.inspect().await.routes().count(), 2);
-    /// # });
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn routes(&self) -> impl Iterator<Item = &Route> + '_ {
-        self.0.router.routes()
-    }
-
-    /// Returns `Some` of the managed state value for the type `T` if it is
-    /// being managed by `self`. Otherwise, returns `None`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// #[derive(PartialEq, Debug)]
-    /// struct MyState(&'static str);
-    ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    ///
-    /// let cargo = rocket.inspect().await;
-    /// assert_eq!(cargo.state::<MyState>(), Some(&MyState("hello!")));
-    /// # });
-    /// ```
-    #[inline(always)]
-    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
-        self.0.managed_state.try_get()
-    }
-
-    /// Returns the figment for configured provider.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// let figment = rocket.inspect().await.figment();
-    /// # });
-    /// ```
-    #[inline(always)]
-    pub fn figment(&self) -> &Figment {
-        &self.0.figment
-    }
-
-    /// Returns the active configuration.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::Rocket;
-    /// use rocket::fairing::AdHoc;
-    ///
-    /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Config Printer", |cargo| {
-    ///             println!("Rocket launch config: {:?}", cargo.config());
-    ///         }))
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn config(&self) -> &Config {
-        &self.0.config
     }
 }

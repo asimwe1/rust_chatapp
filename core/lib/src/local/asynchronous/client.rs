@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use parking_lot::RwLock;
 
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
-use crate::rocket::{Rocket, Cargo};
+use crate::rocket::Rocket;
 use crate::http::{private::cookie, Method};
 use crate::error::Error;
 
@@ -48,7 +48,7 @@ use crate::error::Error;
 /// # });
 /// ```
 pub struct Client {
-    cargo: Cargo,
+    rocket: Rocket,
     cookies: RwLock<cookie::CookieJar>,
     pub(in super) tracked: bool,
 }
@@ -59,9 +59,8 @@ impl Client {
         tracked: bool
     ) -> Result<Client, Error> {
         rocket.prelaunch_check().await?;
-        let cargo = rocket.into_cargo().await;
         let cookies = RwLock::new(cookie::CookieJar::new());
-        Ok(Client { cargo, tracked, cookies })
+        Ok(Client { rocket, tracked, cookies })
     }
 
     // WARNING: This is unstable! Do not use this method outside of Rocket!
@@ -79,8 +78,8 @@ impl Client {
     }
 
     #[inline(always)]
-    pub(crate) fn _cargo(&self) -> &Cargo {
-        &self.cargo
+    pub(crate) fn _rocket(&self) -> &Rocket {
+        &self.rocket
     }
 
     #[inline(always)]

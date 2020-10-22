@@ -119,25 +119,7 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub fn rocket(&self) -> &Rocket {
-        &*self._cargo()
-    }
-
-    /// Returns a reference to the `Cargo` of the `Rocket` this client is
-    /// creating requests for.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    #[doc = $import]
-    ///
-    /// # Client::_test(|client, _, _| {
-    /// let client: &Client = client;
-    /// let cargo = client.cargo();
-    /// # });
-    /// ```
-    #[inline(always)]
-    pub fn cargo(&self) -> &Cargo {
-        self._cargo()
+        &*self._rocket()
     }
 
     /// Returns a cookie jar containing all of the cookies this client is

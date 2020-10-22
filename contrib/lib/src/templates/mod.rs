@@ -104,7 +104,7 @@
 //! can be any type that implements [`Serialize`] from [`serde`] and would
 //! serialize to an `Object` value.
 //!
-//! In debug mode (without the `--release` flag passed to `cargo`), templates
+//! In debug mode (without the `--release` flag passed to `rocket`), templates
 //! will be automatically reloaded from disk if any changes have been made to
 //! the templates directory since the previous request. In release builds,
 //! template reloading is disabled to improve performance and cannot be enabled.
@@ -140,7 +140,7 @@ use serde_json::{Value, to_value};
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use rocket::Cargo;
+use rocket::Rocket;
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
@@ -337,14 +337,14 @@ impl Template {
     ///
     ///     # context.insert("test", "test");
     ///     # #[allow(unused_variables)]
-    ///     let template = Template::show(client.cargo(), "index", context);
+    ///     let template = Template::show(client.rocket(), "index", context);
     /// }
     /// ```
     #[inline]
-    pub fn show<S, C>(cargo: &Cargo, name: S, context: C) -> Option<String>
+    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = cargo.state::<ContextManager>().map(ContextManager::context).or_else(|| {
+        let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");

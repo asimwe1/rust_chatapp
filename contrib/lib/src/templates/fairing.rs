@@ -138,10 +138,10 @@ impl Fairing for TemplateFairing {
     /// The user's callback, if any was supplied, is called to customize the
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
-    async fn on_attach(&self, mut rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         use rocket::figment::{Source, value::magic::RelativePathBuf};
 
-        let configured_dir = rocket.figment().await
+        let configured_dir = rocket.figment()
             .extract_inner::<RelativePathBuf>("template_dir")
             .map(|path| path.relative());
 
@@ -173,7 +173,7 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
-        let cm = req.guard::<rocket::State<'_, ContextManager>>().await
+        let cm = req.managed_state::<ContextManager>()
             .expect("Template ContextManager registered in on_attach");
 
         cm.reload_if_needed(&*self.custom_callback);

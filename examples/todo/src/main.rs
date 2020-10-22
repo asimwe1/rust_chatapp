@@ -95,8 +95,8 @@ async fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     Template::render("index", Context::raw(&conn, msg).await)
 }
 
-async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
-    DbConn::get_one(rocket.inspect().await).await
+async fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
+    DbConn::get_one(&rocket).await
         .expect("database connection")
         .run(|c| match embedded_migrations::run(c) {
             Ok(()) => Ok(rocket),
@@ -112,8 +112,8 @@ fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
         .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
+        .attach(Template::fairing())
         .mount("/", StaticFiles::from(crate_relative!("/static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
-        .attach(Template::fairing())
 }

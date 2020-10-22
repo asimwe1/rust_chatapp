@@ -187,7 +187,7 @@ impl std::ops::BitOr for Options {
 /// ## Relative Paths
 ///
 /// In the example above, `/static` is an absolute path. If your static files
-/// are stored relative to your crate and your project is managed by Cargo, use
+/// are stored relative to your crate and your project is managed by Rocket, use
 /// the [`crate_relative!`] macro to obtain a path that is relative to your
 /// crate's root. For example, to serve files in the `static` subdirectory of
 /// your crate at `/`, you might write:

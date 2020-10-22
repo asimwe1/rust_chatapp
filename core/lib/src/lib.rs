@@ -36,7 +36,7 @@
 //!
 //! ## Usage
 //!
-//! Depend on `rocket` in `Cargo.toml`:
+//! Depend on `rocket` in `Rocket.toml`:
 //!
 //! ```toml
 //! [dependencies]
@@ -67,7 +67,7 @@
 //!   * **secrets:** Enables support for [private cookies].
 //!   * **tls:** Enables support for [TLS].
 //!
-//! The features can be enabled in `Cargo.toml`:
+//! The features can be enabled in `Rocket.toml`:
 //!
 //! ```toml
 //! [dependencies]
@@ -146,7 +146,7 @@ mod ext;
 #[doc(inline)] pub use crate::catcher::Catcher;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
-pub use crate::rocket::{Cargo, Rocket};
+pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.

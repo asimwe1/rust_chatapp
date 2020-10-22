@@ -66,9 +66,9 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::on_attach("Token State", |mut rocket| async {
+        .attach(AdHoc::on_attach("Token State", |rocket| async {
             println!("Adding token managed state...");
-            match rocket.figment().await.extract_inner("token") {
+            match rocket.figment().extract_inner("token") {
                 Ok(value) => Ok(rocket.manage(Token(value))),
                 Err(_) => Err(rocket)
             }

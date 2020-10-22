@@ -7,7 +7,7 @@
 //! ## Extracting Configuration Parameters
 //!
 //! Rocket exposes the active [`Figment`] via [`Rocket::figment()`] and
-//! [`Cargo::figment()`]. Any value that implements [`Deserialize`] can be
+//! [`Rocket::figment()`]. Any value that implements [`Deserialize`] can be
 //! extracted from the figment:
 //!
 //! ```rust
@@ -27,7 +27,7 @@
 //!
 //! [`Figment`]: figment::Figment
 //! [`Rocket::figment()`]: crate::Rocket::figment()
-//! [`Cargo::figment()`]: crate::Cargo::figment()
+//! [`Rocket::figment()`]: crate::Rocket::figment()
 //! [`Deserialize`]: serde::Deserialize
 //!
 //! ## Custom Providers

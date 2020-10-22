@@ -130,7 +130,7 @@ impl Data {
     /// In a fairing:
     ///
     /// ```
-    /// use rocket::{Cargo, Rocket, Request, Data, Response};
+    /// use rocket::{Rocket, Request, Data, Response};
     /// use rocket::fairing::{Fairing, Info, Kind};
     /// # struct MyType;
     ///

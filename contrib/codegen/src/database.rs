@@ -72,9 +72,11 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let request = quote!(::rocket::request);
 
     let request_guard_type = quote_spanned! { span =>
-        /// The request guard type.
         #vis struct #guard_type(#databases::Connection<Self, #conn_type>);
     };
+
+    let pool = quote_spanned!(span => #databases::ConnectionPool<Self, #conn_type>);
+    let conn = quote_spanned!(span => #databases::Connection<Self, #conn_type>);
 
     Ok(quote! {
         #request_guard_type
@@ -83,26 +85,26 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Returns a fairing that initializes the associated database
             /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
-                <#databases::ConnectionPool<Self, #conn_type>>::fairing(#fairing_name, #name)
+                <#pool>::fairing(#fairing_name, #name)
             }
 
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached.
-            pub async fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
-                <#databases::ConnectionPool<Self, #conn_type>>::get_one(cargo).await.map(Self)
+            pub async fn get_one(__rocket: &::rocket::Rocket) -> Option<Self> {
+                <#pool>::get_one(&__rocket).await.map(Self)
             }
 
             /// Runs the provided closure on a thread from a threadpool. The
             /// closure will be passed an `&mut r2d2::PooledConnection`.
             /// `.await`ing the return value of this function yields the value
             /// returned by the closure.
-            pub async fn run<F, R>(&self, f: F) -> R
+            pub async fn run<F, R>(&self, __f: F) -> R
             where
                 F: FnOnce(&mut #conn_type) -> R + Send + 'static,
                 R: Send + 'static,
             {
-                self.0.run(f).await
+                self.0.run(__f).await
             }
         }
 
@@ -110,8 +112,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
         impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
             type Error = ();
 
-            async fn from_request(req: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                <#databases::Connection<Self, #conn_type>>::from_request(req).await.map(Self)
+            async fn from_request(__r: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+                <#conn>::from_request(__r).await.map(Self)
             }
         }
     }.into())

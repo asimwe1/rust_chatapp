@@ -1,8 +1,8 @@
 use rocket::config::{Config, LogLevel};
 
-async fn test_config(profile: &str) {
-    let mut rocket = rocket::custom(Config::figment().select(profile));
-    let config = rocket.config().await;
+fn test_config(profile: &str) {
+    let rocket = rocket::custom(Config::figment().select(profile));
+    let config = rocket.config();
     match &*profile {
         "debug" => {
             assert_eq!(config.address, std::net::Ipv4Addr::LOCALHOST);
@@ -25,12 +25,12 @@ async fn test_config(profile: &str) {
     }
 }
 
-#[rocket::async_test]
-async fn test_debug_config() {
-    test_config("debug").await
+#[test]
+fn test_debug_config() {
+    test_config("debug")
 }
 
-#[rocket::async_test]
-async fn test_release_config() {
-    test_config("release").await
+#[test]
+fn test_release_config() {
+    test_config("release")
 }
