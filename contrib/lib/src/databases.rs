@@ -584,9 +584,10 @@ impl<T> From<r2d2::Error> for Error<T> {
 /// ```
 ///
 /// In this example, `ConnectionManager::new()` method returns a `foo::Error` on
-/// failure. For convenience, the [`DbError`] enum is used to consolidate this
-/// error type and the `r2d2::Error` type that can result from
-/// `r2d2::Pool::builder()` or `database::Config::from()`.
+/// failure. The [`Error`] enum consolidates this type, the `r2d2::Error` type
+/// that can result from `r2d2::Pool::builder()`, and the
+/// [`figment::Error`](rocket::figment::Error) type from
+/// `database::Config::from()`.
 ///
 /// In the event that a connection manager isn't fallible (as is the case with
 /// Diesel's r2d2 connection manager, for instance), the associated error type

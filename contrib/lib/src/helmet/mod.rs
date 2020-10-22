@@ -47,13 +47,13 @@
 //! [X-DNS-Prefetch-Control]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-DNS-Prefetch-Control
 //! [clickjacking]: https://en.wikipedia.org/wiki/Clickjacking
 //!
-//! [`XssFilter`]: helmet::XssFilter
-//! [`NoSniff`]: helmet::NoSniff
-//! [`Frame`]: helmet::Frame
-//! [`Hsts`]: helmet::Hsts
-//! [`ExpectCt`]: helmet::ExpectCt
-//! [`Referrer`]: helmet::Referrer
-//! [`Prefetch`]: helmet::Prefetch
+//! [`XssFilter`]: self::XssFilter
+//! [`NoSniff`]: self::NoSniff
+//! [`Frame`]: self::Frame
+//! [`Hsts`]: self::Hsts
+//! [`ExpectCt`]: self::ExpectCt
+//! [`Referrer`]: self::Referrer
+//! [`Prefetch`]: self::Prefetch
 //!
 //! # Usage
 //!

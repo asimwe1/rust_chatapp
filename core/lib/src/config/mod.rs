@@ -36,7 +36,7 @@
 //! [`rocket::ignite()`]. The configured provider can be built on top of
 //! [`Config::figment()`], [`Config::default()`], both, or neither. The
 //! [Figment](@figment) documentation has full details on instantiating existing
-//! providers like [`Toml`]() and [`Json`] as well as creating custom providers for
+//! providers like [`Toml`]() and [`Env`] as well as creating custom providers for
 //! more complex cases.
 //!
 //! Configuration values can be overridden at runtime by merging figment's tuple
@@ -92,10 +92,10 @@
 //! }
 //! ```
 //!
-//! [`rocket::custom()`]: crate::rocket::custom()
-//! [`rocket::ignite()`]: crate::rocket::ignite()
+//! [`rocket::custom()`]: crate::custom()
+//! [`rocket::ignite()`]: crate::ignite()
 //! [`Toml`]: figment::providers::Toml
-//! [`Json`]: figment::providers::Json
+//! [`Env`]: figment::providers::Env
 
 mod secret_key;
 mod config;

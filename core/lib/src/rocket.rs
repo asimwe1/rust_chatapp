@@ -458,7 +458,7 @@ impl Rocket {
 
     /// Creates a new `Rocket` application using the supplied configuration
     /// provider. This method is typically called through the
-    /// [`rocket::custom()`] alias.
+    /// [`rocket::custom()`](crate::custom()) alias.
     ///
     /// # Panics
     ///

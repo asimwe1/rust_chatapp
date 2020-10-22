@@ -173,7 +173,7 @@ impl Config {
     /// environment variable. If it is not set, it defaults to `debug` when
     /// compiled in debug mode and `release` when compiled in release mode.
     ///
-    /// [`rocket::ignite()`]: crate::rocket::ignite()
+    /// [`rocket::ignite()`]: crate::ignite()
     ///
     /// # Example
     ///

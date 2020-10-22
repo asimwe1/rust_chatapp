@@ -35,7 +35,7 @@ pub struct TlsConfig {
 impl TlsConfig {
     /// Constructs a `TlsConfig` from paths to a `certs` certificate-chain
     /// a `key` private-key. This method does no validation; it simply creates a
-    /// structure suitable for passing into a [`Config`].
+    /// structure suitable for passing into a [`Config`](crate::Config).
     ///
     /// # Example
     ///
@@ -55,7 +55,8 @@ impl TlsConfig {
 
     /// Constructs a `TlsConfig` from byte buffers to a `certs`
     /// certificate-chain a `key` private-key. This method does no validation;
-    /// it simply creates a structure suitable for passing into a [`Config`].
+    /// it simply creates a structure suitable for passing into a
+    /// [`Config`](crate::Config).
     ///
     /// # Example
     ///
