@@ -135,6 +135,7 @@ pub mod http {
 mod shutdown;
 mod router;
 mod rocket;
+mod server;
 mod codegen;
 mod ext;
 
