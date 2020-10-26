@@ -166,7 +166,9 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     tokio::runtime::Builder::new()
-        .basic_scheduler()
+        .threaded_scheduler()
+        .thread_name("rocket-test-worker-thread")
+        .core_threads(1)
         .enable_all()
         .build()
         .expect("create tokio runtime")
