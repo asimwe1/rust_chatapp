@@ -129,6 +129,8 @@ impl Error {
     }
 }
 
+impl std::error::Error for Error {  }
+
 impl fmt::Display for ErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
