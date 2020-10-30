@@ -196,7 +196,7 @@ mod tests {
     fn state_is_cloneable() {
         struct Token(usize);
 
-        let rocket = crate::ignite().manage(Token(123));
+        let rocket = crate::custom(crate::Config::default()).manage(Token(123));
         let state = rocket.state::<Token>().unwrap();
         assert_eq!(state.0, 123);
         assert_eq!(state.clone().0, 123);
