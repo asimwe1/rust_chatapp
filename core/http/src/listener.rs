@@ -18,6 +18,7 @@ use tokio::net::{TcpListener, TcpStream};
 // that they could be introduced in upstream libraries.
 /// A 'Listener' yields incoming connections
 pub trait Listener {
+    /// The connection type returned by this listener.
     type Connection: Connection;
 
     /// Return the actual address this listener bound to.
@@ -29,6 +30,7 @@ pub trait Listener {
 
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
+    /// The remote address, i.e. the client's socket address.
     fn remote_addr(&self) -> Option<SocketAddr>;
 }
 
@@ -150,6 +152,7 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
     }
 }
 
+/// Binds a TCP listener to `address` and returns it.
 pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
     Ok(TcpListener::bind(address).await?)
 }

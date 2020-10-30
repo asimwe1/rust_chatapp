@@ -15,6 +15,7 @@ mod key {
 
 /// Types and methods to manage a `Key` when private cookies are disabled.
 #[cfg(not(feature = "private-cookies"))]
+#[allow(missing_docs)]
 mod key {
     #[derive(Copy, Clone)]
     pub struct Key;

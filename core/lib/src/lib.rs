@@ -79,10 +79,11 @@
 //!
 //! ## Configuration
 //!
-//! Rocket and Rocket libraries are configured via the `Rocket.toml` file and/or
-//! `ROCKET_{PARAM}` environment variables. For more information on how to
-//! configure Rocket, see the [configuration section] of the guide as well as
-//! the [`config`] module documentation.
+//! By default, Rocket applications are configured via a `Rocket.toml` file
+//! and/or `ROCKET_{PARAM}` environment variables. For more information on how
+//! to configure Rocket, including how to completely customize configuration
+//! sources, see the [configuration section] of the guide as well as the
+//! [`config`] module documentation.
 //!
 //! [configuration section]: https://rocket.rs/master/guide/configuration/
 //!
@@ -109,13 +110,15 @@ pub use futures;
 pub use tokio;
 pub use figment;
 
-#[doc(hidden)] #[macro_use] pub mod logger;
+#[doc(hidden)]
+#[macro_use] pub mod logger;
 #[macro_use] pub mod outcome;
+#[macro_use] pub mod data;
 pub mod local;
 pub mod request;
 pub mod response;
 pub mod config;
-pub mod data;
+pub mod form;
 pub mod handler;
 pub mod fairing;
 pub mod error;
@@ -138,6 +141,7 @@ mod rocket;
 mod server;
 mod codegen;
 mod ext;
+mod state;
 
 #[doc(hidden)] pub use log::{info, warn, error, debug};
 #[doc(inline)] pub use crate::response::Response;
@@ -146,17 +150,18 @@ mod ext;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
 pub use crate::router::Route;
-pub use crate::request::{Request, State};
+pub use crate::request::Request;
 pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
+pub use crate::state::State;
 
-/// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
+/// Creates a new instance of `Rocket`: aliases [`Rocket::ignite()`].
 pub fn ignite() -> Rocket {
     Rocket::ignite()
 }
 
-/// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
-/// custom configuration provider.
+/// Creates a new instance of `Rocket` with a custom configuration provider:
+/// aliases [`Rocket::custom()`].
 pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
     Rocket::custom(provider)
 }

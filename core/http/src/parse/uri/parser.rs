@@ -3,7 +3,7 @@ use pear::input::{Extent, Rewind};
 use pear::macros::{parser, switch, parse_current_marker, parse_error, parse_try};
 
 use crate::uri::{Uri, Origin, Authority, Absolute, Host};
-use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_qchar, is_rchar};
+use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_qchar};
 use crate::parse::uri::RawInput;
 
 type Result<'a, T> = pear::input::Result<T, RawInput<'a>>;
@@ -36,13 +36,6 @@ pub fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
 }
 
 #[parser]
-pub fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    fn is_pchar_or_rchar(c: &u8) -> bool { is_pchar(c) || is_rchar(c) }
-    fn is_qchar_or_rchar(c: &u8) -> bool { is_qchar(c) || is_rchar(c) }
-    (peek(b'/')?, path_and_query(is_pchar_or_rchar, is_qchar_or_rchar)?).1
-}
-
-#[parser]
 fn path_and_query<'a, F, Q>(
     input: &mut RawInput<'a>,
     is_path_char: F,
@@ -57,7 +50,7 @@ fn path_and_query<'a, F, Q>(
         parse_error!("expected path or query, found neither")?
     } else {
         // We know the string is ASCII because of the `is_char` checks above.
-        Ok(unsafe {Origin::raw(input.start.into(), path.into(), query.map(|q| q.into())) })
+        Ok(unsafe { Origin::raw(input.start.into(), path.into(), query.map(|q| q.into())) })
     }
 }
 

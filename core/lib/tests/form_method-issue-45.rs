@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::request::Form;
+use rocket::form::Form;
 
 #[derive(FromForm)]
 struct FormData {
@@ -9,7 +9,7 @@ struct FormData {
 
 #[patch("/", data = "<form_data>")]
 fn bug(form_data: Form<FormData>) -> &'static str {
-    assert_eq!("Form data", form_data.form_data);
+    assert_eq!("Form data", form_data.into_inner().form_data);
     "OK"
 }
 

@@ -160,12 +160,6 @@ impl<'a> PasteId<'a> {
         PasteId(Cow::Owned(id))
     }
 }
-
-impl<'a> fmt::Display for PasteId<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 ```
 
 Then, in `src/main.rs`, add the following after `extern crate rocket`:
@@ -207,12 +201,10 @@ an `upload` directory next to the `src` directory:
 mkdir upload
 ```
 
-For the `upload` route, we'll need to `use` a few items:
+For the `upload` route, we'll need to import `Data`:
 
 ```rust
 use rocket::Data;
-use rocket::http::RawStr;
-use rocket::response::Debug;
 ```
 
 The [Data](@api/rocket/data/struct.Data.html) structure is key
@@ -227,13 +219,12 @@ and handler signature look like this:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# fn main() {}
 
 use rocket::Data;
 use rocket::response::Debug;
 
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
+fn upload(paste: Data) -> std::io::Result<String> {
     # unimplemented!()
     /* .. */
 }
@@ -270,7 +261,7 @@ async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
     // Write the paste out, limited to 128KiB, and return the URL.
-    paste.open(128.kibibytes()).stream_to_file(filename).await?;
+    paste.open(128.kibibytes()).into_file(filename).await?;
     Ok(url)
 }
 ```
@@ -330,11 +321,10 @@ paste doesn't exist.
 ```rust
 # #[macro_use] extern crate rocket;
 
-use rocket::http::RawStr;
 use rocket::tokio::fs::File;
 
 #[get("/<id>")]
-async fn retrieve(id: &RawStr) -> Option<File> {
+async fn retrieve(id: &str) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).await.ok()
 }
@@ -356,7 +346,7 @@ fn rocket() -> rocket::Rocket {
 ```
 
 Unfortunately, there's a problem with this code. Can you spot the issue? The
-[`RawStr`](@api/rocket/http/struct.RawStr.html) type should tip you off!
+`&str` type should tip you off!
 
 The issue is that the _user_ controls the value of `id`, and as a result, can
 coerce the service into opening files inside `upload/` that aren't meant to be
@@ -378,29 +368,19 @@ using it. We do this by implementing `FromParam` for `PasteId` in
 ```rust
 use std::borrow::Cow;
 
-use rocket::http::RawStr;
 use rocket::request::FromParam;
 
 /// A _probably_ unique paste ID.
 pub struct PasteId<'a>(Cow<'a, str>);
 
-/// Returns `true` if `id` is a valid paste ID and `false` otherwise.
-fn valid_id(id: &str) -> bool {
-    id.chars().all(|c| {
-        (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
-    })
-}
-
 /// Returns an instance of `PasteId` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
 impl<'a> FromParam<'a> for PasteId<'a> {
-    type Error = &'a RawStr;
+    type Error = &'a str;
 
-    fn from_param(param: &'a RawStr) -> Result<PasteId<'a>, &'a RawStr> {
-        match valid_id(param) {
-            true => Ok(PasteId(Cow::Borrowed(param))),
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param.chars().all(|c| c.is_ascii_alphanumeric()) {
+            true => Ok(PasteId(param.into())),
             false => Err(param)
         }
     }
@@ -417,7 +397,7 @@ the `retrieve` route, preventing attacks on the `retrieve` route:
 # use std::borrow::Cow;
 # use rocket::tokio::fs::File;
 
-# type PasteId<'a> = Cow<'a, str>;
+# type PasteId<'a> = &'a str;
 
 #[get("/<id>")]
 async fn retrieve(id: PasteId<'_>) -> Option<File> {
@@ -426,7 +406,7 @@ async fn retrieve(id: PasteId<'_>) -> Option<File> {
 }
 ```
 
-Note that our `valid_id` function is simplistic and could be improved by, for
+Note that our `from_param` function is simplistic and could be improved by, for
 example, checking that the length of the `id` is within some known bound or
 potentially blacklisting sensitive files as needed.
 

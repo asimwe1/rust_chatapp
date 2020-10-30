@@ -8,7 +8,7 @@ fn hello(name: String, age: u8) -> String {
 }
 
 #[get("/hello/<name>")]
-fn hi(name: String) -> String {
+fn hi(name: &str) -> &str {
     name
 }
 

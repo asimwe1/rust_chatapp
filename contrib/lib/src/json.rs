@@ -14,32 +14,33 @@
 //! features = ["json"]
 //! ```
 
-use std::ops::{Deref, DerefMut};
 use std::io;
+use std::ops::{Deref, DerefMut};
 use std::iter::FromIterator;
 
-use rocket::request::Request;
-use rocket::outcome::Outcome::*;
-use rocket::data::{Data, ByteUnit, Transform::*, Transformed};
-use rocket::data::{FromTransformedData, TransformFuture, FromDataFuture};
-use rocket::http::Status;
+use rocket::request::{Request, local_cache};
+use rocket::data::{ByteUnit, Data, FromData, Outcome};
 use rocket::response::{self, Responder, content};
+use rocket::http::Status;
+use rocket::form::prelude as form;
 
 use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, Deserializer};
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 #[doc(hidden)]
 pub use serde_json::{json_internal, json_internal_vec};
 
-/// The JSON type: implements [`FromTransformedData`] and [`Responder`], allowing you to
-/// easily consume and respond with JSON.
+/// The JSON data guard: easily consume and respond with JSON.
 ///
 /// ## Receiving JSON
 ///
-/// If you're receiving JSON data, simply add a `data` parameter to your route
-/// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
-/// some type you'd like to parse from JSON. `T` must implement [`Deserialize`]
-/// from [`serde`]. The data is parsed from the HTTP request body.
+/// `Json` is both a data guard and a form guard.
+///
+/// ### Data Guard
+///
+/// To parse request body data as JSON , add a `data` route argument with a
+/// target type of `Json<T>`, where `T` is some type you'd like to parse from
+/// JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -47,7 +48,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// # type User = usize;
 /// use rocket_contrib::json::Json;
 ///
-/// #[post("/users", format = "json", data = "<user>")]
+/// #[post("/user", format = "json", data = "<user>")]
 /// fn new_user(user: Json<User>) {
 ///     /* ... */
 /// }
@@ -57,6 +58,30 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// Using `format = json` means that any request that doesn't specify
 /// "application/json" as its `Content-Type` header value will not be routed to
 /// the handler.
+///
+/// ### Form Guard
+///
+/// `Json<T>`, as a form guard, accepts value and data fields and parses the
+/// data as a `T`. Simple use `Json<T>`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type Metadata = usize;
+/// use rocket::form::{Form, FromForm};
+/// use rocket_contrib::json::Json;
+///
+/// #[derive(FromForm)]
+/// struct User<'r> {
+///     name: &'r str,
+///     metadata: Json<Metadata>
+/// }
+///
+/// #[post("/user", data = "<form>")]
+/// fn new_user(form: Form<User<'_>>) {
+///     /* ... */
+/// }
+/// ```
 ///
 /// ## Sending JSON
 ///
@@ -94,22 +119,6 @@ pub use serde_json::{json_internal, json_internal_vec};
 #[derive(Debug)]
 pub struct Json<T>(pub T);
 
-impl<T> Json<T> {
-    /// Consumes the JSON wrapper and returns the wrapped item.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use rocket_contrib::json::Json;
-    /// let string = "Hello".to_string();
-    /// let my_json = Json(string);
-    /// assert_eq!(my_json.into_inner(), "Hello".to_string());
-    /// ```
-    #[inline(always)]
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
 /// An error returned by the [`Json`] data guard when incoming data fails to
 /// serialize as JSON.
 #[derive(Debug)]
@@ -126,36 +135,54 @@ pub enum JsonError<'a> {
 
 const DEFAULT_LIMIT: ByteUnit = ByteUnit::Mebibyte(1);
 
-impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
-    type Error = JsonError<'a>;
-    type Owned = String;
-    type Borrowed = str;
+impl<T> Json<T> {
+    /// Consumes the JSON wrapper and returns the wrapped item.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use rocket_contrib::json::Json;
+    /// let string = "Hello".to_string();
+    /// let my_json = Json(string);
+    /// assert_eq!(my_json.into_inner(), "Hello".to_string());
+    /// ```
+    #[inline(always)]
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
 
-    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
-        Box::pin(async move {
-            let size_limit = r.limits().get("json").unwrap_or(DEFAULT_LIMIT);
-            match d.open(size_limit).stream_to_string().await {
-                Ok(s) => Borrowed(Success(s)),
-                Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
-            }
-        })
+impl<'r, T: Deserialize<'r>> Json<T> {
+    fn from_str(s: &'r str) -> Result<Self, JsonError<'r>> {
+        serde_json::from_str(s).map(Json).map_err(|e| JsonError::Parse(s, e))
     }
 
-    fn from_data(_: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
-        Box::pin(async move {
-            let string = try_outcome!(o.borrowed());
-            match serde_json::from_str(&string) {
-                Ok(v) => Success(Json(v)),
-                Err(e) => {
-                    error_!("Couldn't parse JSON body: {:?}", e);
-                    if e.is_data() {
-                        Failure((Status::UnprocessableEntity, JsonError::Parse(string, e)))
-                    } else {
-                        Failure((Status::BadRequest, JsonError::Parse(string, e)))
-                    }
-                }
-            }
-        })
+    async fn from_data(req: &'r Request<'_>, data: Data) -> Result<Self, JsonError<'r>> {
+        let size_limit = req.limits().get("json").unwrap_or(DEFAULT_LIMIT);
+        let string = match data.open(size_limit).into_string().await {
+            Ok(s) if s.is_complete() => s.into_inner(),
+            Ok(_) => {
+                let eof = io::ErrorKind::UnexpectedEof;
+                return Err(JsonError::Io(io::Error::new(eof, "data limit exceeded")));
+            },
+            Err(e) => return Err(JsonError::Io(e)),
+        };
+
+        Self::from_str(local_cache!(req, string))
+    }
+}
+
+#[rocket::async_trait]
+impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
+    type Error = JsonError<'r>;
+
+    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+        match Self::from_data(req, data).await {
+            Ok(value) => Outcome::Success(value),
+            Err(JsonError::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
+                Outcome::Failure((Status::PayloadTooLarge, JsonError::Io(e)))
+            },
+            Err(e) => Outcome::Failure((Status::BadRequest, e)),
+        }
     }
 }
 
@@ -187,6 +214,26 @@ impl<T> DerefMut for Json<T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut T {
         &mut self.0
+    }
+}
+
+impl From<JsonError<'_>> for form::Error<'_> {
+    fn from(e: JsonError<'_>) -> Self {
+        match e {
+            JsonError::Io(e) => e.into(),
+            JsonError::Parse(_, e) => form::Error::custom(e)
+        }
+    }
+}
+
+#[rocket::async_trait]
+impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for Json<T> {
+    fn from_value(field: form::ValueField<'v>) -> Result<Self, form::Errors<'v>> {
+        Ok(Self::from_str(field.value)?)
+    }
+
+    async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
+        Ok(Self::from_data(f.request, f.data).await?)
     }
 }
 
@@ -397,3 +444,5 @@ macro_rules! json {
         $crate::json::JsonValue($crate::json::json_internal!($($json)+))
     };
 }
+
+pub use json;

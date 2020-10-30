@@ -24,18 +24,14 @@ tls = ["rocket_http/tls"]
 secrets = ["rocket_http/private-cookies"]
 
 [dependencies]
-rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
-rocket_http = { version = "0.5.0-dev", path = "../http" }
 futures = "0.3.0"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.0"
-state = "0.4.1"
 time = "0.2.11"
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
 atty = "0.2"
-async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.5"
 parking_lot = "0.11"
@@ -44,6 +40,31 @@ serde = { version = "1.0", features = ["derive"] }
 figment = { version = "0.10.2", features = ["toml", "env"] }
 rand = "0.8"
 either = "1"
+pin-project-lite = "0.1"
+indexmap = { version = "1.0", features = ["serde"] }
+tempfile = "3"
+
+[dependencies.state]
+git = "https://github.com/SergioBenitez/state.git"
+rev = "7576652"
+
+[dependencies.async-trait]
+git = "https://github.com/SergioBenitez/async-trait.git"
+rev = "0cda89bd"
+
+[dependencies.rocket_codegen]
+version = "0.5.0-dev"
+path = "../codegen"
+
+[dependencies.rocket_http]
+version = "0.5.0-dev"
+path = "../http"
+features = ["serde"]
+
+[dependencies.multer]
+git = "https://github.com/rousan/multer-rs.git"
+rev = "0620e54"
+features = ["tokio-io"]
 
 [dependencies.tokio]
 version = "1.0"

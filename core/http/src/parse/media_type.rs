@@ -5,7 +5,7 @@ use pear::combinators::{prefixed_series, surrounded};
 use pear::macros::{parser, switch, parse};
 use pear::parsers::*;
 
-use crate::media_type::{MediaType, Source};
+use crate::header::{MediaType, Source};
 use crate::parse::checkers::{is_whitespace, is_valid_token};
 
 type Input<'a> = pear::input::Pear<pear::input::Cursor<&'a str>>;

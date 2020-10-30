@@ -3,26 +3,107 @@ use std::task::{Context, Poll};
 use std::path::Path;
 use std::io::{self, Cursor};
 
+use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
+use futures::stream::Stream;
+use futures::ready;
 
-use crate::ext::AsyncReadBody;
+use crate::http::hyper;
+use crate::ext::{PollExt, Chain};
+use crate::data::{Capped, N};
 
 /// Raw data stream of a request body.
 ///
 /// This stream can only be obtained by calling
-/// [`Data::open()`](crate::data::Data::open()). The stream contains all of the
-/// data in the body of the request. It exposes no methods directly. Instead, it
-/// must be used as an opaque [`AsyncRead`] structure.
+/// [`Data::open()`](crate::data::Data::open()) with a data limit. The stream
+/// contains all of the data in the body of the request.
+///
+/// Reading from a `DataStream` is accomplished via the various methods on the
+/// structure. In general, methods exists in two variants: those that _check_
+/// whether the entire stream was read and those that don't. The former either
+/// directly or indirectly (via [`Capped`]) return an [`N`] which allows
+/// checking if the stream was read to completion while the latter do not.
+///
+/// | Read Into | Method                               | Notes                            |
+/// |-----------|--------------------------------------|----------------------------------|
+/// | `String`  | [`DataStream::into_string()`]        | Completeness checked. Preferred. |
+/// | `String`  | [`AsyncReadExt::read_to_string()`]   | Unchecked w/existing `String`.   |
+/// | `Vec<u8>` | [`DataStream::into_bytes()`]         | Checked. Preferred.              |
+/// | `Vec<u8>` | [`DataStream::stream_to(&mut vec)`]  | Checked w/existing `Vec`.        |
+/// | `Vec<u8>` | [`DataStream::stream_precise_to()`]  | Unchecked w/existing `Vec`.      |
+/// | `File`    | [`DataStream::into_file()`]          | Checked. Preferred.              |
+/// | `File`    | [`DataStream::stream_to(&mut file)`] | Checked w/ existing `File`.      |
+/// | `File`    | [`DataStream::stream_precise_to()`]  | Unchecked w/ existing `File`.    |
+/// | `T`       | [`DataStream::stream_to()`]          | Checked. Any `T: AsyncWrite`.    |
+/// | `T`       | [`DataStream::stream_precise_to()`]  | Unchecked. Any `T: AsyncWrite`.  |
+///
+/// [`DataStream::stream_to(&mut vec)`]: DataStream::stream_to()
+/// [`DataStream::stream_to(&mut file)`]: DataStream::stream_to()
 pub struct DataStream {
-    pub(crate) buffer: Take<Cursor<Vec<u8>>>,
-    pub(crate) stream: Take<AsyncReadBody>
+    pub(crate) chain: Take<Chain<Cursor<Vec<u8>>, StreamReader>>,
+}
+
+/// An adapter: turns a `T: Stream` (in `StreamKind`) into a `tokio::AsyncRead`.
+pub struct StreamReader {
+    state: State,
+    inner: StreamKind,
+}
+
+/// The current state of `StreamReader` `AsyncRead` adapter.
+enum State {
+    Pending,
+    Partial(Cursor<hyper::Bytes>),
+    Done,
+}
+
+/// The kinds of streams we accept as `Data`.
+enum StreamKind {
+    Body(hyper::Body),
+    Multipart(multer::Field)
 }
 
 impl DataStream {
-    /// A helper method to write the body of the request to any `AsyncWrite`
-    /// type.
+    pub(crate) fn new(buf: Vec<u8>, stream: StreamReader, limit: u64) -> Self {
+        let chain = Chain::new(Cursor::new(buf), stream).take(limit);
+        Self { chain }
+    }
+
+    /// Whether a previous read exhausted the set limit _and then some_.
+    async fn limit_exceeded(&mut self) -> io::Result<bool> {
+        #[cold]
+        async fn _limit_exceeded(stream: &mut DataStream) -> io::Result<bool> {
+            stream.chain.set_limit(1);
+            let mut buf = [0u8; 1];
+            Ok(stream.read(&mut buf).await? != 0)
+        }
+
+        Ok(self.chain.limit() == 0 && _limit_exceeded(self).await?)
+    }
+
+    /// Number of bytes a full read from `self` will _definitely_ read.
     ///
-    /// This method is identical to `tokio::io::copy(&mut self, &mut writer)`.
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn f(data: Data) {
+    ///     let definitely_have_n_bytes = data.open(1.kibibytes()).hint();
+    /// }
+    /// ```
+    pub fn hint(&self) -> usize {
+        let buf_len = self.chain.get_ref().get_ref().0.get_ref().len();
+        std::cmp::min(buf_len, self.chain.limit() as usize)
+    }
+
+    /// A helper method to write the body of the request to any `AsyncWrite`
+    /// type. Returns an [`N`] which indicates how many bytes were written and
+    /// whether the entire stream was read. An additional read from `self` may
+    /// be required to check if all of the sream has been read. If that
+    /// information is not needed, use [`DataStream::stream_precise_to()`].
+    ///
+    /// This method is identical to `tokio::io::copy(&mut self, &mut writer)`
+    /// except in that it returns an `N` to check for completeness.
     ///
     /// # Example
     ///
@@ -30,24 +111,24 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn handler(mut data: Data) -> io::Result<String> {
+    /// async fn data_guard(mut data: Data) -> io::Result<String> {
     ///     // write all of the data to stdout
-    ///     let written = data.open(512.kibibytes()).stream_to(tokio::io::stdout()).await?;
+    ///     let written = data.open(512.kibibytes())
+    ///         .stream_to(tokio::io::stdout()).await?;
+    ///
     ///     Ok(format!("Wrote {} bytes.", written))
     /// }
     /// ```
     #[inline(always)]
-    pub async fn stream_to<W>(mut self, mut writer: W) -> io::Result<u64>
+    pub async fn stream_to<W>(mut self, mut writer: W) -> io::Result<N>
         where W: AsyncWrite + Unpin
     {
-        tokio::io::copy(&mut self, &mut writer).await
+        let written = tokio::io::copy(&mut self, &mut writer).await?;
+        Ok(N { written, complete: !self.limit_exceeded().await? })
     }
 
-    /// A helper method to write the body of the request to a file at the path
-    /// determined by `path`.
-    ///
-    /// This method is identical to `self.stream_to(&mut
-    /// File::create(path).await?)`.
+    /// Like [`DataStream::stream_to()`] except that no end-of-stream check is
+    /// conducted and thus read/write completeness is unknown.
     ///
     /// # Example
     ///
@@ -55,36 +136,19 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn handler(mut data: Data) -> io::Result<String> {
-    ///     let written = data.open(1.megabytes()).stream_to_file("/static/file").await?;
-    ///     Ok(format!("Wrote {} bytes to /static/file", written))
+    /// async fn data_guard(mut data: Data) -> io::Result<String> {
+    ///     // write all of the data to stdout
+    ///     let written = data.open(512.kibibytes())
+    ///         .stream_precise_to(tokio::io::stdout()).await?;
+    ///
+    ///     Ok(format!("Wrote {} bytes.", written))
     /// }
     /// ```
     #[inline(always)]
-    pub async fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
-        let mut file = tokio::fs::File::create(path).await?;
-        self.stream_to(&mut file).await
-    }
-
-    /// A helper method to write the body of the request to a `String`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::io;
-    /// use rocket::data::{Data, ToByteUnit};
-    ///
-    /// async fn handler(data: Data) -> io::Result<String> {
-    ///     data.open(10.bytes()).stream_to_string().await
-    /// }
-    /// ```
-    pub async fn stream_to_string(mut self) -> io::Result<String> {
-        let buf_len = self.buffer.get_ref().get_ref().len();
-        let max_from_buf = std::cmp::min(buf_len, self.buffer.limit() as usize);
-        let capacity = std::cmp::min(max_from_buf, 1024);
-        let mut string = String::with_capacity(capacity);
-        self.read_to_string(&mut string).await?;
-        Ok(string)
+    pub async fn stream_precise_to<W>(mut self, mut writer: W) -> io::Result<u64>
+        where W: AsyncWrite + Unpin
+    {
+        tokio::io::copy(&mut self, &mut writer).await
     }
 
     /// A helper method to write the body of the request to a `Vec<u8>`.
@@ -95,21 +159,90 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn handler(data: Data) -> io::Result<Vec<u8>> {
-    ///     data.open(4.kibibytes()).stream_to_vec().await
+    /// async fn data_guard(data: Data) -> io::Result<Vec<u8>> {
+    ///     let bytes = data.open(4.kibibytes()).into_bytes().await?;
+    ///     if !bytes.is_complete() {
+    ///         println!("there are bytes remaining in the stream");
+    ///     }
+    ///
+    ///     Ok(bytes.into_inner())
     /// }
     /// ```
-    pub async fn stream_to_vec(mut self) -> io::Result<Vec<u8>> {
-        let buf_len = self.buffer.get_ref().get_ref().len();
-        let max_from_buf = std::cmp::min(buf_len, self.buffer.limit() as usize);
-        let capacity = std::cmp::min(max_from_buf, 1024);
-        let mut vec = Vec::with_capacity(capacity);
-        self.read_to_end(&mut vec).await?;
-        Ok(vec)
+    pub async fn into_bytes(self) -> io::Result<Capped<Vec<u8>>> {
+        let mut vec = Vec::with_capacity(self.hint());
+        let n = self.stream_to(&mut vec).await?;
+        Ok(Capped { value: vec, n })
+    }
+
+    /// A helper method to write the body of the request to a `String`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn data_guard(data: Data) -> io::Result<String> {
+    ///     let string = data.open(10.bytes()).into_string().await?;
+    ///     if !string.is_complete() {
+    ///         println!("there are bytes remaining in the stream");
+    ///     }
+    ///
+    ///     Ok(string.into_inner())
+    /// }
+    /// ```
+    pub async fn into_string(mut self) -> io::Result<Capped<String>> {
+        let mut string = String::with_capacity(self.hint());
+        let written = self.read_to_string(&mut string).await?;
+        let n = N { written: written as u64, complete: !self.limit_exceeded().await? };
+        Ok(Capped { value: string, n })
+    }
+
+    /// A helper method to write the body of the request to a file at the path
+    /// determined by `path`. If a file at the path already exists, it is
+    /// overwritten. The opened file is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn data_guard(mut data: Data) -> io::Result<String> {
+    ///     let file = data.open(1.megabytes()).into_file("/static/file").await?;
+    ///     if !file.is_complete() {
+    ///         println!("there are bytes remaining in the stream");
+    ///     }
+    ///
+    ///     Ok(format!("Wrote {} bytes to /static/file", file.n))
+    /// }
+    /// ```
+    pub async fn into_file<P: AsRef<Path>>(self, path: P) -> io::Result<Capped<File>> {
+        let mut file = File::create(path).await?;
+        let n = self.stream_to(&mut tokio::io::BufWriter::new(&mut file)).await?;
+        Ok(Capped { value: file, n })
     }
 }
 
 // TODO.async: Consider implementing `AsyncBufRead`.
+
+impl StreamReader {
+    pub fn empty() -> Self {
+        Self { inner: StreamKind::Body(hyper::Body::empty()), state: State::Done }
+    }
+}
+
+impl From<hyper::Body> for StreamReader {
+    fn from(body: hyper::Body) -> Self {
+        Self { inner: StreamKind::Body(body), state: State::Pending }
+    }
+}
+
+impl From<multer::Field> for StreamReader {
+    fn from(field: multer::Field) -> Self {
+        Self { inner: StreamKind::Multipart(field), state: State::Pending }
+    }
+}
 
 impl AsyncRead for DataStream {
     #[inline(always)]
@@ -118,15 +251,57 @@ impl AsyncRead for DataStream {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        if self.buffer.limit() > 0 {
-            trace_!("DataStream::buffer_read()");
-            match Pin::new(&mut self.buffer).poll_read(cx, buf) {
-                Poll::Ready(Ok(())) if buf.filled().is_empty() => { /* fall through */ },
-                poll => return poll,
+        Pin::new(&mut self.chain).poll_read(cx, buf)
+    }
+}
+
+impl Stream for StreamKind {
+    type Item = io::Result<hyper::Bytes>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        match self.get_mut() {
+            StreamKind::Body(body) => Pin::new(body).poll_next(cx)
+                .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
+            StreamKind::Multipart(mp) => Pin::new(mp).poll_next(cx)
+                .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            StreamKind::Body(body) => body.size_hint(),
+            StreamKind::Multipart(mp) => mp.size_hint(),
+        }
+    }
+}
+
+impl AsyncRead for StreamReader {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        loop {
+            self.state = match self.state {
+                State::Pending => {
+                    match ready!(Pin::new(&mut self.inner).poll_next(cx)) {
+                        Some(Err(e)) => return Poll::Ready(Err(e)),
+                        Some(Ok(bytes)) => State::Partial(Cursor::new(bytes)),
+                        None => State::Done,
+                    }
+                },
+                State::Partial(ref mut cursor) => {
+                    let rem = buf.remaining();
+                    match ready!(Pin::new(cursor).poll_read(cx, buf)) {
+                        Ok(()) if rem == buf.remaining() => State::Pending,
+                        result => return Poll::Ready(result),
+                    }
+                }
+                State::Done => return Poll::Ready(Ok(())),
             }
         }
-
-        trace_!("DataStream::stream_read()");
-        Pin::new(&mut self.stream).poll_read(cx, buf)
     }
 }

@@ -5,7 +5,6 @@ use unicode_xid::UnicodeXID;
 
 use crate::ext::IntoOwned;
 use crate::uri::{Origin, UriPart, Path, Query};
-use crate::uri::encoding::unsafe_percent_encode;
 
 use self::Error::*;
 
@@ -120,8 +119,6 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
             return Err(MissingClose);
         } else if segment.contains('>') || segment.contains('<') {
             return Err(Malformed);
-        } else if unsafe_percent_encode::<P>(segment) != segment {
-            return Err(Uri);
         }
 
         Ok(RouteSegment {
@@ -132,12 +129,13 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
         })
     }
 
-    pub fn parse_many(
-        string: &'a str,
+    pub fn parse_many<S: AsRef<str> + ?Sized> (
+        string: &'a S,
     ) -> impl Iterator<Item = SResult<'_, P>> {
         let mut last_multi_seg: Option<&str> = None;
         // We check for empty segments when we parse an `Origin` in `FromMeta`.
-        string.split(P::DELIMITER)
+        string.as_ref()
+            .split(P::DELIMITER)
             .filter(|s| !s.is_empty())
             .enumerate()
             .map(move |(i, seg)| {
@@ -158,12 +156,12 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
 
 impl<'a> RouteSegment<'a, Path> {
     pub fn parse(uri: &'a Origin<'_>) -> impl Iterator<Item = SResult<'a, Path>> {
-        Self::parse_many(uri.path())
+        Self::parse_many(uri.path().as_str())
     }
 }
 
 impl<'a> RouteSegment<'a, Query> {
     pub fn parse(uri: &'a Origin<'_>) -> Option<impl Iterator<Item = SResult<'a, Query>>> {
-        uri.query().map(|q| Self::parse_many(q))
+        uri.query().map(|q| Self::parse_many(q.as_str()))
     }
 }

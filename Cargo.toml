@@ -1,6 +1,3 @@
-[profile.dev]
-codegen-units = 4
-
 [workspace]
 members = [
   "core/lib/",
@@ -11,7 +8,7 @@ members = [
   "site/tests",
   "examples/cookies",
   "examples/errors",
-  "examples/form_validation",
+  "examples/forms",
   "examples/hello_person",
   "examples/query_params",
   "examples/hello_world",
@@ -30,7 +27,6 @@ members = [
   "examples/msgpack",
   "examples/handlebars_templates",
   "examples/tera_templates",
-  "examples/form_kitchen_sink",
   "examples/config",
   "examples/raw_upload",
   "examples/pastebin",

@@ -30,7 +30,7 @@ pub struct DataSegment(pub Segment);
 pub struct Optional<T>(pub Option<T>);
 
 impl FromMeta for StringLit {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))
     }
 }
@@ -43,7 +43,7 @@ pub struct RoutePath {
 }
 
 impl FromMeta for Status {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
         if num < 100 || num >= 600 {
             return Err(meta.value_span().error("status must be in range [100, 599]"));
@@ -61,7 +61,7 @@ impl ToTokens for Status {
 }
 
 impl FromMeta for ContentType {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         http::ContentType::parse_flexible(&String::from_meta(meta)?)
             .map(ContentType)
             .ok_or(meta.value_span().error("invalid or unknown content type"))
@@ -77,7 +77,7 @@ impl ToTokens for ContentType {
 }
 
 impl FromMeta for MediaType {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
             .ok_or(meta.value_span().error("invalid or unknown media type"))?;
 
@@ -95,7 +95,7 @@ impl FromMeta for MediaType {
 impl ToTokens for MediaType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (top, sub) = (self.0.top().as_str(), self.0.sub().as_str());
-        let (keys, values) = self.0.params().split2();
+        let (keys, values) = self.0.params().map(|(k, v)| (k.as_str(), v)).split2();
         let http = quote!(::rocket::http);
 
         tokens.extend(quote! {
@@ -114,7 +114,7 @@ const VALID_METHODS: &[http::Method] = &[
 ];
 
 impl FromMeta for Method {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let span = meta.value_span();
         let help_text = format!("method must be one of: {}", VALID_METHODS_STR);
 
@@ -156,13 +156,13 @@ impl ToTokens for Method {
 }
 
 impl FromMeta for Origin {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
 
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
-                let span = string.subspan(e.index() + 1..);
-                span.error(format!("invalid path URI: {}", e))
+                let span = string.subspan(e.index() + 1..(e.index() + 2));
+                span.error(format!("invalid route URI: {}", e))
                     .help("expected path in origin form: \"/path/<param>\"")
             })?;
 
@@ -177,7 +177,7 @@ impl FromMeta for Origin {
 }
 
 impl FromMeta for DataSegment {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..(string.len() + 1));
 
@@ -192,7 +192,7 @@ impl FromMeta for DataSegment {
 }
 
 impl FromMeta for RoutePath {
-    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
         let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
         let path_span = string.subspan(1..origin.0.path().len() + 1);
         let path = parse_segments::<Path>(origin.0.path(), path_span);
@@ -220,9 +220,11 @@ impl FromMeta for RoutePath {
 
 impl<T: ToTokens> ToTokens for Optional<T> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        define_vars_and_mods!(_Some, _None);
+        use crate::exports::{_Some, _None};
+        use devise::Spanned;
+
         let opt_tokens = match self.0 {
-            Some(ref val) => quote!(#_Some(#val)),
+            Some(ref val) => quote_spanned!(val.span() => #_Some(#val)),
             None => quote!(#_None)
         };
 

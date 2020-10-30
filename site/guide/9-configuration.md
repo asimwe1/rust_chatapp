@@ -21,7 +21,7 @@ values:
 |----------------|-----------------|-------------------------------------------------|-----------------------|
 | `address`      | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
 | `port`         | `u16`           | Port to serve on.                               | `8000`                |
-| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count |
+| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count        |
 | `keep_alive`   | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
 | `log_level`    | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
 | `cli_colors`   | `bool`          | Whether to use colors and emoji when logging.   | `true`                |

@@ -19,7 +19,7 @@ struct Foo5(String, String);
 
 #[derive(UriDisplayQuery)]
 struct Foo6 {
-    #[form(field = 123)]
+    #[field(name = 123)]
     field: String,
 }
 

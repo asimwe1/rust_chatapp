@@ -1,6 +1,7 @@
 //! Extension traits implemented by several HTTP types.
 
 use smallvec::{Array, SmallVec};
+use state::Storage;
 
 // TODO: It would be nice if we could somehow have one trait that could give us
 // either SmallVec or Vec.
@@ -95,6 +96,38 @@ impl<T: IntoOwned> IntoOwned for Option<T> {
         self.map(|inner| inner.into_owned())
     }
 }
+
+impl<T: IntoOwned> IntoOwned for Vec<T> {
+    type Owned = Vec<T::Owned>;
+
+    #[inline(always)]
+    fn into_owned(self) -> Self::Owned {
+        self.into_iter()
+            .map(|inner| inner.into_owned())
+            .collect()
+    }
+}
+
+impl<T: IntoOwned + Send + Sync> IntoOwned for Storage<T>
+    where T::Owned: Send + Sync
+{
+    type Owned = Storage<T::Owned>;
+
+    #[inline(always)]
+    fn into_owned(self) -> Self::Owned {
+        self.map(|inner| inner.into_owned())
+    }
+}
+
+impl<A: IntoOwned, B: IntoOwned> IntoOwned for (A, B) {
+    type Owned = (A::Owned, B::Owned);
+
+    #[inline(always)]
+    fn into_owned(self) -> Self::Owned {
+        (self.0.into_owned(), self.1.into_owned())
+    }
+}
+
 
 impl<B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'_, B> {
     type Owned = Cow<'static, B>;

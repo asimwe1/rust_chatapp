@@ -1,11 +1,14 @@
 //! Extensions to `syn` types.
 
 use devise::ext::SpanDiagnosticExt;
-use devise::syn::{self, Ident, ext::IdentExt as _};
+
+use crate::syn::{self, Ident, ext::IdentExt as _};
+use crate::proc_macro2::Span;
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
     fn append(&self, string: &str) -> syn::Ident;
+    fn with_span(self, span: Span) -> syn::Ident;
 }
 
 impl IdentExt for syn::Ident {
@@ -15,6 +18,11 @@ impl IdentExt for syn::Ident {
 
     fn append(&self, string: &str) -> syn::Ident {
         syn::Ident::new(&format!("{}{}", self, string), self.span())
+    }
+
+    fn with_span(mut self, span: Span) -> syn::Ident {
+        self.set_span(span);
+        self
     }
 }
 
@@ -83,7 +91,7 @@ impl NameSource {
 }
 
 impl devise::FromMeta for NameSource {
-    fn from_meta(meta: devise::MetaItem<'_>) -> devise::Result<Self> {
+    fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
         if let syn::Lit::Str(s) = meta.lit()? {
             return Ok(NameSource::new(s.value(), s.span()));
         }
@@ -104,9 +112,9 @@ impl std::hash::Hash for NameSource {
     }
 }
 
-impl PartialEq for NameSource {
-    fn eq(&self, other: &Self) -> bool {
-        self.name() == other.name()
+impl AsRef<str> for NameSource {
+    fn as_ref(&self) -> &str {
+        self.name()
     }
 }
 

@@ -285,25 +285,24 @@ impl fmt::Debug for Catcher {
 
 macro_rules! html_error_template {
     ($code:expr, $reason:expr, $description:expr) => (
-        concat!(r#"
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8">
-                <title>"#, $code, " ", $reason, r#"</title>
-            </head>
-            <body align="center">
-                <div role="main" align="center">
-                    <h1>"#, $code, ": ", $reason, r#"</h1>
-                    <p>"#, $description, r#"</p>
-                    <hr />
-                </div>
-                <div role="contentinfo" align="center">
-                    <small>Rocket</small>
-                </div>
-            </body>
-            </html>
-        "#
+        concat!(
+r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>"#, $code, " ", $reason, r#"</title>
+</head>
+<body align="center">
+    <div role="main" align="center">
+        <h1>"#, $code, ": ", $reason, r#"</h1>
+        <p>"#, $description, r#"</p>
+        <hr />
+    </div>
+    <div role="contentinfo" align="center">
+        <small>Rocket</small>
+    </div>
+</body>
+</html>"#
         )
     )
 }

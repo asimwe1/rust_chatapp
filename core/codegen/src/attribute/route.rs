@@ -11,7 +11,6 @@ use crate::syn_ext::{IdentExt, NameSource};
 use crate::proc_macro2::{TokenStream, Span};
 use crate::http_codegen::{Method, MediaType, RoutePath, DataSegment, Optional};
 use crate::attribute::segments::{Source, Kind, Segment};
-use crate::syn::{Attribute, parse::Parser};
 
 use crate::{URI_MACRO_PREFIX, ROCKET_PARAM_PREFIX};
 
@@ -49,6 +48,14 @@ struct Route {
     /// user wrote it, while the ident is the identifier that should be used
     /// during code generation, the `rocket_ident`.
     inputs: Vec<(NameSource, syn::Ident, syn::Type)>,
+}
+
+impl Route {
+    fn find_input<T>(&self, name: &T) -> Option<&(NameSource, syn::Ident, syn::Type)>
+        where T: PartialEq<NameSource>
+    {
+        self.inputs.iter().find(|(n, ..)| name == n)
+    }
 }
 
 fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
@@ -125,75 +132,60 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
 }
 
 fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
-    define_vars_and_mods!(req, data, error, log, request, _None, _Some, _Ok, _Err, Outcome);
     let i = seg.index.expect("dynamic parameters must be indexed");
     let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
     let name = ident.to_string();
 
+    define_spanned_export!(span =>
+        __req, __data, _log, _request, _None, _Some, _Ok, _Err, Outcome
+    );
+
     // All dynamic parameter should be found if this function is being called;
     // that's the point of statically checking the URI parameters.
     let internal_error = quote!({
-        #log::error("Internal invariant error: expected dynamic parameter not found.");
-        #log::error("Please report this error to the Rocket issue tracker.");
-        #Outcome::Forward(#data)
+        #_log::error("Internal invariant error: expected dynamic parameter not found.");
+        #_log::error("Please report this error to the Rocket issue tracker.");
+        #Outcome::Forward(#__data)
     });
 
     // Returned when a dynamic parameter fails to parse.
     let parse_error = quote!({
-        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, #error));
-        #Outcome::Forward(#data)
+        #_log::warn_(&format!("Failed to parse '{}': {:?}", #name, __error));
+        #Outcome::Forward(#__data)
     });
 
     let expr = match seg.kind {
         Kind::Single => quote_spanned! { span =>
-            match #req.raw_segment_str(#i) {
-                #_Some(__s) => match <#ty as #request::FromParam>::from_param(__s) {
+            match #__req.routed_segment(#i) {
+                #_Some(__s) => match <#ty as #_request::FromParam>::from_param(__s) {
                     #_Ok(__v) => __v,
-                    #_Err(#error) => return #parse_error,
+                    #_Err(__error) => return #parse_error,
                 },
                 #_None => return #internal_error
             }
         },
         Kind::Multi => quote_spanned! { span =>
-            match #req.raw_segments(#i) {
-                #_Some(__s) => match <#ty as #request::FromSegments>::from_segments(__s) {
-                    #_Ok(__v) => __v,
-                    #_Err(#error) => return #parse_error,
-                },
-                #_None => return #internal_error
+            match <#ty as #_request::FromSegments>::from_segments(#__req.routed_segments(#i..)) {
+                #_Ok(__v) => __v,
+                #_Err(__error) => return #parse_error,
             }
         },
         Kind::Static => return quote!()
     };
 
     quote! {
-        #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
         let #ident: #ty = #expr;
     }
 }
 
 fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
-    define_vars_and_mods!(req, data, FromTransformedData, Outcome, Transform);
     let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
+    define_spanned_export!(span => __req, __data, FromData, Outcome);
+
     quote_spanned! { span =>
-        let __transform = <#ty as #FromTransformedData>::transform(#req, #data).await;
+        let __outcome = <#ty as #FromData>::from_data(#__req, #__data).await;
 
-        #[allow(unreachable_patterns, unreachable_code)]
-        let __outcome = match __transform {
-            #Transform::Owned(#Outcome::Success(__v)) => {
-                #Transform::Owned(#Outcome::Success(__v))
-            },
-            #Transform::Borrowed(#Outcome::Success(ref __v)) => {
-                #Transform::Borrowed(#Outcome::Success(::std::borrow::Borrow::borrow(__v)))
-            },
-            #Transform::Borrowed(__o) => #Transform::Borrowed(__o.map(|_| {
-                unreachable!("Borrowed(Success(..)) case handled in previous block")
-            })),
-            #Transform::Owned(__o) => #Transform::Owned(__o),
-        };
-
-        #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #FromTransformedData>::from_data(#req, __outcome).await {
+        let #ident: #ty = match __outcome {
             #Outcome::Success(__d) => __d,
             #Outcome::Forward(__d) => return #Outcome::Forward(__d),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
@@ -202,118 +194,95 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
 }
 
 fn query_exprs(route: &Route) -> Option<TokenStream> {
-    define_vars_and_mods!(_None, _Some, _Ok, _Err, _Option);
-    define_vars_and_mods!(data, trail, log, request, req, Outcome, SmallVec, Query);
+    use devise::ext::{Split2, Split6};
+
+    define_spanned_export!(Span::call_site() =>
+        __req, __data, _log, _form, Outcome, _Ok, _Err, _Some, _None
+    );
+
     let query_segments = route.attribute.path.query.as_ref()?;
-    let (mut decls, mut matchers, mut builders) = (vec![], vec![], vec![]);
-    for segment in query_segments {
-        let (ident, ty, span) = if segment.kind != Kind::Static {
-            let (ident, ty) = route.inputs.iter()
-                .find(|(name, _, _)| name == &segment.name)
-                .map(|(_, rocket_ident, ty)| (rocket_ident, ty))
-                .unwrap();
 
-            let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
-            (Some(ident), Some(ty), span.into())
-        } else {
-            (None, None, segment.span.into())
-        };
-
-        let decl = match segment.kind {
-            Kind::Single => quote_spanned! { span =>
-                #[allow(non_snake_case)]
-                let mut #ident: #_Option<#ty> = #_None;
-            },
-            Kind::Multi => quote_spanned! { span =>
-                #[allow(non_snake_case)]
-                let mut #trail = #SmallVec::<[#request::FormItem; 8]>::new();
-            },
-            Kind::Static => quote!()
-        };
-
-        let name = segment.name.name();
-        let matcher = match segment.kind {
-            Kind::Single => quote_spanned! { span =>
-                (_, #name, __v) => {
-                    #[allow(unreachable_patterns, unreachable_code)]
-                    let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
-                        #_Ok(__v) => __v,
-                        #_Err(__e) => {
-                            #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                            return #Outcome::Forward(#data);
-                        }
-                    };
-
-                    #ident = #_Some(__v);
-                }
-            },
-            Kind::Static => quote! {
-                (#name, _, _) => continue,
-            },
-            Kind::Multi => quote! {
-                _ => #trail.push(__i),
+    // Record all of the static parameters for later filtering.
+    let (raw_name, raw_value) = query_segments.iter()
+        .filter(|s| !s.is_dynamic())
+        .map(|s| {
+            let name = s.name.name();
+            match name.find('=') {
+                Some(i) => (&name[..i], &name[i + 1..]),
+                None => (name, "")
             }
-        };
+        })
+        .split2();
 
-        let builder = match segment.kind {
-            Kind::Single => quote_spanned! { span =>
-                #[allow(non_snake_case)]
-                let #ident = match #ident.or_else(<#ty as #request::FromFormValue>::default) {
-                    #_Some(__v) => __v,
-                    #_None => {
-                        #log::warn_(&format!("Missing required query parameter '{}'.", #name));
-                        return #Outcome::Forward(#data);
-                    }
-                };
-            },
-            Kind::Multi => quote_spanned! { span =>
-                #[allow(non_snake_case)]
-                let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
-                    #_Ok(__v) => __v,
-                    #_Err(__e) => {
-                        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                        return #Outcome::Forward(#data);
-                    }
-                };
-            },
-            Kind::Static => quote!()
-        };
+    // Now record all of the dynamic parameters.
+    let (name, matcher, ident, init_expr, push_expr, finalize_expr) = query_segments.iter()
+        .filter(|s| s.is_dynamic())
+        .map(|s| (s, s.name.name(), route.find_input(&s.name).expect("dynamic has input")))
+        .map(|(seg, name, (_, ident, ty))| {
+            let matcher = match seg.kind {
+                Kind::Multi => quote_spanned!(seg.span => _),
+                _ => quote_spanned!(seg.span => #name)
+            };
 
-        decls.push(decl);
-        matchers.push(matcher);
-        builders.push(builder);
-    }
+            let span = ty.span();
+            define_spanned_export!(span => FromForm, _form);
 
-    matchers.push(quote!(_ => continue));
+            let ty = quote_spanned!(span => <#ty as #FromForm>);
+            let i = ident.clone().with_span(span);
+            let init = quote_spanned!(span => #ty::init(#_form::Options::Lenient));
+            let finalize = quote_spanned!(span => #ty::finalize(#i));
+            let push = match seg.kind {
+                Kind::Multi => quote_spanned!(span => #ty::push_value(&mut #i, _f)),
+                _ => quote_spanned!(span => #ty::push_value(&mut #i, _f.shift())),
+            };
+
+            (name, matcher, ident, init, push, finalize)
+        })
+        .split6();
+
+    #[allow(non_snake_case)]
     Some(quote! {
-        #(#decls)*
+        let mut _e = #_form::Errors::new();
+        #(let mut #ident = #init_expr;)*
 
-        if let #_Some(__items) = #req.raw_query_items() {
-            for __i in __items {
-                match (__i.raw.as_str(), __i.key.as_str(), __i.value) {
-                    #(
-                        #[allow(unreachable_patterns, unreachable_code)]
-                        #matchers
-                    )*
-                }
+        for _f in #__req.query_fields() {
+            let _raw = (_f.name.source().as_str(), _f.value);
+            let _key = _f.name.key_lossy().as_str();
+            match (_raw, _key) {
+                // Skip static parameters so <param..> doesn't see them.
+                #(((#raw_name, #raw_value), _) => { /* skip */ },)*
+                #((_, #matcher) => #push_expr,)*
+                _ => { /* in case we have no trailing, ignore all else */ },
             }
         }
 
         #(
-            #[allow(unreachable_patterns, unreachable_code)]
-            #builders
+            let #ident = match #finalize_expr {
+                #_Ok(_v) => #_Some(_v),
+                #_Err(_err) => {
+                    _e.extend(_err.with_name(#_form::NameView::new(#name)));
+                    #_None
+                },
+            };
         )*
+
+        if !_e.is_empty() {
+            #_log::warn_("query string failed to match declared route");
+            for _err in _e { #_log::warn_(_err); }
+            return #Outcome::Forward(#__data);
+        }
+
+        #(let #ident = #ident.unwrap();)*
     })
 }
 
 fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
-    define_vars_and_mods!(req, data, request, Outcome);
     let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
+    define_spanned_export!(span => __req, __data, _request, Outcome);
     quote_spanned! { span =>
-        #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #request::FromRequest>::from_request(#req).await {
+        let #ident: #ty = match <#ty as #_request::FromRequest>::from_request(#__req).await {
             #Outcome::Success(__v) => __v,
-            #Outcome::Forward(_) => return #Outcome::Forward(#data),
+            #Outcome::Forward(_) => return #Outcome::Forward(#__data),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
         };
     }
@@ -327,7 +296,7 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream {
         .filter(|seg| seg.source == Source::Path || seg.source == Source::Query)
         .filter(|seg| seg.kind != Kind::Static)
         .map(|seg| &seg.name)
-        .map(|seg_name| route.inputs.iter().find(|(in_name, ..)| in_name == seg_name).unwrap())
+        .map(|seg_name| route.find_input(seg_name).unwrap())
         .map(|(name, _, ty)| (name.ident(), ty))
         .map(|(ident, ty)| quote!(#ident: #ty));
 
@@ -364,20 +333,21 @@ fn generate_respond_expr(route: &Route) -> TokenStream {
         syn::ReturnType::Type(_, ref ty) => ty.span().into()
     };
 
-    define_vars_and_mods!(req);
-    define_vars_and_mods!(ret_span => handler);
+    define_spanned_export!(ret_span => __req, _handler);
     let user_handler_fn_name = &route.function.sig.ident;
     let parameter_names = route.inputs.iter()
         .map(|(_, rocket_ident, _)| rocket_ident);
 
-    let _await = route.function.sig.asyncness.map(|a| quote_spanned!(a.span().into() => .await));
+    let _await = route.function.sig.asyncness
+        .map(|a| quote_spanned!(a.span().into() => .await));
+
     let responder_stmt = quote_spanned! { ret_span =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
     };
 
     quote_spanned! { ret_span =>
         #responder_stmt
-        #handler::Outcome::from(#req, ___responder)
+        #_handler::Outcome::from(#__req, ___responder)
     }
 }
 
@@ -409,7 +379,10 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, _Box, Request, Data, Route, StaticRouteInfo, HandlerFuture);
+    use crate::exports::{
+        __req, __data, _Box, Request, Data, Route, StaticRouteInfo, HandlerFuture
+    };
+
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_internal_uri_macro = generate_internal_uri_macro(&route);
@@ -430,10 +403,11 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
         /// Rocket code generated proxy static conversion implementation.
         impl From<#user_handler_fn_name> for #StaticRouteInfo {
+            #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn from(_: #user_handler_fn_name) -> #StaticRouteInfo {
                 fn monomorphized_function<'_b>(
-                    #req: &'_b #Request<'_>,
-                    #data: #Data
+                    #__req: &'_b #Request<'_>,
+                    #__data: #Data
                 ) -> #HandlerFuture<'_b> {
                     #_Box::pin(async move {
                         #(#req_guard_definitions)*
@@ -473,13 +447,8 @@ fn complete_route(args: TokenStream, input: TokenStream) -> Result<TokenStream> 
         .map_err(|e| Diagnostic::from(e))
         .map_err(|diag| diag.help("`#[route]` can only be used on functions"))?;
 
-    let full_attr = quote!(#[route(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr)?;
-    let attribute = match RouteAttribute::from_attrs("route", &attrs) {
-        Some(result) => result?,
-        None => return Err(Span::call_site().error("internal error: bad attribute"))
-    };
-
+    let attr_tokens = quote!(route(#args));
+    let attribute = RouteAttribute::from_meta(&syn::parse2(attr_tokens)?)?;
     codegen_route(parse_route(attribute, function)?)
 }
 
@@ -499,12 +468,8 @@ fn incomplete_route(
         .map_err(|e| Diagnostic::from(e))
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
-    let full_attr = quote!(#[#method_ident(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr)?;
-    let method_attribute = match MethodRouteAttribute::from_attrs(&method_str, &attrs) {
-        Some(result) => result?,
-        None => return Err(Span::call_site().error("internal error: bad attribute"))
-    };
+    let full_attr = quote!(#method_ident(#args));
+    let method_attribute = MethodRouteAttribute::from_meta(&syn::parse2(full_attr)?)?;
 
     let attribute = RouteAttribute {
         method: SpanWrapped {

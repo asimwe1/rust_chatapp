@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::{CookieJar, RawStr};
+use rocket::http::CookieJar;
 
 #[post("/<id>")]
 fn has_one(id: i32) {  }
@@ -12,7 +12,7 @@ fn has_one_guarded(cookies: &CookieJar<'_>, id: i32) {  }
 fn has_two(cookies: &CookieJar<'_>, id: i32, name: String) {  }
 
 #[post("/<id>/<name>")]
-fn optionals(id: Option<i32>, name: Result<String, &RawStr>) {  }
+fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
 
 fn main() {
     uri!(has_one);

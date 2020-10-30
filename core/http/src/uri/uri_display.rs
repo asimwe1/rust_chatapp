@@ -1,7 +1,6 @@
 use std::{fmt, path};
 use std::borrow::Cow;
 
-use crate::RawStr;
 use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
@@ -119,7 +118,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///     The implementation of `UriDisplay` for these types is identical to the
 ///     `Display` implementation.
 ///
-///   * **[`&RawStr`](RawStr), `String`, `&str`, `Cow<str>`**
+///   * **`String`, `&str`, `Cow<str>`**
 ///
 ///     The string is percent encoded.
 ///
@@ -237,25 +236,23 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::http::RawStr;
 /// use rocket::request::FromParam;
 ///
-/// struct Name(String);
+/// struct Name<'r>(&'r str);
 ///
 /// const PREFIX: &str = "name:";
 ///
-/// impl<'r> FromParam<'r> for Name {
-///     type Error = &'r RawStr;
+/// impl<'r> FromParam<'r> for Name<'r> {
+///     type Error = &'r str;
 ///
 ///     /// Validates parameters that start with 'name:', extracting the text
 ///     /// after 'name:' as long as there is at least one character.
-///     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-///         let decoded = param.percent_decode().map_err(|_| param)?;
-///         if !decoded.starts_with(PREFIX) || decoded.len() < (PREFIX.len() + 1) {
+///     fn from_param(param: &'r str) -> Result<Self, Self::Error> {
+///         if !param.starts_with(PREFIX) || param.len() < (PREFIX.len() + 1) {
 ///             return Err(param);
 ///         }
 ///
-///         let real_name = decoded[PREFIX.len()..].to_string();
+///         let real_name = &param[PREFIX.len()..];
 ///         Ok(Name(real_name))
 ///     }
 /// }
@@ -265,25 +262,25 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// use rocket::http::uri::{Formatter, FromUriParam, UriDisplay, Path};
 /// use rocket::response::Redirect;
 ///
-/// impl UriDisplay<Path> for Name {
-///     // Delegates to the `UriDisplay` implementation for `String` via the
-///     // call to `write_value` to ensure that the written string is
-///     // URI-safe. In this case, the string will be percent encoded.
-///     // Prefixes the inner name with `name:`.
+/// impl UriDisplay<Path> for Name<'_> {
+///     // Delegates to the `UriDisplay` implementation for `str` via the call
+///     // to `write_value` to ensure that the written string is URI-safe. In
+///     // this case, the string will be percent encoded. Prefixes the inner
+///     // name with `name:`.
 ///     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
 ///         f.write_value(&format!("name:{}", self.0))
 ///     }
 /// }
 ///
-/// impl_from_uri_param_identity!([Path] Name);
+/// impl_from_uri_param_identity!([Path] ('a) Name<'a>);
 ///
 /// #[get("/name/<name>")]
-/// fn redirector(name: Name) -> Redirect {
+/// fn redirector(name: Name<'_>) -> Redirect {
 ///     Redirect::to(uri!(real: name))
 /// }
 ///
 /// #[get("/<name>")]
-/// fn real(name: Name) -> String {
+/// fn real(name: Name<'_>) -> String {
 ///     format!("Hello, {}!", name.0)
 /// }
 ///
@@ -352,14 +349,6 @@ impl_with_display! {
 
 // These are second level implementations: they all defer to an existing
 // implementation.
-
-/// Percent-encodes the raw string. Defers to `str`.
-impl<P: UriPart> UriDisplay<P> for RawStr {
-    #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
-}
 
 /// Percent-encodes the raw string. Defers to `str`.
 impl<P: UriPart> UriDisplay<P> for String {

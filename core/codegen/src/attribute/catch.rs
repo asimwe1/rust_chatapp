@@ -3,8 +3,7 @@ use devise::{syn, MetaItem, Spanned, Result, FromMeta, Diagnostic};
 
 use crate::http_codegen::{self, Optional};
 use crate::proc_macro2::{TokenStream, Span};
-use crate::syn_ext::{ReturnTypeExt, TokenStreamExt};
-use self::syn::{Attribute, parse::Parser};
+use crate::syn_ext::ReturnTypeExt;
 
 /// The raw, parsed `#[catch(code)]` attribute.
 #[derive(Debug, FromMeta)]
@@ -18,19 +17,19 @@ struct CatchAttribute {
 struct CatcherCode(Option<http_codegen::Status>);
 
 impl FromMeta for CatcherCode {
-    fn from_meta(m: MetaItem<'_>) -> Result<Self> {
-        if usize::from_meta(m).is_ok() {
-            let status = http_codegen::Status::from_meta(m)?;
+    fn from_meta(meta: &MetaItem) -> Result<Self> {
+        if usize::from_meta(meta).is_ok() {
+            let status = http_codegen::Status::from_meta(meta)?;
             Ok(CatcherCode(Some(status)))
-        } else if let MetaItem::Path(path) = m {
+        } else if let MetaItem::Path(path) = meta {
             if path.is_ident("default") {
                 Ok(CatcherCode(None))
             } else {
-                Err(m.span().error(format!("expected `default`")))
+                Err(meta.span().error("expected `default`"))
             }
         } else {
-            let msg = format!("expected integer or identifier, found {}", m.description());
-            Err(m.span().error(msg))
+            let msg = format!("expected integer or identifier, found {}", meta.description());
+            Err(meta.span().error(msg))
         }
     }
 }
@@ -51,15 +50,9 @@ fn parse_params(
         .map_err(Diagnostic::from)
         .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
 
-    let full_attr = quote!(#[catch(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr)?;
-    let attribute = match CatchAttribute::from_attrs("catch", &attrs) {
-        Some(result) => result.map_err(|diag| {
-            diag.help("`#[catch]` expects a status code int or `default`: \
-                        `#[catch(404)]` or `#[catch(default)]`")
-        })?,
-        None => return Err(Span::call_site().error("internal error: bad attribute"))
-    };
+    let attribute = CatchAttribute::from_meta(&syn::parse2(quote!(catch(#args)))?)
+        .map_err(|diag| diag.help("`#[catch]` expects a status code int or `default`: \
+                        `#[catch(404)]` or `#[catch(default)]`"))?;
 
     Ok(CatchParams { status: attribute.status.0, function })
 }
@@ -78,8 +71,8 @@ pub fn _catch(
     let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
-    define_vars_and_mods!(catch.function.span().into() =>
-        req, status, _Box, Request, Response, StaticCatcherInfo, Catcher,
+    define_spanned_export!(catch.function.span().into() =>
+        __req, __status, _Box, Request, Response, StaticCatcherInfo, Catcher,
         ErrorHandlerFuture, Status);
 
     // Determine the number of parameters that will be passed in.
@@ -96,7 +89,7 @@ pub fn _catch(
 
     // Set the `req` and `status` spans to that of their respective function
     // arguments for a more correct `wrong type` error span. `rev` to be cute.
-    let codegen_args = &[&req, &status];
+    let codegen_args = &[__req, __status];
     let inputs = catch.function.sig.inputs.iter().rev()
         .zip(codegen_args.into_iter())
         .map(|(fn_arg, codegen_arg)| match fn_arg {
@@ -110,7 +103,7 @@ pub fn _catch(
 
     let catcher_response = quote_spanned!(return_type_span => {
         let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;
-        ::rocket::response::Responder::respond_to(___responder, #req)?
+        ::rocket::response::Responder::respond_to(___responder, #__req)?
     });
 
     // Generate the catcher, keeping the user's input around.
@@ -126,13 +119,13 @@ pub fn _catch(
         impl From<#user_catcher_fn_name> for #StaticCatcherInfo {
             fn from(_: #user_catcher_fn_name) -> #StaticCatcherInfo {
                 fn monomorphized_function<'_b>(
-                    #status: #Status,
-                    #req: &'_b #Request<'_>
+                    #__status: #Status,
+                    #__req: &'_b #Request<'_>
                 ) -> #ErrorHandlerFuture<'_b> {
                     #_Box::pin(async move {
                         let __response = #catcher_response;
                         #Response::build()
-                            .status(#status)
+                            .status(#__status)
                             .merge(__response)
                             .ok()
                     })

@@ -1,7 +1,5 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::RawStr;
-
 #[derive(FromForm)]
 enum Thing { }
 
@@ -17,127 +15,127 @@ struct Foo3(usize);
 #[derive(FromForm)]
 struct NextTodoTask<'f, 'a> {
     description: String,
-    raw_description: &'f RawStr,
-    other: &'a RawStr,
+    raw_description: &'f str,
+    other: &'a str,
     completed: bool,
 }
 
 #[derive(FromForm)]
 struct BadName1 {
-    #[form(field = "isindex")]
+    #[field(name = "isindex")]
     field: String,
 }
 
 #[derive(FromForm)]
 struct Demo2 {
-    #[form(field = "foo")]
+    #[field(name = "foo")]
     field: String,
     foo: usize,
 }
 
 #[derive(FromForm)]
 struct MyForm9 {
-    #[form(field = "hello")]
+    #[field(name = "hello")]
     first: String,
-    #[form(field = "hello")]
+    #[field(name = "hello")]
     other: String,
 }
 
 #[derive(FromForm)]
 struct MyForm10 {
     first: String,
-    #[form(field = "first")]
+    #[field(name = "first")]
     other: String,
 }
 
 #[derive(FromForm)]
 struct MyForm {
-    #[form(field = "blah", field = "bloo")]
+    #[field(name = "blah", field = "bloo")]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm1 {
-    #[form]
+    #[field]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm2 {
-    #[form("blah")]
+    #[field("blah")]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm3 {
-    #[form(123)]
+    #[field(123)]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm4 {
-    #[form(beep = "bop")]
+    #[field(beep = "bop")]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm5 {
-    #[form(field = "blah")]
-    #[form(field = "bleh")]
+    #[field(name = "blah")]
+    #[field(name = "blah")]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm6 {
-    #[form(field = true)]
+    #[field(name = true)]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm7 {
-    #[form(field)]
+    #[field(name)]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm8 {
-    #[form(field = 123)]
+    #[field(name = 123)]
     my_field: String,
 }
 
 #[derive(FromForm)]
 struct MyForm11 {
-    #[form(field = "hello&world")]
+    #[field(name = "hello&world")]
     first: String,
 }
 
 #[derive(FromForm)]
 struct MyForm12 {
-    #[form(field = "!@#$%^&*()_")]
+    #[field(name = "!@#$%^&*()_")]
     first: String,
 }
 
 #[derive(FromForm)]
 struct MyForm13 {
-    #[form(field = "?")]
+    #[field(name = "?")]
     first: String,
 }
 
 #[derive(FromForm)]
 struct MyForm14 {
-    #[form(field = "")]
+    #[field(name = "")]
     first: String,
 }
 
 #[derive(FromForm)]
 struct BadName2 {
-    #[form(field = "a&b")]
+    #[field(name = "a&b")]
     field: String,
 }
 
 #[derive(FromForm)]
 struct BadName3 {
-    #[form(field = "a=")]
+    #[field(name = "a=")]
     field: String,
 }
 

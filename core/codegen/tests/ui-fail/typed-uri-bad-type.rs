@@ -1,13 +1,12 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::RawStr;
 use rocket::request::FromParam;
 
 struct S;
 
 impl<'a> FromParam<'a> for S {
     type Error = ();
-    fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> { Ok(S) }
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> { Ok(S) }
 }
 
 #[post("/<id>")]
@@ -20,13 +19,17 @@ fn not_uri_display(id: i32, name: S) {  }
 fn not_uri_display_but_unused(id: i32, name: S) {  }
 
 #[post("/<id>/<name>")]
-fn optionals(id: Option<i32>, name: Result<String, &RawStr>) {  }
+fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
 
-use rocket::request::{Query, FromQuery};
+use rocket::form::{FromFormField, Errors, ValueField, DataField};
 
-impl<'q> FromQuery<'q> for S {
-    type Error = ();
-    fn from_query(query: Query<'q>) -> Result<Self, Self::Error> { Ok(S) }
+#[rocket::async_trait]
+impl<'v> FromFormField<'v> for S {
+    fn default() -> Option<Self> { None }
+
+    fn from_value(_: ValueField<'v>) -> Result<Self, Errors<'v>> { Ok(S) }
+
+    async fn from_data(_: DataField<'v, '_>) -> Result<Self, Errors<'v>> { Ok(S) }
 }
 
 #[post("/?<id>")]
@@ -36,7 +39,7 @@ fn simple_q(id: isize) {  }
 fn other_q(id: usize, rest: S) {  }
 
 #[post("/?<id>&<name>")]
-fn optionals_q(id: Option<i32>, name: Result<String, &RawStr>) {  }
+fn optionals_q(id: Option<i32>, name: Result<String, Errors<'_>>) {  }
 
 fn main() {
     uri!(simple: id = "hi");
@@ -66,7 +69,7 @@ fn main() {
 
     // These are all okay.
     uri!(optionals_q: _, _);
-    uri!(optionals_q: id = 10, name = "Bob".to_string());
-    uri!(optionals_q: _, "Bob".into());
+    uri!(optionals_q: id = Some(10), name = Some("Bob".to_string()));
+    uri!(optionals_q: _, Some("Bob".into()));
     uri!(optionals_q: id = _, name = _);
 }

@@ -208,7 +208,7 @@ pub fn init(level: LogLevel) -> bool {
 macro_rules! external_log_function {
     ($fn_name:ident: $macro_name:ident) => (
         #[doc(hidden)] #[inline(always)]
-        pub fn $fn_name(msg: &str) { $macro_name!("{}", msg); }
+        pub fn $fn_name<T: std::fmt::Display>(msg: T) { $macro_name!("{}", msg); }
     )
 }
 

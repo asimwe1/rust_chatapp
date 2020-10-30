@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::net::{IpAddr, Ipv4Addr};
 
 use figment::{Figment, Profile, Provider, Metadata, error::Result};
@@ -7,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
 use crate::config::{SecretKey, TlsConfig, LogLevel};
+use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
 
 /// Rocket server configuration.
@@ -57,21 +59,24 @@ pub struct Config {
     pub address: IpAddr,
     /// Port to serve on. **(default: `8000`)**
     pub port: u16,
-    /// Number of future-executing threads. **(default: `num cores`)**
+    /// Number of threads to use for executing futures. **(default: `num_cores`)**
     pub workers: usize,
     /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
     pub keep_alive: u32,
+    /// Streaming read size limits. **(default: [`Limits::default()`])**
+    pub limits: Limits,
+    /// The TLS configuration, if any. **(default: `None`)**
+    pub tls: Option<TlsConfig>,
+    /// The secret key for signing and encrypting. **(default: `0`)**
+    pub secret_key: SecretKey,
+    /// The directory to store temporary files in. **(default:
+    /// [`std::env::temp_dir`]).
+    pub temp_dir: PathBuf,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
     /// Whether to use colors and emoji when logging. **(default: `true`)**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub cli_colors: bool,
-    /// The secret key for signing and encrypting. **(default: `0`)**
-    pub secret_key: SecretKey,
-    /// The TLS configuration, if any. **(default: `None`)**
-    pub tls: Option<TlsConfig>,
-    /// Streaming read size limits. **(default: [`Limits::default()`])**
-    pub limits: Limits,
     /// Whether `ctrl-c` initiates a server shutdown. **(default: `true`)**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub ctrlc: bool,
@@ -141,6 +146,7 @@ impl Config {
             secret_key: SecretKey::zero(),
             tls: None,
             limits: Limits::default(),
+            temp_dir: std::env::temp_dir(),
             ctrlc: true,
         }
     }
@@ -270,10 +276,6 @@ impl Config {
         launch_info_!("address: {}", Paint::default(&self.address).bold());
         launch_info_!("port: {}", Paint::default(&self.port).bold());
         launch_info_!("workers: {}", Paint::default(self.workers).bold());
-        launch_info_!("log level: {}", Paint::default(self.log_level).bold());
-        launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
-        launch_info_!("limits: {}", Paint::default(&self.limits).bold());
-        launch_info_!("cli colors: {}", Paint::default(&self.cli_colors).bold());
 
         let ka = self.keep_alive;
         if ka > 0 {
@@ -282,10 +284,13 @@ impl Config {
             launch_info_!("keep-alive: {}", Paint::default("disabled").bold());
         }
 
+        launch_info_!("limits: {}", Paint::default(&self.limits).bold());
         match self.tls_enabled() {
             true => launch_info_!("tls: {}", Paint::default("enabled").bold()),
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
         }
+
+        launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
 
         #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
         if !self.secret_key.is_provided() {
@@ -293,6 +298,10 @@ impl Config {
             info_!("disable `secrets` feature or configure a `secret_key`");
             info_!("this becomes a {} in non-debug profiles", Paint::red("hard error").bold());
         }
+
+        launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
+        launch_info_!("log level: {}", Paint::default(self.log_level).bold());
+        launch_info_!("cli colors: {}", Paint::default(&self.cli_colors).bold());
 
         // Check for now depreacted config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
@@ -343,6 +352,15 @@ impl Provider for Config {
 
     fn profile(&self) -> Option<Profile> {
         Some(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
+    }
+}
+
+#[crate::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for &'r Config {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+        request::Outcome::Success(req.config())
     }
 }
 

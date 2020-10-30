@@ -2,18 +2,18 @@
 
 #[cfg(test)] mod tests;
 
-use rocket::request::{Form, LenientForm};
+use rocket::form::Strict;
 
 #[derive(FromForm)]
 struct Person {
     /// Use the `form` attribute to expect an invalid Rust identifier in the HTTP form.
-    #[form(field = "first-name")]
+    #[field(name = "first-name")]
     name: String,
     age: Option<u8>
 }
 
 #[get("/hello?<person..>")]
-fn hello(person: Option<Form<Person>>) -> String {
+fn hello(person: Option<Strict<Person>>) -> String {
     if let Some(person) = person {
         if let Some(age) = person.age {
             format!("Hello, {} year old named {}!", age, person.name)
@@ -26,7 +26,7 @@ fn hello(person: Option<Form<Person>>) -> String {
 }
 
 #[get("/hello?age=20&<person..>")]
-fn hello_20(person: LenientForm<Person>) -> String {
+fn hello_20(person: Person) -> String {
     format!("20 years old? Hi, {}!", person.name)
 }
 

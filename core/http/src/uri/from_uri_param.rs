@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use crate::RawStr;
 use crate::uri::{self, UriPart, UriDisplay};
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
@@ -52,19 +51,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///
 /// Because the [`FromUriParam::Target`] type is the same as the input type, the
 /// conversion is a no-op and free of cost, allowing an `&str` to be used in
-/// place of a `String` without penalty. A similar no-op conversion exists for
-/// [`&RawStr`](RawStr):
-///
-/// ```rust
-/// # extern crate rocket;
-/// # use rocket::http::uri::{FromUriParam, UriPart};
-/// # struct S;
-/// # type RawStr = S;
-/// impl<'a, 'b, P: UriPart> FromUriParam<P, &'a str> for &'b RawStr {
-///     type Target = &'a str;
-/// #   fn from_uri_param(s: &'a str) -> Self::Target { "hi" }
-/// }
-/// ```
+/// place of a `String` without penalty.
 ///
 /// # Provided Implementations
 ///
@@ -72,7 +59,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///
 ///    * `String`, `i8`, `i16`, `i32`, `i64`, `i128`, `isize`, `u8`, `u16`,
 ///      `u32`, `u64`, `u128`, `usize`, `f32`, `f64`, `bool`, `IpAddr`,
-///      `Ipv4Addr`, `Ipv6Addr`, `&str`, `&RawStr`, `Cow<str>`
+///      `Ipv4Addr`, `Ipv6Addr`, `&str`, `Cow<str>`
 ///
 /// The following types have _identity_ implementations _only in [`Path`]_:
 ///
@@ -87,9 +74,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// is expected by a route:
 ///
 ///   * `&str` to `String`
-///   * `&str` to `RawStr`
 ///   * `String` to `&str`
-///   * `String` to `RawStr`
 ///   * `T` to `Form<T>`
 ///
 /// The following conversions are implemented _only in [`Path`]_:
@@ -136,12 +121,11 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// # #[macro_use] extern crate rocket;
 /// use std::fmt;
 ///
-/// use rocket::http::RawStr;
 /// use rocket::http::uri::{Formatter, UriDisplay, FromUriParam, Query};
 ///
 /// #[derive(FromForm)]
 /// struct User<'a> {
-///     name: &'a RawStr,
+///     name: &'a str,
 ///     nickname: String,
 /// }
 ///
@@ -166,12 +150,10 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # use std::fmt;
-/// use rocket::http::RawStr;
-/// use rocket::request::Form;
 /// # use rocket::http::uri::{Formatter, UriDisplay, FromUriParam, Query};
 /// #
 /// # #[derive(FromForm)]
-/// # struct User<'a> { name: &'a RawStr, nickname: String, }
+/// # struct User<'a> { name: &'a str, nickname: String, }
 /// #
 /// # impl UriDisplay<Query> for User<'_> {
 /// #     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
@@ -186,13 +168,13 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// #         User { name: name.into(), nickname: nickname.to_string() }
 /// #     }
 /// # }
-///
+/// #
 /// #[post("/<name>?<user..>")]
-/// fn some_route(name: &RawStr, user: Form<User>)  { /* .. */ }
+/// fn some_route(name: &str, user: User<'_>)  { /* .. */ }
 ///
 /// let uri = uri!(some_route: name = "hey", user = ("Robert Mike", "Bob"));
 /// assert_eq!(uri.path(), "/hey");
-/// assert_eq!(uri.query(), Some("name=Robert%20Mike&nickname=Bob"));
+/// assert_eq!(uri.query().unwrap(), "name=Robert%20Mike&nickname=Bob");
 /// ```
 ///
 /// [`uri!`]: crate::uri
@@ -306,16 +288,13 @@ impl_from_uri_param_identity! {
 
 impl_from_uri_param_identity! {
     ('a) &'a str,
-    ('a) &'a RawStr,
     ('a) Cow<'a, str>
 }
 
 impl_conversion_ref! {
     ('a) &'a str => String,
-    ('a, 'b) &'a str => &'b RawStr,
 
-    ('a) String => &'a str,
-    ('a) String => &'a RawStr
+    ('a) String => &'a str
 }
 
 impl_from_uri_param_identity!([uri::Path] ('a) &'a Path);

@@ -97,7 +97,7 @@ impl<'c> LocalRequest<'c> {
             self.client._with_raw_cookies_mut(|jar| {
                 let current_time = time::OffsetDateTime::now_utc();
                 for cookie in response.cookies().iter() {
-                    if let Some(expires) = cookie.expires() {
+                    if let Some(expires) = cookie.expires_datetime() {
                         if expires <= current_time {
                             jar.force_remove(cookie);
                             continue;

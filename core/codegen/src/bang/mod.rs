@@ -12,7 +12,7 @@ fn struct_maker_vec(
     input: proc_macro::TokenStream,
     ty: TokenStream,
 ) -> Result<TokenStream> {
-    define_vars_and_mods!(_Vec);
+    use crate::exports::_Vec;
 
     // Parse a comma-separated list of paths.
     let paths = <Punctuated<Path, Token![,]>>::parse_terminated.parse(input)?;

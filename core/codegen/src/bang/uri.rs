@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use devise::{syn, Result, ext::SpanDiagnosticExt};
+use devise::{syn, Result};
+use devise::ext::{SpanDiagnosticExt, quote_respanned};
 
 use crate::http::{uri::{Origin, Path, Query}, ext::IntoOwned};
 use crate::http::route::{RouteSegment, Kind};
@@ -46,7 +47,7 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
     let route_name = &internal.uri_params.route_path;
     match internal.validate() {
         Validation::Ok(exprs) => {
-            let path_param_count = internal.route_uri.path().matches('<').count();
+            let path_param_count = internal.route_uri.path().as_str().matches('<').count();
             for expr in exprs.iter().take(path_param_count) {
                 if !expr.as_expr().is_some() {
                     return Err(expr.span().error("path parameters cannot be ignored"));
@@ -112,18 +113,19 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
 }
 
 fn add_binding(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
-    let uri_mod = quote!(rocket::http::uri);
-    let (span, ident_tmp) = (expr.span(), ident.prepend("__tmp_"));
-    let from_uri_param = if source == Source::Query {
-        quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Query, _>)
-    } else {
-        quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Path, _>)
+    let span = expr.span();
+    define_spanned_export!(span => _uri);
+    let part = match source {
+        Source::Query => quote_spanned!(span => #_uri::Query),
+        _ => quote_spanned!(span => #_uri::Path),
     };
 
+    let tmp_ident = ident.clone().with_span(expr.span());
+    let let_stmt = quote_spanned!(span => let #tmp_ident = #expr);
+
     to.push(quote_spanned!(span =>
-        #[allow(non_snake_case)]
-        let #ident_tmp = #expr;
-        let #ident = <#ty as #from_uri_param>::from_uri_param(#ident_tmp);
+        #[allow(non_snake_case)] #let_stmt;
+        let #ident = <#ty as #_uri::FromUriParam<#part, _>>::from_uri_param(#tmp_ident);
     ));
 }
 
@@ -132,7 +134,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     bindings: &mut Vec<TokenStream>,
     mut items: I
 ) -> TokenStream {
-    let (uri_mod, path) = (quote!(rocket::http::uri), uri.path());
+    let (uri_mod, path) = (quote!(rocket::http::uri), uri.path().as_str());
     if !path.contains('<') {
         return quote!(#uri_mod::UriArgumentsKind::Static(#path));
     }
@@ -161,7 +163,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     bindings: &mut Vec<TokenStream>,
     mut items: I
 ) -> Option<TokenStream> {
-    let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?);
+    let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?.as_str());
     if !query.contains('<') {
         return Some(quote!(#uri_mod::UriArgumentsKind::Static(#query)));
     }
@@ -181,7 +183,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
             None => {
                 // Force a typecheck for the `Ignoreable` trait. Note that write
                 // out the path to `is_ignorable` to get the right span.
-                bindings.push(quote_spanned! { arg_expr.span() =>
+                bindings.push(quote_respanned! { arg_expr.span() =>
                     rocket::http::uri::assert_ignorable::<#uri_mod::Query, #ty>();
                 });
 
@@ -210,11 +212,11 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
 // (`<param>`) with `param=<param>`.
 fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
     let mount_point = internal.uri_params.mount_point.as_ref()
-        .map(|origin| origin.path())
+        .map(|origin| origin.path().as_str())
         .unwrap_or("");
 
     let path = format!("{}/{}", mount_point, internal.route_uri.path());
-    let query = internal.route_uri.query();
+    let query = internal.route_uri.query().map(|q| q.as_str());
     Origin::new(path, query).into_normalized().into_owned()
 }
 

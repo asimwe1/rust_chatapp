@@ -6,11 +6,9 @@ use futures::future::{Future, BoxFuture};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
-use crate::Rocket;
-use crate::handler;
-use crate::request::{Request, FormItems};
-use crate::data::Data;
-use crate::response::{Body, Response};
+use crate::{Rocket, Request, Data, handler};
+use crate::form::Form;
+use crate::response::{Response, Body};
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
 use crate::logger::PaintExt;
@@ -61,7 +59,7 @@ async fn hyper_service_fn(
         };
 
         // Retrieve the data from the hyper body.
-        let mut data = Data::from_hyp(h_body).await;
+        let mut data = Data::from(h_body);
 
         // Dispatch the request to get a response, then write that response out.
         let token = rocket.preprocess_request(&mut req, &mut data).await;
@@ -160,15 +158,13 @@ impl Rocket {
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
 
         if is_form && req.method() == Method::Post && peek_buffer.len() >= min_len {
-            if let Ok(form) = std::str::from_utf8(peek_buffer) {
-                let method: Option<Result<Method, _>> = FormItems::from(form)
-                    .filter(|item| item.key.as_str() == "_method")
-                    .map(|item| item.value.parse())
-                    .next();
+            let method = std::str::from_utf8(peek_buffer).ok()
+                .and_then(|raw_form| Form::values(raw_form).next())
+                .filter(|field| field.name == "_method")
+                .and_then(|field| field.value.parse().ok());
 
-                if let Some(Ok(method)) = method {
-                    req._set_method(method);
-                }
+            if let Some(method) = method {
+                req._set_method(method);
             }
         }
 

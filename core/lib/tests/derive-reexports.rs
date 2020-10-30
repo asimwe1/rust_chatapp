@@ -1,10 +1,10 @@
 use rocket;
 
 use rocket::{get, routes};
-use rocket::request::{Form, FromForm, FromFormValue};
+use rocket::form::{FromForm, FromFormField};
 use rocket::response::Responder;
 
-#[derive(FromFormValue)]
+#[derive(FromFormField)]
 enum Thing {
     A,
     B,
@@ -37,7 +37,7 @@ fn index() -> DerivedResponder {
 }
 
 #[get("/?<params..>")]
-fn number(params: Form<ThingForm>) -> DerivedResponder {
+fn number(params: ThingForm) -> DerivedResponder {
     DerivedResponder { data: params.thing.to_string() }
 }
 

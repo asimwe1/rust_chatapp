@@ -5,10 +5,13 @@ workspace = "../../"
 edition = "2018"
 publish = false
 
+[dependencies]
+rocket = { path = "../../core/lib", features = ["secrets"] }
+
 [dev-dependencies]
 rocket = { path = "../../core/lib", features = ["secrets"] }
-doc-comment = "0.3"
 rocket_contrib = { path = "../../contrib/lib", features = ["json", "tera_templates", "diesel_sqlite_pool"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }
+time = "0.2"

@@ -1,15 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::request::Form;
-
-#[derive(FromForm)]
-struct Simple {
-    value: String
-}
+use rocket::form::Form;
 
 #[post("/", data = "<form>")]
-fn index(form: Form<Simple>) -> String {
-    form.into_inner().value
+fn index(form: Form<String>) -> String {
+    form.into_inner()
 }
 
 mod limits_tests {
@@ -19,7 +14,7 @@ mod limits_tests {
     use rocket::data::Limits;
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
-        let limits = Limits::default().limit("forms", limit.into());
+        let limits = Limits::default().limit("form", limit.into());
         let config = rocket::Config::figment().merge(("limits", limits));
         rocket::custom(config).mount("/", routes![super::index])
     }
@@ -54,7 +49,7 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.status(), Status::UnprocessableEntity);
+        assert_eq!(response.status(), Status::PayloadTooLarge);
     }
 
     #[test]
@@ -65,6 +60,6 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.into_string(), Some("Hell".into()));
+        assert_eq!(response.status(), Status::PayloadTooLarge);
     }
 }

@@ -1,11 +1,12 @@
-use std::io::{self, Cursor};
+use std::io;
 use std::pin::Pin;
 use std::task::{Poll, Context};
 
 use futures::{ready, stream::Stream};
 use tokio::io::{AsyncRead, ReadBuf};
+use pin_project_lite::pin_project;
 
-use crate::http::hyper::{self, Bytes, HttpBody};
+use crate::http::hyper::Bytes;
 
 pub struct IntoBytesStream<R> {
     inner: R,
@@ -47,57 +48,67 @@ pub trait AsyncReadExt: AsyncRead + Sized {
 
 impl<T: AsyncRead> AsyncReadExt for T { }
 
-pub struct AsyncReadBody {
-    inner: hyper::Body,
-    state: State,
+pub trait PollExt<T, E> {
+    fn map_err_ext<U, F>(self, f: F) -> Poll<Option<Result<T, U>>>
+        where F: FnOnce(E) -> U;
 }
 
-enum State {
-    Pending,
-    Partial(Cursor<Bytes>),
-    Done,
-}
-
-impl AsyncReadBody {
-    pub fn empty() -> Self {
-        Self { inner: hyper::Body::empty(), state: State::Done }
+impl<T, E> PollExt<T, E> for Poll<Option<Result<T, E>>> {
+    /// Changes the error value of this `Poll` with the closure provided.
+    fn map_err_ext<U, F>(self, f: F) -> Poll<Option<Result<T, U>>>
+        where F: FnOnce(E) -> U
+    {
+        match self {
+            Poll::Ready(Some(Ok(t))) => Poll::Ready(Some(Ok(t))),
+            Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(f(e)))),
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 
-impl From<hyper::Body> for AsyncReadBody {
-    fn from(body: hyper::Body) -> Self {
-        Self { inner: body, state: State::Pending }
+pin_project! {
+    /// Stream for the [`chain`](super::AsyncReadExt::chain) method.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct Chain<T, U> {
+        #[pin]
+        first: T,
+        #[pin]
+        second: U,
+        done_first: bool,
     }
 }
 
-impl AsyncRead for AsyncReadBody {
+impl<T: AsyncRead, U: AsyncRead> Chain<T, U> {
+    pub(crate) fn new(first: T, second: U) -> Self {
+        Self { first, second, done_first: false }
+    }
+}
+
+impl<T: AsyncRead, U: AsyncRead> Chain<T, U> {
+    /// Gets references to the underlying readers in this `Chain`.
+    pub fn get_ref(&self) -> (&T, &U) {
+        (&self.first, &self.second)
+    }
+}
+
+impl<T: AsyncRead, U: AsyncRead> AsyncRead for Chain<T, U> {
     fn poll_read(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        loop {
-            match self.state {
-                State::Pending => {
-                    match ready!(Pin::new(&mut self.inner).poll_data(cx)) {
-                        Some(Ok(bytes)) => {
-                            self.state = State::Partial(Cursor::new(bytes));
-                        }
-                        Some(Err(e)) => {
-                            let error = io::Error::new(io::ErrorKind::Other, e);
-                            return Poll::Ready(Err(error));
-                        }
-                        None => self.state = State::Done,
-                    }
-                },
-                State::Partial(ref mut cursor) => {
-                    match ready!(Pin::new(cursor).poll_read(cx, buf)) {
-                        Ok(()) if buf.filled().is_empty() => self.state = State::Pending,
-                        result => return Poll::Ready(result),
-                    }
-                }
-                State::Done => return Poll::Ready(Ok(())),
+        let me = self.project();
+
+        if !*me.done_first {
+            let init_rem = buf.remaining();
+            ready!(me.first.poll_read(cx, buf))?;
+            if buf.remaining() == init_rem {
+                *me.done_first = true;
+            } else {
+                return Poll::Ready(Ok(()));
             }
         }
+        me.second.poll_read(cx, buf)
     }
 }

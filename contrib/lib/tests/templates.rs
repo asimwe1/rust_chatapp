@@ -5,12 +5,12 @@
 mod templates_tests {
     use std::path::{Path, PathBuf};
 
-    use rocket::{Rocket, http::RawStr};
+    use rocket::Rocket;
     use rocket::config::Config;
     use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
-    fn template_check(md: Metadata<'_>, engine: &RawStr, name: &RawStr) -> Option<()> {
+    fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
         match md.contains_template(&format!("{}/{}", engine, name)) {
             true => Some(()),
             false => None

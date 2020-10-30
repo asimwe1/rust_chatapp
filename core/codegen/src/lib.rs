@@ -58,63 +58,8 @@
 
 use rocket_http as http;
 
-macro_rules! vars_and_mods {
-    ($($name:ident => $path:path,)*) => {
-        macro_rules! define {
-            // Note: the `o` is to capture the input's span
-            $(($i:ident $name) => {
-                #[allow(non_snake_case)] let $i = quote!($path);
-            };)*
-            $(($span:expr => $i:ident $name) => {
-                #[allow(non_snake_case)] let $i = quote_spanned!($span => $path);
-            };)*
-        }
-    }
-}
-
-vars_and_mods! {
-    req => __req,
-    status => __status,
-    catcher => __catcher,
-    data => __data,
-    error => __error,
-    trail => __trail,
-    request => rocket::request,
-    response => rocket::response,
-    handler => rocket::handler,
-    log => rocket::logger,
-    Outcome => rocket::outcome::Outcome,
-    FromTransformedData => rocket::data::FromTransformedData,
-    Transform => rocket::data::Transform,
-    Query => rocket::request::Query,
-    FromFormValue => rocket::request::FromFormValue,
-    Request => rocket::request::Request,
-    Response => rocket::response::Response,
-    Data => rocket::data::Data,
-    StaticRouteInfo => rocket::StaticRouteInfo,
-    StaticCatcherInfo => rocket::StaticCatcherInfo,
-    Route => rocket::Route,
-    Catcher => rocket::Catcher,
-    SmallVec => rocket::http::private::SmallVec,
-    Status => rocket::http::Status,
-    HandlerFuture => rocket::handler::HandlerFuture,
-    ErrorHandlerFuture => rocket::catcher::ErrorHandlerFuture,
-    _Option => ::std::option::Option,
-    _Result => ::std::result::Result,
-    _Some => ::std::option::Option::Some,
-    _None => ::std::option::Option::None,
-    _Ok => ::std::result::Result::Ok,
-    _Err => ::std::result::Result::Err,
-    _Box => ::std::boxed::Box,
-    _Vec => ::std::vec::Vec,
-}
-
-macro_rules! define_vars_and_mods {
-    ($($name:ident),*) => ($(define!($name $name);)*);
-    ($span:expr => $($name:ident),*) => ($(define!($span => $name $name);)*)
-}
-
 #[macro_use]
+mod exports;
 mod proc_macro_ext;
 mod derive;
 mod attribute;
@@ -238,11 +183,11 @@ macro_rules! route_attribute {
         ///
         /// ```rust
         /// # #[macro_use] extern crate rocket;
-        /// # use rocket::request::Form;
+        /// # use rocket::form::Form;
         /// # use std::path::PathBuf;
         /// # #[derive(FromForm)] struct F { a: usize }
         /// #[get("/<foo>/bar/<baz..>?<msg>&closed&<rest..>", data = "<form>")]
-        /// # fn f(foo: usize, baz: PathBuf, msg: String, rest: Form<F>, form: Form<F>) {  }
+        /// # fn f(foo: usize, baz: PathBuf, msg: String, rest: F, form: Form<F>) {  }
         /// ```
         ///
         /// The type of each function argument corresponding to a dynamic
@@ -256,9 +201,9 @@ macro_rules! route_attribute {
         /// |----------|-------------|-------------------|
         /// | path     | `<ident>`   | [`FromParam`]     |
         /// | path     | `<ident..>` | [`FromSegments`]  |
-        /// | query    | `<ident>`   | [`FromFormValue`] |
-        /// | query    | `<ident..>` | [`FromQuery`]     |
-        /// | data     | `<ident>`   | [`FromTransformedData`]      |
+        /// | query    | `<ident>`   | [`FromFormField`] |
+        /// | query    | `<ident..>` | [`FromFrom`]      |
+        /// | data     | `<ident>`   | [`FromData`]      |
         ///
         /// The type of each function argument that _does not_ have a
         /// corresponding dynamic parameter is required to implement the
@@ -269,9 +214,9 @@ macro_rules! route_attribute {
         ///
         /// [`FromParam`]: ../rocket/request/trait.FromParam.html
         /// [`FromSegments`]: ../rocket/request/trait.FromSegments.html
-        /// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
-        /// [`FromQuery`]: ../rocket/request/trait.FromQuery.html
-        /// [`FromTransformedData`]: ../rocket/data/trait.FromTransformedData.html
+        /// [`FromFormField`]: ../rocket/request/trait.FromFormField.html
+        /// [`FromForm`]: ../rocket/form/trait.FromForm.html
+        /// [`FromData`]: ../rocket/data/trait.FromData.html
         /// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
         /// [`Route`]: ../rocket/struct.Route.html
         /// [`Responder`]: ../rocket/response/trait.Responder.html
@@ -303,7 +248,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromTransformedData` Outcomes] for further detail.
+        ///            `Failure`. See [`FromData` Outcomes] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -326,7 +271,7 @@ macro_rules! route_attribute {
         /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
         /// [`Response`]: ../rocket/struct.Response.html
         /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
-        /// [`FromTransformedData` Outcomes]: ../rocket/data/trait.FromTransformedData.html#outcomes
+        /// [`FromData` Outcomes]: ../rocket/data/trait.FromData.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -412,33 +357,30 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
 }
 
-/// FIXME: Document.
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::async_entry::async_test_attribute(args, input))
 }
 
-/// FIXME: Document.
 #[proc_macro_attribute]
 pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::async_entry::main_attribute(args, input))
 }
 
-/// FIXME: Document.
 #[proc_macro_attribute]
 pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::async_entry::launch_attribute(args, input))
 }
 
-/// Derive for the [`FromFormValue`] trait.
+/// Derive for the [`FromFormField`] trait.
 ///
-/// The [`FromFormValue`] derive can be applied to enums with nullary
+/// The [`FromFormField`] derive can be applied to enums with nullary
 /// (zero-length) fields:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
-/// #[derive(FromFormValue)]
+/// #[derive(FromFormField)]
 /// enum MyValue {
 ///     First,
 ///     Second,
@@ -446,37 +388,36 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// The derive generates an implementation of the [`FromFormValue`] trait for
+/// The derive generates an implementation of the [`FromFormField`] trait for
 /// the decorated `enum`. The implementation returns successfully when the form
 /// value matches, case insensitively, the stringified version of a variant's
 /// name, returning an instance of said variant. If there is no match, an error
-/// ([`FromFormValue::Error`]) of type [`&RawStr`] is returned, the value of
-/// which is the raw form field value that failed to match.
+/// recording all of the available options is returned.
 ///
 /// As an example, for the `enum` above, the form values `"first"`, `"FIRST"`,
 /// `"fiRSt"`, and so on would parse as `MyValue::First`, while `"second"` and
 /// `"third"` would parse as `MyValue::Second` and `MyValue::Third`,
 /// respectively.
 ///
-/// The `form` field attribute can be used to change the string that is compared
-/// against for a given variant:
+/// The `field` field attribute can be used to change the string value that is
+/// compared against for a given variant:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
-/// #[derive(FromFormValue)]
+/// #[derive(FromFormField)]
 /// enum MyValue {
 ///     First,
 ///     Second,
-///     #[form(value = "fourth")]
+///     #[field(value = "fourth")]
 ///     Third,
 /// }
 /// ```
 ///
-/// The `#[form]` attribute's grammar is:
+/// The `#[field]` attribute's grammar is:
 ///
 /// ```text
-/// form := 'field' '=' STRING_LIT
+/// field := 'value' '=' STRING_LIT
 ///
 /// STRING_LIT := any valid string literal, as defined by Rust
 /// ```
@@ -486,13 +427,12 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 /// variant. In the example above, the the strings `"fourth"`, `"FOUrth"` and so
 /// on would parse as `MyValue::Third`.
 ///
-/// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
-/// [`FromFormValue::Error`]: ../rocket/request/trait.FromFormValue.html#associatedtype.Error
-/// [`&RawStr`]: ../rocket/http/struct.RawStr.html
+/// [`FromFormField`]: ../rocket/request/trait.FromFormField.html
+/// [`FromFormField::Error`]: ../rocket/request/trait.FromFormField.html#associatedtype.Error
 // FIXME(rustdoc): We should be able to refer to items in `rocket`.
-#[proc_macro_derive(FromFormValue, attributes(form))]
-pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
-    emit!(derive::from_form_value::derive_from_form_value(input))
+#[proc_macro_derive(FromFormField, attributes(field))]
+pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
+    emit!(derive::from_form_field::derive_from_form_field(input))
 }
 
 /// Derive for the [`FromForm`] trait.
@@ -509,22 +449,26 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// Each field's type is required to implement [`FromFormValue`].
+/// Each field's type is required to implement [`FromFormField`].
 ///
 /// The derive generates an implementation of the [`FromForm`] trait. The
 /// implementation parses a form whose field names match the field names of the
 /// structure on which the derive was applied. Each field's value is parsed with
-/// the [`FromFormValue`] implementation of the field's type. The `FromForm`
+/// the [`FromFormField`] implementation of the field's type. The `FromForm`
 /// implementation succeeds only when all of the field parses succeed. If
 /// parsing fails, an error ([`FromForm::Error`]) of type [`FormParseError`] is
 /// returned.
 ///
-/// The derive accepts one field attribute: `form`, with the following syntax:
+/// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
-/// form := 'field' '=' '"' IDENT '"'
+/// field := name? validate*
+///
+/// name := 'name' '=' '"' IDENT '"'
+/// validate := 'validate' '=' EXPR
 ///
 /// IDENT := valid identifier, as defined by Rust
+/// EXPR := valid expression, as defined by Rust
 /// ```
 ///
 /// When applied, the attribute looks as follows:
@@ -535,22 +479,22 @@ pub fn derive_from_form_value(input: TokenStream) -> TokenStream {
 /// #[derive(FromForm)]
 /// struct MyStruct {
 ///     field: usize,
-///     #[form(field = "renamed_field")]
+///     #[field(name = "renamed_field")]
 ///     other: String
 /// }
 /// ```
 ///
 /// The field attribute directs that a different incoming field name is
-/// expected, and the value of the `field` attribute is used instead of the
-/// structure's actual field name when parsing a form. In the example above, the
-/// value of the `MyStruct::other` struct field will be parsed from the incoming
-/// form's `renamed_field` field.
+/// expected, the value of `name`, which is used instead of the structure's
+/// actual field name when parsing a form. In the example above, the value of
+/// the `MyStruct::other` struct field will be parsed from the incoming form's
+/// `renamed_field` field.
 ///
 /// [`FromForm`]: ../rocket/request/trait.FromForm.html
-/// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
+/// [`FromFormField`]: ../rocket/request/trait.FromFormField.html
 /// [`FormParseError`]: ../rocket/request/enum.FormParseError.html
 /// [`FromForm::Error`]: ../rocket/request/trait.FromForm.html#associatedtype.Error
-#[proc_macro_derive(FromForm, attributes(form))]
+#[proc_macro_derive(FromForm, attributes(field))]
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
     emit!(derive::from_form::derive_from_form(input))
 }
@@ -716,10 +660,10 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// `name` parameter, and [`Formatter::write_value()`] for every unnamed field
 /// in the order the fields are declared.
 ///
-/// The derive accepts one field attribute: `form`, with the following syntax:
+/// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
-/// form := 'field' '=' '"' IDENT '"'
+/// field := 'name' '=' '"' IDENT '"'
 ///
 /// IDENT := valid identifier, as defined by Rust
 /// ```
@@ -734,21 +678,21 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// struct MyStruct {
 ///     name: String,
 ///     id: usize,
-///     #[form(field = "type")]
+///     #[field(name = "type")]
 ///     kind: Kind,
 /// }
 /// ```
 ///
 /// The field attribute directs that a different field name be used when calling
 /// [`Formatter::write_named_value()`] for the given field. The value of the
-/// `field` attribute is used instead of the structure's actual field name. In
+/// `name` attribute is used instead of the structure's actual field name. In
 /// the example above, the field `MyStruct::kind` is rendered with a name of
 /// `type`.
 ///
 /// [`UriDisplay<Query>`]: ../rocket/http/uri/trait.UriDisplay.html
 /// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value
 /// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
-#[proc_macro_derive(UriDisplayQuery, attributes(form))]
+#[proc_macro_derive(UriDisplayQuery, attributes(field))]
 pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_query(input))
 }
@@ -1030,6 +974,6 @@ pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
 
 #[doc(hidden)]
 #[proc_macro]
-pub fn rocket_internal_guide_tests(input: TokenStream) -> TokenStream {
+pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
     emit!(bang::guide_tests_internal(input))
 }

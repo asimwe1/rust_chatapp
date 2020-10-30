@@ -1,15 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::request::Form;
-
-#[derive(FromForm)]
-struct FormData {
-    form_data: String,
-}
+use rocket::form::Form;
 
 #[post("/", data = "<form_data>")]
-fn bug(form_data: Form<FormData>) -> String {
-    form_data.into_inner().form_data
+fn bug(form_data: Form<String>) -> String {
+    form_data.into_inner()
 }
 
 mod tests {

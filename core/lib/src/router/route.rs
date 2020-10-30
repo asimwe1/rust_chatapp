@@ -213,7 +213,8 @@ impl Route {
     /// ```
     #[inline]
     pub fn base(&self) -> &str {
-        self.base.path()
+        // This is ~ok as the route path is assumed to be percent decoded.
+        self.base.path().as_str()
     }
 
     /// Retrieves this route's path.
@@ -228,10 +229,10 @@ impl Route {
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
     /// assert_eq!(index.uri.path(), "/boo/foo/bar");
-    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.uri.query().unwrap(), "a=1");
     /// assert_eq!(index.base(), "/boo");
     /// assert_eq!(index.path().path(), "/foo/bar");
-    /// assert_eq!(index.path().query(), Some("a=1"));
+    /// assert_eq!(index.path().query().unwrap(), "a=1");
     /// ```
     #[inline]
     pub fn path(&self) -> &Origin<'_> {
@@ -278,6 +279,10 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(n) = self.name {
+            write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
+        }
+
         write!(f, "{} ", Paint::green(&self.method))?;
         if self.base.path() != "/" {
             write!(f, "{}", Paint::blue(&self.base).underline())?;
@@ -291,11 +296,6 @@ impl fmt::Display for Route {
 
         if let Some(ref format) = self.format {
             write!(f, " {}", Paint::yellow(format))?;
-        }
-
-        if let Some(name) = self.name {
-            write!(f, " {}{}{}",
-                   Paint::cyan("("), Paint::magenta(name), Paint::cyan(")"))?;
         }
 
         Ok(())

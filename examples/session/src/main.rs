@@ -5,9 +5,11 @@
 use std::collections::HashMap;
 
 use rocket::outcome::IntoOutcome;
-use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
+use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, CookieJar};
+use rocket::form::Form;
+
 use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
@@ -54,7 +56,7 @@ fn login_user(_user: User) -> Redirect {
 }
 
 #[get("/login", rank = 2)]
-fn login_page(flash: Option<FlashMessage<'_, '_>>) -> Template {
+fn login_page(flash: Option<FlashMessage<'_>>) -> Template {
     let mut context = HashMap::new();
     if let Some(ref msg) = flash {
         context.insert("flash", msg.msg());

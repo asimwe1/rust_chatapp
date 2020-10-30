@@ -77,10 +77,8 @@ not just the world, we can declare a route like so:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-use rocket::http::RawStr;
-
 #[get("/hello/<name>")]
-fn hello(name: &RawStr) -> String {
+fn hello(name: &str) -> String {
     format!("Hello, {}!", name)
 }
 ```
@@ -113,25 +111,6 @@ fn hello(name: String, age: u8, cool: bool) -> String {
 
 [`FromParam`]: @api/rocket/request/trait.FromParam.html
 [`FromParam` API docs]: @api/rocket/request/trait.FromParam.html
-
-! note: Rocket types _raw_ strings separately from decoded strings.
-
-  You may have noticed an unfamiliar [`RawStr`] type in the code example above.
-  This is a special type, provided by Rocket, that represents an unsanitized,
-  unvalidated, and undecoded raw string from an HTTP message. It exists to
-  separate validated string inputs, represented by types such as `String`,
-  `&str`, and `Cow<str>`, from unvalidated inputs, represented by `&RawStr`. It
-  also provides helpful methods to convert the unvalidated string into a
-  validated one.
-
-  Because `&RawStr` implements [`FromParam`], it can be used as the type of a
-  dynamic segment, as in the example above, where the value refers to a
-  potentially undecoded string. By contrast, a `String` is guaranteed to be
-  decoded. Which you should use depends on whether you want direct but
-  potentially unsafe access to the string (`&RawStr`), or safe access to the
-  string at the cost of an allocation (`String`).
-
-  [`RawStr`]: @api/rocket/http/struct.RawStr.html
 
 ### Multiple Segments
 
@@ -210,8 +189,6 @@ routes:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# use rocket::http::RawStr;
-
 #[get("/user/<id>")]
 fn user(id: usize) { /* ... */ }
 
@@ -219,7 +196,7 @@ fn user(id: usize) { /* ... */ }
 fn user_int(id: isize) { /* ... */ }
 
 #[get("/user/<id>", rank = 3)]
-fn user_str(id: &RawStr) { /* ... */ }
+fn user_str(id: &str) { /* ... */ }
 
 #[launch]
 fn rocket() -> rocket::Rocket {
@@ -248,7 +225,7 @@ will be routed as follows:
   `GET /user/<id> [3] (user_str)`.
 
 Forwards can be _caught_ by using a `Result` or `Option` type. For example, if
-the type of `id` in the `user` function was `Result<usize, &RawStr>`, then `user`
+the type of `id` in the `user` function was `Result<usize, &str>`, then `user`
 would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `usize`, while an `Err` would indicate that `<id>` was not a `usize`. The
 `Err`'s value would contain the string that failed to parse as a `usize`.
@@ -279,126 +256,6 @@ of a route given its properties.
 | no          | partly static | -3   | `/<hi>?world=true`  |
 | no          | fully dynamic | -2   | `/<hi>?<world>`     |
 | no          | none          | -1   | `/<hi>`             |
-
-## Query Strings
-
-Query segments can be declared static or dynamic in much the same way as path
-segments:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::http::RawStr;
-
-#[get("/hello?wave&<name>")]
-fn hello(name: &RawStr) -> String {
-    format!("Hello, {}!", name.as_str())
-}
-```
-
-The `hello` route above matches any `GET` request to `/hello` that has at least
-one query key of `name` and a query segment of `wave` in any order, ignoring any
-extra query segments. The value of the `name` query parameter is used as the
-value of the `name` function argument. For instance, a request to
-`/hello?wave&name=John` would return `Hello, John!`. Other requests that would
-result in the same response include:
-
-  * `/hello?name=John&wave` (reordered)
-  * `/hello?name=John&wave&id=123` (extra segments)
-  * `/hello?id=123&name=John&wave` (reordered, extra segments)
-  * `/hello?name=Bob&name=John&wave` (last value taken)
-
-Any number of dynamic query segments are allowed. A query segment can be of any
-type, including your own, as long as the type implements the [`FromFormValue`]
-trait.
-
-[`FromFormValue`]: @api/rocket/request/trait.FromFormValue.html
-
-### Optional Parameters
-
-Query parameters are allowed to be _missing_. As long as a request's query
-string contains all of the static components of a route's query string, the
-request will be routed to that route. This allows for optional parameters,
-validating even when a parameter is missing.
-
-To achieve this, use `Option<T>` as the parameter type. Whenever the query
-parameter is missing in a request, `None` will be provided as the value.  A
-route using `Option<T>` looks as follows:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-#[get("/hello?wave&<name>")]
-fn hello(name: Option<String>) -> String {
-    name.map(|name| format!("Hi, {}!", name))
-        .unwrap_or_else(|| "Hello!".into())
-}
-```
-
-Any `GET` request with a path of `/hello` and a `wave` query segment will be
-routed to this route. If a `name=value` query segment is present, the route
-returns the string `"Hi, value!"`. If no `name` query segment is present, the
-route returns `"Hello!"`.
-
-Just like a parameter of type `Option<T>` will have the value `None` if the
-parameter is missing from a query, a parameter of type `bool` will have the
-value `false` if it is missing. The default value for a missing parameter can be
-customized for your own types that implement `FromFormValue` by implementing
-[`FromFormValue::default()`].
-
-[`FromFormValue::default()`]: @api/rocket/request/trait.FromFormValue.html#method.default
-
-### Multiple Segments
-
-As with paths, you can also match against multiple segments in a query by using
-`<param..>`. The type of such parameters, known as _query guards_, must
-implement the [`FromQuery`] trait. Query guards must be the final component of a
-query: any text after a query parameter will result in a compile-time error.
-
-A query guard validates all otherwise unmatched (by static or dynamic query
-parameters) query segments. While you can implement [`FromQuery`] yourself, most
-use cases will be handled by using the [`Form`] or [`LenientForm`] query guard.
-The [Forms](#forms) section explains using these types in detail. In short,
-these types allow you to use a structure with named fields to automatically
-validate query/form parameters:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-use rocket::request::Form;
-
-#[derive(FromForm)]
-struct User {
-    name: String,
-    account: usize,
-}
-
-#[get("/item?<id>&<user..>")]
-fn item(id: usize, user: Form<User>) { /* ... */ }
-```
-
-For a request to `/item?id=100&name=sandal&account=400`, the `item` route above
-sets `id` to `100` and `user` to `User { name: "sandal", account: 400 }`. To
-catch forms that fail to validate, use a type of `Option` or `Result`:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::request::Form;
-# #[derive(FromForm)] struct User { name: String, account: usize, }
-
-#[get("/item?<id>&<user..>")]
-fn item(id: usize, user: Option<Form<User>>) { /* ... */ }
-```
-
-For more query handling examples, see [the `query_params`
-example](@example/query_params).
-
-[`FromQuery`]: @api/rocket/request/trait.FromQuery.html
 
 ## Request Guards
 
@@ -737,199 +594,12 @@ Any type that implements [`FromData`] is also known as _a data guard_.
 
 [`FromData`]: @api/rocket/data/trait.FromData.html
 
-### Forms
-
-Forms are one of the most common types of data handled in web applications, and
-Rocket makes handling them easy. Say your application is processing a form
-submission for a new todo `Task`. The form contains two fields: `complete`, a
-checkbox, and `description`, a text field. You can easily handle the form
-request in Rocket as follows:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-use rocket::request::Form;
-
-#[derive(FromForm)]
-struct Task {
-    complete: bool,
-    description: String,
-}
-
-#[post("/todo", data = "<task>")]
-fn new(task: Form<Task>) { /* .. */ }
-```
-
-The [`Form`] type implements the `FromData` trait as long as its generic
-parameter implements the [`FromForm`] trait. In the example, we've derived the
-`FromForm` trait automatically for the `Task` structure. `FromForm` can be
-derived for any structure whose fields implement [`FromFormValue`]. If a `POST
-/todo` request arrives, the form data will automatically be parsed into the
-`Task` structure. If the data that arrives isn't of the correct Content-Type,
-the request is forwarded. If the data doesn't parse or is simply invalid, a
-customizable `400 - Bad Request` or `422 - Unprocessable Entity` error is
-returned. As before, a forward or failure can be caught by using the `Option`
-and `Result` types:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::request::Form;
-# #[derive(FromForm)] struct Task { complete: bool, description: String, }
-
-#[post("/todo", data = "<task>")]
-fn new(task: Option<Form<Task>>) { /* .. */ }
-```
-
-[`Form`]: @api/rocket/request/struct.Form.html
-[`FromForm`]: @api/rocket/request/trait.FromForm.html
-[`FromFormValue`]: @api/rocket/request/trait.FromFormValue.html
-
-#### Lenient Parsing
-
-Rocket's `FromForm` parsing is _strict_ by default. In other words, a `Form<T>`
-will parse successfully from an incoming form only if the form contains the
-exact set of fields in `T`. Said another way, a `Form<T>` will error on missing
-and/or extra fields. For instance, if an incoming form contains the fields "a",
-"b", and "c" while `T` only contains "a" and "c", the form _will not_ parse as
-`Form<T>`.
-
-Rocket allows you to opt-out of this behavior via the [`LenientForm`] data type.
-A `LenientForm<T>` will parse successfully from an incoming form as long as the
-form contains a superset of the fields in `T`. Said another way, a
-`LenientForm<T>` automatically discards extra fields without error. For
-instance, if an incoming form contains the fields "a", "b", and "c" while `T`
-only contains "a" and "c", the form _will_ parse as `LenientForm<T>`.
-
-You can use a `LenientForm` anywhere you'd use a `Form`. Its generic parameter
-is also required to implement `FromForm`. For instance, we can simply replace
-`Form` with `LenientForm` above to get lenient parsing:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-use rocket::request::LenientForm;
-
-#[derive(FromForm)]
-struct Task {
-    /* .. */
-    # complete: bool,
-    # description: String,
-}
-
-#[post("/todo", data = "<task>")]
-fn new(task: LenientForm<Task>) { /* .. */ }
-```
-
-[`LenientForm`]: @api/rocket/request/struct.LenientForm.html
-
-#### Field Renaming
-
-By default, Rocket matches the name of an incoming form field to the name of a
-structure field. While this behavior is typical, it may also be desired to use
-different names for form fields and struct fields while still parsing as
-expected. You can ask Rocket to look for a different form field for a given
-structure field by using the `#[form(field = "name")]` field annotation.
-
-As an example, say that you're writing an application that receives data from an
-external service. The external service `POST`s a form with a field named `type`.
-Since `type` is a reserved keyword in Rust, it cannot be used as the name of a
-field. To get around this, you can use field renaming as follows:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-#[derive(FromForm)]
-struct External {
-    #[form(field = "type")]
-    api_type: String
-}
-```
-
-Rocket will then match the form field named `type` to the structure field named
-`api_type` automatically.
-
-#### Field Validation
-
-Fields of forms can be easily validated via implementations of the
-[`FromFormValue`] trait. For example, if you'd like to verify that some user is
-over some age in a form, then you might define a new `AdultAge` type, use it as
-a field in a form structure, and implement `FromFormValue` so that it only
-validates integers over that age:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-use rocket::http::RawStr;
-use rocket::request::FromFormValue;
-
-struct AdultAge(usize);
-
-impl<'v> FromFormValue<'v> for AdultAge {
-    type Error = &'v RawStr;
-
-    fn from_form_value(form_value: &'v RawStr) -> Result<AdultAge, &'v RawStr> {
-        match form_value.parse::<usize>() {
-            Ok(age) if age >= 21 => Ok(AdultAge(age)),
-            _ => Err(form_value),
-        }
-    }
-}
-
-#[derive(FromForm)]
-struct Person {
-    age: AdultAge
-}
-```
-
-If a form is submitted with a bad age, Rocket won't call a handler requiring a
-valid form for that structure. You can use `Option` or `Result` types for fields
-to catch parse failures:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# type AdultAge = usize;
-
-#[derive(FromForm)]
-struct Person {
-    age: Option<AdultAge>
-}
-```
-
-The `FromFormValue` trait can also be derived for enums with nullary fields:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-#[derive(FromFormValue)]
-enum MyValue {
-    First,
-    Second,
-    Third,
-}
-```
-
-The derive generates an implementation of the `FromFormValue` trait for the
-decorated enum. The implementation returns successfully when the form value
-matches, case insensitively, the stringified version of a variant's name,
-returning an instance of said variant.
-
-The [form validation](@example/form_validation) and [form kitchen
-sink](@example/form_kitchen_sink) examples provide further illustrations.
-
 ### JSON
 
-Handling JSON data is no harder: simply use the
-[`Json`](@api/rocket_contrib/json/struct.Json.html) type from
-[`rocket_contrib`]:
+The [`Json<T>`](@api/rocket_contrib/json/struct.Json.html) type from
+[`rocket_contrib`] is a data guard that parses the deserialzies body data as
+JSON. The only condition is that the generic type `T` implements the
+`Deserialize` trait from [Serde](https://github.com/serde-rs/json).
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -949,41 +619,56 @@ struct Task {
 fn new(task: Json<Task>) { /* .. */ }
 ```
 
-The only condition is that the generic type in `Json` implements the
-`Deserialize` trait from [Serde](https://github.com/serde-rs/json). See the
-[JSON example] on GitHub for a complete example.
+See the [JSON example] on GitHub for a complete example.
 
 [JSON example]: @example/json
+
+### Temporary Files
+
+The [`TempFile`] data guard streams data directly to a temporary file which can
+the be persisted. It makes accepting file uploads trivial:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+use rocket::data::TempFile;
+
+#[post("/upload", format = "plain", data = "<file>")]
+async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
+    # let permanent_location = "/tmp/perm.txt";
+    file.persist_to(permanent_location).await
+}
+```
+
+[`TempFile`]: @api/rocket/data/struct.TempFile.html
 
 ### Streaming
 
 Sometimes you just want to handle incoming data directly. For example, you might
-want to stream the incoming data out to a file. Rocket makes this as simple as
+want to stream the incoming data to some sink. Rocket makes this as simple as
 possible via the [`Data`](@api/rocket/data/struct.Data.html) type:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# fn main() {}
+
+use rocket::tokio;
 
 use rocket::data::{Data, ToByteUnit};
-use rocket::response::Debug;
 
-#[post("/upload", format = "plain", data = "<data>")]
-async fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
-    let bytes_written = data.open(128.kibibytes())
-        .stream_to_file("/tmp/upload.txt")
+#[post("/debug", data = "<data>")]
+async fn debug(data: Data) -> std::io::Result<()> {
+    // Stream at most 512KiB all of the body data to stdout.
+    data.open(512.kibibytes())
+        .stream_to(tokio::io::stdout())
         .await?;
 
-    Ok(bytes_written.to_string())
+    Ok(())
 }
 ```
 
-The route above accepts any `POST` request to the `/upload` path with
-`Content-Type: text/plain`  At most 128KiB (`128 << 10` bytes) of the incoming
-data are streamed out to `tmp/upload.txt`, and the number of bytes written is
-returned as a plain text response if the upload succeeds. If the upload fails,
-an error response is returned. The handler above is complete. It really is that
-simple! See the [GitHub example code](@example/raw_upload) for the full crate.
+The route above accepts any `POST` request to the `/debug` path. At most 512KiB
+of the incoming is streamed out to `stdout`. If the upload fails, an error
+response is returned. The handler above is complete. It really is that simple!
 
 ! note: Rocket requires setting limits when reading incoming data.
 
@@ -993,23 +678,954 @@ simple! See the [GitHub example code](@example/raw_upload) for the full crate.
   [`ToByteUnit`](@api/rocket/data/trait.ToByteUnit.html) trait makes specifying
   such a value as idiomatic as `128.kibibytes()`.
 
-## Async Routes
+## Forms
 
-Rocket makes it easy to use `async/await` in routes.
+Forms are one of the most common types of data handled in web applications, and
+Rocket makes handling them easy. Say your application is processing a form
+submission for a new todo `Task`. The form contains two fields: `complete`, a
+checkbox, and `type`, a text field. You can easily handle the form request in
+Rocket as follows:
 
 ```rust
 # #[macro_use] extern crate rocket;
-use rocket::tokio::time::{sleep, Duration};
-#[get("/delay/<seconds>")]
-async fn delay(seconds: u64) -> String {
-    sleep(Duration::from_secs(seconds)).await;
-    format!("Waited for {} seconds", seconds)
+
+use rocket::form::Form;
+
+#[derive(FromForm)]
+struct Task {
+    complete: bool,
+    r#type: String,
+}
+
+#[post("/todo", data = "<task>")]
+fn new(task: Form<Task>) { /* .. */ }
+```
+
+The [`Form`] type implements the `FromData` trait as long as its generic
+parameter implements the [`FromForm`] trait. In the example, we've derived the
+`FromForm` trait automatically for the `Task` structure. `FromForm` can be
+derived for any structure whose fields implement [`FromForm`], or equivalently,
+[`FromFormField`]. If a `POST /todo` request arrives, the form data will
+automatically be parsed into the `Task` structure. If the data that arrives
+isn't of the correct Content-Type, the request is forwarded. If the data doesn't
+parse or is simply invalid, a customizable error is returned. As before, a
+forward or failure can be caught by using the `Option` and `Result` types:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# use rocket::form::Form;
+# #[derive(FromForm)] struct Task { complete: bool }
+
+#[post("/todo", data = "<task>")]
+fn new(task: Option<Form<Task>>) { /* .. */ }
+```
+
+[`Form`]: @api/rocket/form/struct.Form.html
+[`FromForm`]: @api/rocket/form/trait.FromForm.html
+
+### Strict Parsing
+
+Rocket's `FromForm` parsing is _lenient_ by default: a `Form<T>` will parse
+successfully from an incoming form even if it contains extra or duplicate
+fields. The extras or duplicates are ignored -- no validation or parsing of the
+fields occurs. To change this behavior and make form parsing _strict_, use the
+[`Form<Strict<T>>`] data type, which errors if there are any extra, undeclared
+fields.
+
+You can use a `Form<Strict<T>>` anywhere you'd use a `Form<T>`. Its generic
+parameter is also required to implement `FromForm`. For instance, we can simply
+replace `Form<T>` with `Form<Strict<T>>` above to get strict parsing:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::form::{Form, Strict};
+
+#[derive(FromForm)]
+struct Task {
+    /* .. */
+    # complete: bool,
+    # description: String,
+}
+
+#[post("/todo", data = "<task>")]
+fn new(task: Form<Strict<Task>>) { /* .. */ }
+```
+
+[`Form<Strict<T>>`]: @api/rocket/form/struct.Strict.html
+
+### Field Renaming
+
+By default, Rocket matches the name of an incoming form field to the name of a
+structure field. While this behavior is typical, it may also be desired to use
+different names for form fields and struct fields while still parsing as
+expected. You can ask Rocket to look for a different form field for a given
+structure field by using the `#[field(name = "name")]` field annotation.
+
+As an example, say that you're writing an application that receives data from an
+external service. The external service `POST`s a form with a field named
+`first-Name` which you'd like to write as `first_name` in Rust. Field renaming
+helps:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+#[derive(FromForm)]
+struct External {
+    #[field(name = "first-Name")]
+    first_name: String
 }
 ```
 
-First, notice that the route function is an `async fn`. This enables
-the use of `await` inside the handler. `sleep` is an asynchronous
-function, so we must `await` it.
+Rocket will then match the form field named `first-Name` to the structure field
+named `first_name`.
+
+### Ad-Hoc Validation
+
+Fields of forms can be easily ad-hoc validated via the `#[field(validate)]`
+attribute. As an example, consider a form field `age: u16` which we'd like to
+ensure is greater than `21`. The following structure accomplishes this:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[derive(FromForm)]
+struct Person {
+    #[field(validate = range(21..))]
+    age: u16
+}
+```
+
+The expression `range(21..)` is a call to [`form::validate::range`]. Rocket
+passes a borrow of the attributed field, here `self.age`, as the first parameter
+to the function call. The rest of the fields are pass as written in the
+expression.
+
+Any function in the [`form::validate`] module can be called, and other fields of
+the form can be passed in by using `self.$field` `$field` is the name of the
+field in the structure. For example, the following form validates that the value
+of the field `confirm` is equal to the value of the field `value`:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[derive(FromForm)]
+struct Password {
+    #[field(name = "password")]
+    value: String,
+    #[field(validate = eq(&*self.value))]
+    confirm: String,
+}
+```
+
+[`form::validate`]: @api/rocket/form/validate/index.html
+[`form::validate::range`]: @api/rocket/form/validate/fn.range.html
+[`Errors<'_>`]: @api/rocket/form/error/struct.Errors.html
+
+In reality, the expression after `validate =` can be _any_ expression as long as
+it evaluates to a value of type `Result<(), Errors<'_>>`, where an `Ok` value
+means that validation was successful while an `Err` of [`Errors<'_>`] indicates
+the error(s) that occured. For instance, if you wanted to implement an ad-hoc
+Luhn validator for credit-card-like numbers, you might write:
+
+
+```rust
+# #[macro_use] extern crate rocket;
+extern crate time;
+
+#[derive(FromForm)]
+struct CreditCard<'v> {
+    #[field(validate = luhn())]
+    number: &'v str,
+    # #[field(validate = luhn())]
+    # other: String,
+    #[field(validate = range(..9999))]
+    cvv: u16,
+    expiration: time::Date,
+}
+
+fn luhn<'v, S: AsRef<str>>(field: S) -> rocket::form::Result<'v, ()> {
+    let num = field.as_ref().parse::<u64>()?;
+
+    /* implementation of Luhn validator... */
+    # Ok(())
+}
+```
+
+### Defaults
+
+The [`FromForm`] trait allows types to specify a default value if one isn't
+provided in a submitted form. This includes types such as `bool`, useful for
+checkboxes, and `Option<T>`. Additionally, `FromForm` is implemented for
+`Result<T, Errors<'_>>` where the error value is [`Errors<'_>`]. All of these
+types can be used just like any other form field:
+
+
+```rust
+# use rocket::form::FromForm;
+use rocket::form::Errors;
+
+#[derive(FromForm)]
+struct MyForm<'v> {
+    maybe_string: Option<String>,
+    ok_or_error: Result<Vec<String>, Errors<'v>>,
+    here: bool,
+}
+
+# rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
+```
+
+[`Errors<'_>`]: @api/rocket/forms/struct.Errors.html
+
+### Collections
+
+Rocket's form support allows your application to express _any_ structure with
+_any_ level of nesting and collection, eclipsing the expressivity offered by any
+other web framework. To parse into these structures, Rocket separates a field's
+name into "keys" by the delimiters `.` and `[]`, each of which in turn is
+separated into "indices" by `:`. In other words, a name has keys and a key has
+indices, each a strict subset of its parent. This is depicted in the example
+below with two form fields:
+
+```html
+food.bart[bar:foo].blam[0_0][1000]=some-value&another_field=another_val
+|-------------------------------|   name
+|--| |--| |-----|  |--| |-|  |--|   keys
+|--| |--| |-| |-|  |--| |-|  |--|   indices
+```
+
+Rocket _pushes_ form fields to `FromForm` types as they arrive. The type then
+operates on _one_ key (and all of its indices) at a time and _shifts_ to the
+next `key`, from left-to-right, before invoking any other `FromForm` types with
+the rest of the field. A _shift_ encodes a nested structure while indices allows
+for structures that need more than one value to allow indexing.
+
+! note: A `.` after a `[]` is optional.
+
+  The form field name `a[b]c` is exactly equivalent to `a[b].c`. Likewise, the
+  form field name `.a` is equivalent to `a`.
+
+### Nesting
+
+Form structs can be nested:
+
+```rust
+use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    owner: Person,
+    pet: Pet,
+}
+
+#[derive(FromForm)]
+struct Person {
+    name: String
+}
+
+#[derive(FromForm)]
+struct Pet {
+    name: String,
+    #[field(validate = eq(true))]
+    good_pet: bool,
+}
+```
+
+To parse into a `MyForm`, a form with the following fields must be submitted:
+
+  * `owner.name` - string
+  * `pet.name` - string
+  * `pet.good_pet` - boolean
+
+Such a form, URL-encoded, may look like:
+
+```rust
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
+# #[derive(FromForm, Debug, PartialEq)] struct Person { name: String }
+# #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
+
+# assert_form_parses! { MyForm,
+"owner.name=Bob&pet.name=Sally&pet.good_pet=on",
+# "owner.name=Bob&pet.name=Sally&pet.good_pet=yes",
+# "owner.name=Bob&pet.name=Sally&pet.good_pet=on",
+# "pet.name=Sally&owner.name=Bob&pet.good_pet=on",
+# "pet.name=Sally&pet.good_pet=on&owner.name=Bob",
+# =>
+
+// ...which parses as this struct.
+MyForm {
+    owner: Person {
+        name: "Bob".into()
+    },
+    pet: Pet {
+        name: "Sally".into(),
+        good_pet: true,
+    }
+}
+# };
+```
+
+Note that `.` is used to separate each field. Identically, `[]` can be used in
+place of or in addition to `.`:
+
+```rust
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
+# #[derive(FromForm, Debug, PartialEq)] struct Person { name: String }
+# #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
+
+// All of these are identical to the previous...
+# assert_form_parses! { MyForm,
+"owner[name]=Bob&pet[name]=Sally&pet[good_pet]=on",
+"owner[name]=Bob&pet[name]=Sally&pet.good_pet=on",
+"owner.name=Bob&pet[name]=Sally&pet.good_pet=on",
+"pet[name]=Sally&owner.name=Bob&pet.good_pet=on",
+# =>
+
+// ...and thus parse as this struct.
+MyForm {
+    owner: Person {
+        name: "Bob".into()
+    },
+    pet: Pet {
+        name: "Sally".into(),
+        good_pet: true,
+    }
+}
+# };
+```
+
+Any level of nesting is allowed.
+
+### Vectors
+
+A form can also contain sequences:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    numbers: Vec<usize>,
+}
+```
+
+To parse into a `MyForm`, a form with the following fields must be submitted:
+
+  * `numbers[$k]` - usize (or equivalently, `numbers.$k`)
+
+...where `$k` is the "key" used to determine whether to push the rest of the
+field to the last element in the vector or create a new one. If the key is the
+same as the previous key seen by the vector, then the field's value is pushed to
+the last element. Otherwise, a new element is created. The actual value of `$k`
+is irrelevant: it is only used for comparison, has no semantic meaning, and is
+not remembered by `Vec`. The special blank key is never equal to any other key.
+
+Consider the following examples.
+
+```rust
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# #[derive(FromForm, PartialEq, Debug)] struct MyForm { numbers: Vec<usize>, }
+// These form strings...
+# assert_form_parses! { MyForm,
+"numbers[]=1&numbers[]=2&numbers[]=3",
+"numbers[a]=1&numbers[b]=2&numbers[c]=3",
+"numbers[a]=1&numbers[b]=2&numbers[a]=3",
+"numbers[]=1&numbers[b]=2&numbers[c]=3",
+"numbers.0=1&numbers.1=2&numbers[c]=3",
+"numbers=1&numbers=2&numbers=3",
+# =>
+
+// ...parse as this struct:
+MyForm {
+    numbers: vec![1 ,2, 3]
+}
+# };
+
+// These, on the other hand...
+# assert_form_parses! { MyForm,
+"numbers[0]=1&numbers[0]=2&numbers[]=3",
+"numbers[]=1&numbers[b]=3&numbers[b]=2",
+# =>
+
+// ...parse as this struct:
+MyForm {
+    numbers: vec![1, 3]
+}
+# };
+```
+
+You might be surprised to see the last example,
+`"numbers=1&numbers=2&numbers=3"`, in the first list. This is equivalent to the
+previous examples as the "key" seen by the `Vec` (everything after `numbers`) is
+empty. Thus, `Vec` pushes to a new `usize` for every field. `usize`, like all
+types that implement `FromFormField`, discard duplicate and extra fields when
+parsed leniently, keeping only the _first_ field.
+
+### Nesting in Vectors
+
+Any `FromForm` type can appear in a sequence:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    name: String,
+    pets: Vec<Pet>,
+}
+
+#[derive(FromForm)]
+struct Pet {
+    name: String,
+    #[field(validate = eq(true))]
+    good_pet: bool,
+}
+```
+
+To parse into a `MyForm`, a form with the following fields must be submitted:
+
+  * `name` - string
+  * `pets[$k].name` - string
+  * `pets[$k].good_pet` - boolean
+
+Examples include:
+
+```rust
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { name: String, pets: Vec<Pet>, }
+# #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
+// These form strings...
+assert_form_parses! { MyForm,
+"name=Bob&pets[0].name=Sally&pets[0].good_pet=on",
+"name=Bob&pets[sally].name=Sally&pets[sally].good_pet=yes",
+# =>
+
+// ...parse as this struct:
+MyForm {
+    name: "Bob".into(),
+    pets: vec![Pet { name: "Sally".into(), good_pet: true }],
+}
+# };
+
+// These, on the other hand, fail to parse:
+# assert_not_form_parses! { MyForm,
+"name=Bob&pets[0].name=Sally&pets[1].good_pet=on",
+"name=Bob&pets[].name=Sally&pets[].good_pet=on",
+# };
+```
+
+### Nested Vectors
+
+Since vectors are `FromForm` themselves, they can appear inside of vectors:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    v: Vec<Vec<usize>>,
+}
+```
+
+The rules are exactly the same.
+
+```rust
+# use rocket::form::FromForm;
+# use rocket_guide_tests::assert_form_parses;
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { v: Vec<Vec<usize>>, }
+# assert_form_parses! { MyForm,
+"v=1&v=2&v=3" => MyForm { v: vec![vec![1], vec![2], vec![3]] },
+"v[][]=1&v[][]=2&v[][]=3" => MyForm { v: vec![vec![1], vec![2], vec![3]] },
+"v[0][]=1&v[0][]=2&v[][]=3" => MyForm { v: vec![vec![1, 2], vec![3]] },
+"v[][]=1&v[0][]=2&v[0][]=3" => MyForm { v: vec![vec![1], vec![2, 3]] },
+"v[0][]=1&v[0][]=2&v[0][]=3" => MyForm { v: vec![vec![1, 2, 3]] },
+"v[0][0]=1&v[0][0]=2&v[0][]=3" => MyForm { v: vec![vec![1, 3]] },
+"v[0][0]=1&v[0][0]=2&v[0][0]=3" => MyForm { v: vec![vec![1]] },
+# };
+```
+
+### Maps
+
+A form can also contain maps:
+
+```rust
+# use rocket::form::FromForm;
+use std::collections::HashMap;
+
+#[derive(FromForm)]
+struct MyForm {
+    ids: HashMap<String, usize>,
+}
+```
+
+To parse into a `MyForm`, a form with the following fields must be submitted:
+
+  * `ids[$string]` - usize (or equivalently, `ids.$string`)
+
+...where `$string` is the "key" used to determine which value in the map to push
+the rest of the field to. Unlike with vectors, the key _does_ have a semantic
+meaning and _is_ remembered, so ordering of fields is inconsequential: a given
+string `$string` always maps to the same element.
+
+As an example, the following are equivalent and all parse to `{ "a" => 1, "b" =>
+2 }`:
+
+```rust
+# use std::collections::HashMap;
+#
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{map, assert_form_parses};
+#
+# #[derive(Debug, PartialEq, FromForm)]
+# struct MyForm {
+#     ids: HashMap<String, usize>,
+# }
+// These form strings...
+# assert_form_parses! { MyForm,
+"ids[a]=1&ids[b]=2",
+"ids[b]=2&ids[a]=1",
+"ids[a]=1&ids[a]=2&ids[b]=2",
+"ids.a=1&ids.b=2",
+# =>
+
+// ...parse as this struct:
+MyForm {
+    ids: map! {
+        "a" => 1usize,
+        "b" => 2usize,
+    }
+}
+# };
+```
+
+Both the key and value of a `HashMap` can be any type that implements
+`FromForm`. Consider a value representing another structure:
+
+```rust
+# use std::collections::HashMap;
+
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    ids: HashMap<usize, Person>,
+}
+
+#[derive(FromForm)]
+struct Person {
+    name: String,
+    age: usize
+}
+```
+
+To parse into a `MyForm`, a form with the following fields must be submitted:
+
+  * `ids[$usize].name` - string
+  * `ids[$usize].age` - usize
+
+Examples include:
+
+```rust
+# use std::collections::HashMap;
+#
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{map, assert_form_parses};
+#
+
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { ids: HashMap<usize, Person>, }
+# #[derive(FromForm, Debug, PartialEq)] struct Person { name: String, age: usize }
+
+// These form strings...
+# assert_form_parses! { MyForm,
+"ids[0]name=Bob&ids[0]age=3&ids[1]name=Sally&ids[1]age=10",
+"ids[0]name=Bob&ids[1]age=10&ids[1]name=Sally&ids[0]age=3",
+"ids[0]name=Bob&ids[1]name=Sally&ids[0]age=3&ids[1]age=10",
+# =>
+
+// ...which parse as this struct:
+MyForm {
+    ids: map! {
+        0usize => Person { name: "Bob".into(), age: 3 },
+        1usize => Person { name: "Sally".into(), age: 10 },
+    }
+}
+# };
+```
+
+Now consider the following structure where both the key and value represent
+structures:
+
+```rust
+# use std::collections::HashMap;
+
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    m: HashMap<Person, Pet>,
+}
+
+#[derive(FromForm, PartialEq, Eq, Hash)]
+struct Person {
+    name: String,
+    age: usize
+}
+
+#[derive(FromForm)]
+struct Pet {
+    wags: bool
+}
+```
+
+! warning: The `HashMap` key type, here `Person`, must implement `Eq + Hash`.
+
+Since the key is a collection, here `Person`, it must be built up from multiple
+fields. This requires being able to specify via the form field name that the
+field's value corresponds to a key in the map. The is done with the syntax
+`k:$key` which indicates that the field corresponds to the `k`ey named `$key`.
+Thus, to parse into a `MyForm`, a form with the following fields must be
+submitted:
+
+  * `m[k:$key].name` - string
+  * `m[k:$key].age` - usize
+  * `m[$key].wags` or `m[v:$key].wags`  - boolean
+
+! note: The syntax `v:$key` also exists.
+
+  The shorthand `m[$key]` is equivalent to `m[v:$key]`.
+
+Note that `$key` can be _anything_: it is simply a symbolic identifier for a
+key/value pair in the map and has no bearing on the actual values that will be
+parsed into the map.
+
+Examples include:
+
+```rust
+# use std::collections::HashMap;
+#
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{map, assert_form_parses};
+#
+
+# #[derive(FromForm, Debug, PartialEq)] struct MyForm { m: HashMap<Person, Pet>, }
+# #[derive(FromForm, Debug, PartialEq, Eq, Hash)] struct Person { name: String, age: usize }
+# #[derive(FromForm, Debug, PartialEq)] struct Pet { wags: bool }
+
+// These form strings...
+# assert_form_parses! { MyForm,
+"m[k:alice]name=Alice&m[k:alice]age=30&m[v:alice].wags=no",
+"m[k:alice]name=Alice&m[k:alice]age=30&m[alice].wags=no",
+"m[k:123]name=Alice&m[k:123]age=30&m[123].wags=no",
+# =>
+
+// ...which parse as this struct:
+MyForm {
+    m: map! {
+        Person { name: "Alice".into(), age: 30 } => Pet { wags: false }
+    }
+}
+# };
+
+// While this longer form string...
+# assert_form_parses! { MyForm,
+"m[k:a]name=Alice&m[k:a]age=40&m[a].wags=no&\
+m[k:b]name=Bob&m[k:b]age=72&m[b]wags=yes&\
+m[k:cat]name=Katie&m[k:cat]age=12&m[cat]wags=yes",
+# =>
+
+// ...parses as this struct:
+MyForm {
+    m: map! {
+        Person { name: "Alice".into(), age: 40 } => Pet { wags: false },
+        Person { name: "Bob".into(), age: 72 } => Pet { wags: true },
+        Person { name: "Katie".into(), age: 12 } => Pet { wags: true },
+    }
+}
+# };
+```
+
+### Arbitrary Collections
+
+_Any_ collection can be expressed with any level of arbitrary nesting, maps, and
+sequences. Consider the extravagently contrived type:
+
+```rust
+use std::collections::{BTreeMap, HashMap};
+# use rocket::form::FromForm;
+
+#[derive(FromForm, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+struct Person {
+    name: String,
+    age: usize
+}
+
+# type Foo =
+HashMap<Vec<BTreeMap<Person, usize>>, HashMap<usize, Person>>
+# ;
+# /*
+|-[k:$k1]-----------|------|------| |-[$k1]-----------------|
+     |---[$i]-------|------|------|         |-[k:$j]*|
+           |-[k:$k2]|------|                 ~~[$j]~~|name*|
+                    |-name*|                 ~~[$j]~~|age-*|
+                    |-age*-|
+           |~~~~~~~~~~~~~~~|v:$k2*|
+# */
+```
+
+! warning: The `BTreeMap` key type, here `Person`, must implement `Ord`.
+
+As illustrated above with `*` marking terminals, we need the following form
+fields for this structure:
+
+  * `[k:$k1][$i][k:$k2]name` - string
+  * `[k:$k1][$i][k:$k2]age` - usize
+  * `[k:$k1][$i][$k2]` - usize
+  * `[$k1][k:$j]` - usize
+  * `[$k1][$j]name` - string
+  * `[$k1][$j]age` - string
+
+Where we have the following symbolic keys:
+
+  * `$k1`: symbolic name of the top-level key
+  * `$i`: symbolic name of the vector index
+  * `$k2`: symbolic name of the sub-level  (`BTreeMap`) key
+  * `$j`: symbolic name and/or value top-level value's key
+
+```rust
+# use std::collections::BTreeMap;
+# use std::collections::HashMap;
+#
+# use rocket::form::FromForm;
+# use rocket_guide_tests::{map, bmap, assert_form_parses};
+# #[derive(FromForm, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+# struct Person { name: String, age: usize }
+
+type Foo = HashMap<Vec<BTreeMap<Person, usize>>, HashMap<usize, Person>>;
+
+// This (long, contrived) form string...
+# assert_form_parses! { Foo,
+"[k:top_key][i][k:sub_key]name=Bobert&\
+[k:top_key][i][k:sub_key]age=22&\
+[k:top_key][i][sub_key]=1337&\
+[top_key][7]name=Builder&\
+[top_key][7]age=99",
+
+// We could also set the top-level value's key explicitly:
+// [top_key][k:7]=7
+# "[k:top_key][i][k:sub_key]name=Bobert&\
+# [k:top_key][i][k:sub_key]age=22&\
+# [top_key][k:7]=7&\
+# [k:top_key][i][sub_key]=1337&\
+# [top_key][7]name=Builder&\
+# [top_key][7]age=99",
+# =>
+
+// ...parses as this (long, contrived) map:
+map! {
+    vec![bmap! {
+        Person { name: "Bobert".into(), age: 22 } => 1337usize,
+    }]
+    =>
+    map! {
+        7usize => Person { name: "Builder".into(), age: 99 }
+    }
+}
+# };
+```
+
+### Context
+
+The [`Contextual`] type acts as a proxy for any form type, recording all of the
+submitted form values and produced errors and associating them with their
+corresponding field name. `Contextual` is particularly useful to render a form
+with previously submitted values and render errors associated with a form input.
+
+To retrieve the context for a form, use `Form<Contextual<'_, T>>` as a data
+guard, where `T` implements `FromForm`. The `context` field contains the form's
+[`Context`]:
+
+```rust
+# use rocket::post;
+# type T = String;
+
+use rocket::form::{Form, Contextual};
+
+#[post("/submit", data = "<form>")]
+fn submit(form: Form<Contextual<'_, T>>) {
+    if let Some(ref value) = form.value {
+        // The form parsed successfully. `value` is the `T`.
+    }
+
+    // In all cases, `form.context` contains the `Context`.
+    // We can retrieve raw field values and errors.
+    let raw_id_value = form.context.value("id");
+    let id_errors = form.context.errors("id");
+}
+```
+
+`Context` serializes as a map, so it can be rendered in templates that require
+`Serialize` types. See
+[`Context`](@api/rocket/form/struct.Context.html#Serialization) for details
+about its serialization format. The [forms example], too, makes use of form
+contexts, as well as every other forms feature.
+
+[`Contextual`]: @api/rocket/form/struct.Contextual.html
+[`Context`]: @api/rocket/form/struct.Context.html
+[forms example]: @example/forms
+
+## Query Strings
+
+Query strings are URL-encoded forms that appear in the URL of a request. Query
+parameters are declared like path parameters but otherwise handled like regular
+URL-encoded form fields. The table below summarizes the analogy:
+
+| Path Synax  | Query Syntax | Path Type Bound  | Query Type Bound |
+|-------------|--------------|------------------|------------------|
+| `<param>`   | `<param>`    | [`FromParam`]    | [`FromForm`]     |
+| `<param..>` | `<param..>`  | [`FromSegments`] | [`FromForm`]     |
+| `static`    | `static`     | N/A              | N/A              |
+
+Because dynamic parameters are form types, they can be single values,
+collections, nested collections, or anything in between, just like any other
+form field.
+
+### Static Parameters
+
+A request matches a route _iff_ its query string contains all of the static
+parameters in the route's query string. A route with a static parameter `param`
+(any UTF-8 text string) in a query will only match requests with that exact path
+segment in its query string.
+
+! note: This is truly an _iff_!
+
+  Only the static parameters in query route string affect routing. Dynamic
+  parameters are allowed to be missing by default.
+
+
+For example, the route below will match requests with path `/` and _at least_
+the query segments `hello` and `cat=♥`:
+
+```rust,ignore
+# FIXME: https://github.com/rust-lang/rust/issues/82583
+# #[macro_use] extern crate rocket;
+
+#[get("/?hello&cat=♥")]
+fn cats() -> &'static str {
+    "Hello, kittens!"
+}
+
+// The following GET requests match `cats`.
+# let status = rocket_guide_tests::client(routes![cats]).get(
+"/?cat%3D%E2%99%A5%26hello"
+# ).dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
+# let status = rocket_guide_tests::client(routes![cats]).get(
+"/?hello&cat%3D%E2%99%A5%26"
+# ).dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
+# let status = rocket_guide_tests::client(routes![cats]).get(
+"/?dogs=amazing&hello&there&cat%3D%E2%99%A5%26"
+# ).dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
+```
+
+### Dynamic Parameters
+
+A single dynamic parameter of `<param>` acts identically to a form field
+declared as `param`. In particular, Rocket will expect the query form to contain
+a field with key `param` and push the shifted field to the `param` type. As with
+forms, default values are used when parsing fails. The example below illustrates
+this with a single value `name`, a collection `color`, a nested form `person`,
+and an `other` value that will default to `None`:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[derive(Debug, PartialEq, FromFormField)]
+enum Color {
+    Red,
+    Blue,
+    Green
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct Pet<'r> {
+  name: &'r str,
+  age: usize,
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct Person<'r> {
+  pet: Pet<'r>,
+}
+
+#[get("/?<name>&<color>&<person>&<other>")]
+fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>) {
+    assert_eq!(name, "George");
+    assert_eq!(color, [Color::Red, Color::Green, Color::Green, Color::Blue]);
+    assert_eq!(other, None);
+    assert_eq!(person, Person {
+      pet: Pet { name: "Fi Fo Alex", age: 1 }
+    });
+}
+
+// A request with these query segments matches as above.
+# rocket_guide_tests::client(routes![hello]).get("/?\
+color=reg&\
+color=green&\
+person.pet.name=Fi+Fo+Alex&\
+color=green&\
+person.pet.age=1\
+color=blue&\
+extra=yes\
+# ").dispatch();
+```
+
+Note that, like forms, parsing is field-ordering insensitive and lenient by
+default.
+
+### Trailing Parameter
+
+A trailing dynamic parameter of `<param..>` collects all of the query segments
+that don't otherwise match a declared static or dynamic parameter. In other
+words, the otherwise unmatched segments are pushed, unshifted, to the
+`<param..>` type:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+use rocket::form::Form;
+
+#[derive(FromForm)]
+struct User<'r> {
+    name: &'r str,
+    active: bool,
+}
+
+#[get("/?hello&<id>&<user..>")]
+fn user(id: usize, user: User<'_>) {
+    assert_eq!(id, 1337);
+    assert_eq!(user.name, "Bob Smith");
+    assert_eq!(user.active, true);
+}
+
+// A request with these query segments matches as above.
+# rocket_guide_tests::client(routes![user]).get("/?\
+name=Bob+Smith&\
+id=1337\
+active=yes\
+# ").dispatch();
+```
 
 ## Error Catchers
 

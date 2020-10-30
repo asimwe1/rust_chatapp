@@ -28,7 +28,7 @@ fn test_raw_upload() {
         .dispatch();
 
     assert_eq!(res.status(), Status::Ok);
-    assert_eq!(res.into_string(), Some(UPLOAD_CONTENTS.len().to_string()));
+    assert!(res.into_string().unwrap().contains(&UPLOAD_CONTENTS.len().to_string()));
 
     // Ensure we find the body in the /tmp/upload.txt file.
     let mut file_contents = String::new();

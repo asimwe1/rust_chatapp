@@ -8,14 +8,23 @@ use self::Method::*;
 /// Representation of HTTP methods.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
+    /// The `GET` variant.
     Get,
+    /// The `PUT` variant.
     Put,
+    /// The `POST` variant.
     Post,
+    /// The `DELETE` variant.
     Delete,
+    /// The `OPTIONS` variant.
     Options,
+    /// The `HEAD` variant.
     Head,
+    /// The `TRACE` variant.
     Trace,
+    /// The `CONNECT` variant.
     Connect,
+    /// The `PATCH` variant.
     Patch
 }
 

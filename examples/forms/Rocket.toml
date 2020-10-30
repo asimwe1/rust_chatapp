@@ -1,0 +1,2 @@
+[global.limits]
+data-form = "2MiB"

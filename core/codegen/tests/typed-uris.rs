@@ -4,13 +4,13 @@
 
 use std::path::PathBuf;
 
-use rocket::http::{RawStr, CookieJar};
+use rocket::http::CookieJar;
 use rocket::http::uri::{FromUriParam, Query};
-use rocket::request::Form;
+use rocket::form::{Form, error::{Errors, ErrorKind}};
 
 #[derive(FromForm, UriDisplayQuery)]
 struct User<'a> {
-    name: &'a RawStr,
+    name: &'a str,
     nickname: String,
 }
 
@@ -65,10 +65,10 @@ fn no_uri_display_okay(id: i32, form: Form<Second>) { }
 #[post("/name/<name>?<foo>&bar=10&<bar>&<query..>", data = "<user>", rank = 2)]
 fn complex<'r>(
     foo: usize,
-    name: &RawStr,
-    query: Form<User<'r>>,
+    name: &str,
+    query: User<'r>,
     user: Form<User<'r>>,
-    bar: &RawStr,
+    bar: &str,
     cookies: &CookieJar<'_>
 ) {  }
 
@@ -354,15 +354,15 @@ mod typed_uris {
 #[derive(FromForm, UriDisplayQuery)]
 struct Third<'r> {
     one: String,
-    two: &'r RawStr,
+    two: &'r str,
 }
 
 #[post("/<foo>/<bar>?<q1>&<rest..>")]
 fn optionals(
     foo: Option<usize>,
-    bar: Result<String, &RawStr>,
-    q1: Result<usize, &RawStr>,
-    rest: Option<Form<Third<'_>>>
+    bar: Result<String, &'_ str>,
+    q1: Result<usize, Errors<'_>>,
+    rest: Option<Third<'_>>
 ) { }
 
 #[test]
@@ -408,7 +408,7 @@ fn test_optional_uri_parameters() {
         uri!(optionals:
             foo = 10,
             bar = &"hi there",
-            q1 = Err("foo".into()) as Result<usize, &RawStr>,
+            q1 = Err(ErrorKind::Missing.into()) as Result<usize, _>,
             rest = _
         ) => "/10/hi%20there",
 

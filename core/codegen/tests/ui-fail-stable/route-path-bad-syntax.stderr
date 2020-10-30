@@ -1,18 +1,18 @@
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid route URI: expected token '/' but found 'a' at index 0
   --- help: expected path in origin form: "/path/<param>"
  --> $DIR/route-path-bad-syntax.rs:5:7
   |
 5 | #[get("a")]
   |       ^^^
 
-error: invalid path URI: unexpected EOF: expected token '/' at index 0
+error: invalid route URI: unexpected EOF: expected token '/' at index 0
   --- help: expected path in origin form: "/path/<param>"
  --> $DIR/route-path-bad-syntax.rs:8:7
   |
 8 | #[get("")]
   |       ^^
 
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid route URI: expected token '/' but found 'a' at index 0
   --- help: expected path in origin form: "/path/<param>"
   --> $DIR/route-path-bad-syntax.rs:11:7
    |
@@ -43,37 +43,6 @@ error: paths cannot contain empty segments
   --> $DIR/route-path-bad-syntax.rs:23:7
    |
 23 | #[get("/a/b//")]
-   |       ^^^^^^^^
-
-error: invalid path URI: expected EOF but found '#' at index 3
-  --- help: expected path in origin form: "/path/<param>"
-  --> $DIR/route-path-bad-syntax.rs:28:7
-   |
-28 | #[get("/!@#$%^&*()")]
-   |       ^^^^^^^^^^^^^
-
-error: segment contains invalid URI characters
-  --- note: components cannot contain reserved characters
-  --- help: reserved characters include: '%', '+', '&', etc.
-  --> $DIR/route-path-bad-syntax.rs:31:7
-   |
-31 | #[get("/a%20b")]
-   |       ^^^^^^^^
-
-error: segment contains invalid URI characters
-  --- note: components cannot contain reserved characters
-  --- help: reserved characters include: '%', '+', '&', etc.
-  --> $DIR/route-path-bad-syntax.rs:34:7
-   |
-34 | #[get("/a?a%20b")]
-   |       ^^^^^^^^^^
-
-error: segment contains invalid URI characters
-  --- note: components cannot contain reserved characters
-  --- help: reserved characters include: '%', '+', '&', etc.
-  --> $DIR/route-path-bad-syntax.rs:37:7
-   |
-37 | #[get("/a?a+b")]
    |       ^^^^^^^^
 
 error: unused dynamic parameter

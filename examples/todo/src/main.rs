@@ -11,7 +11,8 @@ use std::fmt::Display;
 
 use rocket::Rocket;
 use rocket::fairing::AdHoc;
-use rocket::request::{Form, FlashMessage};
+use rocket::request::FlashMessage;
+use rocket::form::Form;
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::{templates::Template, serve::{StaticFiles, crate_relative}};
 use diesel::SqliteConnection;
@@ -90,7 +91,7 @@ async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-async fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
+async fn index(msg: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
     let msg = msg.map(|m| (m.name().to_string(), m.msg().to_string()));
     Template::render("index", Context::raw(&conn, msg).await)
 }

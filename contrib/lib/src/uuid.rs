@@ -20,8 +20,8 @@ use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
 
-use rocket::request::{FromParam, FromFormValue};
-use rocket::http::RawStr;
+use rocket::request::FromParam;
+use rocket::form::{self, FromFormField, ValueField};
 
 type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 
@@ -104,19 +104,14 @@ impl<'a> FromParam<'a> for Uuid {
     /// A value is successfully parsed if `param` is a properly formatted Uuid.
     /// Otherwise, a `ParseError` is returned.
     #[inline(always)]
-    fn from_param(param: &'a RawStr) -> Result<Uuid, Self::Error> {
+    fn from_param(param: &'a str) -> Result<Uuid, Self::Error> {
         param.parse()
     }
 }
 
-impl<'v> FromFormValue<'v> for Uuid {
-    type Error = &'v RawStr;
-
-    /// A value is successfully parsed if `form_value` is a properly formatted
-    /// Uuid. Otherwise, the raw form value is returned.
-    #[inline(always)]
-    fn from_form_value(form_value: &'v RawStr) -> Result<Uuid, &'v RawStr> {
-        form_value.parse().map_err(|_| form_value)
+impl<'v> FromFormField<'v> for Uuid {
+    fn from_value(field: ValueField<'v>) -> form::Result<'v, Self> {
+        Ok(field.value.parse().map_err(form::error::Error::custom)?)
     }
 }
 

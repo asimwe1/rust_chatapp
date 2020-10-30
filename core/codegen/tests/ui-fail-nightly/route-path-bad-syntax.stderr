@@ -1,12 +1,12 @@
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid route URI: expected token '/' but found 'a' at index 0
  --> $DIR/route-path-bad-syntax.rs:5:8
   |
 5 | #[get("a")]
-  |        ^^
+  |        ^
   |
   = help: expected path in origin form: "/path/<param>"
 
-error: invalid path URI: unexpected EOF: expected token '/' at index 0
+error: invalid route URI: unexpected EOF: expected token '/' at index 0
  --> $DIR/route-path-bad-syntax.rs:8:8
   |
 8 | #[get("")]
@@ -14,11 +14,11 @@ error: invalid path URI: unexpected EOF: expected token '/' at index 0
   |
   = help: expected path in origin form: "/path/<param>"
 
-error: invalid path URI: expected token '/' but found 'a' at index 0
+error: invalid route URI: expected token '/' but found 'a' at index 0
   --> $DIR/route-path-bad-syntax.rs:11:8
    |
 11 | #[get("a/b/c")]
-   |        ^^^^^^
+   |        ^
    |
    = help: expected path in origin form: "/path/<param>"
 
@@ -49,41 +49,6 @@ error: paths cannot contain empty segments
    |       ^^^^^^^^
    |
    = note: expected '/a/b', found '/a/b//'
-
-error: invalid path URI: expected EOF but found '#' at index 3
-  --> $DIR/route-path-bad-syntax.rs:28:11
-   |
-28 | #[get("/!@#$%^&*()")]
-   |           ^^^^^^^^^
-   |
-   = help: expected path in origin form: "/path/<param>"
-
-error: segment contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:31:9
-   |
-31 | #[get("/a%20b")]
-   |         ^^^^^
-   |
-   = note: components cannot contain reserved characters
-   = help: reserved characters include: '%', '+', '&', etc.
-
-error: segment contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:34:11
-   |
-34 | #[get("/a?a%20b")]
-   |           ^^^^^
-   |
-   = note: components cannot contain reserved characters
-   = help: reserved characters include: '%', '+', '&', etc.
-
-error: segment contains invalid URI characters
-  --> $DIR/route-path-bad-syntax.rs:37:11
-   |
-37 | #[get("/a?a+b")]
-   |           ^^^
-   |
-   = note: components cannot contain reserved characters
-   = help: reserved characters include: '%', '+', '&', etc.
 
 error: unused dynamic parameter
   --> $DIR/route-path-bad-syntax.rs:42:9

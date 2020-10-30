@@ -139,7 +139,7 @@ impl<'a> Absolute<'a> {
     /// assert_eq!(uri.scheme(), "file");
     /// let origin = uri.origin().unwrap();
     /// assert_eq!(origin.path(), "/web/home.html");
-    /// assert_eq!(origin.query(), Some("new"));
+    /// assert_eq!(origin.query().unwrap(), "new");
     ///
     /// let uri = Absolute::parse("https://rocket.rs").expect("valid URI");
     /// assert_eq!(uri.origin(), None);
@@ -148,9 +148,107 @@ impl<'a> Absolute<'a> {
     pub fn origin(&self) -> Option<&Origin<'a>> {
         self.origin.as_ref()
     }
+
+    /// Sets the authority in `self` to `authority` and returns `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::{Absolute, Authority};
+    ///
+    /// let uri = Absolute::parse("https://rocket.rs:80").expect("valid URI");
+    /// let authority = uri.authority().unwrap();
+    /// assert_eq!(authority.host(), "rocket.rs");
+    /// assert_eq!(authority.port(), Some(80));
+    ///
+    /// let new_authority = Authority::parse("google.com").unwrap();
+    /// let uri = uri.with_authority(new_authority);
+    /// let authority = uri.authority().unwrap();
+    /// assert_eq!(authority.host(), "google.com");
+    /// assert_eq!(authority.port(), None);
+    /// ```
+    #[inline(always)]
+    pub fn with_authority(mut self, authority: Authority<'a>) -> Self {
+        self.set_authority(authority);
+        self
+    }
+
+    /// Sets the authority in `self` to `authority`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::{Absolute, Authority};
+    ///
+    /// let mut uri = Absolute::parse("https://rocket.rs:80").expect("valid URI");
+    /// let authority = uri.authority().unwrap();
+    /// assert_eq!(authority.host(), "rocket.rs");
+    /// assert_eq!(authority.port(), Some(80));
+    ///
+    /// let new_authority = Authority::parse("google.com:443").unwrap();
+    /// uri.set_authority(new_authority);
+    /// let authority = uri.authority().unwrap();
+    /// assert_eq!(authority.host(), "google.com");
+    /// assert_eq!(authority.port(), Some(443));
+    /// ```
+    #[inline(always)]
+    pub fn set_authority(&mut self, authority: Authority<'a>) {
+        self.authority = Some(authority);
+    }
+
+    /// Sets the origin in `self` to `origin` and returns `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::{Absolute, Origin};
+    ///
+    /// let mut uri = Absolute::parse("http://rocket.rs/web/?new").unwrap();
+    /// let origin = uri.origin().unwrap();
+    /// assert_eq!(origin.path(), "/web/");
+    /// assert_eq!(origin.query().unwrap(), "new");
+    ///
+    /// let new_origin = Origin::parse("/launch").unwrap();
+    /// let uri = uri.with_origin(new_origin);
+    /// let origin = uri.origin().unwrap();
+    /// assert_eq!(origin.path(), "/launch");
+    /// assert_eq!(origin.query(), None);
+    /// ```
+    #[inline(always)]
+    pub fn with_origin(mut self, origin: Origin<'a>) -> Self {
+        self.set_origin(origin);
+        self
+    }
+
+    /// Sets the origin in `self` to `origin`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::{Absolute, Origin};
+    ///
+    /// let mut uri = Absolute::parse("http://rocket.rs/web/?new").unwrap();
+    /// let origin = uri.origin().unwrap();
+    /// assert_eq!(origin.path(), "/web/");
+    /// assert_eq!(origin.query().unwrap(), "new");
+    ///
+    /// let new_origin = Origin::parse("/launch?when=now").unwrap();
+    /// uri.set_origin(new_origin);
+    /// let origin = uri.origin().unwrap();
+    /// assert_eq!(origin.path(), "/launch");
+    /// assert_eq!(origin.query().unwrap(), "when=now");
+    /// ```
+    #[inline(always)]
+    pub fn set_origin(&mut self, origin: Origin<'a>) {
+        self.origin = Some(origin);
+    }
 }
 
-impl<'b> PartialEq<Absolute<'b>> for Absolute<'_> {
+impl<'a, 'b> PartialEq<Absolute<'b>> for Absolute<'a> {
     fn eq(&self, other: &Absolute<'b>) -> bool {
         self.scheme() == other.scheme()
             && self.authority() == other.authority()
@@ -173,4 +271,3 @@ impl Display for Absolute<'_> {
         Ok(())
     }
 }
-

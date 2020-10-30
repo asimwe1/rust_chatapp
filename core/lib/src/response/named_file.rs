@@ -22,15 +22,16 @@ impl NamedFile {
     /// errors may also be returned according to
     /// [`OpenOptions::open()`](std::fs::OpenOptions::open()).
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```rust
+    /// # use rocket::get;
     /// use rocket::response::NamedFile;
     ///
-    /// #[allow(unused_variables)]
-    /// # rocket::async_test(async {
-    /// let file = NamedFile::open("foo.txt").await;
-    /// });
+    /// #[get("/")]
+    /// async fn index() -> Option<NamedFile> {
+    ///     NamedFile::open("index.html").await.ok()
+    /// }
     /// ```
     pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<NamedFile> {
         // FIXME: Grab the file size here and prohibit `seek`ing later (or else
@@ -42,18 +43,54 @@ impl NamedFile {
     }
 
     /// Retrieve the underlying `File`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::response::NamedFile;
+    ///
+    /// # async fn f() -> std::io::Result<()> {
+    /// let named_file = NamedFile::open("index.html").await?;
+    /// let file = named_file.file();
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub fn file(&self) -> &File {
         &self.1
     }
 
     /// Retrieve a mutable borrow to the underlying `File`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::response::NamedFile;
+    ///
+    /// # async fn f() -> std::io::Result<()> {
+    /// let mut named_file = NamedFile::open("index.html").await?;
+    /// let file = named_file.file_mut();
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub fn file_mut(&mut self) -> &mut File {
         &mut self.1
     }
 
     /// Take the underlying `File`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::response::NamedFile;
+    ///
+    /// # async fn f() -> std::io::Result<()> {
+    /// let named_file = NamedFile::open("index.html").await?;
+    /// let file = named_file.take_file();
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub fn take_file(self) -> File {
         self.1
@@ -64,11 +101,9 @@ impl NamedFile {
     /// # Examples
     ///
     /// ```rust
-    /// # use std::io;
     /// use rocket::response::NamedFile;
     ///
-    /// # #[allow(dead_code)]
-    /// # async fn demo_path() -> io::Result<()> {
+    /// # async fn demo_path() -> std::io::Result<()> {
     /// let file = NamedFile::open("foo.txt").await?;
     /// assert_eq!(file.path().as_os_str(), "foo.txt");
     /// # Ok(())

@@ -21,7 +21,7 @@ use crate::error::{Error, ErrorKind};
 pub struct Rocket {
     pub(crate) config: Config,
     pub(crate) figment: Figment,
-    pub(crate) managed_state: Container,
+    pub(crate) managed_state: Container![Send + Sync],
     pub(crate) router: Router,
     pub(crate) default_catcher: Option<Catcher>,
     pub(crate) catchers: HashMap<u16, Catcher>,
@@ -85,7 +85,7 @@ impl Rocket {
         logger::try_init(config.log_level, config.cli_colors, false);
         config.pretty_print(&figment);
 
-        let managed_state = Container::new();
+        let managed_state = <Container![Send + Sync]>::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         Rocket {
             config, figment,

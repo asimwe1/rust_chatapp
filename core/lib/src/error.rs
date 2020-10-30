@@ -170,7 +170,7 @@ impl Drop for Error {
             ErrorKind::Bind(ref e) => {
                 error!("Rocket failed to bind network socket to given address/port.");
                 info_!("{}", e);
-                panic!("aborting due to binding o error");
+                panic!("aborting due to socket bind error");
             }
             ErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");

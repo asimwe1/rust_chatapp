@@ -18,10 +18,10 @@ impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
 use rocket::data::{self, FromData};
 
 #[rocket::async_trait]
-impl FromData for HasContentType {
+impl<'r> FromData<'r> for HasContentType {
     type Error = ();
 
-    async fn from_data(req: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+    async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, ()> {
         req.content_type().map(|_| HasContentType).or_forward(data)
     }
 }

@@ -1,0 +1,111 @@
+error: tuple structs are not supported
+ --> $DIR/from_form_field.rs:4:1
+  |
+4 | struct Foo1;
+  | ^^^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+ --> $DIR/from_form_field.rs:3:10
+  |
+3 | #[derive(FromFormField)]
+  |          ^^^^^^^^^^^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: tuple structs are not supported
+ --> $DIR/from_form_field.rs:7:1
+  |
+7 | struct Foo2(usize);
+  | ^^^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+ --> $DIR/from_form_field.rs:6:10
+  |
+6 | #[derive(FromFormField)]
+  |          ^^^^^^^^^^^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: named structs are not supported
+  --> $DIR/from_form_field.rs:10:1
+   |
+10 | struct Foo3 {
+   | ^^^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+ --> $DIR/from_form_field.rs:9:10
+  |
+9 | #[derive(FromFormField)]
+  |          ^^^^^^^^^^^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: variants cannot have fields
+  --> $DIR/from_form_field.rs:16:6
+   |
+16 |     A(usize),
+   |      ^^^^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:14:10
+   |
+14 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   |
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: enum must have at least one variant
+  --> $DIR/from_form_field.rs:20:1
+   |
+20 | enum Foo5 { }
+   | ^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:19:10
+   |
+19 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   |
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: type generics are not supported
+  --> $DIR/from_form_field.rs:23:11
+   |
+23 | enum Foo6<T> {
+   |           ^
+
+error: [note] error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:22:10
+   |
+22 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   |
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid value: expected string literal
+  --> $DIR/from_form_field.rs:29:21
+   |
+29 |     #[field(value = 123)]
+   |                     ^^^
+
+error: [note] error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:27:10
+   |
+27 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   |
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected literal, found bare path "value"
+  --> $DIR/from_form_field.rs:35:13
+   |
+35 |     #[field(value)]
+   |             ^^^^^
+
+error: [note] error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:33:10
+   |
+33 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   |
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

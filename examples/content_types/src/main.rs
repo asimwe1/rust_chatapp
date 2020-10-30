@@ -6,7 +6,7 @@ use std::io;
 
 use rocket::request::Request;
 use rocket::data::{Data, ToByteUnit};
-use rocket::response::{Debug, content::{Json, Html}};
+use rocket::response::content::{Json, Html};
 
 use serde::{Serialize, Deserialize};
 
@@ -25,10 +25,10 @@ struct Person {
 // the route attribute. Note: if this was a real application, we'd use
 // `rocket_contrib`'s built-in JSON support and return a `JsonValue` instead.
 #[get("/<name>/<age>", format = "json")]
-fn get_hello(name: String, age: u8) -> Json<String> {
+fn get_hello(name: String, age: u8) -> io::Result<Json<String>> {
     // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
     let person = Person { name, age };
-    Json(serde_json::to_string(&person).unwrap())
+    Ok(Json(serde_json::to_string(&person)?))
 }
 
 // In a `POST` request and all other payload supporting request types, the
@@ -38,11 +38,11 @@ fn get_hello(name: String, age: u8) -> Json<String> {
 // In a real application, we wouldn't use `serde_json` directly; instead, we'd
 // use `contrib::Json` to automatically serialize a type into JSON.
 #[post("/<age>", format = "plain", data = "<name_data>")]
-async fn post_hello(age: u8, name_data: Data) -> Result<Json<String>, Debug<io::Error>> {
-    let name = name_data.open(64.bytes()).stream_to_string().await?;
-    let person = Person { name, age };
+async fn post_hello(age: u8, name_data: Data) -> io::Result<Json<String>> {
+    let name = name_data.open(64.bytes()).into_string().await?;
+    let person = Person { name: name.into_inner(), age };
     // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
-    Ok(Json(serde_json::to_string(&person).expect("valid JSON")))
+    Ok(Json(serde_json::to_string(&person)?))
 }
 
 #[catch(404)]

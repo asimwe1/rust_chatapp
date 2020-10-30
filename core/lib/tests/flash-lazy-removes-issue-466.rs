@@ -11,12 +11,12 @@ fn set() -> Flash<&'static str> {
 }
 
 #[get("/unused")]
-fn unused(flash: Option<FlashMessage<'_, '_>>) -> Option<()> {
+fn unused(flash: Option<FlashMessage<'_>>) -> Option<()> {
     flash.map(|_| ())
 }
 
 #[get("/use")]
-fn used(flash: Option<FlashMessage<'_, '_>>) -> Option<String> {
+fn used(flash: Option<FlashMessage<'_>>) -> Option<String> {
     flash.map(|flash| flash.msg().into())
 }
 

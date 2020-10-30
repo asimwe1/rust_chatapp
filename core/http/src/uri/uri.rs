@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::str::Utf8Error;
 use std::convert::TryFrom;
 
+use crate::RawStr;
 use crate::ext::IntoOwned;
 use crate::parse::Extent;
 use crate::uri::{Origin, Authority, Absolute, Error};
@@ -96,7 +97,7 @@ impl<'a> Uri<'a> {
     /// let uri = Uri::parse("/a/b/c?query").expect("valid URI");
     /// let origin = uri.origin().expect("origin URI");
     /// assert_eq!(origin.path(), "/a/b/c");
-    /// assert_eq!(origin.query(), Some("query"));
+    /// assert_eq!(origin.query().unwrap(), "query");
     ///
     /// // Invalid URIs fail to parse.
     /// Uri::parse("foo bar").expect_err("invalid URI");
@@ -104,20 +105,6 @@ impl<'a> Uri<'a> {
     pub fn parse(string: &'a str) -> Result<Uri<'a>, Error<'_>> {
         crate::parse::uri::from_str(string)
     }
-
-//    pub fn from_hyp(uri: &'a hyper::Uri) -> Uri<'a> {
-//        match uri.is_absolute() {
-//            true => Uri::Absolute(Absolute::new(
-//                uri.scheme().unwrap(),
-//                match uri.host() {
-//                    Some(host) => Some(Authority::new(None, Host::Raw(host), uri.port())),
-//                    None => None
-//                },
-//                None
-//            )),
-//            false => Uri::Asterisk
-//        }
-//    }
 
     /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
     /// Otherwise, returns `None`.
@@ -197,8 +184,10 @@ impl<'a> Uri<'a> {
     /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
     /// assert_eq!(encoded, "hello%3Fa%3D%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
-    pub fn percent_encode(string: &str) -> Cow<'_, str> {
-        percent_encode::<DEFAULT_ENCODE_SET>(string)
+    pub fn percent_encode<S>(string: &S) -> Cow<'_, str>
+        where S: AsRef<str> + ?Sized
+    {
+        percent_encode::<DEFAULT_ENCODE_SET>(RawStr::new(string))
     }
 
     /// Returns a URL-decoded version of the string. If the percent encoded
@@ -213,8 +202,10 @@ impl<'a> Uri<'a> {
     /// let decoded = Uri::percent_decode("/Hello%2C%20world%21".as_bytes());
     /// assert_eq!(decoded.unwrap(), "/Hello, world!");
     /// ```
-    pub fn percent_decode(string: &[u8]) -> Result<Cow<'_, str>, Utf8Error> {
-        let decoder = percent_encoding::percent_decode(string);
+    pub fn percent_decode<S>(bytes: &S) -> Result<Cow<'_, str>, Utf8Error>
+        where S: AsRef<[u8]> + ?Sized
+    {
+        let decoder = percent_encoding::percent_decode(bytes.as_ref());
         decoder.decode_utf8()
     }
 
@@ -231,8 +222,10 @@ impl<'a> Uri<'a> {
     /// let decoded = Uri::percent_decode_lossy("/Hello%2C%20world%21".as_bytes());
     /// assert_eq!(decoded, "/Hello, world!");
     /// ```
-    pub fn percent_decode_lossy(string: &[u8]) -> Cow<'_, str> {
-        let decoder = percent_encoding::percent_decode(string);
+    pub fn percent_decode_lossy<S>(bytes: &S) -> Cow<'_, str>
+        where S: AsRef<[u8]> + ?Sized
+    {
+        let decoder = percent_encoding::percent_decode(bytes.as_ref());
         decoder.decode_utf8_lossy()
     }
 }

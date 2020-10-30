@@ -5,19 +5,14 @@ mod tests;
 
 use std::collections::HashMap;
 
-use rocket::request::Form;
+use rocket::form::Form;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, CookieJar};
 use rocket_contrib::templates::Template;
 
-#[derive(FromForm)]
-struct Message {
-    message: String,
-}
-
 #[post("/submit", data = "<message>")]
-fn submit(cookies: &CookieJar<'_>, message: Form<Message>) -> Redirect {
-    cookies.add(Cookie::new("message", message.into_inner().message));
+fn submit(cookies: &CookieJar<'_>, message: Form<String>) -> Redirect {
+    cookies.add(Cookie::new("message", message.into_inner()));
     Redirect::to("/")
 }
 

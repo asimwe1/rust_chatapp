@@ -77,21 +77,22 @@ pub struct Options(u8);
 
 #[allow(non_upper_case_globals, non_snake_case)]
 impl Options {
-    /// `Options` representing the empty set. No dotfiles or index pages are
-    /// rendered. This is different than [`Options::default()`](#impl-Default),
-    /// which enables `Index`.
+    /// `Options` representing the empty set: no options are enabled. This is
+    /// different than [`Options::default()`](#impl-Default), which enables
+    /// `Index`.
     pub const None: Options = Options(0b0000);
 
     /// `Options` enabling responding to requests for a directory with the
     /// `index.html` file in that directory, if it exists. When this is enabled,
     /// the [`StaticFiles`] handler will respond to requests for a directory
-    /// `/foo` with the file `${root}/foo/index.html` if it exists. This is
-    /// enabled by default.
+    /// `/foo` of `/foo/` with the file `${root}/foo/index.html` if it exists.
+    /// This is enabled by default.
     pub const Index: Options = Options(0b0001);
 
     /// `Options` enabling returning dot files. When this is enabled, the
     /// [`StaticFiles`] handler will respond to requests for files or
-    /// directories beginning with `.`. This is _not_ enabled by default.
+    /// directories beginning with `.`. When disabled, any dotfiles will be
+    /// treated as missing. This is _not_ enabled by default.
     pub const DotFiles: Options = Options(0b0010);
 
     /// `Options` that normalizes directory requests by redirecting requests to
@@ -100,8 +101,28 @@ impl Options {
     /// When enabled, the [`StaticFiles`] handler will respond to requests for a
     /// directory without a trailing `/` with a permanent redirect (308) to the
     /// same path with a trailing `/`. This ensures relative URLs within any
-    /// document served for that directory will be interpreted relative to that
-    /// directory, rather than its parent. This is _not_ enabled by default.
+    /// document served from that directory will be interpreted relative to that
+    /// directory rather than its parent. This is _not_ enabled by default.
+    ///
+    /// # Example
+    ///
+    /// Given the following directory structure...
+    ///
+    /// ```text
+    /// static/
+    /// └── foo/
+    ///     ├── cat.jpeg
+    ///     └── index.html
+    /// ```
+    ///
+    /// ...with `StaticFiles::from("static")`, both requests to `/foo` and
+    /// `/foo/` will serve `static/foo/index.html`. If `index.html` references
+    /// `cat.jpeg` as a relative URL, the browser will request `/cat.jpeg`
+    /// (`static/cat.jpeg`) when the request for `/foo` was handled and
+    /// `/foo/cat.jpeg` (`static/foo/cat.jpeg`) if `/foo/` was handled. As a
+    /// result, the request in the former case will fail. To avoid this,
+    /// `NormalizeDirs` will redirect requests to `/foo` to `/foo/` if the file
+    /// that would be served is a directory.
     pub const NormalizeDirs: Options = Options(0b0100);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
@@ -335,7 +356,7 @@ async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> O
     where P: AsRef<Path>
 {
     if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
-        let new_path = r.uri().map_path(|p| p.to_owned() + "/")
+        let new_path = r.uri().map_path(|p| format!("{}/", p))
             .expect("adding a trailing slash to a known good path results in a valid path")
             .into_owned();
 
@@ -364,9 +385,9 @@ impl Handler for StaticFiles {
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
         // only allowing dotfiles if the user allowed it.
         let allow_dotfiles = self.options.contains(Options::DotFiles);
-        let path = req.get_segments::<Segments<'_>>(0)
+        let path = req.segments::<Segments<'_>>(0..)
             .and_then(|res| res.ok())
-            .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
+            .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
         match path {

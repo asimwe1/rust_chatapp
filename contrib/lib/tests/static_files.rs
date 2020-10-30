@@ -119,14 +119,13 @@ mod static_tests {
 
     #[test]
     fn test_forwarding() {
-        use rocket::http::RawStr;
         use rocket::{get, routes};
 
         #[get("/<value>", rank = 20)]
         fn catch_one(value: String) -> String { value }
 
         #[get("/<a>/<b>", rank = 20)]
-        fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
+        fn catch_two(a: &str, b: &str) -> String { format!("{}/{}", a, b) }
 
         let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
         let client = Client::tracked(rocket).expect("valid rocket");

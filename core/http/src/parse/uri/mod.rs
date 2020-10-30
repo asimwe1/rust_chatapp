@@ -6,7 +6,7 @@ pub(crate) mod tables;
 
 use crate::uri::{Uri, Origin, Absolute, Authority};
 
-use self::parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
+use self::parser::{uri, origin, authority_only, absolute_only};
 
 pub use self::error::Error;
 
@@ -20,11 +20,6 @@ pub fn from_str(s: &str) -> Result<Uri<'_>, Error<'_>> {
 #[inline]
 pub fn origin_from_str(s: &str) -> Result<Origin<'_>, Error<'_>> {
     Ok(parse!(origin: RawInput::new(s.as_bytes()))?)
-}
-
-#[inline]
-pub fn route_origin_from_str(s: &str) -> Result<Origin<'_>, Error<'_>> {
-    Ok(parse!(rocket_route_origin: RawInput::new(s.as_bytes()))?)
 }
 
 #[inline]

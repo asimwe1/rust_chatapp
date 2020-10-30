@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use devise::{syn, Diagnostic, ext::SpanDiagnosticExt};
 use crate::proc_macro2::Span;
 
+use crate::http::RawStr;
 use crate::http::uri::{self, UriPart};
 use crate::http::route::RouteSegment;
 use crate::proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
@@ -145,7 +146,7 @@ pub fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
 }
 
 pub fn parse_segments<P: UriPart>(
-    string: &str,
+    string: &RawStr,
     span: Span
 ) -> DResult<Vec<Segment>> {
     let mut segments = vec![];
@@ -154,11 +155,11 @@ pub fn parse_segments<P: UriPart>(
     for result in <RouteSegment<'_, P>>::parse_many(string) {
         match result {
             Ok(segment) => {
-                let seg_span = subspan(&segment.string, string, span);
+                let seg_span = subspan(&segment.string, string.as_str(), span);
                 segments.push(Segment::from(segment, seg_span));
             },
             Err((segment_string, error)) => {
-                diags.push(into_diagnostic(segment_string, string, span, &error));
+                diags.push(into_diagnostic(segment_string, string.as_str(), span, &error));
                 if let Error::Trailing(..) = error {
                     break;
                 }

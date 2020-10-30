@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
 use std::convert::AsRef;
 use std::cmp::Ordering;
@@ -6,6 +5,7 @@ use std::str::Utf8Error;
 use std::fmt;
 
 use ref_cast::RefCast;
+use stable_pattern::{Pattern, ReverseSearcher, Split, SplitInternal};
 
 use crate::uncased::UncasedStr;
 
@@ -52,11 +52,11 @@ use crate::uncased::UncasedStr;
 /// [`FromParam`]: rocket::request::FromParam
 /// [`FromFormValue`]: rocket::request::FromFormValue
 #[repr(transparent)]
-#[derive(RefCast, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(RefCast, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
 
 impl RawStr {
-    /// Constructs an `&RawStr` from an `&str` at no cost.
+    /// Constructs an `&RawStr` from a string-like type at no cost.
     ///
     /// # Example
     ///
@@ -64,14 +64,18 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::from_str("Hello, world!");
+    /// let raw_str = RawStr::new("Hello, world!");
     ///
     /// // `into` can also be used; note that the type must be specified
     /// let raw_str: &RawStr = "Hello, world!".into();
     /// ```
-    #[inline(always)]
-    pub fn from_str(string: &str) -> &RawStr {
-        string.into()
+    pub fn new<S: AsRef<str> + ?Sized>(string: &S) -> &RawStr {
+        RawStr::ref_cast(string.as_ref())
+    }
+
+    /// Performs percent decoding.
+    fn _percent_decode(&self) -> percent_encoding::PercentDecode<'_> {
+        percent_encoding::percent_decode(self.as_bytes())
     }
 
     /// Returns a percent-decoded version of the string.
@@ -88,7 +92,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::from_str("Hello%21");
+    /// let raw_str = RawStr::new("Hello%21");
     /// let decoded = raw_str.percent_decode();
     /// assert_eq!(decoded, Ok("Hello!".into()));
     /// ```
@@ -101,12 +105,12 @@ impl RawStr {
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
     /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
-    /// let bad_raw_str = RawStr::from_str(bad_str);
+    /// let bad_raw_str = RawStr::new(bad_str);
     /// assert!(bad_raw_str.percent_decode().is_err());
     /// ```
     #[inline(always)]
     pub fn percent_decode(&self) -> Result<Cow<'_, str>, Utf8Error> {
-        percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
+        self._percent_decode().decode_utf8()
     }
 
     /// Returns a percent-decoded version of the string. Any invalid UTF-8
@@ -121,7 +125,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::from_str("Hello%21");
+    /// let raw_str = RawStr::new("Hello%21");
     /// let decoded = raw_str.percent_decode_lossy();
     /// assert_eq!(decoded, "Hello!");
     /// ```
@@ -134,12 +138,30 @@ impl RawStr {
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
     /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
-    /// let bad_raw_str = RawStr::from_str(bad_str);
+    /// let bad_raw_str = RawStr::new(bad_str);
     /// assert_eq!(bad_raw_str.percent_decode_lossy(), "a=�");
     /// ```
     #[inline(always)]
     pub fn percent_decode_lossy(&self) -> Cow<'_, str> {
-        percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
+        self._percent_decode().decode_utf8_lossy()
+    }
+
+    /// Replaces '+' with ' ' in `self`, allocating only when necessary.
+    fn _replace_plus(&self) -> Cow<'_, str> {
+        let string = self.as_str();
+        let mut allocated = String::new(); // this is allocation free
+        for i in memchr::memchr_iter(b'+', string.as_bytes()) {
+            if allocated.is_empty() {
+                allocated = string.into();
+            }
+
+            unsafe { allocated.as_bytes_mut()[i] = b' '; }
+        }
+
+        match allocated.is_empty() {
+            true => Cow::Borrowed(string),
+            false => Cow::Owned(allocated)
+        }
     }
 
     /// Returns a URL-decoded version of the string. This is identical to
@@ -156,16 +178,16 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str: &RawStr = "Hello%2C+world%21".into();
+    /// let raw_str = RawStr::new("Hello%2C+world%21");
     /// let decoded = raw_str.url_decode();
-    /// assert_eq!(decoded, Ok("Hello, world!".to_string()));
+    /// assert_eq!(decoded.unwrap(), "Hello, world!");
     /// ```
-    pub fn url_decode(&self) -> Result<String, Utf8Error> {
-        // TODO: Make this more efficient!
-        let replaced = self.replace("+", " ");
-        RawStr::from_str(replaced.as_str())
-            .percent_decode()
-            .map(|cow| cow.into_owned())
+    pub fn url_decode(&self) -> Result<Cow<'_, str>, Utf8Error> {
+        let string = self._replace_plus();
+        match percent_encoding::percent_decode(string.as_bytes()).decode_utf8()? {
+            Cow::Owned(s) => Ok(Cow::Owned(s)),
+            Cow::Borrowed(_) => Ok(string)
+        }
     }
 
     /// Returns a URL-decoded version of the string.
@@ -196,14 +218,15 @@ impl RawStr {
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
     /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a+b=\xff") };
-    /// let bad_raw_str = RawStr::from_str(bad_str);
+    /// let bad_raw_str = RawStr::new(bad_str);
     /// assert_eq!(bad_raw_str.url_decode_lossy(), "a b=�");
     /// ```
-    pub fn url_decode_lossy(&self) -> String {
-        let replaced = self.replace("+", " ");
-        RawStr::from_str(replaced.as_str())
-            .percent_decode_lossy()
-            .into_owned()
+    pub fn url_decode_lossy(&self) -> Cow<'_, str> {
+        let string = self._replace_plus();
+        match percent_encoding::percent_decode(string.as_bytes()).decode_utf8_lossy() {
+            Cow::Owned(s) => Cow::Owned(s),
+            Cow::Borrowed(_) => string
+        }
     }
 
     /// Returns an HTML escaped version of `self`. Allocates only when
@@ -247,6 +270,9 @@ impl RawStr {
     /// let escaped = raw_str.html_escape();
     /// assert_eq!(escaped, "大阪");
     /// ```
+    // NOTE: This is the ~fastest (a table-based implementation is slightly
+    // faster) implementation benchmarked for dense-ish escaping. For sparser
+    // texts, a regex-based-find solution is much faster.
     pub fn html_escape(&self) -> Cow<'_, str> {
         let mut escaped = false;
         let mut allocated = Vec::new(); // this is allocation free
@@ -312,6 +338,44 @@ impl RawStr {
         }
     }
 
+    /// Returns the length of `self`.
+    ///
+    /// This length is in bytes, not [`char`]s or graphemes. In other words,
+    /// it may not be what a human considers the length of the string.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("Hello, world!");
+    /// assert_eq!(raw_str.len(), 13);
+    /// ```
+    #[inline]
+    pub const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Returns `true` if `self` has a length of zero bytes.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("Hello, world!");
+    /// assert!(!raw_str.is_empty());
+    ///
+    /// let raw_str = RawStr::new("");
+    /// assert!(raw_str.is_empty());
+    /// ```
+    #[inline]
+    pub const fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Converts `self` into an `&str`.
     ///
     /// This method should be used sparingly. **Only use this method when you
@@ -323,12 +387,54 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::from_str("Hello, world!");
+    /// let raw_str = RawStr::new("Hello, world!");
     /// assert_eq!(raw_str.as_str(), "Hello, world!");
     /// ```
     #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        self
+    pub const fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Converts `self` into an `&[u8]`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("hi");
+    /// assert_eq!(raw_str.as_bytes(), &[0x68, 0x69]);
+    /// ```
+    #[inline(always)]
+    pub const fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
+    /// Converts a string slice to a raw pointer.
+    ///
+    /// As string slices are a slice of bytes, the raw pointer points to a
+    /// [`u8`]. This pointer will be pointing to the first byte of the string
+    /// slice.
+    ///
+    /// The caller must ensure that the returned pointer is never written to.
+    /// If you need to mutate the contents of the string slice, use [`as_mut_ptr`].
+    ///
+    /// [`as_mut_ptr`]: str::as_mut_ptr
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("hi");
+    /// let ptr = raw_str.as_ptr();
+    /// ```
+    pub const fn as_ptr(&self) -> *const u8 {
+        self.as_str().as_ptr()
     }
 
     /// Converts `self` into an `&UncasedStr`.
@@ -342,54 +448,317 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::from_str("Content-Type");
+    /// let raw_str = RawStr::new("Content-Type");
     /// assert!(raw_str.as_uncased_str() == "content-TYPE");
     /// ```
     #[inline(always)]
     pub fn as_uncased_str(&self) -> &UncasedStr {
         self.as_str().into()
     }
+
+    /// Returns `true` if the given pattern matches a sub-slice of
+    /// this string slice.
+    ///
+    /// Returns `false` if it does not.
+    ///
+    /// The pattern can be a `&str`, [`char`], a slice of [`char`]s, or a
+    /// function or closure that determines if a character matches.
+    ///
+    /// [`char`]: prim@char
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let bananas = RawStr::new("bananas");
+    ///
+    /// assert!(bananas.contains("nana"));
+    /// assert!(!bananas.contains("apples"));
+    /// ```
+    #[inline]
+    pub fn contains<'a, P: Pattern<'a>>(&'a self, pat: P) -> bool {
+        pat.is_contained_in(self.as_str())
+    }
+
+    /// Returns `true` if the given pattern matches a prefix of this
+    /// string slice.
+    ///
+    /// Returns `false` if it does not.
+    ///
+    /// The pattern can be a `&str`, [`char`], a slice of [`char`]s, or a
+    /// function or closure that determines if a character matches.
+    ///
+    /// [`char`]: prim@char
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let bananas = RawStr::new("bananas");
+    ///
+    /// assert!(bananas.starts_with("bana"));
+    /// assert!(!bananas.starts_with("nana"));
+    /// ```
+    pub fn starts_with<'a, P: Pattern<'a>>(&'a self, pat: P) -> bool {
+        pat.is_prefix_of(self.as_str())
+    }
+
+    /// Returns `true` if the given pattern matches a suffix of this
+    /// string slice.
+    ///
+    /// Returns `false` if it does not.
+    ///
+    /// The pattern can be a `&str`, [`char`], a slice of [`char`]s, or a
+    /// function or closure that determines if a character matches.
+    ///
+    /// [`char`]: prim@char
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let bananas = RawStr::new("bananas");
+    ///
+    /// assert!(bananas.ends_with("anas"));
+    /// assert!(!bananas.ends_with("nana"));
+    /// ```
+    pub fn ends_with<'a, P>(&'a self, pat: P) -> bool
+        where P: Pattern<'a>, <P as Pattern<'a>>::Searcher: ReverseSearcher<'a>
+    {
+        pat.is_suffix_of(self.as_str())
+    }
+
+    /// An iterator over substrings of this string slice, separated by
+    /// characters matched by a pattern.
+    ///
+    /// The pattern can be a `&str`, [`char`], a slice of [`char`]s, or a
+    /// function or closure that determines if a character matches.
+    ///
+    /// [`char`]: prim@char
+    ///
+    /// # Examples
+    ///
+    /// Simple patterns:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let v: Vec<_> = RawStr::new("Mary had a little lamb")
+    ///     .split(' ')
+    ///     .map(|r| r.as_str())
+    ///     .collect();
+    ///
+    /// assert_eq!(v, ["Mary", "had", "a", "little", "lamb"]);
+    /// ```
+    #[inline]
+    pub fn split<'a, P>(&'a self, pat: P) -> impl Iterator<Item = &'a RawStr>
+        where P: Pattern<'a>
+    {
+        let split: Split<'_, P> = Split(SplitInternal {
+            start: 0,
+            end: self.len(),
+            matcher: pat.into_searcher(self.as_str()),
+            allow_trailing_empty: true,
+            finished: false,
+        });
+
+        split.map(|s| s.into())
+    }
+
+    /// Splits `self` into two pieces: the piece _before_ the first byte `b` and
+    /// the piece _after_ (not including `b`). Returns the tuple (`before`,
+    /// `after`). If `b` is not in `self`, or `b` is not an ASCII characters,
+    /// returns the entire string `self` as `before` and the empty string as
+    /// `after`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let haystack = RawStr::new("a good boy!");
+    ///
+    /// let (before, after) = haystack.split_at_byte(b'a');
+    /// assert_eq!(before, "");
+    /// assert_eq!(after, " good boy!");
+    ///
+    /// let (before, after) = haystack.split_at_byte(b' ');
+    /// assert_eq!(before, "a");
+    /// assert_eq!(after, "good boy!");
+    ///
+    /// let (before, after) = haystack.split_at_byte(b'o');
+    /// assert_eq!(before, "a g");
+    /// assert_eq!(after, "od boy!");
+    ///
+    /// let (before, after) = haystack.split_at_byte(b'!');
+    /// assert_eq!(before, "a good boy");
+    /// assert_eq!(after, "");
+    ///
+    /// let (before, after) = haystack.split_at_byte(b'?');
+    /// assert_eq!(before, "a good boy!");
+    /// assert_eq!(after, "");
+    ///
+    /// let haystack = RawStr::new("");
+    /// let (before, after) = haystack.split_at_byte(b' ');
+    /// assert_eq!(before, "");
+    /// assert_eq!(after, "");
+    /// ```
+    #[inline]
+    pub fn split_at_byte(&self, b: u8) -> (&RawStr, &RawStr) {
+        if !b.is_ascii() {
+            return (self, &self[0..0]);
+        }
+
+        match memchr::memchr(b, self.as_bytes()) {
+            // SAFETY: `b` is a character boundary since it's ASCII, `i` is in
+            // bounds in `self` (or else None), and i is at most len - 1, so i +
+            // 1 is at most len.
+            Some(i) => unsafe {
+                let s = self.as_str();
+                let start = s.get_unchecked(0..i);
+                let end = s.get_unchecked((i + 1)..self.len());
+                (start.into(), end.into())
+            },
+            None => (self, &self[0..0])
+        }
+    }
+
+    /// Parses this string slice into another type.
+    ///
+    /// Because `parse` is so general, it can cause problems with type
+    /// inference. As such, `parse` is one of the few times you'll see
+    /// the syntax affectionately known as the 'turbofish': `::<>`. This
+    /// helps the inference algorithm understand specifically which type
+    /// you're trying to parse into.
+    ///
+    /// `parse` can parse any type that implements the [`FromStr`] trait.
+    ///
+    /// # Errors
+    ///
+    /// Will return [`Err`] if it's not possible to parse this string slice into
+    /// the desired type.
+    ///
+    /// [`Err`]: FromStr::Err
+    ///
+    /// # Examples
+    ///
+    /// Basic usage
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let four: u32 = RawStr::new("4").parse().unwrap();
+    ///
+    /// assert_eq!(4, four);
+    /// ```
+    #[inline]
+    pub fn parse<F: std::str::FromStr>(&self) -> Result<F, F::Err> {
+        std::str::FromStr::from_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use _serde::{ser, de, Serialize, Deserialize};
+
+    use super::*;
+
+    impl Serialize for RawStr {
+        fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+            where S: ser::Serializer
+        {
+            self.as_str().serialize(ser)
+        }
+    }
+
+    impl<'de: 'a, 'a> Deserialize<'de> for &'a RawStr {
+        fn deserialize<D>(de: D) -> Result<Self, D::Error>
+            where D: de::Deserializer<'de>
+        {
+            <&'a str as Deserialize<'de>>::deserialize(de).map(RawStr::new)
+        }
+    }
+
+}
+
+impl fmt::Debug for RawStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 impl<'a> From<&'a str> for &'a RawStr {
     #[inline(always)]
     fn from(string: &'a str) -> &'a RawStr {
-        RawStr::ref_cast(string)
+        RawStr::new(string)
     }
 }
 
-impl PartialEq<str> for RawStr {
-    #[inline(always)]
-    fn eq(&self, other: &str) -> bool {
-        self.as_str() == other
-    }
+macro_rules! impl_partial {
+    ($A:ty : $B:ty) => (
+        impl PartialEq<$A> for $B {
+            #[inline(always)]
+            fn eq(&self, other: &$A) -> bool {
+                let left: &str = self.as_ref();
+                let right: &str = other.as_ref();
+                left == right
+            }
+        }
+
+        impl PartialOrd<$A> for $B {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &$A) -> Option<Ordering> {
+                let left: &str = self.as_ref();
+                let right: &str = other.as_ref();
+                left.partial_cmp(right)
+            }
+        }
+    )
 }
 
-impl PartialEq<String> for RawStr {
-    #[inline(always)]
-    fn eq(&self, other: &String) -> bool {
-        self.as_str() == other.as_str()
-    }
-}
+impl_partial!(RawStr : &RawStr);
+impl_partial!(&RawStr : RawStr);
 
-impl PartialEq<String> for &'_ RawStr {
-    #[inline(always)]
-    fn eq(&self, other: &String) -> bool {
-        self.as_str() == other.as_str()
-    }
-}
+impl_partial!(str : RawStr);
+impl_partial!(str : &RawStr);
+impl_partial!(&str : RawStr);
+impl_partial!(&&str : RawStr);
 
-impl PartialOrd<str> for RawStr {
-    #[inline(always)]
-    fn partial_cmp(&self, other: &str) -> Option<Ordering> {
-        (self as &str).partial_cmp(other)
-    }
-}
+impl_partial!(Cow<'_, str> : RawStr);
+impl_partial!(Cow<'_, str> : &RawStr);
+impl_partial!(RawStr : Cow<'_, str>);
+impl_partial!(&RawStr : Cow<'_, str>);
+
+impl_partial!(String : RawStr);
+impl_partial!(String : &RawStr);
+
+impl_partial!(RawStr : String);
+impl_partial!(&RawStr : String);
+
+impl_partial!(RawStr : str);
+impl_partial!(RawStr : &str);
+impl_partial!(RawStr : &&str);
+impl_partial!(&RawStr : str);
 
 impl AsRef<str> for RawStr {
     #[inline(always)]
     fn as_ref(&self) -> &str {
-        self
+        self.as_str()
     }
 }
 
@@ -400,19 +769,26 @@ impl AsRef<[u8]> for RawStr {
     }
 }
 
-impl Deref for RawStr {
-    type Target = str;
+impl<I: core::slice::SliceIndex<str, Output=str>> core::ops::Index<I> for RawStr {
+    type Output = RawStr;
 
-    #[inline(always)]
-    fn deref(&self) -> &str {
-        &self.0
+    #[inline]
+    fn index(&self, index: I) -> &Self::Output {
+        self.as_str()[index].into()
     }
 }
 
-impl DerefMut for RawStr {
+impl std::borrow::Borrow<str> for RawStr {
     #[inline(always)]
-    fn deref_mut(&mut self) -> &mut str {
-        &mut self.0
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::borrow::Borrow<RawStr> for &str {
+    #[inline(always)]
+    fn borrow(&self) -> &RawStr {
+        (*self).into()
     }
 }
 
@@ -429,10 +805,10 @@ mod tests {
 
     #[test]
     fn can_compare() {
-        let raw_str = RawStr::from_str("abc");
+        let raw_str = RawStr::new("abc");
         assert_eq!(raw_str, "abc");
         assert_eq!("abc", raw_str.as_str());
-        assert_eq!(raw_str, RawStr::from_str("abc"));
+        assert_eq!(raw_str, RawStr::new("abc"));
         assert_eq!(raw_str, "abc".to_string());
         assert_eq!("abc".to_string(), raw_str.as_str());
     }

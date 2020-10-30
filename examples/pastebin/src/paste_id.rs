@@ -1,53 +1,46 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::path::{Path, PathBuf};
 
 use rocket::request::FromParam;
-use rocket::http::RawStr;
 use rand::{self, Rng};
 
 /// Table to retrieve base62 values from.
 const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// A _probably_ unique paste ID.
-pub struct PasteID<'a>(Cow<'a, str>);
+#[derive(UriDisplayPath)]
+pub struct PasteId<'a>(Cow<'a, str>);
 
-impl<'a> PasteID<'a> {
+impl PasteId<'_> {
     /// Generate a _probably_ unique ID with `size` characters. For readability,
     /// the characters used are from the sets [0-9], [A-Z], [a-z]. The
     /// probability of a collision depends on the value of `size` and the number
     /// of IDs generated thus far.
-    pub fn new(size: usize) -> PasteID<'static> {
+    pub fn new(size: usize) -> PasteId<'static> {
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
         for _ in 0..size {
             id.push(BASE62[rng.gen::<usize>() % 62] as char);
         }
 
-        PasteID(Cow::Owned(id))
+        PasteId(Cow::Owned(id))
+    }
+
+    pub fn file_path(&self) -> PathBuf {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/", "upload");
+        Path::new(root).join(self.0.as_ref())
     }
 }
 
-impl<'a> fmt::Display for PasteID<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// Returns `true` if `id` is a valid paste ID and `false` otherwise.
-fn valid_id(id: &str) -> bool {
-    id.chars().all(|c| c.is_ascii_alphanumeric())
-}
-
-/// Returns an instance of `PasteID` if the path segment is a valid ID.
+/// Returns an instance of `PasteId` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
-impl<'a> FromParam<'a> for PasteID<'a> {
-    type Error = &'a RawStr;
+impl<'a> FromParam<'a> for PasteId<'a> {
+    type Error = &'a str;
 
-    fn from_param(param: &'a RawStr) -> Result<PasteID<'a>, &'a RawStr> {
-        match valid_id(param) {
-            true => Ok(PasteID(Cow::Borrowed(param))),
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param.chars().all(|c| c.is_ascii_alphanumeric()) {
+            true => Ok(PasteId(param.into())),
             false => Err(param)
         }
     }
 }
-

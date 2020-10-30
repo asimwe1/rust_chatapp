@@ -1,8 +1,6 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate bencher;
 
-use rocket::http::RawStr;
-
 #[get("/")]
 fn hello_world() -> &'static str { "Hello, world!" }
 
@@ -22,7 +20,7 @@ fn index_b() -> &'static str { "index" }
 fn index_c() -> &'static str { "index" }
 
 #[get("/<_a>")]
-fn index_dyn_a(_a: &RawStr) -> &'static str { "index" }
+fn index_dyn_a(_a: &str) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
     let config = rocket::Config::figment().merge(("log_level", "off"));
@@ -93,7 +91,7 @@ fn bench_simple_routing(b: &mut Bencher) {
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
     for route in client.rocket().routes() {
-        let request = client.req(route.method, route.uri.path());
+        let request = client.req(route.method, route.uri.path().as_str());
         requests.push(request);
     }
 

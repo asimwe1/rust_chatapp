@@ -1,11 +1,31 @@
 //! Contains types that set the status code and corresponding headers of a
 //! response.
 //!
-//! These types are designed to make it easier to respond correctly with a given
-//! status code. Each type takes in the minimum number of parameters required to
-//! construct a proper response with that status code. Some types take in
+//! # Responding
+//!
+//! Types in this module designed to make it easier to construct correct
+//! responses with a given status code. Each type takes in the minimum number of
+//! parameters required to construct a correct response. Some types take in
 //! responders; when they do, the responder finalizes the response by writing
 //! out additional headers and, importantly, the body of the response.
+//!
+//!
+//!
+//! The [`Custom`] type allows responding with _any_ `Status` but _does not_
+//! ensure that all of the required headers are present. As a convenience,
+//! `(Status, R)` where `R: Responder` is _also_ a `Responder`, identical to
+//! `Custom`.
+//!
+//! ```rust
+//! # extern crate rocket;
+//! # use rocket::get;
+//! use rocket::http::Status;
+//!
+//! #[get("/")]
+//! fn index() -> (Status, &'static str) {
+//!     (Status::NotFound, "Hey, there's no index!")
+//! }
+//! ```
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -418,11 +438,15 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Conflict<R> {
 /// # Example
 ///
 /// ```rust
+/// # use rocket::get;
 /// use rocket::response::status;
 /// use rocket::http::Status;
 ///
 /// # #[allow(unused_variables)]
-/// let response = status::Custom(Status::ImATeapot, "Hi!");
+/// #[get("/")]
+/// fn handler() -> status::Custom<&'static str> {
+///     status::Custom(Status::ImATeapot, "Hi!")
+/// }
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Custom<R>(pub Status, pub R);
@@ -434,6 +458,13 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
         Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()
+    }
+}
+
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for (Status, R) {
+    #[inline(always)]
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o> {
+        Custom(self.0, self.1).respond_to(request)
     }
 }
 

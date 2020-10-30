@@ -19,7 +19,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "3648468" }
+devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "bd221a4" }
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../../core/lib" }

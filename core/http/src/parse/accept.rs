@@ -11,8 +11,13 @@ type Result<'a, T> = pear::input::Result<T, Input<'a>>;
 #[parser]
 fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
     let media_type = media_type()?;
-    let weight = match media_type.params().next() {
-        Some(("q", value)) if value.len() <= 5 => match value.parse::<f32>().ok() {
+    let q = match media_type.params().next() {
+        Some((name, value)) if name  == "q" => Some(value),
+        _ => None
+    };
+
+    let weight = match q {
+        Some(value) if value.len() <= 5 => match value.parse::<f32>().ok() {
             Some(q) if q > 1. => parse_error!("q value must be <= 1")?,
             Some(q) if q < 0. => parse_error!("q value must be > 0")?,
             Some(q) => Some(q),

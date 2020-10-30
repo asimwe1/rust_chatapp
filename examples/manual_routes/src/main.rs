@@ -5,7 +5,7 @@ use std::env;
 
 use rocket::{Request, Route};
 use rocket::data::{Data, ToByteUnit};
-use rocket::http::{Status, RawStr, Method::*};
+use rocket::http::{Status, Method::*};
 use rocket::response::{Responder, status::Custom};
 use rocket::handler::{Handler, Outcome, HandlerFuture};
 use rocket::catcher::{Catcher, ErrorHandlerFuture};
@@ -21,21 +21,20 @@ fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> HandlerFuture<'a> {
-    let param = req.get_param::<&'a RawStr>(0)
+    let param = req.param::<&'a str>(0)
         .and_then(|res| res.ok())
         .unwrap_or("unnamed".into());
 
-    Outcome::from(req, param.as_str()).pin()
+    Outcome::from(req, param).pin()
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    let param_outcome = req.get_param::<&RawStr>(1)
+    let param_outcome = req.param::<&str>(1)
         .and_then(|res| res.ok())
         .into_outcome(Status::BadRequest);
 
     Box::pin(async move {
-        let param = try_outcome!(param_outcome);
-        Outcome::try_from(req, RawStr::from_str(param).url_decode())
+        Outcome::from(req, try_outcome!(param_outcome))
     })
 }
 
@@ -85,7 +84,7 @@ impl CustomHandler {
 impl Handler for CustomHandler {
     async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         let self_data = self.data;
-        let id = req.get_param::<&RawStr>(0)
+        let id = req.param::<&str>(0)
             .and_then(|res| res.ok())
             .or_forward(data);
 

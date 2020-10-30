@@ -1,9 +1,11 @@
 use std::path::PathBuf;
-use std::str::Utf8Error;
 
-use crate::uri::Uri;
+use crate::RawStr;
+use crate::parse::IndexedStr;
 
-/// Iterator over the segments of an absolute URI path. Skips empty segments.
+/// Iterator over the non-empty, percent-decoded segments of a URI path.
+///
+/// Returned by [`Origin::path_segments()`].
 ///
 /// ### Examples
 ///
@@ -11,27 +13,32 @@ use crate::uri::Uri;
 /// # extern crate rocket;
 /// use rocket::http::uri::Origin;
 ///
-/// let uri = Origin::parse("/a/////b/c////////d").unwrap();
-/// let segments = uri.segments();
+/// let uri = Origin::parse("/a%20z/////b/c////////d").unwrap();
+/// let segments = uri.path_segments();
 /// for (i, segment) in segments.enumerate() {
 ///     match i {
-///         0 => assert_eq!(segment, "a"),
+///         0 => assert_eq!(segment, "a z"),
 ///         1 => assert_eq!(segment, "b"),
 ///         2 => assert_eq!(segment, "c"),
 ///         3 => assert_eq!(segment, "d"),
 ///         _ => panic!("only four segments")
 ///     }
 /// }
+/// # assert_eq!(uri.path_segments().len(), 4);
+/// # assert_eq!(uri.path_segments().count(), 4);
+/// # assert_eq!(uri.path_segments().next(), Some("a z"));
 /// ```
-#[derive(Clone, Debug)]
-pub struct Segments<'a>(pub &'a str);
+#[derive(Debug, Clone, Copy)]
+pub struct Segments<'o> {
+    pub(super) source: &'o RawStr,
+    pub(super) segments: &'o [IndexedStr<'static>],
+    pub(super) pos: usize,
+}
 
-/// Errors which can occur when attempting to interpret a segment string as a
-/// valid path segment.
+/// An error interpreting a segment as a [`PathBuf`] component in
+/// [`Segments::to_path_buf()`].
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum SegmentError {
-    /// The segment contained invalid UTF8 characters when percent decoded.
-    Utf8(Utf8Error),
+pub enum PathError {
     /// The segment started with the wrapped invalid character.
     BadStart(char),
     /// The segment contained the wrapped invalid character.
@@ -40,10 +47,37 @@ pub enum SegmentError {
     BadEnd(char),
 }
 
-impl Segments<'_> {
-    /// Creates a `PathBuf` from a `Segments` iterator. The returned `PathBuf`
-    /// is percent-decoded. If a segment is equal to "..", the previous segment
-    /// (if any) is skipped.
+impl<'o> Segments<'o> {
+    /// Returns the number of path segments left.
+    #[inline]
+    pub fn len(&self) -> usize {
+        let max_pos = std::cmp::min(self.pos, self.segments.len());
+        self.segments.len() - max_pos
+    }
+
+    /// Returns `true` if there are no segments left.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Skips `n` segments.
+    #[inline]
+    pub fn skip(mut self, n: usize) -> Self {
+        self.pos = std::cmp::min(self.pos + n, self.segments.len());
+        self
+    }
+
+    /// Get the `n`th segment from the current position.
+    #[inline]
+    pub fn get(&self, n: usize) -> Option<&'o str> {
+        self.segments.get(self.pos + n)
+            .map(|i| i.from_source(Some(self.source.as_str())))
+    }
+
+    /// Creates a `PathBuf` from `self`. The returned `PathBuf` is
+    /// percent-decoded. If a segment is equal to "..", the previous segment (if
+    /// any) is skipped.
     ///
     /// For security purposes, if a segment meets any of the following
     /// conditions, an `Err` is returned indicating the condition met:
@@ -62,30 +96,27 @@ impl Segments<'_> {
     /// As a result of these conditions, a `PathBuf` derived via `FromSegments`
     /// is safe to interpolate within, or use as a suffix of, a path without
     /// additional checks.
-    pub fn into_path_buf(self, allow_dotfiles: bool) -> Result<PathBuf, SegmentError> {
+    pub fn to_path_buf(&self, allow_dotfiles: bool) -> Result<PathBuf, PathError> {
         let mut buf = PathBuf::new();
-        for segment in self {
-            let decoded = Uri::percent_decode(segment.as_bytes())
-                .map_err(SegmentError::Utf8)?;
-
-            if decoded == ".." {
+        for segment in self.clone() {
+            if segment == ".." {
                 buf.pop();
-            } else if !allow_dotfiles && decoded.starts_with('.') {
-                return Err(SegmentError::BadStart('.'))
-            } else if decoded.starts_with('*') {
-                return Err(SegmentError::BadStart('*'))
-            } else if decoded.ends_with(':') {
-                return Err(SegmentError::BadEnd(':'))
-            } else if decoded.ends_with('>') {
-                return Err(SegmentError::BadEnd('>'))
-            } else if decoded.ends_with('<') {
-                return Err(SegmentError::BadEnd('<'))
-            } else if decoded.contains('/') {
-                return Err(SegmentError::BadChar('/'))
-            } else if cfg!(windows) && decoded.contains('\\') {
-                return Err(SegmentError::BadChar('\\'))
+            } else if !allow_dotfiles && segment.starts_with('.') {
+                return Err(PathError::BadStart('.'))
+            } else if segment.starts_with('*') {
+                return Err(PathError::BadStart('*'))
+            } else if segment.ends_with(':') {
+                return Err(PathError::BadEnd(':'))
+            } else if segment.ends_with('>') {
+                return Err(PathError::BadEnd('>'))
+            } else if segment.ends_with('<') {
+                return Err(PathError::BadEnd('<'))
+            } else if segment.contains('/') {
+                return Err(PathError::BadChar('/'))
+            } else if cfg!(windows) && segment.contains('\\') {
+                return Err(PathError::BadChar('\\'))
             } else {
-                buf.push(&*decoded)
+                buf.push(&*segment)
             }
         }
 
@@ -93,30 +124,70 @@ impl Segments<'_> {
     }
 }
 
-impl<'a> Iterator for Segments<'a> {
-    type Item = &'a str;
+impl<'o> Iterator for Segments<'o> {
+    type Item = &'o str;
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        // Find the start of the next segment (first that's not '/').
-        let i = self.0.find(|c| c != '/')?;
-
-        // Get the index of the first character that _is_ a '/' after start.
-        // j = index of first character after i (hence the i +) that's not a '/'
-        let j = self.0[i..].find('/').map_or(self.0.len(), |j| i + j);
-
-        // Save the result, update the iterator, and return!
-        let result = Some(&self.0[i..j]);
-        self.0 = &self.0[j..];
-        result
+        let item = self.get(0)?;
+        self.pos += 1;
+        Some(item)
     }
 
-    // TODO: Potentially take a second parameter with Option<cached count> and
-    // return it here if it's Some. The downside is that a decision has to be
-    // made about -when- to compute and cache that count. A place to do it is in
-    // the segments() method. But this means that the count will always be
-    // computed regardless of whether it's needed. Maybe this is ok. We'll see.
-    // fn count(self) -> usize where Self: Sized {
-    //     self.1.unwrap_or_else(self.fold(0, |cnt, _| cnt + 1))
-    // }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
+
+    fn count(self) -> usize {
+        self.len()
+    }
+}
+
+/// Decoded query segments iterator.
+#[derive(Debug, Clone, Copy)]
+pub struct QuerySegments<'o> {
+    pub(super) source: Option<&'o RawStr>,
+    pub(super) segments: &'o [(IndexedStr<'static>, IndexedStr<'static>)],
+    pub(super) pos: usize,
+}
+
+impl<'o> QuerySegments<'o> {
+    /// Returns the number of query segments left.
+    pub fn len(&self) -> usize {
+        let max_pos = std::cmp::min(self.pos, self.segments.len());
+        self.segments.len() - max_pos
+    }
+
+    /// Skip `n` segments.
+    pub fn skip(mut self, n: usize) -> Self {
+        self.pos = std::cmp::min(self.pos + n, self.segments.len());
+        self
+    }
+
+    /// Get the `n`th segment from the current position.
+    #[inline]
+    pub fn get(&self, n: usize) -> Option<(&'o str, &'o str)> {
+        let (name, val) = self.segments.get(self.pos + n)?;
+        let source = self.source.map(|s| s.as_str());
+        let name = name.from_source(source);
+        let val = val.from_source(source);
+        Some((name, val))
+    }
+}
+
+impl<'o> Iterator for QuerySegments<'o> {
+    type Item = (&'o str, &'o str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.get(0)?;
+        self.pos += 1;
+        Some(item)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
+
+    fn count(self) -> usize {
+        self.len()
+    }
 }

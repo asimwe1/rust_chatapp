@@ -2,8 +2,9 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::outcome::Outcome::*;
-use rocket::request::{self, FromRequest, Request, State};
+use rocket::State;
+use rocket::outcome::Outcome;
+use rocket::request::{self, FromRequest, Request};
 
 #[cfg(test)] mod tests;
 
@@ -27,7 +28,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
 
-        Success(Guard1)
+        Outcome::Success(Guard1)
     }
 }
 
@@ -37,7 +38,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
 
     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
         try_outcome!(req.guard::<Guard1>().await);
-        Success(Guard2)
+        Outcome::Success(Guard2)
     }
 }
 
@@ -52,7 +53,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard3 {
             atomics.cached.fetch_add(1, Ordering::Relaxed)
         }).await;
 
-        Success(Guard3)
+        Outcome::Success(Guard3)
     }
 }
 
@@ -62,7 +63,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard4 {
 
     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
         try_outcome!(Guard3::from_request(req).await);
-        Success(Guard4)
+        Outcome::Success(Guard4)
     }
 }
 

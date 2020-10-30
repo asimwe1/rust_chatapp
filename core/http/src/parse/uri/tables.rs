@@ -1,3 +1,5 @@
+/// Takes a set of sets of byte characters, return a 2^8 array with non-zero
+/// values at the indices corresponding to the character byte values.
 const fn char_table(sets: &[&[u8]]) -> [u8; 256] {
     let mut table = [0u8; 256];
 
@@ -40,10 +42,6 @@ pub const PATH_CHARS: [u8; 256] = char_table(&[
     UNRESERVED, PCT_ENCODED, SUB_DELIMS, &[b':', b'@', b'/']
 ]);
 
-const ROUTE_CHARS: [u8; 256] = char_table(&[&[
-    b'<', b'>'
-]]);
-
 const QUERY_CHARS: [u8; 256] = char_table(&[
     &PATH_CHARS, &[b'/', b'?'],
 
@@ -58,9 +56,6 @@ const REG_NAME_CHARS: [u8; 256] = char_table(&[
 
 #[inline(always)]
 pub const fn is_pchar(&c: &u8) -> bool { PATH_CHARS[c as usize] != 0 }
-
-#[inline(always)]
-pub const fn is_rchar(&c: &u8) -> bool { ROUTE_CHARS[c as usize] != 0 }
 
 #[inline(always)]
 pub const fn is_qchar(&c: &u8) -> bool { QUERY_CHARS[c as usize] != 0 }
@@ -82,7 +77,6 @@ mod tests {
     fn check_tables() {
         test_char_table(&super::PATH_CHARS[..]);
         test_char_table(&super::QUERY_CHARS[..]);
-        test_char_table(&super::ROUTE_CHARS[..]);
         test_char_table(&super::REG_NAME_CHARS[..]);
     }
 }

@@ -3,21 +3,69 @@ use std::fmt;
 use serde::{Serialize, Deserialize};
 use crate::request::{Request, FromRequest, Outcome};
 
-use crate::data::{ByteUnit, ToByteUnit};
+use crate::data::ByteUnit;
+use crate::http::uncased::Uncased;
 
-/// Mapping from data types to read limits.
+/// Mapping from (hierarchical) data types to size limits.
 ///
-/// A `Limits` structure contains a mapping from a given data type ("forms",
-/// "json", and so on) to the maximum size in bytes that should be accepted by a
-/// Rocket application for that data type. For instance, if the limit for
-/// "forms" is set to `256`, only 256 bytes from an incoming form request will
-/// be read.
+/// A `Limits` structure contains a mapping from a given hierarchical data type
+/// ("form", "data-form", "ext/pdf", and so on) to the maximum size in bytes
+/// that should be accepted by Rocket for said data type. For instance, if the
+/// limit for "form" is set to `256`, only 256 bytes from an incoming non-data
+/// form (that is, url-encoded) will be accepted.
 ///
-/// # Defaults
+/// To help in preventing DoS attacks, all incoming data reads must capped by a
+/// limit. As such, all data guards impose a limit. The _name_ of the limit is
+/// dictated by the data guard or type itself. For instance, [`Form`] imposes
+/// the `form` limit for value-based forms and `data-form` limit for data-based
+/// forms.
 ///
-/// The default limits are:
+/// If a limit is exceeded, a guard will typically fail. The [`Capped`] type
+/// allows retrieving some data types even when the limit is exceeded.
 ///
-///   * **forms**: 32KiB
+/// [`Capped`]: crate::data::Capped
+/// [`Form`]: crate::form::Form
+///
+/// # Hierarchy
+///
+/// Data limits are hierarchical. The `/` (forward slash) character delimits the
+/// levels, or layers, of a given limit. To obtain a limit value for a given
+/// name, layers are peeled from right to left until a match is found, if any.
+/// For example, fetching the limit named `pet/dog/bingo` will return the first
+/// of `pet/dog/bingo`, `pet/dog` or `pet`:
+///
+/// ```rust
+/// use rocket::data::{Limits, ToByteUnit};
+///
+/// let limits = Limits::default()
+///     .limit("pet", 64.kibibytes())
+///     .limit("pet/dog", 128.kibibytes())
+///     .limit("pet/dog/bingo", 96.kibibytes());
+///
+/// assert_eq!(limits.get("pet/dog/bingo"), Some(96.kibibytes()));
+/// assert_eq!(limits.get("pet/dog/ralph"), Some(128.kibibytes()));
+/// assert_eq!(limits.get("pet/cat/bingo"), Some(64.kibibytes()));
+///
+/// assert_eq!(limits.get("pet/dog/bingo/hat"), Some(96.kibibytes()));
+/// ```
+///
+/// # Built-in Limits
+///
+/// The following table details recognized built-in limits used by Rocket. Note
+/// that this table _does not_ include limits for types outside of Rocket's
+/// core. In particular, this does not include limits applicable to contrib
+/// types like `json` and `msgpack`.
+///
+/// | Limit Name        | Default | Type         | Description                           |
+/// |-------------------|---------|--------------|---------------------------------------|
+/// | `form`            | 32KiB   | [`Form`]     | entire non-data-based form            |
+/// | `data-form`       | 2MiB    | [`Form`]     | entire data-based form                |
+/// | `file`            | 1MiB    | [`TempFile`] | [`TempFile`] data guard or form field |
+/// | `file/$ext`       | _N/A_   | [`TempFile`] | file form field with extension `$ext` |
+/// | `string`          | 8KiB    | [`String`]   | data guard or data form field         |
+/// | `bytes`           | 8KiB    | [`Vec<u8>`]  | data guard                            |
+///
+/// [`TempFile`]: crate::data::TempFile
 ///
 /// # Usage
 ///
@@ -26,13 +74,16 @@ use crate::data::{ByteUnit, ToByteUnit};
 /// ```rust
 /// use rocket::data::{Limits, ToByteUnit};
 ///
-/// // Set a limit of 64KiB for forms and 3MiB for JSON.
+/// // Set a limit of 64KiB for forms, 3MiB for PDFs, and 1MiB for JSON.
 /// let limits = Limits::default()
-///     .limit("forms", 64.kibibytes())
-///     .limit("json", 3.mebibytes());
+///     .limit("form", 64.kibibytes())
+///     .limit("file/pdf", 3.mebibytes())
+///     .limit("json", 1.mebibytes());
 /// ```
 ///
-/// The configured limits can be retrieved via the `&Limits` request guard:
+/// The [`Limits::default()`](#impl-Default) method populates the `Limits`
+/// structure with default limits in the [table above](#built-in-limits). A
+/// configured limit can be retrieved via the `&Limits` request guard:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -44,7 +95,7 @@ use crate::data::{ByteUnit, ToByteUnit};
 /// #[post("/echo", data = "<data>")]
 /// async fn echo(data: Data, limits: &Limits) -> Result<String, Debug<io::Error>> {
 ///     let limit = limits.get("data").unwrap_or(1.mebibytes());
-///     Ok(data.open(limit).stream_to_string().await?)
+///     Ok(data.open(limit).into_string().await?.value)
 /// }
 /// ```
 ///
@@ -58,10 +109,10 @@ use crate::data::{ByteUnit, ToByteUnit};
 /// # struct MyType;
 /// # type MyError = ();
 /// #[rocket::async_trait]
-/// impl FromData for MyType {
+/// impl<'r> FromData<'r> for MyType {
 ///     type Error = MyError;
 ///
-///     async fn from_data(req: &Request<'_>, data: Data) -> data::Outcome<Self, MyError> {
+///     async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, MyError> {
 ///         let limit = req.limits().get("my-data-type");
 ///         /* .. */
 ///         # unimplemented!()
@@ -71,22 +122,37 @@ use crate::data::{ByteUnit, ToByteUnit};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Limits {
-    // We cache this internally but don't share that fact in the API.
     #[serde(with = "figment::util::vec_tuple_map")]
-    limits: Vec<(String, ByteUnit)>
+    limits: Vec<(Uncased<'static>, ByteUnit)>
 }
 
-/// The default limits are:
-///
-///   * **forms**: 32KiB
 impl Default for Limits {
     fn default() -> Limits {
-        // Default limit for forms is 32KiB.
-        Limits { limits: vec![("forms".into(), 32.kibibytes())] }
+        Limits::new()
+            .limit("form", Limits::FORM)
+            .limit("data-form", Limits::DATA_FORM)
+            .limit("file", Limits::FILE)
+            .limit("string", Limits::STRING)
+            .limit("bytes", Limits::BYTES)
     }
 }
 
 impl Limits {
+    /// Default limit for value-based forms.
+    pub const FORM: ByteUnit = ByteUnit::Kibibyte(32);
+
+    /// Default limit for data-based forms.
+    pub const DATA_FORM: ByteUnit = ByteUnit::Mebibyte(2);
+
+    /// Default limit for temporary files.
+    pub const FILE: ByteUnit = ByteUnit::Mebibyte(1);
+
+    /// Default limit for strings.
+    pub const STRING: ByteUnit = ByteUnit::Kibibyte(8);
+
+    /// Default limit for bytes.
+    pub const BYTES: ByteUnit = ByteUnit::Kibibyte(8);
+
     /// Construct a new `Limits` structure with no limits set.
     ///
     /// # Example
@@ -95,10 +161,10 @@ impl Limits {
     /// use rocket::data::{Limits, ToByteUnit};
     ///
     /// let limits = Limits::default();
-    /// assert_eq!(limits.get("forms"), Some(32.kibibytes()));
+    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
     ///
     /// let limits = Limits::new();
-    /// assert_eq!(limits.get("forms"), None);
+    /// assert_eq!(limits.get("form"), None);
     /// ```
     #[inline]
     pub fn new() -> Self {
@@ -113,42 +179,112 @@ impl Limits {
     /// ```rust
     /// use rocket::data::{Limits, ToByteUnit};
     ///
-    /// let limits = Limits::default().limit("json", 1.mebibytes());
+    /// let limits = Limits::default();
+    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
+    /// assert_eq!(limits.get("json"), None);
     ///
-    /// assert_eq!(limits.get("forms"), Some(32.kibibytes()));
+    /// let limits = limits.limit("json", 1.mebibytes());
+    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
     /// assert_eq!(limits.get("json"), Some(1.mebibytes()));
     ///
-    /// let new_limits = limits.limit("json", 64.mebibytes());
-    /// assert_eq!(new_limits.get("json"), Some(64.mebibytes()));
+    /// let limits = limits.limit("json", 64.mebibytes());
+    /// assert_eq!(limits.get("json"), Some(64.mebibytes()));
     /// ```
-    pub fn limit<S: Into<String>>(mut self, name: S, limit: ByteUnit) -> Self {
+    pub fn limit<S: Into<Uncased<'static>>>(mut self, name: S, limit: ByteUnit) -> Self {
         let name = name.into();
-        match self.limits.iter_mut().find(|(k, _)| *k == name) {
-            Some((_, v)) => *v = limit,
-            None => self.limits.push((name, limit)),
+        match self.limits.binary_search_by(|(k, _)| k.cmp(&name)) {
+            Ok(i) => self.limits[i].1 = limit,
+            Err(i) => self.limits.insert(i, (name.into(), limit))
         }
 
-        self.limits.sort_by(|a, b| a.0.cmp(&b.0));
         self
     }
 
-    /// Retrieve the set limit, if any, for the data type with name `name`.
+    /// Returns the limit named `name`, proceeding hierarchically from right
+    /// to left until one is found, or returning `None` if none is found.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::data::{Limits, ToByteUnit};
     ///
-    /// let limits = Limits::default().limit("json", 64.mebibytes());
+    /// let limits = Limits::default()
+    ///     .limit("json", 1.mebibytes())
+    ///     .limit("file/jpeg", 4.mebibytes());
     ///
-    /// assert_eq!(limits.get("forms"), Some(32.kibibytes()));
-    /// assert_eq!(limits.get("json"), Some(64.mebibytes()));
+    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
+    /// assert_eq!(limits.get("json"), Some(1.mebibytes()));
+    /// assert_eq!(limits.get("data-form"), Some(Limits::DATA_FORM));
+    ///
+    /// assert_eq!(limits.get("file"), Some(1.mebibytes()));
+    /// assert_eq!(limits.get("file/png"), Some(1.mebibytes()));
+    /// assert_eq!(limits.get("file/jpeg"), Some(4.mebibytes()));
+    /// assert_eq!(limits.get("file/jpeg/inner"), Some(4.mebibytes()));
+    ///
     /// assert!(limits.get("msgpack").is_none());
     /// ```
-    pub fn get(&self, name: &str) -> Option<ByteUnit> {
-        self.limits.iter()
-            .find(|(k, _)| *k == name)
-            .map(|(_, v)| *v)
+    pub fn get<S: AsRef<str>>(&self, name: S) -> Option<ByteUnit> {
+        let mut name = name.as_ref();
+        let mut indices = name.rmatch_indices('/');
+        loop {
+            let exact_limit = self.limits
+                .binary_search_by(|(k, _)| k.as_uncased_str().cmp(name.into()))
+                .map(|i| self.limits[i].1);
+
+            if let Ok(exact) = exact_limit {
+                return Some(exact);
+            }
+
+            let (i, _) = indices.next()?;
+            name = &name[..i];
+        }
+    }
+
+    /// Returns the limit for the name created by joining the strings in
+    /// `layers` with `/` as a separator, then proceeding like
+    /// [`Limits::get()`], hierarchically from right to left until one is found,
+    /// or returning `None` if none is found.
+    ///
+    /// This methods exists to allow finding hierarchical limits without
+    /// constructing a string to call `get()` with but otherwise returns the
+    /// same results.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::data::{Limits, ToByteUnit};
+    ///
+    /// let limits = Limits::default()
+    ///     .limit("json", 2.mebibytes())
+    ///     .limit("file/jpeg", 4.mebibytes());
+    ///
+    /// assert_eq!(limits.find(["json"]), Some(2.mebibytes()));
+    /// assert_eq!(limits.find(["json", "person"]), Some(2.mebibytes()));
+    ///
+    /// assert_eq!(limits.find(["file"]), Some(1.mebibytes()));
+    /// assert_eq!(limits.find(["file", "png"]), Some(1.mebibytes()));
+    /// assert_eq!(limits.find(["file", "jpeg"]), Some(4.mebibytes()));
+    /// assert_eq!(limits.find(["file", "jpeg", "inner"]), Some(4.mebibytes()));
+    ///
+    /// # let s: &[&str] = &[]; assert_eq!(limits.find(s), None);
+    /// ```
+    pub fn find<S: AsRef<str>, L: AsRef<[S]>>(&self, layers: L) -> Option<ByteUnit> {
+        let layers = layers.as_ref();
+        for j in (1..=layers.len()).rev() {
+            let layers = &layers[..j];
+            let opt = self.limits
+                .binary_search_by(|(k, _)| {
+                    let k_layers = k.as_str().split('/');
+                    k_layers.cmp(layers.iter().map(|s| s.as_ref()))
+                })
+                .map(|i| self.limits[i].1);
+
+            if let Ok(byte_unit) = opt {
+                return Some(byte_unit);
+            }
+        }
+
+        None
     }
 }
 

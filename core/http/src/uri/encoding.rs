@@ -3,6 +3,7 @@ use std::borrow::Cow;
 
 use percent_encoding::{AsciiSet, utf8_percent_encode};
 
+use crate::RawStr;
 use crate::uri::{UriPart, Path, Query};
 use crate::parse::uri::tables::PATH_CHARS;
 
@@ -79,14 +80,6 @@ impl EncodeSet for DEFAULT_ENCODE_SET {
         .add(b'=');
 }
 
-pub fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<'_, str> {
-    match P::DELIMITER {
-        '/' => percent_encode::<UNSAFE_ENCODE_SET<Path>>(string),
-        '&' => percent_encode::<UNSAFE_ENCODE_SET<Query>>(string),
-        _ => percent_encode::<DEFAULT_ENCODE_SET>(string)
-    }
-}
-
-pub fn percent_encode<S: EncodeSet + Default>(string: &str) -> Cow<'_, str> {
-    utf8_percent_encode(string, &S::SET).into()
+pub fn percent_encode<S: EncodeSet + Default>(string: &RawStr) -> Cow<'_, str> {
+    utf8_percent_encode(string.as_str(), &S::SET).into()
 }

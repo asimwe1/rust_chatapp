@@ -6,7 +6,7 @@ use serde::ser::{Serialize, Serializer, SerializeStruct};
 use crate::outcome::IntoOutcome;
 use crate::response::{self, Responder};
 use crate::request::{self, Request, FromRequest};
-use crate::http::{Status, Cookie};
+use crate::http::{Status, Cookie, CookieJar};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
@@ -52,10 +52,9 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
-/// use rocket::http::RawStr;
 ///
 /// #[post("/login/<name>")]
-/// fn login(name: &RawStr) -> Result<&'static str, Flash<Redirect>> {
+/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
 ///     if name == "special_user" {
 ///         Ok("Hello, special user!")
 ///     } else {
@@ -97,7 +96,7 @@ pub struct Flash<R> {
 ///
 /// [`name()`]: Flash::name()
 /// [`msg()`]: Flash::msg()
-pub type FlashMessage<'a, 'r> = crate::response::Flash<&'a Request<'r>>;
+pub type FlashMessage<'a> = crate::response::Flash<&'a CookieJar<'a>>;
 
 impl<R> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
@@ -199,15 +198,15 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
     }
 }
 
-impl<'a, 'r> Flash<&'a Request<'r>> {
+impl<'a> FlashMessage<'a> {
     /// Constructs a new message with the given name and message for the given
     /// request.
-    fn named(name: &str, msg: &str, req: &'a Request<'r>) -> Flash<&'a Request<'r>> {
+    fn named<'r: 'a>(name: &str, msg: &str, req: &'a Request<'r>) -> FlashMessage<'a> {
         Flash {
             name: name.to_string(),
             message: msg.to_string(),
             consumed: AtomicBool::new(false),
-            inner: req,
+            inner: req.cookies(),
         }
     }
 
@@ -215,7 +214,7 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
     fn clear_cookie_if_needed(&self) {
         // Remove the cookie if it hasn't already been removed.
         if !self.consumed.swap(true, Ordering::Relaxed) {
-            self.inner.cookies().remove(Cookie::named(FLASH_COOKIE_NAME));
+            self.inner.remove(Cookie::named(FLASH_COOKIE_NAME));
         }
     }
 
@@ -238,7 +237,7 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
 /// The suggested use is through an `Option` and the `FlashMessage` type alias
 /// in `request`: `Option<FlashMessage>`.
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
+impl<'a, 'r> FromRequest<'a, 'r> for FlashMessage<'a> {
     type Error = ();
 
     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {

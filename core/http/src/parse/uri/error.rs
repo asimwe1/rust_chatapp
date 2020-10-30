@@ -14,8 +14,8 @@ use crate::ext::IntoOwned;
 /// `Display` implementation. In other words, by printing a value of this type.
 #[derive(Debug)]
 pub struct Error<'a> {
-    expected: Expected<u8, Cow<'a, [u8]>>,
-    index: usize,
+    pub(crate) expected: Expected<u8, Cow<'a, [u8]>>,
+    pub(crate) index: usize,
 }
 
 impl<'a> From<ParseError<RawInput<'a>>> for Error<'a> {

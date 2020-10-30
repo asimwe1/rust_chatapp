@@ -1,48 +1,47 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 use rocket::State;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::tokio::sync::Mutex;
+use rocket_contrib::json::{Json, JsonValue, json};
 
 use serde::{Serialize, Deserialize};
 
 // The type to represent the ID of a message.
-type ID = usize;
+type Id = usize;
 
 // We're going to store all of the messages here. No need for a DB.
-type MessageMap = Mutex<HashMap<ID, String>>;
+type MessageMap<'r> = State<'r, Mutex<HashMap<Id, String>>>;
 
 #[derive(Serialize, Deserialize)]
-struct Message {
-    id: Option<ID>,
-    contents: String
+struct Message<'r> {
+    id: Option<Id>,
+    contents: Cow<'r, str>
 }
 
-// TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "json", data = "<message>")]
-fn new(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> JsonValue {
-    let mut hashmap = map.lock().expect("map lock.");
+async fn new(id: Id, message: Json<Message<'_>>, map: MessageMap<'_>) -> JsonValue {
+    let mut hashmap = map.lock().await;
     if hashmap.contains_key(&id) {
         json!({
             "status": "error",
             "reason": "ID exists. Try put."
         })
     } else {
-        hashmap.insert(id, message.0.contents);
+        hashmap.insert(id, message.contents.to_string());
         json!({ "status": "ok" })
     }
 }
 
 #[put("/<id>", format = "json", data = "<message>")]
-fn update(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> Option<JsonValue> {
-    let mut hashmap = map.lock().unwrap();
+async fn update(id: Id, message: Json<Message<'_>>, map: MessageMap<'_>) -> Option<JsonValue> {
+    let mut hashmap = map.lock().await;
     if hashmap.contains_key(&id) {
-        hashmap.insert(id, message.0.contents);
+        hashmap.insert(id, message.contents.to_string());
         Some(json!({ "status": "ok" }))
     } else {
         None
@@ -50,14 +49,18 @@ fn update(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> Option<
 }
 
 #[get("/<id>", format = "json")]
-fn get(id: ID, map: State<'_, MessageMap>) -> Option<Json<Message>> {
-    let hashmap = map.lock().unwrap();
-    hashmap.get(&id).map(|contents| {
-        Json(Message {
-            id: Some(id),
-            contents: contents.clone()
-        })
-    })
+async fn get<'r>(id: Id, map: MessageMap<'r>) -> Option<Json<Message<'r>>> {
+    let hashmap = map.lock().await;
+    let contents = hashmap.get(&id)?.clone();
+    Some(Json(Message {
+        id: Some(id),
+        contents: contents.into()
+    }))
+}
+
+#[get("/echo", data = "<msg>")]
+fn echo<'r>(msg: Json<Message<'r>>) -> Cow<'r, str> {
+    msg.into_inner().contents
 }
 
 #[catch(404)]
@@ -69,9 +72,9 @@ fn not_found() -> JsonValue {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::ignite()
-        .mount("/message", routes![new, update, get])
+        .mount("/message", routes![new, update, get, echo])
         .register(catchers![not_found])
-        .manage(Mutex::new(HashMap::<ID, String>::new()))
+        .manage(Mutex::new(HashMap::<Id, String>::new()))
 }

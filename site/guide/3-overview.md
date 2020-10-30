@@ -265,6 +265,24 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
   use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
   instance on a custom-built runtime by not using _either_ attribute.
 
+### Async Routes
+
+Rocket makes it easy to use `async/await` in routes.
+
+```rust
+# #[macro_use] extern crate rocket;
+use rocket::tokio::time::{sleep, Duration};
+#[get("/delay/<seconds>")]
+async fn delay(seconds: u64) -> String {
+    sleep(Duration::from_secs(seconds)).await;
+    format!("Waited for {} seconds", seconds)
+}
+```
+
+First, notice that the route function is an `async fn`. This enables the use of
+`await` inside the handler. `sleep` is an asynchronous function, so we must
+`await` it.
+
 ### Multitasking
 
 Rust's `Future`s are a form of *cooperative multitasking*. In general, `Future`s

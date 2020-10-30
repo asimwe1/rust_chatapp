@@ -148,6 +148,12 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
+///   * **&[`Config`](crate::config::Config)**
+///
+///     Extracts the application [`Config`].
+///
+///     _This implementation always returns successfully._
+///
 ///   * **ContentType**
 ///
 ///     Extracts the [`ContentType`] from the incoming request. If the request

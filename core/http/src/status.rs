@@ -50,6 +50,26 @@ impl StatusClass {
 /// constant should be used; one is declared for every status defined
 /// in the HTTP standard.
 ///
+/// # Responding
+///
+/// To set a custom `Status` on a response, use a [`response::status`]
+/// responder. Alternatively, respond with `(Status, T)` where `T: Responder`, but
+/// note that the response may require additional headers to be valid as
+/// enforced by the types in [`response::status`].
+///
+/// ```rust
+/// # extern crate rocket;
+/// # use rocket::get;
+/// use rocket::http::Status;
+///
+/// #[get("/")]
+/// fn index() -> (Status, &'static str) {
+///     (Status::NotFound, "Hey, there's no index!")
+/// }
+/// ```
+///
+/// [`response::status`]: ../response/status/index.html
+///
 /// ## Example
 ///
 /// A status of `200 OK` can be instantiated via the `Ok` constant:
@@ -84,12 +104,18 @@ impl StatusClass {
 /// assert_eq!(not_found.reason, "Not Found");
 /// assert_eq!(not_found.to_string(), "404 Not Found".to_string());
 /// ```
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Status {
     /// The HTTP status code associated with this status.
     pub code: u16,
     /// The HTTP reason phrase associated with this status.
     pub reason: &'static str
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Status::Ok
+    }
 }
 
 macro_rules! ctrs {
@@ -275,5 +301,31 @@ impl fmt::Display for Status {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.code, self.reason)
+    }
+}
+
+impl std::hash::Hash for Status {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.code.hash(state)
+    }
+}
+
+impl PartialEq for Status {
+    fn eq(&self, other: &Self) -> bool {
+        self.code.eq(&other.code)
+    }
+}
+
+impl Eq for Status { }
+
+impl PartialOrd for Status {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.code.partial_cmp(&other.code)
+    }
+}
+
+impl Ord for Status {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.code.cmp(&other.code)
     }
 }

@@ -2,6 +2,7 @@ use super::Route;
 
 use crate::http::MediaType;
 use crate::http::route::Kind;
+use crate::form::ValueField;
 use crate::request::Request;
 
 impl Route {
@@ -64,45 +65,41 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
     a_segments.len() == b_segments.len()
 }
 
-fn paths_match(route: &Route, request: &Request<'_>) -> bool {
+fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.metadata.path_segments;
-    if route_segments.len() > request.state.path_segments.len() {
+    let req_segments = req.routed_segments(0..);
+    if route_segments.len() > req_segments.len() {
         return false;
     }
 
-    let request_segments = request.raw_path_segments();
-    for (route_seg, req_seg) in route_segments.iter().zip(request_segments) {
+    for (route_seg, req_seg) in route_segments.iter().zip(req_segments) {
         match route_seg.kind {
             Kind::Multi => return true,
-            Kind::Static if &*route_seg.string != req_seg.as_str() => return false,
+            Kind::Static if route_seg.string != req_seg => return false,
             _ => continue,
         }
     }
 
-    route_segments.len() == request.state.path_segments.len()
+    route_segments.len() == req_segments.len()
 }
 
-fn queries_match(route: &Route, request: &Request<'_>) -> bool {
+fn queries_match(route: &Route, req: &Request<'_>) -> bool {
     if route.metadata.fully_dynamic_query {
         return true;
     }
 
-    let route_query_segments = match route.metadata.query_segments {
-        Some(ref segments) => segments,
+    let route_segments = match route.metadata.query_segments {
+        Some(ref segments) => segments.iter(),
         None => return true
     };
 
-    let req_query_segments = match request.raw_query_items() {
-        Some(iter) => iter.map(|item| item.raw.as_str()),
-        None => return route.metadata.fully_dynamic_query
-    };
-
-    for seg in route_query_segments.iter() {
-        if seg.kind == Kind::Static {
-            // it's okay; this clones the iterator
-            if !req_query_segments.clone().any(|r| r == seg.string) {
-                return false;
+    for seg in route_segments.filter(|s| s.kind == Kind::Static) {
+        if !req.query_fields().any(|f| f == ValueField::parse(&seg.string)) {
+            trace_!("route {} missing static query {}", route, seg.string);
+            for f in req.query_fields() {
+                trace_!("field: {:?}", f);
             }
+            return false;
         }
     }
 

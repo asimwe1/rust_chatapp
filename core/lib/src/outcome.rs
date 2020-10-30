@@ -9,11 +9,11 @@
 //! processing next.
 //!
 //! The `Outcome` type is the return type of many of the core Rocket traits,
-//! including [`FromRequest`](crate::request::FromRequest),
-//! [`FromTransformedData`] [`Responder`]. It is also the return type of request
-//! handlers via the [`Response`](crate::response::Response) type.
+//! including [`FromRequest`](crate::request::FromRequest), [`FromData`]
+//! [`Responder`]. It is also the return type of request handlers via the
+//! [`Response`](crate::response::Response) type.
 //!
-//! [`FromTransformedData`]: crate::data::FromTransformedData
+//! [`FromData`]: crate::data::FromData
 //! [`Responder`]: crate::response::Responder
 //!
 //! # Success
@@ -21,7 +21,7 @@
 //! A successful `Outcome<S, E, F>`, `Success(S)`, is returned from functions
 //! that complete successfully. The meaning of a `Success` outcome depends on
 //! the context. For instance, the `Outcome` of the `from_data` method of the
-//! [`FromTransformedData`] trait will be matched against the type expected by
+//! [`FromData`] trait will be matched against the type expected by
 //! the user. For example, consider the following handler:
 //!
 //! ```rust
@@ -31,10 +31,9 @@
 //! fn hello(my_val: S) { /* ... */  }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an
-//! `Outcome` with a `Success(S)`. If `from_data` returns a `Success`, the
-//! `Success` value will be unwrapped and the value will be used as the value of
-//! `my_val`.
+//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! `Success(S)`. If `from_data` returns a `Success`, the `Success` value will
+//! be unwrapped and the value will be used as the value of `my_val`.
 //!
 //! # Failure
 //!
@@ -56,11 +55,11 @@
 //! fn hello(my_val: Result<S, E>) { /* ... */ }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an
-//! `Outcome` with a `Success(S)` and `Failure(E)`. If `from_data` returns a
-//! `Failure`, the `Failure` value will be unwrapped and the value will be used
-//! as the `Err` value of `my_val` while a `Success` will be unwrapped and used
-//! the `Ok` value.
+//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! `Success(S)` and `Failure(E)`. If `from_data` returns a `Failure`, the
+//! `Failure` value will be unwrapped and the value will be used as the `Err`
+//! value of `my_val` while a `Success` will be unwrapped and used the `Ok`
+//! value.
 //!
 //! # Forward
 //!
@@ -79,14 +78,14 @@
 //! fn hello(my_val: S) { /* ... */ }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an
-//! `Outcome` with a `Success(S)`, `Failure(E)`, and `Forward(F)`. If the
-//! `Outcome` is a `Forward`, the `hello` handler isn't called. Instead, the
-//! incoming request is forwarded, or passed on to, the next matching route, if
-//! any. Ultimately, if there are no non-forwarding routes, forwarded requests
-//! are handled by the 404 catcher. Similar to `Failure`s, users can catch
-//! `Forward`s by requesting a type of `Option<S>`. If an `Outcome` is a
-//! `Forward`, the `Option` will be `None`.
+//! The [`FromData`] implementation for the type `S` returns an `Outcome` with a
+//! `Success(S)`, `Failure(E)`, and `Forward(F)`. If the `Outcome` is a
+//! `Forward`, the `hello` handler isn't called. Instead, the incoming request
+//! is forwarded, or passed on to, the next matching route, if any. Ultimately,
+//! if there are no non-forwarding routes, forwarded requests are handled by the
+//! 404 catcher. Similar to `Failure`s, users can catch `Forward`s by requesting
+//! a type of `Option<S>`. If an `Outcome` is a `Forward`, the `Option` will be
+//! `None`.
 
 use std::fmt;
 
@@ -215,10 +214,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_success(&self) -> bool {
-        match *self {
-            Success(_) => true,
-            _ => false
-        }
+        matches!(self, Success(_))
     }
 
     /// Return true if this `Outcome` is a `Failure`.
@@ -240,10 +236,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_failure(&self) -> bool {
-        match *self {
-            Failure(_) => true,
-            _ => false
-        }
+        matches!(self, Failure(_))
     }
 
     /// Return true if this `Outcome` is a `Forward`.
@@ -265,10 +258,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_forward(&self) -> bool {
-        match *self {
-            Forward(_) => true,
-            _ => false
-        }
+        matches!(self, Forward(_))
     }
 
     /// Converts from `Outcome<S, E, F>` to `Option<S>`.
@@ -349,7 +339,8 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Converts from `Outcome<S, E, F>` to `Result<S, T>` for a given `T`.
+    /// Returns a `Success` value as `Ok()` or `value` in `Err`. Converts from
+    /// `Outcome<S, E, F>` to `Result<S, T>` for a given `T`.
     ///
     /// Returns `Ok` with the `Success` value if this is a `Success`, otherwise
     /// returns an `Err` with the provided value. `self` is consumed, and all
@@ -376,8 +367,9 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Converts from `Outcome<S, E, F>` to `Result<S, T>` for a given `T`
-    /// produced from a supplied function or closure.
+    /// Returns a `Success` value as `Ok()` or `f()` in `Err`. Converts from
+    /// `Outcome<S, E, F>` to `Result<S, T>` for a given `T` produced from a
+    /// supplied function or closure.
     ///
     /// Returns `Ok` with the `Success` value if this is a `Success`, otherwise
     /// returns an `Err` with the result of calling `f`. `self` is consumed, and
@@ -425,9 +417,9 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<T, E, F>` by applying the
-    /// function `f` to the value of type `S` in `self` if `self` is an
-    /// `Outcome::Success`.
+    /// Maps the `Success` value using `f`. Maps an `Outcome<S, E, F>` to an
+    /// `Outcome<T, E, F>` by applying the function `f` to the value of type `S`
+    /// in `self` if `self` is an `Outcome::Success`.
     ///
     /// ```rust
     /// # use rocket::outcome::Outcome;
@@ -447,9 +439,9 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
-    /// function `f` to the value of type `E` in `self` if `self` is an
-    /// `Outcome::Failure`.
+    /// Maps the `Failure` value using `f`. Maps an `Outcome<S, E, F>` to an
+    /// `Outcome<S, T, F>` by applying the function `f` to the value of type `E`
+    /// in `self` if `self` is an `Outcome::Failure`.
     ///
     /// ```rust
     /// # use rocket::outcome::Outcome;
@@ -469,9 +461,9 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, E, T>` by applying the
-    /// function `f` to the value of type `F` in `self` if `self` is an
-    /// `Outcome::Forward`.
+    /// Maps the `Forward` value using `f`. Maps an `Outcome<S, E, F>` to an
+    /// `Outcome<S, E, T>` by applying the function `f` to the value of type `F`
+    /// in `self` if `self` is an `Outcome::Forward`.
     ///
     /// ```rust
     /// # use rocket::outcome::Outcome;
@@ -491,9 +483,10 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<T, E, F>` by applying the
-    /// function `f` to the value of type `S` in `self` if `self` is an
-    /// `Outcome::Success`.
+    /// Maps the `Success` value using `f()`, returning the `Outcome` from `f()`
+    /// or the original `self` if `self` is not `Success`. Maps an `Outcome<S,
+    /// E, F>` to an `Outcome<T, E, F>` by applying the function `f` to the
+    /// value of type `S` in `self` if `self` is an `Outcome::Success`.
     ///
     /// # Examples
     ///
@@ -520,6 +513,8 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Maps the `Failure` value using `f()`, returning the `Outcome` from `f()`
+    /// or the original `self` if `self` is not `Failure`. Maps an `Outcome<S,
     /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
     /// function `f` to the value of type `E` in `self` if `self` is an
     /// `Outcome::Failure`.
@@ -549,9 +544,10 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, E, T>` by applying the
-    /// function `f` to the value of type `F` in `self` if `self` is an
-    /// `Outcome::Forward`.
+    /// Maps the `Forward` value using `f()`, returning the `Outcome` from `f()`
+    /// or the original `self` if `self` is not `Forward`. Maps an `Outcome<S,
+    /// E, F>` to an `Outcome<S, E, T>` by applying the function `f` to the
+    /// value of type `F` in `self` if `self` is an `Outcome::Forward`.
     ///
     /// # Examples
     ///
@@ -616,10 +612,11 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
     }
 }
 
-/// Unwraps an [`Outcome`] to its success value, otherwise propagating the
-/// forward or failure.
+/// Unwraps a [`Success`](Outcome::Success) or propagates a `Forward` or
+/// `Failure`.
 ///
-/// In the case of a `Forward` or `Failure` variant, the inner type is passed to
+/// This is just like `?` (or previously, `try!`), but for `Outcome`. In the
+/// case of a `Forward` or `Failure` variant, the inner type is passed to
 /// [`From`](std::convert::From), allowing for the conversion between specific
 /// and more general types. The resulting forward/error is immediately returned.
 ///
@@ -632,8 +629,10 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
-/// # use std::sync::atomic::{AtomicUsize, Ordering};
-/// use rocket::request::{self, Request, FromRequest, State};
+/// use std::sync::atomic::{AtomicUsize, Ordering};
+///
+/// use rocket::State;
+/// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::Outcome::*;
 ///
 /// #[derive(Default)]

@@ -53,6 +53,9 @@ mod private {
 /// [`UriDisplay`]: crate::uri::UriDisplay
 /// [`Formatter`]: crate::uri::Formatter
 pub trait UriPart: private::Sealed {
+    /// The delimiter used to separate components of this URI part.
+    /// Specifically, `/` for `Path` and `&` for `Query`.
+    #[doc(hidden)]
     const DELIMITER: char;
 }
 
