@@ -159,6 +159,12 @@ mod test {
         assert!(unranked_route_collisions(&["/a/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/c/d", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/<_>", "/<_>"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "/a/b"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "/a/<b>"]));
+        assert!(unranked_route_collisions(&["/<_..>", "/a/b"]));
+        assert!(unranked_route_collisions(&["/<_..>", "/<_>"]));
+        assert!(unranked_route_collisions(&["/<_>/b", "/a/b"]));
     }
 
     #[test]
@@ -175,6 +181,11 @@ mod test {
         assert!(unranked_route_collisions(&["/a/<a..>/", "/a/bd/e/"]));
         assert!(unranked_route_collisions(&["/a/<a..>//", "/a/b//c//d/e/"]));
         assert!(unranked_route_collisions(&["/a//<a..>//", "/a/b//c//d/e/"]));
+        assert!(unranked_route_collisions(&["///<_>", "/<_>"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "///a//b"]));
+        assert!(unranked_route_collisions(&["//a///<_>", "/a//<b>"]));
+        assert!(unranked_route_collisions(&["//<_..>", "/a/b"]));
+        assert!(unranked_route_collisions(&["//<_..>", "/<_>"]));
     }
 
     #[test]
@@ -197,6 +208,11 @@ mod test {
         assert!(!unranked_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
         assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
         assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/d"]));
+        assert!(!unranked_route_collisions(&["/<_>", "/"]));
+        assert!(!unranked_route_collisions(&["/a/<_>", "/a"]));
+        assert!(!unranked_route_collisions(&["/a/<_..>", "/a"]));
+        assert!(!unranked_route_collisions(&["/a/<_..>", "/<_>"]));
+        assert!(!unranked_route_collisions(&["/a/<_>", "/<_>"]));
     }
 
     #[test]
@@ -207,6 +223,9 @@ mod test {
         assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
         assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
         assert!(!default_rank_route_collisions(&["/a/b", "/a/b/<c..>"]));
+        assert!(!default_rank_route_collisions(&["/<_>", "/static"]));
+        assert!(!default_rank_route_collisions(&["/<_>/<_>", "/foo/bar"]));
+        assert!(!default_rank_route_collisions(&["/foo/<_>", "/foo/bar"]));
     }
 
     #[test]
