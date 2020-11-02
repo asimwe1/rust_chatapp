@@ -1,118 +1,78 @@
-pub(crate) const PATH_CHARS: [u8; 256] = [
-    //  0      1      2      3      4      5      6      7      8      9
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //   x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  1x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  2x
-        0,     0,     0,  b'!',     0,     0,  b'$',  b'%',  b'&', b'\'', //  3x
-     b'(',  b')',  b'*',  b'+',  b',',  b'-',  b'.',  b'/',  b'0',  b'1', //  4x
-     b'2',  b'3',  b'4',  b'5',  b'6',  b'7',  b'8',  b'9',  b':',  b';', //  5x
-        0,  b'=',     0,     0,  b'@',  b'A',  b'B',  b'C',  b'D',  b'E', //  6x
-     b'F',  b'G',  b'H',  b'I',  b'J',  b'K',  b'L',  b'M',  b'N',  b'O', //  7x
-     b'P',  b'Q',  b'R',  b'S',  b'T',  b'U',  b'V',  b'W',  b'X',  b'Y', //  8x
-     b'Z',     0,     0,     0,     0,  b'_',     0,  b'a',  b'b',  b'c', //  9x
-     b'd',  b'e',  b'f',  b'g',  b'h',  b'i',  b'j',  b'k',  b'l',  b'm', // 10x
-     b'n',  b'o',  b'p',  b'q',  b'r',  b's',  b't',  b'u',  b'v',  b'w', // 11x
-     b'x',  b'y',  b'z',     0,     0,     0,  b'~',     0,     0,     0, // 12x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 13x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 14x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 15x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 16x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 17x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 18x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 19x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 20x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 21x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 22x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 23x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 24x
-        0,     0,     0,     0,     0,     0,                             // 25x
+const fn char_table(sets: &[&[u8]]) -> [u8; 256] {
+    let mut table = [0u8; 256];
+
+    let mut i = 0;
+    while i < sets.len() {
+        let set: &[u8] = sets[i];
+
+        let mut j = 0;
+        while j < set.len() {
+            let c: u8 = set[j];
+            table[c as usize] = c;
+            j += 1;
+        }
+
+        i += 1;
+    }
+
+    table
+}
+
+const UNRESERVED: &[u8] = &[
+    b'A', b'B', b'C', b'D', b'E', b'F', b'G', b'H', b'I', b'J', b'K', b'L',
+    b'M', b'N', b'O', b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W', b'X',
+    b'Y', b'Z', b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i', b'j',
+    b'k', b'l', b'm', b'n', b'o', b'p', b'q', b'r', b's', b't', b'u', b'v',
+    b'w', b'x', b'y', b'z', b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7',
+    b'8', b'9', b'-', b'.', b'_', b'~',
 ];
 
-#[inline(always)]
-pub fn is_pchar(&c: &u8) -> bool {
-    PATH_CHARS[c as usize] != 0
-}
-
-pub(crate) const ROUTE_CHARS: [u8; 256] = [
-    //  0      1      2      3      4      5      6      7      8      9
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //   x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  1x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  2x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  3x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  4x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  5x
-     b'<',     0,  b'>',     0,     0,     0,     0,     0,     0,     0, //  6x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  7x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  8x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  9x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 10x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 11x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 12x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 13x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 14x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 15x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 16x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 17x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 18x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 19x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 20x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 21x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 22x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 23x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 24x
-        0,     0,     0,     0,     0,     0,                             // 25x
+const PCT_ENCODED: &[u8] = &[
+    b'%', b'A', b'B', b'C', b'D', b'E', b'F', b'a', b'b', b'c', b'd', b'e',
+    b'f', b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'
 ];
 
-#[inline(always)]
-pub fn is_rchar(&c: &u8) -> bool {
-    ROUTE_CHARS[c as usize] != 0
-}
-
-#[inline(always)]
-pub fn is_pchar_or_rchar(c: &u8) -> bool {
-    is_pchar(c) || is_rchar(c)
-}
-
-const REG_CHARS: [u8; 256] = [
-    //  0      1      2      3      4      5      6      7      8      9
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //   x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  1x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  2x
-        0,     0,     0,  b'!',     0,     0,  b'$',     0,  b'&', b'\'', //  3x
-     b'(',  b')',  b'*',  b'+',  b',',  b'-',  b'.',     0,  b'0',  b'1', //  4x
-     b'2',  b'3',  b'4',  b'5',  b'6',  b'7',  b'8',  b'9',     0,  b';', //  5x
-        0,  b'=',     0,     0,     0,  b'A',  b'B',  b'C',  b'D',  b'E', //  6x
-     b'F',  b'G',  b'H',  b'I',  b'J',  b'K',  b'L',  b'M',  b'N',  b'O', //  7x
-     b'P',  b'Q',  b'R',  b'S',  b'T',  b'U',  b'V',  b'W',  b'X',  b'Y', //  8x
-     b'Z',     0,     0,     0,     0,  b'_',     0,  b'a',  b'b',  b'c', //  9x
-     b'd',  b'e',  b'f',  b'g',  b'h',  b'i',  b'j',  b'k',  b'l',  b'm', // 10x
-     b'n',  b'o',  b'p',  b'q',  b'r',  b's',  b't',  b'u',  b'v',  b'w', // 11x
-     b'x',  b'y',  b'z',     0,     0,     0,  b'~',     0,     0,     0, // 12x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 13x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 14x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 15x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 16x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 17x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 18x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 19x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 20x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 21x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 22x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 23x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 24x
-        0,     0,     0,     0,     0,     0                              // 25x
+const SUB_DELIMS: &[u8] = &[
+    b'!', b'$', b'&', b'\'', b'(', b')', b'*', b'+', b',', b';', b'='
 ];
 
+pub const PATH_CHARS: [u8; 256] = char_table(&[
+    UNRESERVED, PCT_ENCODED, SUB_DELIMS, &[b':', b'@', b'/']
+]);
+
+const ROUTE_CHARS: [u8; 256] = char_table(&[&[
+    b'<', b'>'
+]]);
+
+const QUERY_CHARS: [u8; 256] = char_table(&[
+    &PATH_CHARS, &[b'/', b'?'],
+
+    // NOTE: these are _not_ accepted in RFC 7230/3986. However, browsers
+    // routinely send these unencoded, so allow them to support the real-world.
+    &[b'{', b'}', b'[',  b']', b'\\',  b'^',  b'`', b'|'],
+]);
+
+const REG_NAME_CHARS: [u8; 256] = char_table(&[
+    UNRESERVED, PCT_ENCODED, SUB_DELIMS
+]);
+
 #[inline(always)]
-pub fn is_reg_name_char(&c: &u8) -> bool {
-    REG_CHARS[c as usize] != 0
-}
+pub const fn is_pchar(&c: &u8) -> bool { PATH_CHARS[c as usize] != 0 }
+
+#[inline(always)]
+pub const fn is_rchar(&c: &u8) -> bool { ROUTE_CHARS[c as usize] != 0 }
+
+#[inline(always)]
+pub const fn is_qchar(&c: &u8) -> bool { QUERY_CHARS[c as usize] != 0 }
+
+#[inline(always)]
+pub const fn is_reg_name_char(&c: &u8) -> bool { REG_NAME_CHARS[c as usize] != 0 }
 
 #[cfg(test)]
 mod tests {
     fn test_char_table(table: &[u8]) {
         for (i, &v) in table.iter().enumerate() {
-            if v != 0 && v != 1 {
+            if v != 0 {
                 assert_eq!(i, v as usize);
             }
         }
@@ -121,6 +81,8 @@ mod tests {
     #[test]
     fn check_tables() {
         test_char_table(&super::PATH_CHARS[..]);
-        test_char_table(&super::REG_CHARS[..]);
+        test_char_table(&super::QUERY_CHARS[..]);
+        test_char_table(&super::ROUTE_CHARS[..]);
+        test_char_table(&super::REG_NAME_CHARS[..]);
     }
 }
