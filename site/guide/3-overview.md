@@ -199,11 +199,11 @@ as we expected.
   examples, spanning all of Rocket's features, in the [GitHub examples
   directory](@example/).
 
-The second approach uses the `#[main]` route attribute. `#[main]` _also_
-generates a `main` function that sets up an async runtime but unlike
-`#[launch]`, allows _you_ to start the server:
+The second approach uses the `#[rocket::main]` route attribute.
+`#[rocket::main]` _also_ generates a `main` function that sets up an async
+runtime but unlike `#[launch]`, allows _you_ to start the server:
 
-```rust
+```rust,no_run
 # #[macro_use] extern crate rocket;
 #
 # #[get("/world")]
@@ -211,7 +211,7 @@ generates a `main` function that sets up an async runtime but unlike
 #     "Hello, world!"
 # }
 
-#[main]
+#[rocket::main]
 async fn main() {
     rocket::ignite()
         .mount("/hello", routes![world])
@@ -220,8 +220,8 @@ async fn main() {
 }
 ```
 
-`#[main]` is useful when a handle to the `Future` returned by `launch()` is
-desired, or when the return value of [`launch()`] is to be inspected. The
+`#[rocket::main]` is useful when a handle to the `Future` returned by `launch()`
+is desired, or when the return value of [`launch()`] is to be inspected. The
 [errors example] for instance, inspects the return value.
 
 [`launch()`]: @api/rocket/struct.Rocket.html#method.launch
@@ -262,8 +262,8 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 ! note
 
   Rocket master uses the tokio runtime. The runtime is started for you if you
-  use `#[launch]` or `#[main]`, but you can still `launch()` a Rocket instance
-  on a custom-built runtime by not using _either_ attribute.
+  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
+  instance on a custom-built runtime by not using _either_ attribute.
 
 ### Multitasking
 
