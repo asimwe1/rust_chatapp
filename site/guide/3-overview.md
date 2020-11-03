@@ -175,8 +175,8 @@ Running the application, the console shows:
     => cli colors: true
     => keep-alive: 5s
     => tls: disabled
-🛰  Mounting /:
-    => GET / (hello)
+🛰  Mounting /hello:
+    => GET /hello/world (world)
 🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 
