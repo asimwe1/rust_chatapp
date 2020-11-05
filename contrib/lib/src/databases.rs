@@ -707,7 +707,8 @@ impl Poolable for memcache::Client {
 #[doc(hidden)]
 pub struct ConnectionPool<K, C: Poolable> {
     config: Config,
-    pool: r2d2::Pool<C::Manager>,
+    // This is an 'Option' so that we can drop the pool in a 'spawn_blocking'.
+    pool: Option<r2d2::Pool<C::Manager>>,
     semaphore: Arc<Semaphore>,
     _marker: PhantomData<fn() -> K>,
 }
@@ -766,7 +767,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
             let pool_size = config.pool_size;
             match C::pool(db, &rocket) {
                 Ok(pool) => Ok(rocket.manage(ConnectionPool::<K, C> {
-                    pool, config,
+                    config,
+                    pool: Some(pool),
                     semaphore: Arc::new(Semaphore::new(pool_size as usize)),
                     _marker: PhantomData,
                 })),
@@ -787,7 +789,9 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
             }
         };
 
-        let pool = self.pool.clone();
+        let pool = self.pool.as_ref().cloned()
+            .expect("internal invariant broken: self.pool is Some");
+
         match run_blocking(move || pool.get_timeout(duration)).await {
             Ok(c) => Ok(Connection {
                 connection: Arc::new(Mutex::new(Some(c))),
@@ -846,6 +850,13 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
                 drop(permit);
             })
         });
+    }
+}
+
+impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
+    fn drop(&mut self) {
+        let pool = self.pool.take();
+        tokio::task::spawn_blocking(move || drop(pool));
     }
 }
 

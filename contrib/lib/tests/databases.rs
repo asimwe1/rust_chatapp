@@ -52,3 +52,55 @@ mod rusqlite_integration_test {
         }).await;
     }
 }
+
+#[cfg(feature = "databases")]
+#[cfg(test)]
+mod drop_runtime_test {
+    use r2d2::{ManageConnection, Pool};
+    use rocket_contrib::databases::{database, Poolable, PoolResult};
+    use tokio::runtime::Runtime;
+
+    struct ContainsRuntime(Runtime);
+    struct TestConnection;
+
+    impl ManageConnection for ContainsRuntime {
+        type Connection = TestConnection;
+        type Error = std::convert::Infallible;
+
+        fn connect(&self) -> Result<Self::Connection, Self::Error> {
+            Ok(TestConnection)
+        }
+
+        fn is_valid(&self, _conn: &mut Self::Connection) -> Result<(), Self::Error> {
+            Ok(())
+        }
+
+        fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
+            false
+        }
+    }
+
+    impl Poolable for TestConnection {
+        type Manager = ContainsRuntime;
+        type Error = ();
+
+        fn pool(_db_name: &str, _rocket: &rocket::Rocket) -> PoolResult<Self> {
+            let manager = ContainsRuntime(tokio::runtime::Runtime::new().unwrap());
+            Ok(Pool::builder().build(manager)?)
+        }
+    }
+
+    #[database("test_db")]
+    struct TestDb(TestConnection);
+
+    #[rocket::async_test]
+    async fn test_drop_runtime() {
+        use rocket::figment::{Figment, util::map};
+
+        let config = Figment::from(rocket::Config::default())
+            .merge(("databases", map!["test_db" => map!["url" => ""]]));
+
+        let rocket = rocket::custom(config).attach(TestDb::fairing());
+        drop(rocket);
+    }
+}
