@@ -54,8 +54,7 @@ impl<'h> Header<'h> {
         }
     }
 
-    /// Returns the name of this header with casing preserved. To do a
-    /// case-insensitive equality check, use `.name` directly.
+    /// Returns the name of this header.
     ///
     /// # Example
     ///
@@ -67,23 +66,23 @@ impl<'h> Header<'h> {
     ///
     /// let value = format!("{} value", "custom");
     /// let header = Header::new("X-Custom-Header", value);
-    /// assert_eq!(header.name(), "X-Custom-Header");
-    /// assert!(header.name() != "X-CUSTOM-HEADER");
+    /// assert_eq!(header.name().as_str(), "X-Custom-Header");
+    /// assert_ne!(header.name().as_str(), "X-CUSTOM-HEADER");
     /// ```
     ///
-    /// A case-insensitive equality check via `.name`:
+    /// A case-insensitive equality check:
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::Header;
     ///
     /// let header = Header::new("X-Custom-Header", "custom value");
-    /// assert_eq!(header.name, "X-Custom-Header");
-    /// assert_eq!(header.name, "X-CUSTOM-HEADER");
+    /// assert_eq!(header.name(), "X-Custom-Header");
+    /// assert_eq!(header.name(), "X-CUSTOM-HEADER");
     /// ```
     #[inline(always)]
-    pub fn name(&self) -> &str {
-        self.name.as_str()
+    pub fn name(&self) -> &UncasedStr {
+        &self.name
     }
 
     /// Returns the value of this header.
@@ -553,7 +552,7 @@ impl<'h> HeaderMap<'h> {
     ///
     /// // Actually iterate through them.
     /// for header in map.iter() {
-    ///     match header.name() {
+    ///     match header.name().as_str() {
     ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
     ///         "X-Other" => assert_eq!(header.value(), "other"),
     ///         "X-Third" => assert_eq!(header.value(), "third"),
@@ -598,7 +597,7 @@ impl<'h> HeaderMap<'h> {
     ///
     /// // Actually iterate through them.
     /// for header in map.into_iter() {
-    ///     match header.name() {
+    ///     match header.name().as_str() {
     ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
     ///         "X-Other" => assert_eq!(header.value(), "other"),
     ///         "X-Third" => assert_eq!(header.value(), "third"),

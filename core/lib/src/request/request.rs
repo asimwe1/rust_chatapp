@@ -14,7 +14,7 @@ use crate::request::{FromFormValue, FormItems, FormItem};
 
 use crate::{Rocket, Config, Shutdown, Route};
 use crate::http::{hyper, uri::{Origin, Segments}};
-use crate::http::{Method, Header, HeaderMap};
+use crate::http::{Method, Header, HeaderMap, uncased::UncasedStr};
 use crate::http::{RawStr, ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::private::{Indexed, SmallVec};
 use crate::data::Limits;
@@ -350,7 +350,9 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn add_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
-        self.headers.add(header.into());
+        let header = header.into();
+        self.bust_header_cache(header.name(), false);
+        self.headers.add(header);
     }
 
     /// Replaces the value of the header with name `header.name` with
@@ -369,20 +371,22 @@ impl<'r> Request<'r> {
     ///
     /// request.add_header(ContentType::Any);
     /// assert_eq!(request.headers().get_one("Content-Type"), Some("*/*"));
+    /// assert_eq!(request.content_type(), Some(&ContentType::Any));
     ///
     /// request.replace_header(ContentType::PNG);
     /// assert_eq!(request.headers().get_one("Content-Type"), Some("image/png"));
+    /// assert_eq!(request.content_type(), Some(&ContentType::PNG));
     /// # });
     /// ```
     #[inline(always)]
     pub fn replace_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
-        self.headers.replace(header.into());
+        let header = header.into();
+        self.bust_header_cache(header.name(), true);
+        self.headers.replace(header);
     }
 
     /// Returns the Content-Type header of `self`. If the header is not present,
-    /// returns `None`. The Content-Type header is cached after the first call
-    /// to this function. As a result, subsequent calls will always return the
-    /// same value.
+    /// returns `None`.
     ///
     /// # Example
     ///
@@ -394,10 +398,6 @@ impl<'r> Request<'r> {
     /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.add_header(ContentType::JSON);
     /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
-    ///
-    /// // The header is cached; it cannot be replaced after first access.
-    /// request.replace_header(ContentType::HTML);
-    /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
     /// # });
     /// ```
     #[inline(always)]
@@ -408,9 +408,7 @@ impl<'r> Request<'r> {
     }
 
     /// Returns the Accept header of `self`. If the header is not present,
-    /// returns `None`. The Accept header is cached after the first call to this
-    /// function. As a result, subsequent calls will always return the same
-    /// value.
+    /// returns `None`.
     ///
     /// # Example
     ///
@@ -421,10 +419,6 @@ impl<'r> Request<'r> {
     ///
     /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.add_header(Accept::JSON);
-    /// assert_eq!(request.accept(), Some(&Accept::JSON));
-    ///
-    /// // The header is cached; it cannot be replaced after first access.
-    /// request.replace_header(Accept::HTML);
     /// assert_eq!(request.accept(), Some(&Accept::JSON));
     /// # });
     /// ```
@@ -747,6 +741,19 @@ impl<'r> Request<'r> {
 // They _are not_ part of the stable API. Please, don't use these.
 #[doc(hidden)]
 impl<'r> Request<'r> {
+    /// Resets the cached value (if any) for the header with name `name`.
+    fn bust_header_cache(&mut self, name: &UncasedStr, replace: bool) {
+        if name == "Content-Type" {
+            if self.content_type().is_none() || replace {
+                self.state.content_type = Storage::new();
+            }
+        } else if name == "Accept" {
+            if self.accept().is_none() || replace {
+                self.state.accept = Storage::new();
+            }
+        }
+    }
+
     // Only used by doc-tests! Needs to be `pub` because doc-test are external.
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::default());
