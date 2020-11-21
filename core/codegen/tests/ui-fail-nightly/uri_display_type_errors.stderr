@@ -29,6 +29,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is
    |           ^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: 1 redundant requirements hidden
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
@@ -38,6 +39,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is
    |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: 1 redundant requirements hidden
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
@@ -47,6 +49,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is
    |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: 1 redundant requirements hidden
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Path>` is not satisfied
