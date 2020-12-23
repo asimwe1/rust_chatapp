@@ -125,6 +125,25 @@ impl SecretKey {
     pub fn is_zero(&self) -> bool {
         self.kind == Kind::Zero
     }
+
+    /// Returns `true` if `self` was not automatically generated and is not zero.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::SecretKey;
+    ///
+    /// let master = vec![0u8; 64];
+    /// let key = SecretKey::generate().unwrap();
+    /// assert!(!key.is_provided());
+    ///
+    /// let master = vec![0u8; 64];
+    /// let key = SecretKey::from(&master);
+    /// assert!(!key.is_provided());
+    /// ```
+    pub fn is_provided(&self) -> bool {
+        self.kind == Kind::Provided
+    }
 }
 
 #[doc(hidden)]

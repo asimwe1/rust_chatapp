@@ -21,7 +21,7 @@ values:
 |----------------|-----------------|-------------------------------------------------|-----------------------|
 | `address`      | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
 | `port`         | `u16`           | Port to serve on.                               | `8000`                |
-| `workers`      | `u16`           | Number of threads to use for executing futures. | cpu core count * 2    |
+| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count |
 | `keep_alive`   | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
 | `log_level`    | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
 | `cli_colors`   | `bool`          | Whether to use colors and emoji when logging.   | `true`                |
@@ -109,6 +109,17 @@ file's directory.
 
 ! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. As such, it
   may not be suitable for production use.
+
+### Workers
+
+The `workers` parameter sets the number of threads used for parallel task
+execution; there is no limit to the number of concurrent tasks. Due to a
+limitation in upstream async executers, unlike other values, the `workers`
+configuration value cannot be reconfigured or be configured from sources other
+than those provided by [`Config::figment()`], detailed below. In other words,
+only the values set by the `ROCKET_WORKERS` environment variable or in the
+`workers` property of `Rocket.toml` will be considered - all other `workers`
+values are ignored.
 
 ## Default Provider
 

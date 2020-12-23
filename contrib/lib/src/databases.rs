@@ -131,7 +131,7 @@
 //! Additionally, all configurations accept the following _optional_ keys:
 //!
 //!   * `pool_size` - the size of the pool, i.e., the number of connections to
-//!     pool (defaults to the configured number of workers)
+//!     pool (defaults to the configured number of workers * 2)
 //!
 //! Additional options may be required or supported by other adapters.
 //!
@@ -424,7 +424,7 @@ use self::r2d2::ManageConnection;
 pub struct Config {
     /// Connection URL specified in the Rocket configuration.
     pub url: String,
-    /// Initial pool size. Defaults to the number of Rocket workers.
+    /// Initial pool size. Defaults to the number of Rocket workers * 2.
     pub pool_size: u32,
     /// How long to wait, in seconds, for a new connection before timing out.
     /// Defaults to `5`.
@@ -462,7 +462,7 @@ impl Config {
     ///
     ///     let config = Config::from("my_other_db", rocket).unwrap();
     ///     assert_eq!(config.url, "mysql://root:root@localhost/database");
-    ///     assert_eq!(config.pool_size, rocket.config().workers as u32);
+    ///     assert_eq!(config.pool_size, (rocket.config().workers * 2) as u32);
     ///
     ///     let config = Config::from("unknown_db", rocket);
     ///     assert!(config.is_err())
@@ -477,7 +477,7 @@ impl Config {
         let db_key = format!("databases.{}", db_name);
         let key = |name: &str| format!("{}.{}", db_key, name);
         Figment::from(rocket.figment())
-            .merge(Serialized::default(&key("pool_size"), rocket.config().workers))
+            .merge(Serialized::default(&key("pool_size"), rocket.config().workers * 2))
             .merge(Serialized::default(&key("timeout"), 5))
             .extract_inner::<Self>(&db_key)
     }

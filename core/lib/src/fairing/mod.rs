@@ -113,7 +113,7 @@ pub use self::info_kind::{Info, Kind};
 ///     An attach callback can arbitrarily modify the `Rocket` instance being
 ///     constructed. It returns `Ok` if it would like launching to proceed
 ///     nominally and `Err` otherwise. If an attach callback returns `Err`,
-///     launch will be aborted. All attach callbacks are executed on `launch`,
+///     launch will be aborted. All attach callbacks are executed on `attach`,
 ///     even if one or more signal a failure.
 ///
 ///   * **Launch (`on_launch`)**

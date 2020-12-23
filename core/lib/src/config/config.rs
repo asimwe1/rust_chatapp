@@ -25,7 +25,7 @@ use crate::data::Limits;
 /// the appropriate of the two based on the selected profile. With the exception
 /// of `log_level`, which is `normal` in `debug` and `critical` in `release`,
 /// and `secret_key`, which is regenerated from a random value if not set in
-/// "debug" mode only, all of the values are identical in either profile.
+/// "debug" mode only, all default values are identical in all profiles.
 ///
 /// # Provider Details
 ///
@@ -57,8 +57,8 @@ pub struct Config {
     pub address: IpAddr,
     /// Port to serve on. **(default: `8000`)**
     pub port: u16,
-    /// Number of threads to use for executing futures. **(default: `cores * 2`)**
-    pub workers: u16,
+    /// Number of future-executing threads. **(default: `num cores`)**
+    pub workers: usize,
     /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
     pub keep_alive: u32,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
@@ -130,7 +130,7 @@ impl Config {
         Config {
             address: Ipv4Addr::new(127, 0, 0, 1).into(),
             port: 8000,
-            workers: num_cpus::get() as u16 * 2,
+            workers: num_cpus::get(),
             keep_alive: 5,
             log_level: LogLevel::Normal,
             cli_colors: true,
@@ -215,16 +215,7 @@ impl Config {
     /// let config = rocket::Config::from(figment);
     /// ```
     pub fn from<T: Provider>(provider: T) -> Self {
-        // Check for now depreacted config values.
         let figment = Figment::from(&provider);
-        for (key, replacement) in Self::DEPRECATED_KEYS {
-            if figment.find_value(key).is_ok() {
-                warn!("found value for deprecated config key `{}`", Paint::white(key));
-                if let Some(new_key) = replacement {
-                    info_!("key has been by replaced by `{}`", Paint::white(new_key));
-                }
-            }
-        }
 
         #[allow(unused_mut)]
         let mut config = figment.extract::<Self>().unwrap_or_else(|e| {
@@ -233,16 +224,12 @@ impl Config {
         });
 
         #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))] {
-            if config.secret_key.is_zero() {
+            if !config.secret_key.is_provided() {
                 if figment.profile() != Self::DEBUG_PROFILE {
                     crate::logger::try_init(LogLevel::Debug, true, false);
-                    error!("secrets enabled in `release` without `secret_key`");
+                    error!("secrets enabled in non-`debug` without `secret_key`");
                     info_!("disable `secrets` feature or configure a `secret_key`");
                     panic!("aborting due to configuration error(s)")
-                } else {
-                    warn!("secrets enabled in `debug` without `secret_key`");
-                    info_!("disable `secrets` feature or configure a `secret_key`");
-                    info_!("this becomes a hard error in `release`");
                 }
 
                 // in debug, generate a key for a bit more security
@@ -272,10 +259,11 @@ impl Config {
         cfg!(feature = "tls") && self.tls.is_some()
     }
 
-    pub(crate) fn pretty_print(&self, profile: &Profile) {
+    pub(crate) fn pretty_print(&self, figment: &Figment) {
         use crate::logger::PaintExt;
 
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), profile);
+        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), figment.profile());
+
         launch_info_!("address: {}", Paint::default(&self.address).bold());
         launch_info_!("port: {}", Paint::default(&self.port).bold());
         launch_info_!("workers: {}", Paint::default(self.workers).bold());
@@ -294,6 +282,26 @@ impl Config {
         match self.tls_enabled() {
             true => launch_info_!("tls: {}", Paint::default("enabled").bold()),
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
+        }
+
+        if !self.secret_key.is_provided() {
+            warn!("secrets enabled without a configured `secret_key`");
+            info_!("disable `secrets` feature or configure a `secret_key`");
+            info_!("this becomes a {} in non-debug profiles", Paint::red("hard error").bold());
+        }
+
+        // Check for now depreacted config values.
+        for (key, replacement) in Self::DEPRECATED_KEYS {
+            if let Some(md) = figment.find_metadata(key) {
+                warn!("found value for deprecated config key `{}`", Paint::white(key));
+                if let Some(ref source) = md.source {
+                    info_!("in {} {}", Paint::white(source), md.name);
+                }
+
+                if let Some(new_key) = replacement {
+                    info_!("key has been by replaced by `{}`", Paint::white(new_key));
+                }
+            }
         }
     }
 }
@@ -315,21 +323,62 @@ impl Provider for Config {
 
 #[doc(hidden)]
 pub fn pretty_print_error(error: figment::Error) {
+    use figment::error::{Kind, OneOf};
+
     crate::logger::try_init(LogLevel::Debug, true, false);
 
     for e in error {
-        error!("{}", e.kind);
+        fn w<T: std::fmt::Display>(v: T) -> Paint<T> { Paint::white(v) }
+
+        match e.kind {
+            Kind::Message(msg) => error_!("{}", msg),
+            Kind::InvalidType(v, exp) => {
+                error_!("invalid type: found {}, expected {}", w(v), w(exp));
+            }
+            Kind::InvalidValue(v, exp) => {
+                error_!("invalid value {}, expected {}", w(v), w(exp));
+            },
+            Kind::InvalidLength(v, exp) => {
+                error_!("invalid length {}, expected {}", w(v), w(exp))
+            },
+            Kind::UnknownVariant(v, exp) => {
+                error_!("unknown variant: found `{}`, expected `{}`", w(v), w(OneOf(exp)))
+            }
+            Kind::UnknownField(v, exp) => {
+                error_!("unknown field: found `{}`, expected `{}`", w(v), w(OneOf(exp)))
+            }
+            Kind::MissingField(v) => {
+                error_!("missing field `{}`", w(v))
+            }
+            Kind::DuplicateField(v) => {
+                error_!("duplicate field `{}`", w(v))
+            }
+            Kind::ISizeOutOfRange(v) => {
+                error_!("signed integer `{}` is out of range", w(v))
+            }
+            Kind::USizeOutOfRange(v) => {
+                error_!("unsigned integer `{}` is out of range", w(v))
+            }
+            Kind::Unsupported(v) => {
+                error_!("unsupported type `{}`", w(v))
+            }
+            Kind::UnsupportedKey(a, e) => {
+                error_!("unsupported type `{}` for key: must be `{}`", w(a), w(e))
+            }
+        }
 
         if let (Some(ref profile), Some(ref md)) = (&e.profile, &e.metadata) {
             if !e.path.is_empty() {
                 let key = md.interpolate(profile, &e.path);
-                info_!("for key {}", Paint::white(key));
+                info_!("for key {}", w(key));
             }
         }
 
-        if let Some(ref md) = e.metadata {
-            if let Some(ref source) = md.source {
-                info_!("in {} {}", Paint::white(source), md.name);
+        if let Some(md) = e.metadata {
+            if let Some(source) = md.source {
+                info_!("in {} {}", w(source), md.name);
+            } else {
+                info_!("in {}", w(md.name));
             }
         }
     }

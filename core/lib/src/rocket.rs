@@ -83,7 +83,7 @@ impl Rocket {
     pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
         let (config, figment) = (Config::from(&provider), Figment::from(provider));
         logger::try_init(config.log_level, config.cli_colors, false);
-        config.pretty_print(figment.profile());
+        config.pretty_print(&figment);
 
         let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);

@@ -161,7 +161,6 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
     Rocket::custom(provider)
 }
 
-// TODO.async: More thoughtful plan for async tests
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
@@ -178,8 +177,12 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+    // FIXME: The `workers` value won't reflect swaps of `Rocket` in attach
+    // fairings with different config values, or values from non-Rocket configs.
+    // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
     tokio::runtime::Builder::new()
         .threaded_scheduler()
+        .core_threads(Config::from(Config::figment()).workers)
         .thread_name("rocket-worker-thread")
         .enable_all()
         .build()

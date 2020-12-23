@@ -30,6 +30,17 @@
 //! [`Rocket::figment()`]: crate::Rocket::figment()
 //! [`Deserialize`]: serde::Deserialize
 //!
+//! ## Workers
+//!
+//! The `workers` parameter sets the number of threads used for parallel task
+//! execution; there is no limit to the number of concurrent tasks. Due to a
+//! limitation in upstream async executers, unlike other values, the `workers`
+//! configuration value cannot be reconfigured or be configured from sources
+//! other than those provided by [`Config::figment()`]. In other words, only the
+//! values set by the `ROCKET_WORKERS` environment variable or in the `workers`
+//! property of `Rocket.toml` will be considered - all other `workers` values
+//! are ignored.
+//!
 //! ## Custom Providers
 //!
 //! A custom provider can be set via [`rocket::custom()`], which replaces calls to
