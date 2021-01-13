@@ -223,18 +223,17 @@ impl Config {
             panic!("aborting due to configuration error(s)")
         });
 
-        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))] {
-            if !config.secret_key.is_provided() {
-                if figment.profile() != Self::DEBUG_PROFILE {
-                    crate::logger::try_init(LogLevel::Debug, true, false);
-                    error!("secrets enabled in non-`debug` without `secret_key`");
-                    info_!("disable `secrets` feature or configure a `secret_key`");
-                    panic!("aborting due to configuration error(s)")
-                }
-
-                // in debug, generate a key for a bit more security
-                config.secret_key = SecretKey::generate().unwrap_or(SecretKey::zero());
+        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
+        if !config.secret_key.is_provided() {
+            if figment.profile() != Self::DEBUG_PROFILE {
+                crate::logger::try_init(LogLevel::Debug, true, false);
+                error!("secrets enabled in non-`debug` without `secret_key`");
+                info_!("disable `secrets` feature or configure a `secret_key`");
+                panic!("aborting due to configuration error(s)")
             }
+
+            // in debug, generate a key for a bit more security
+            config.secret_key = SecretKey::generate().unwrap_or(SecretKey::zero());
         }
 
         config
@@ -284,6 +283,7 @@ impl Config {
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
         }
 
+        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
         if !self.secret_key.is_provided() {
             warn!("secrets enabled without a configured `secret_key`");
             info_!("disable `secrets` feature or configure a `secret_key`");
@@ -313,7 +313,15 @@ impl Provider for Config {
 
     #[track_caller]
     fn data(&self) -> Result<Map<Profile, Dict>> {
-        Serialized::defaults(self).data()
+        let mut map: Map<Profile, Dict> = Serialized::defaults(self).data()?;
+        // We need to special-case `secret_key` since its serializer zeroes.
+        if !self.secret_key.is_zero() {
+            if let Some(map) = map.get_mut(&Profile::Default) {
+                map.insert("secret_key".into(), self.secret_key.master().into());
+            }
+        }
+
+        Ok(map)
     }
 
     fn profile(&self) -> Option<Profile> {
