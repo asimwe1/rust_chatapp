@@ -114,6 +114,10 @@ impl Config {
         ("env", Some("profile")), ("log", Some("log_level")),
     ];
 
+    const DEPRECATED_PROFILES: &'static [(&'static str, Option<&'static str>)] = &[
+        ("dev", Some("debug")), ("prod", Some("release")),
+    ];
+
     /// Returns the default configuration for the `debug` profile, irrespective
     /// of the compilation profile. For the default Rocket will use, which is
     /// chosen based on the configuration profile, call [`Config::default()`].
@@ -300,6 +304,19 @@ impl Config {
 
                 if let Some(new_key) = replacement {
                     info_!("key has been by replaced by `{}`", Paint::white(new_key));
+                }
+            }
+        }
+
+        // Check for now removed config values.
+        for (prefix, replacement) in Self::DEPRECATED_PROFILES {
+            if let Some(profile) = figment.profiles().find(|p| p.starts_with(prefix)) {
+                warn!("found set deprecated profile `{}`", Paint::white(profile));
+
+                if let Some(new_profile) = replacement {
+                    info_!("profile has been by replaced by `{}`", Paint::white(new_profile));
+                } else {
+                    info_!("profile `{}` has no special meaning", profile);
                 }
             }
         }
