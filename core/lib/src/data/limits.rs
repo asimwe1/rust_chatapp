@@ -68,8 +68,8 @@ use crate::data::{ByteUnit, ToByteUnit};
 ///     }
 /// }
 /// ```
-#[serde(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Limits {
     // We cache this internally but don't share that fact in the API.
     #[serde(with = "figment::util::vec_tuple_map")]
