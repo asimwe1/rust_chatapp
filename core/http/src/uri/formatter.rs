@@ -334,26 +334,42 @@ impl Formatter<'_, Query> {
     fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
         where F: FnOnce(&mut Self) -> fmt::Result
     {
-        // The `prefix` string is pushed in a `StackVec` for use by recursive
-        // (nested) calls to `write_raw`. The string is pushed here and then
-        // popped here. `self.prefixes` is modified nowhere else, and no strings
-        // leak from the the vector. As a result, it is impossible for a
-        // `prefix` to be accessed incorrectly as:
-        //
-        //   * Rust _guarantees_ it exists for the lifetime of this method
-        //   * it is only reachable while this method's stack is active because
-        //     it is popped before this method returns
-        //   * thus, at any point that it's reachable, it's valid
-        //
-        // Said succinctly: this `prefixes` stack shadows a subset of the
-        // `with_prefix` stack precisely, making it reachable to other code.
-        let prefix: &'static str = unsafe { std::mem::transmute(prefix) };
 
-        self.prefixes.push(prefix);
-        let result = f(self);
-        self.prefixes.pop();
+        struct PrefixGuard<'f, 'i>(&'f mut Formatter<'i, Query>);
 
-        result
+        impl<'f, 'i> PrefixGuard<'f, 'i> {
+            fn new(prefix: &str, f: &'f mut Formatter<'i, Query>) -> Self {
+                // SAFETY: The `prefix` string is pushed in a `StackVec` for use
+                // by recursive (nested) calls to `write_raw`. The string is
+                // pushed in `PrefixGuard` here and then popped in `Drop`.
+                // `prefixes` is modified nowhere else, and no concrete-lifetime
+                // strings leak from the the vector. As a result, it is
+                // impossible for a `prefix` to be accessed incorrectly as:
+                //
+                //   * Rust _guarantees_ `prefix` is valid for this method
+                //   * `prefix` is only reachable while this method's stack is
+                //     active because it is unconditionally popped before this
+                //     method returns via `PrefixGuard::drop()`.
+                //   * should a panic occur in `f()`, `PrefixGuard::drop()` is
+                //     still called (or the program aborts), ensuring `prefix`
+                //     is no longer in `prefixes` and thus inaccessible.
+                //   * thus, at any point `prefix` is reachable, it is valid
+                //
+                // Said succinctly: `prefixes` shadows a subset of the
+                // `with_prefix` stack, making it reachable to other code.
+                let prefix = unsafe { std::mem::transmute(prefix) };
+                f.prefixes.push(prefix);
+                PrefixGuard(f)
+            }
+        }
+
+        impl Drop for PrefixGuard<'_, '_> {
+            fn drop(&mut self) {
+                self.0.prefixes.pop();
+            }
+        }
+
+        f(&mut PrefixGuard::new(prefix, self).0)
     }
 
     /// Writes the named value `value` by prefixing `name` followed by `=` to
@@ -466,5 +482,56 @@ impl UriArguments<'_> {
         });
 
         Origin::new(path, query)
+    }
+}
+
+// See https://github.com/SergioBenitez/Rocket/issues/1534.
+#[cfg(test)]
+mod prefix_soundness_test {
+    use crate::uri::{Formatter, Query, UriDisplay};
+
+    struct MyValue;
+
+    impl UriDisplay<Query> for MyValue {
+        fn fmt(&self, _f: &mut Formatter<'_, Query>) -> std::fmt::Result {
+            panic!()
+        }
+    }
+
+    struct MyDisplay;
+
+    impl UriDisplay<Query> for MyDisplay {
+        fn fmt(&self, formatter: &mut Formatter<'_, Query>) -> std::fmt::Result {
+            struct Wrapper<'a, 'b>(&'a mut Formatter<'b, Query>);
+
+            impl<'a, 'b> Drop for Wrapper<'a, 'b> {
+                fn drop(&mut self) {
+                    let _overlap = String::from("12345");
+                    self.0.write_raw("world").ok();
+                    assert!(self.0.prefixes.is_empty());
+                }
+            }
+
+            let wrapper = Wrapper(formatter);
+            let temporary_string = String::from("hello");
+
+            // `write_named_value` will push `temp_string` into a buffer and
+            // call the formatter for `MyValue`, which panics. At the panic
+            // point, `formatter` contains an (illegal) static reference to
+            // `temp_string` in its `prefixes` stack. When unwinding occurs,
+            // `Wrapper` will be dropped. `Wrapper` holds a reference to
+            // `Formatter`, thus `Formatter` must be consistent at this point.
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                wrapper.0.write_named_value(&temporary_string, MyValue)
+            }));
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn check_consistency() {
+        let string = format!("{}", &MyDisplay as &dyn UriDisplay<Query>);
+        assert_eq!(string, "world");
     }
 }
