@@ -1,3 +1,36 @@
+# Version 0.4.7 (Feb 09, 2021)
+
+## Core
+
+  * [[#1534], [`2059a6`]] Fixed a low-severity, minimal impact soundness issue
+    in `uri::Formatter`.
+
+[#1534]: https://github.com/SergioBenitez/Rocket/issues/1534
+[`2059a6`]: https://github.com/SergioBenitez/Rocket/commit/2059a6
+
+# Version 0.4.6 (Nov 09, 2020)
+
+## Core
+
+  * [[`86bd7c`]] Added default and configurable read/write timeouts:
+    `read_timeout` and `write_timeout`.
+  * [[`c24a96`]] Added the `sse` feature, which [enables flushing] by returning
+    `io::ErrorKind::WouldBlock`.
+
+## Docs
+
+  * Fixed broken doc links in `contrib`.
+  * Fixed database library versions in `contrib` docs.
+
+## Internal
+
+  * Updated source code for Rust 2018.
+  * UI tests now use `trybuild` instead of `compiletest-rs`.
+
+[`86bd7c`]: https://github.com/SergioBenitez/Rocket/commit/86bd7c
+[`c24a96`]: https://github.com/SergioBenitez/Rocket/commit/c24a96
+[enables flushing]: https://api.rocket.rs/v0.4/rocket/response/struct.Stream.html#buffering-and-blocking
+
 # Version 0.4.5 (May 30, 2020)
 
 ## Core
@@ -958,7 +991,7 @@ applications.
   * **The [`Responder`] trait has changed.**
 
     `Responder::respond(self)` was removed in favor of
-    `Responder::respond_to(self, &'r Request)`. Responders may dynamically adjust
+    `Responder::respond_to(self, &Request)`. Responders may dynamically adjust
     their response based on the incoming request.
 
   * **`Outcome::of(Responder)` was removed while `Outcome::from(&Request,
