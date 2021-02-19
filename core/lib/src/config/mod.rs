@@ -131,26 +131,30 @@ mod tests {
 
     #[test]
     fn test_default_round_trip() {
-        let figment = Figment::from(Config::default());
+        figment::Jail::expect_with(|_| {
+            let figment = Figment::from(Config::default());
 
-        assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
+            assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
 
-        #[cfg(debug_assertions)]
-        assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
+            #[cfg(debug_assertions)]
+            assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
 
-        #[cfg(not(debug_assertions))]
-        assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
+            #[cfg(not(debug_assertions))]
+            assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
 
-        let config: Config = figment.extract().unwrap();
-        assert_eq!(config, Config::default());
+            let config: Config = figment.extract().unwrap();
+            assert_eq!(config, Config::default());
 
-        #[cfg(debug_assertions)]
-        assert_eq!(config, Config::debug_default());
+            #[cfg(debug_assertions)]
+            assert_eq!(config, Config::debug_default());
 
-        #[cfg(not(debug_assertions))]
-        assert_eq!(config, Config::release_default());
+            #[cfg(not(debug_assertions))]
+            assert_eq!(config, Config::release_default());
 
-        assert_eq!(Config::from(Config::default()), Config::default());
+            assert_eq!(Config::from(Config::default()), Config::default());
+
+            Ok(())
+        });
     }
 
     #[test]
