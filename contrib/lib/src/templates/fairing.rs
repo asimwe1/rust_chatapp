@@ -103,7 +103,7 @@ mod context {
                 if changed {
                     info_!("Change detected: reloading templates.");
                     let mut ctxt = self.context_mut();
-                    if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
+                    if let Some(mut new_ctxt) = Context::initialize(&ctxt.root) {
                         match callback(&mut new_ctxt.engines) {
                             Ok(()) => *ctxt = new_ctxt,
                             Err(e) => {
@@ -164,8 +164,7 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        let root = Source::from(&*path);
-        match Context::initialize(path) {
+        match Context::initialize(&path) {
             Some(mut ctxt) => {
                 use rocket::{logger::PaintExt, yansi::Paint};
                 use crate::templates::Engines;
@@ -174,7 +173,7 @@ impl Fairing for TemplateFairing {
 
                 match (self.callback)(&mut ctxt.engines) {
                     Ok(()) => {
-                        info_!("directory: {}", Paint::white(root));
+                        info_!("directory: {}", Paint::white(Source::from(&*path)));
                         info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
                         Ok(rocket.manage(ContextManager::new(ctxt)))
                     }
@@ -185,7 +184,10 @@ impl Fairing for TemplateFairing {
                     }
                 }
             }
-            None => Err(rocket),
+            None => {
+                error_!("Launch will be aborted due to failed template initialization.");
+                Err(rocket)
+            }
         }
     }
 

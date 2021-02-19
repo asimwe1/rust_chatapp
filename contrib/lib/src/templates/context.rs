@@ -18,7 +18,15 @@ impl Context {
     /// Load all of the templates at `root`, initialize them using the relevant
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
-    pub fn initialize(root: PathBuf) -> Option<Context> {
+    pub fn initialize(root: &Path) -> Option<Context> {
+        let root = match root.canonicalize() {
+            Ok(root) => root,
+            Err(e) => {
+                error!("Invalid template directory '{}': {}.", root.display(), e);
+                return None;
+            }
+        };
+
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
             let mut glob_path = root.join("**").join("*");
@@ -48,13 +56,12 @@ impl Context {
         }
 
         Engines::init(&templates)
-            .map(|engines| Context { root, templates, engines } )
+            .map(|engines| Context { root: root.into(), templates, engines } )
     }
 }
 
 /// Removes the file path's extension or does nothing if there is none.
-fn remove_extension<P: AsRef<Path>>(path: P) -> PathBuf {
-    let path = path.as_ref();
+fn remove_extension(path: &Path) -> PathBuf {
     let stem = match path.file_stem() {
         Some(stem) => stem,
         None => return path.to_path_buf()

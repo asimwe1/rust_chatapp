@@ -352,7 +352,7 @@ impl Template {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use std::collections::HashMap;
