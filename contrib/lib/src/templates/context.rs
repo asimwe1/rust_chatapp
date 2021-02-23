@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::templates::{Engines, TemplateInfo};
 
 use rocket::http::ContentType;
+use normpath::PathExt;
 
 pub(crate) struct Context {
     /// The root of the template directory.
@@ -19,8 +20,8 @@ impl Context {
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
     pub fn initialize(root: &Path) -> Option<Context> {
-        let root = match root.canonicalize() {
-            Ok(root) => root,
+        let root = match root.normalize() {
+            Ok(root) => root.into_path_buf(),
             Err(e) => {
                 error!("Invalid template directory '{}': {}.", root.display(), e);
                 return None;
