@@ -15,8 +15,8 @@ use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
 use crate::DbConn;
 
-#[table_name="tasks"]
 #[derive(serde::Serialize, Queryable, Insertable, Debug, Clone)]
+#[table_name="tasks"]
 pub struct Task {
     pub id: Option<i32>,
     pub description: String,
