@@ -73,8 +73,8 @@ mod tests {
 
     #[test]
     fn check_display() {
-        check_err!("a" => "expected token / but found a at index 0");
-        check_err!("?" => "expected token / but found ? at index 0");
-        check_err!("这" => "expected token / but found byte 232 at index 0");
+        check_err!("a" => "expected token '/' but found 'a' at index 0");
+        check_err!("?" => "expected token '/' but found '?' at index 0");
+        check_err!("这" => "expected token '/' but found byte 232 at index 0");
     }
 }
