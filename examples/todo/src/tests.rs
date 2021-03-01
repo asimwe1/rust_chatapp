@@ -95,7 +95,7 @@ fn test_many_insertions() {
 
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
-            let desc: String = thread_rng().sample_iter(&Alphanumeric).take(12).collect();
+            let desc: String = thread_rng().sample_iter(&Alphanumeric).take(12).map(char::from).collect();
             client.post("/todo")
                 .header(ContentType::Form)
                 .body(format!("description={}", desc))
