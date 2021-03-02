@@ -2,11 +2,7 @@ use quote::ToTokens;
 use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
 
 use crate::proc_macro2::TokenStream;
-use crate::http::{self, ext::IntoOwned};
-use crate::http::uri::{Path, Query};
-use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
-
-use crate::proc_macro_ext::StringLit;
+use crate::http;
 
 #[derive(Debug)]
 pub struct ContentType(pub http::ContentType);
@@ -17,30 +13,11 @@ pub struct Status(pub http::Status);
 #[derive(Debug)]
 pub struct MediaType(pub http::MediaType);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Method(pub http::Method);
-
-#[derive(Debug)]
-pub struct Origin(pub http::uri::Origin<'static>);
-
-#[derive(Clone, Debug)]
-pub struct DataSegment(pub Segment);
 
 #[derive(Clone, Debug)]
 pub struct Optional<T>(pub Option<T>);
-
-impl FromMeta for StringLit {
-    fn from_meta(meta: &MetaItem) -> Result<Self> {
-        Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))
-    }
-}
-
-#[derive(Debug)]
-pub struct RoutePath {
-    pub origin: Origin,
-    pub path: Vec<Segment>,
-    pub query: Option<Vec<Segment>>,
-}
 
 impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
@@ -152,69 +129,6 @@ impl ToTokens for Method {
         };
 
         tokens.extend(method_tokens);
-    }
-}
-
-impl FromMeta for Origin {
-    fn from_meta(meta: &MetaItem) -> Result<Self> {
-        let string = StringLit::from_meta(meta)?;
-
-        let uri = http::uri::Origin::parse_route(&string)
-            .map_err(|e| {
-                let span = string.subspan(e.index() + 1..(e.index() + 2));
-                span.error(format!("invalid route URI: {}", e))
-                    .help("expected path in origin form: \"/path/<param>\"")
-            })?;
-
-        if !uri.is_normalized() {
-            let normalized = uri.clone().into_normalized();
-            return Err(string.span().error("paths cannot contain empty segments")
-                .note(format!("expected '{}', found '{}'", normalized, uri)));
-        }
-
-        Ok(Origin(uri.into_owned()))
-    }
-}
-
-impl FromMeta for DataSegment {
-    fn from_meta(meta: &MetaItem) -> Result<Self> {
-        let string = StringLit::from_meta(meta)?;
-        let span = string.subspan(1..(string.len() + 1));
-
-        let segment = parse_data_segment(&string, span)?;
-        if segment.kind != Kind::Single {
-            return Err(span.error("malformed parameter")
-                        .help("parameter must be of the form '<param>'"));
-        }
-
-        Ok(DataSegment(segment))
-    }
-}
-
-impl FromMeta for RoutePath {
-    fn from_meta(meta: &MetaItem) -> Result<Self> {
-        let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
-        let path_span = string.subspan(1..origin.0.path().len() + 1);
-        let path = parse_segments::<Path>(origin.0.path(), path_span);
-
-        let query = origin.0.query()
-            .map(|q| {
-                let len_to_q = 1 + origin.0.path().len() + 1;
-                let end_of_q = len_to_q + q.len();
-                let query_span = string.subspan(len_to_q..end_of_q);
-                if q.starts_with('&') || q.contains("&&") || q.ends_with('&') {
-                    // TODO: Show a help message with what's expected.
-                    Err(query_span.error("query cannot contain empty segments").into())
-                } else {
-                    parse_segments::<Query>(q, query_span)
-                }
-            }).transpose();
-
-        match (path, query) {
-            (Ok(path), Ok(query)) => Ok(RoutePath { origin, path, query }),
-            (Err(diag), Ok(_)) | (Ok(_), Err(diag)) => Err(diag.emit_head()),
-            (Err(d1), Err(d2)) => Err(d1.join(d2).emit_head())
-        }
     }
 }
 

@@ -5,7 +5,7 @@ use std::str::Utf8Error;
 use std::fmt;
 
 use ref_cast::RefCast;
-use stable_pattern::{Pattern, ReverseSearcher, Split, SplitInternal};
+use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
 
 use crate::uncased::UncasedStr;
 
@@ -538,6 +538,34 @@ impl RawStr {
         where P: Pattern<'a>, <P as Pattern<'a>>::Searcher: ReverseSearcher<'a>
     {
         pat.is_suffix_of(self.as_str())
+    }
+
+
+    /// Returns the byte index of the first character of this string slice that
+    /// matches the pattern.
+    ///
+    /// Returns [`None`] if the pattern doesn't match.
+    ///
+    /// The pattern can be a `&str`, [`char`], a slice of [`char`]s, or a
+    /// function or closure that determines if a character matches.
+    ///
+    /// [`char`]: prim@char
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let s = RawStr::new("Löwe 老虎 Léopard Gepardi");
+    ///
+    /// assert_eq!(s.find('L'), Some(0));
+    /// assert_eq!(s.find('é'), Some(14));
+    /// assert_eq!(s.find("pard"), Some(17));
+    /// ```
+    #[inline]
+    pub fn find<'a, P: Pattern<'a>>(&'a self, pat: P) -> Option<usize> {
+        pat.into_searcher(self.as_str()).next_match().map(|(i, _)| i)
     }
 
     /// An iterator over substrings of this string slice, separated by

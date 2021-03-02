@@ -1,4 +1,4 @@
-error: missing expected parameter: `path`
+error: missing expected parameter: `uri`
  --> $DIR/route-attribute-general-syntax.rs:4:1
   |
 4 | #[get()]
@@ -65,7 +65,7 @@ error: expected key/value `key = value`
    |            ^^^
 
 error: handler arguments cannot be ignored
-  --- help: all handler arguments must be of the form: `ident: Type`
+  --- note: handler arguments must be of the form: `ident: Type`
   --> $DIR/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}

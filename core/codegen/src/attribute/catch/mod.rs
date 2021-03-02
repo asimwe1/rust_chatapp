@@ -1,79 +1,25 @@
-use devise::ext::SpanDiagnosticExt;
-use devise::{syn, MetaItem, Spanned, Result, FromMeta, Diagnostic};
+mod parse;
 
-use crate::http_codegen::{self, Optional};
+use devise::ext::SpanDiagnosticExt;
+use devise::{syn, Spanned, Result};
+
+use crate::http_codegen::Optional;
 use crate::proc_macro2::{TokenStream, Span};
 use crate::syn_ext::ReturnTypeExt;
-
-/// The raw, parsed `#[catch(code)]` attribute.
-#[derive(Debug, FromMeta)]
-struct CatchAttribute {
-    #[meta(naked)]
-    status: CatcherCode
-}
-
-/// `Some` if there's a code, `None` if it's `default`.
-#[derive(Debug)]
-struct CatcherCode(Option<http_codegen::Status>);
-
-impl FromMeta for CatcherCode {
-    fn from_meta(meta: &MetaItem) -> Result<Self> {
-        if usize::from_meta(meta).is_ok() {
-            let status = http_codegen::Status::from_meta(meta)?;
-            Ok(CatcherCode(Some(status)))
-        } else if let MetaItem::Path(path) = meta {
-            if path.is_ident("default") {
-                Ok(CatcherCode(None))
-            } else {
-                Err(meta.span().error("expected `default`"))
-            }
-        } else {
-            let msg = format!("expected integer or identifier, found {}", meta.description());
-            Err(meta.span().error(msg))
-        }
-    }
-}
-
-/// This structure represents the parsed `catch` attribute and associated items.
-struct CatchParams {
-    /// The status associated with the code in the `#[catch(code)]` attribute.
-    status: Option<http_codegen::Status>,
-    /// The function that was decorated with the `catch` attribute.
-    function: syn::ItemFn,
-}
-
-fn parse_params(
-    args: TokenStream,
-    input: proc_macro::TokenStream
-) -> Result<CatchParams> {
-    let function: syn::ItemFn = syn::parse(input)
-        .map_err(Diagnostic::from)
-        .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
-
-    let attribute = CatchAttribute::from_meta(&syn::parse2(quote!(catch(#args)))?)
-        .map_err(|diag| diag.help("`#[catch]` expects a status code int or `default`: \
-                        `#[catch(404)]` or `#[catch(default)]`"))?;
-
-    Ok(CatchParams { status: attribute.status.0, function })
-}
+use crate::exports::*;
 
 pub fn _catch(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream
 ) -> Result<TokenStream> {
     // Parse and validate all of the user's input.
-    let catch = parse_params(args.into(), input)?;
+    let catch = parse::Attribute::parse(args.into(), input)?;
 
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
-    let user_catcher_fn_name = catch.function.sig.ident.clone();
-    let (vis, catcher_status) = (&catch.function.vis, &catch.status);
-    let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
-
-    // Variables names we'll use and reuse.
-    define_spanned_export!(catch.function.span().into() =>
-        __req, __status, _Box, Request, Response, StaticCatcherInfo, Catcher,
-        ErrorHandlerFuture, Status);
+    let user_catcher_fn_name = &catch.function.sig.ident;
+    let vis = &catch.function.vis;
+    let status_code = Optional(catch.status.map(|s| s.code));
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {

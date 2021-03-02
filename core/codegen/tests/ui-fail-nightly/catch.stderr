@@ -14,7 +14,7 @@ error: expected `fn`
   |
   = help: `#[catch]` can only be used on functions
 
-error: expected integer or identifier, found string literal
+error: expected integer or `default`, found string literal
   --> $DIR/catch.rs:11:9
    |
 11 | #[catch("404")]

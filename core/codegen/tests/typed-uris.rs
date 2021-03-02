@@ -8,6 +8,18 @@ use rocket::http::CookieJar;
 use rocket::http::uri::{FromUriParam, Query};
 use rocket::form::{Form, error::{Errors, ErrorKind}};
 
+macro_rules! assert_uri_eq {
+    ($($uri:expr => $expected:expr,)+) => {
+        $(
+            let actual = $uri;
+            let expected = rocket::http::uri::Origin::parse($expected).expect("valid origin URI");
+            if actual != expected {
+                panic!("URI mismatch: got {}, expected {}", actual, expected);
+            }
+        )+
+    };
+}
+
 #[derive(FromForm, UriDisplayQuery)]
 struct User<'a> {
     name: &'a str,
@@ -62,13 +74,13 @@ fn guard_3(id: i32, name: String, cookies: &CookieJar<'_>) { }
 #[post("/<id>", data = "<form>")]
 fn no_uri_display_okay(id: i32, form: Form<Second>) { }
 
-#[post("/name/<name>?<foo>&bar=10&<bar>&<query..>", data = "<user>", rank = 2)]
+#[post("/name/<name>?<foo>&type=10&<type>&<query..>", data = "<user>", rank = 2)]
 fn complex<'r>(
     foo: usize,
     name: &str,
     query: User<'r>,
     user: Form<User<'r>>,
-    bar: &str,
+    r#type: &str,
     cookies: &CookieJar<'_>
 ) {  }
 
@@ -80,12 +92,6 @@ fn param_and_segments(path: PathBuf, id: usize) { }
 
 #[post("/a/<id>/then/<path..>")]
 fn guarded_segments(cookies: &CookieJar<'_>, path: PathBuf, id: usize) { }
-
-macro_rules! assert_uri_eq {
-    ($($uri:expr => $expected:expr,)+) => {
-        $(assert_eq!($uri, rocket::http::uri::Origin::parse($expected).expect("valid origin URI"));)+
-    };
-}
 
 #[test]
 fn check_simple_unnamed() {
@@ -236,42 +242,42 @@ fn check_with_segments() {
 fn check_complex() {
     assert_uri_eq! {
         uri!(complex: "no idea", 10, "high", ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
         uri!(complex: "Bob", 248, "?", User { name: "Robert".into(), nickname: "Bob".into() }) =>
-            "/name/Bob?foo=248&bar=10&bar=%3F&name=Robert&nickname=Bob",
+            "/name/Bob?foo=248&type=10&type=%3F&name=Robert&nickname=Bob",
         uri!(complex: "Bob", 248, "a a", &User { name: "Robert".into(), nickname: "B".into() }) =>
-            "/name/Bob?foo=248&bar=10&bar=a%20a&name=Robert&nickname=B",
+            "/name/Bob?foo=248&type=10&type=a%20a&name=Robert&nickname=B",
         uri!(complex: "no idea", 248, "", &User { name: "A B".into(), nickname: "A".into() }) =>
-            "/name/no%20idea?foo=248&bar=10&bar=&name=A%20B&nickname=A",
+            "/name/no%20idea?foo=248&type=10&type=&name=A%20B&nickname=A",
         uri!(complex: "hi", 3, "b", &User { name: "A B C".into(), nickname: "a b".into() }) =>
-            "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
-        uri!(complex: name = "no idea", foo = 10, bar = "high", query = ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
-        uri!(complex: foo = 10, name = "no idea", bar = "high", query = ("A B C", "a c")) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
-        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high", ) =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
-        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
-        uri!(complex: query = *&("A B C", "a c"), foo = 10, name = "no idea", bar = "high") =>
-            "/name/no%20idea?foo=10&bar=10&bar=high&name=A%20B%20C&nickname=a%20c",
-        uri!(complex: foo = 3, name = "hi", bar = "b",
+            "/name/hi?foo=3&type=10&type=b&name=A%20B%20C&nickname=a%20b",
+        uri!(complex: name = "no idea", foo = 10, r#type = "high", query = ("A B C", "a c")) =>
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
+        uri!(complex: foo = 10, name = "no idea", r#type = "high", query = ("A B C", "a c")) =>
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
+        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", r#type = "high", ) =>
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
+        uri!(complex: query = ("A B C", "a c"), foo = 10, name = "no idea", r#type = "high") =>
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
+        uri!(complex: query = *&("A B C", "a c"), foo = 10, name = "no idea", r#type = "high") =>
+            "/name/no%20idea?foo=10&type=10&type=high&name=A%20B%20C&nickname=a%20c",
+        uri!(complex: foo = 3, name = "hi", r#type = "b",
                 query = &User { name: "A B C".into(), nickname: "a b".into() }) =>
-                "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
+                "/name/hi?foo=3&type=10&type=b&name=A%20B%20C&nickname=a%20b",
         uri!(complex: query = &User { name: "A B C".into(), nickname: "a b".into() },
-                 foo = 3, name = "hi", bar = "b") =>
-                "/name/hi?foo=3&bar=10&bar=b&name=A%20B%20C&nickname=a%20b",
+                 foo = 3, name = "hi", r#type = "b") =>
+                "/name/hi?foo=3&type=10&type=b&name=A%20B%20C&nickname=a%20b",
     }
 
     // Ensure variables are correctly processed.
     let user = User { name: "Robert".into(), nickname: "Bob".into() };
     assert_uri_eq! {
         uri!(complex: "complex", 0, "high", &user) =>
-            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
+            "/name/complex?foo=0&type=10&type=high&name=Robert&nickname=Bob",
         uri!(complex: "complex", 0, "high", &user) =>
-            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
+            "/name/complex?foo=0&type=10&type=high&name=Robert&nickname=Bob",
         uri!(complex: "complex", 0, "high", user) =>
-            "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
+            "/name/complex?foo=0&type=10&type=high&name=Robert&nickname=Bob",
     }
 }
 
@@ -432,5 +438,41 @@ fn test_optional_uri_parameters() {
             q1 = _,
             rest = _,
         ) => "/10/hi%20there",
+    }
+}
+
+#[test]
+fn test_simple_ignored() {
+    #[get("/<_>")] fn ignore_one() { }
+    assert_uri_eq! {
+        uri!(ignore_one: 100) => "/100",
+        uri!(ignore_one: "hello") => "/hello",
+        uri!(ignore_one: "cats r us") => "/cats%20r%20us",
+    }
+
+    #[get("/<_>/<_>")] fn ignore_two() { }
+    assert_uri_eq! {
+        uri!(ignore_two: 100, "boop") => "/100/boop",
+        uri!(ignore_two: &"hi", "bop") => "/hi/bop",
+    }
+
+    #[get("/<_>/foo/<_>")] fn ignore_inner_two() { }
+    #[get("/hi/<_>/foo")] fn ignore_inner_one_a() { }
+    #[get("/hey/hi/<_>/foo/<_>")] fn ignore_inner_two_b() { }
+
+    assert_uri_eq! {
+        uri!(ignore_inner_two: 100, "boop") => "/100/foo/boop",
+        uri!(ignore_inner_one_a: "!?") => "/hi/!%3F/foo",
+        uri!(ignore_inner_two_b: &mut 5, "boo") => "/hey/hi/5/foo/boo",
+    }
+
+    #[get("/<_>/foo/<_>?hi")] fn ignore_with_q() { }
+    #[get("/hi/<_>/foo/<_>?hi&<hey>")] fn ignore_with_q2(hey: Option<usize>) { }
+    #[get("/hi/<_>/foo/<_>?<hi>&<hey>")] fn ignore_with_q3(hi: &str, hey: &str) { }
+
+    assert_uri_eq! {
+        uri!(ignore_with_q: 100, "boop") => "/100/foo/boop?hi",
+        uri!(ignore_with_q2: "!?", "bop", Some(3usize)) => "/hi/!%3F/foo/bop?hi&hey=3",
+        uri!(ignore_with_q3: &mut 5, "boo", "hi b", "ho") => "/hi/5/foo/boo?hi=hi%20b&hey=ho",
     }
 }

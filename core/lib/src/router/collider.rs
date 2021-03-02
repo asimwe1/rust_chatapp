@@ -1,8 +1,6 @@
 use super::Route;
 
 use crate::http::MediaType;
-use crate::http::route::Kind;
-use crate::form::ValueField;
 use crate::request::Request;
 
 impl Route {
@@ -48,15 +46,15 @@ impl Route {
 }
 
 fn paths_collide(route: &Route, other: &Route) -> bool {
-    let a_segments = &route.metadata.path_segments;
-    let b_segments = &other.metadata.path_segments;
+    let a_segments = &route.metadata.path_segs;
+    let b_segments = &other.metadata.path_segs;
     for (seg_a, seg_b) in a_segments.iter().zip(b_segments.iter()) {
-        if seg_a.kind == Kind::Multi || seg_b.kind == Kind::Multi {
+        if seg_a.trailing || seg_b.trailing {
             return true;
         }
 
-        if seg_a.kind == Kind::Static && seg_b.kind == Kind::Static {
-            if seg_a.string != seg_b.string {
+        if !seg_a.dynamic && !seg_b.dynamic {
+            if seg_a.value != seg_b.value {
                 return false;
             }
         }
@@ -66,17 +64,23 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 }
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
-    let route_segments = &route.metadata.path_segments;
+    let route_segments = &route.metadata.path_segs;
     let req_segments = req.routed_segments(0..);
     if route_segments.len() > req_segments.len() {
         return false;
     }
 
+    if route.metadata.wild_path {
+        return true;
+    }
+
     for (route_seg, req_seg) in route_segments.iter().zip(req_segments) {
-        match route_seg.kind {
-            Kind::Multi => return true,
-            Kind::Static if route_seg.string != req_seg => return false,
-            _ => continue,
+        if route_seg.trailing {
+            return true;
+        }
+
+        if !route_seg.dynamic && route_seg.value != req_seg {
+            return false;
         }
     }
 
@@ -84,21 +88,16 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
 }
 
 fn queries_match(route: &Route, req: &Request<'_>) -> bool {
-    if route.metadata.fully_dynamic_query {
+    if route.metadata.wild_query {
         return true;
     }
 
-    let route_segments = match route.metadata.query_segments {
-        Some(ref segments) => segments.iter(),
-        None => return true
-    };
+    let route_query_fields = route.metadata.static_query_fields.iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()));
 
-    for seg in route_segments.filter(|s| s.kind == Kind::Static) {
-        if !req.query_fields().any(|f| f == ValueField::parse(&seg.string)) {
-            trace_!("route {} missing static query {}", route, seg.string);
-            for f in req.query_fields() {
-                trace_!("field: {:?}", f);
-            }
+    for route_seg in route_query_fields {
+        if !req.uri().query_segments().any(|req_seg| req_seg == route_seg) {
+            trace_!("request {} missing static query {:?}", req, route_seg);
             return false;
         }
     }

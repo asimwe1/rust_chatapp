@@ -3,15 +3,14 @@ use std::fmt::Display;
 use devise::{syn, Result};
 use devise::ext::{SpanDiagnosticExt, quote_respanned};
 
-use crate::http::{uri::{Origin, Path, Query}, ext::IntoOwned};
-use crate::http::route::{RouteSegment, Kind};
-use crate::attribute::segments::Source;
-
+use crate::http::uri;
 use crate::syn::{Expr, Ident, Type, spanned::Spanned};
 use crate::http_codegen::Optional;
 use crate::syn_ext::IdentExt;
 use crate::bang::uri_parsing::*;
 use crate::proc_macro2::TokenStream;
+use crate::attribute::param::Parameter;
+use crate::exports::_uri;
 
 use crate::URI_MACRO_PREFIX;
 
@@ -40,42 +39,41 @@ pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
 }
 
 fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
-        impl Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>,
-        impl Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>,
+        impl Iterator<Item = &'a Expr>,                // path exprs
+        impl Iterator<Item = &'a ArgExpr>,             // query exprs
+        impl Iterator<Item = (&'a Ident, &'a Type)>,   // types for both path || query
     )>
 {
     let route_name = &internal.uri_params.route_path;
     match internal.validate() {
         Validation::Ok(exprs) => {
-            let path_param_count = internal.route_uri.path().as_str().matches('<').count();
+            let path_params = internal.dynamic_path_params();
+            let path_param_count = path_params.clone().count();
             for expr in exprs.iter().take(path_param_count) {
                 if !expr.as_expr().is_some() {
                     return Err(expr.span().error("path parameters cannot be ignored"));
                 }
             }
 
-            // Create an iterator over all `ident`, `ty`, and `expr` triples.
-            let arguments = internal.fn_args.iter()
-                .zip(exprs.into_iter())
-                .map(|(FnArg { ident, ty }, expr)| (ident, ty, expr));
+            let query_exprs = exprs.clone().into_iter().skip(path_param_count);
+            let path_exprs = exprs.into_iter().map(|e| e.unwrap_expr()).take(path_param_count);
+            let types = internal.fn_args.iter().map(|a| (&a.ident, &a.ty));
+            Ok((path_exprs, query_exprs, types))
+        }
+        Validation::NamedIgnored(_) => {
+            let diag = internal.uri_params.args_span()
+                .error("expected unnamed arguments due to ignored parameters")
+                .note(format!("uri for route `{}` ignores path parameters: \"{}\"",
+                        quote!(#route_name), internal.route_uri));
 
-            // Create iterators for just the path and query parts.
-            let path_params = arguments.clone()
-                .take(path_param_count)
-                .map(|(i, t, e)| (i, t, e.unwrap_expr()));
-
-            let query_params = arguments.skip(path_param_count);
-            Ok((path_params, query_params))
+            Err(diag)
         }
         Validation::Unnamed(expected, actual) => {
-            let mut diag = internal.uri_params.args_span().error(
-                format!("`{}` route uri expects {} but {} supplied", quote!(#route_name),
-                         p!(expected, "parameter"), p!(actual, "was")));
-
-            if expected > 0 {
-                let ps = p!("parameter", expected);
-                diag = diag.note(format!("expected {}: {}", ps, internal.fn_args_str()));
-            }
+            let diag = internal.uri_params.args_span()
+                .error(format!("expected {} but {} supplied",
+                         p!(expected, "parameter"), p!(actual, "was")))
+                .note(format!("route `{}` has uri \"{}\"",
+                        quote!(#route_name), internal.route_uri));
 
             Err(diag)
         }
@@ -112,12 +110,11 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
     }
 }
 
-fn add_binding(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
+fn add_binding<P: uri::UriPart>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr) {
     let span = expr.span();
-    define_spanned_export!(span => _uri);
-    let part = match source {
-        Source::Query => quote_spanned!(span => #_uri::Query),
-        _ => quote_spanned!(span => #_uri::Path),
+    let part = match P::KIND {
+        uri::Kind::Path => quote_spanned!(span => #_uri::Path),
+        uri::Kind::Query  => quote_spanned!(span => #_uri::Query),
     };
 
     let tmp_ident = ident.clone().with_span(expr.span());
@@ -129,107 +126,117 @@ fn add_binding(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr,
     ));
 }
 
-fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
-    uri: &Origin<'_>,
+fn explode_path<'a>(
+    internal: &InternalUriParams,
     bindings: &mut Vec<TokenStream>,
-    mut items: I
+    mut exprs: impl Iterator<Item = &'a Expr>,
+    mut args: impl Iterator<Item = (&'a Ident, &'a Type)>,
 ) -> TokenStream {
-    let (uri_mod, path) = (quote!(rocket::http::uri), uri.path().as_str());
-    if !path.contains('<') {
-        return quote!(#uri_mod::UriArgumentsKind::Static(#path));
+    if internal.dynamic_path_params().count() == 0 {
+        let route_uri = &internal.route_uri;
+        if let Some(ref mount) = internal.uri_params.mount_point {
+            let full_uri = route_uri.map_path(|p| format!("{}/{}", mount, p))
+                .expect("origin from path")
+                .into_normalized();
+
+            let path = full_uri.path().as_str();
+            return quote!(#_uri::UriArgumentsKind::Static(#path));
+        } else {
+            let path = route_uri.path().as_str();
+            return quote!(#_uri::UriArgumentsKind::Static(#path));
+        }
     }
 
-    let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Path>);
-    let dyn_exprs = <RouteSegment<'_, Path>>::parse(uri).map(|segment| {
-        let segment = segment.expect("segment okay; prechecked on parse");
-        match segment.kind {
-            Kind::Static => {
-                let string = &segment.string;
-                quote!(&#string as &dyn #uri_display)
-            }
-            Kind::Single | Kind::Multi => {
-                let (ident, ty, expr) = items.next().expect("one item for each dyn");
-                add_binding(bindings, &ident, &ty, &expr, Source::Path);
+    let uri_display = quote!(#_uri::UriDisplay<#_uri::Path>);
+    let all_path_params = internal.mount_params.iter().chain(internal.path_params.iter());
+    let dyn_exprs = all_path_params.map(|param| {
+        match param {
+            Parameter::Static(name) => {
+                quote!(&#name as &dyn #uri_display)
+            },
+            Parameter::Dynamic(_) | Parameter::Guard(_) => {
+                let (ident, ty) = args.next().expect("ident/ty for non-ignored");
+                let expr = exprs.next().expect("one expr per dynamic arg");
+                add_binding::<uri::Path>(bindings, &ident, &ty, &expr);
                 quote_spanned!(expr.span() => &#ident as &dyn #uri_display)
+            }
+            Parameter::Ignored(_) => {
+                let expr = exprs.next().expect("one expr per dynamic arg");
+                quote_spanned!(expr.span() => &#expr as &dyn #uri_display)
             }
         }
     });
 
-    quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
+    quote!(#_uri::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
 }
 
-fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
-    uri: &Origin<'_>,
+fn explode_query<'a>(
+    internal: &InternalUriParams,
     bindings: &mut Vec<TokenStream>,
-    mut items: I
+    mut arg_exprs: impl Iterator<Item = &'a ArgExpr>,
+    mut args: impl Iterator<Item = (&'a Ident, &'a Type)>,
 ) -> Option<TokenStream> {
-    let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?.as_str());
-    if !query.contains('<') {
-        return Some(quote!(#uri_mod::UriArgumentsKind::Static(#query)));
+    let query = internal.route_uri.query()?.as_str();
+    if internal.dynamic_query_params().count() == 0 {
+        return Some(quote!(#_uri::UriArgumentsKind::Static(#query)));
     }
 
-    let query_arg = quote!(#uri_mod::UriQueryArgument);
-    let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Query>);
-    let dyn_exprs = <RouteSegment<'_, Query>>::parse(uri)?.filter_map(|segment| {
-        let segment = segment.expect("segment okay; prechecked on parse");
-        if segment.kind == Kind::Static {
-            let string = &segment.string;
-            return Some(quote!(#query_arg::Raw(#string)));
+    let query_arg = quote!(#_uri::UriQueryArgument);
+    let uri_display = quote!(#_uri::UriDisplay<#_uri::Query>);
+    let dyn_exprs = internal.query_params.iter().filter_map(|param| {
+        if let Parameter::Static(source) = param {
+            return Some(quote!(#query_arg::Raw(#source)));
         }
 
-        let (ident, ty, arg_expr) = items.next().expect("one item for each dyn");
+        let dynamic = match param {
+            Parameter::Static(source) =>  {
+                return Some(quote!(#query_arg::Raw(#source)));
+            },
+            Parameter::Dynamic(ref seg) => seg,
+            Parameter::Guard(ref seg) => seg,
+            Parameter::Ignored(_) => unreachable!("invariant: unignorable q")
+        };
+
+        let (ident, ty) = args.next().expect("ident/ty for query");
+        let arg_expr = arg_exprs.next().expect("one expr per query");
         let expr = match arg_expr.as_expr() {
             Some(expr) => expr,
             None => {
                 // Force a typecheck for the `Ignoreable` trait. Note that write
                 // out the path to `is_ignorable` to get the right span.
                 bindings.push(quote_respanned! { arg_expr.span() =>
-                    rocket::http::uri::assert_ignorable::<#uri_mod::Query, #ty>();
+                    rocket::http::uri::assert_ignorable::<#_uri::Query, #ty>();
                 });
 
                 return None;
             }
         };
 
-        let name = &segment.name;
-        add_binding(bindings, &ident, &ty, &expr, Source::Query);
-        Some(match segment.kind {
-            Kind::Single => quote_spanned! { expr.span() =>
+        let name = &dynamic.name;
+        add_binding::<uri::Query>(bindings, &ident, &ty, &expr);
+        Some(match dynamic.trailing {
+            false => quote_spanned! { expr.span() =>
                 #query_arg::NameValue(#name, &#ident as &dyn #uri_display)
             },
-            Kind::Multi => quote_spanned! { expr.span() =>
+            true => quote_spanned! { expr.span() =>
                 #query_arg::Value(&#ident as &dyn #uri_display)
             },
-            Kind::Static => unreachable!("Kind::Static returns early")
         })
     });
 
-    Some(quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
-}
-
-// Returns an Origin URI with the mount point and route path concatenated. The
-// query string is mangled by replacing single dynamic parameters in query parts
-// (`<param>`) with `param=<param>`.
-fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
-    let mount_point = internal.uri_params.mount_point.as_ref()
-        .map(|origin| origin.path().as_str())
-        .unwrap_or("");
-
-    let path = format!("{}/{}", mount_point, internal.route_uri.path());
-    let query = internal.route_uri.query().map(|q| q.as_str());
-    Origin::new(path, query).into_normalized().into_owned()
+    Some(quote!(#_uri::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
 }
 
 pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     // Parse the internal invocation and the user's URI param expressions.
     let internal = syn::parse2::<InternalUriParams>(input)?;
-    let (path_params, query_params) = extract_exprs(&internal)?;
+    let (path_exprs, query_exprs, mut fn_args) = extract_exprs(&internal)?;
 
     let mut bindings = vec![];
-    let uri = build_origin(&internal);
     let uri_mod = quote!(rocket::http::uri);
-    let path = explode_path(&uri, &mut bindings, path_params);
-    let query = Optional(explode_query(&uri, &mut bindings, query_params));
+    let path = explode_path(&internal, &mut bindings, path_exprs, &mut fn_args);
+    let query = explode_query(&internal, &mut bindings, query_exprs, fn_args);
+    let query = Optional(query);
 
      Ok(quote!({
          #(#bindings)*

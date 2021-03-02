@@ -6,10 +6,11 @@ use yansi::Paint;
 use crate::codegen::StaticRouteInfo;
 use crate::handler::Handler;
 use crate::http::{Method, MediaType};
-use crate::http::route::{RouteSegment, Kind};
 use crate::error::RouteUriError;
 use crate::http::ext::IntoOwned;
-use crate::http::uri::{Origin, Path, Query};
+use crate::http::uri::Origin;
+use crate::router::Segment;
+use crate::form::ValueField;
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -37,43 +38,24 @@ pub struct Route {
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Metadata {
-    pub path_segments: Vec<RouteSegment<'static, Path>>,
-    pub query_segments: Option<Vec<RouteSegment<'static, Query>>>,
-    pub fully_dynamic_query: bool,
-}
-
-impl Metadata {
-    fn from(route: &Route) -> Result<Metadata, RouteUriError> {
-        let path_segments = <RouteSegment<'_, Path>>::parse(&route.uri)
-            .map(|res| res.map(|s| s.into_owned()))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let (query_segments, is_dyn) = match <RouteSegment<'_, Query>>::parse(&route.uri) {
-            Some(results) => {
-                let segments = results.map(|res| res.map(|s| s.into_owned()))
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let dynamic = !segments.iter().any(|s| s.kind == Kind::Static);
-
-                (Some(segments), dynamic)
-            }
-            None => (None, true)
-        };
-
-        Ok(Metadata { path_segments, query_segments, fully_dynamic_query: is_dyn })
-    }
+    pub path_segs: Vec<Segment>,
+    pub query_segs: Vec<Segment>,
+    pub static_query_fields: Vec<(String, String)>,
+    pub static_path: bool,
+    pub wild_path: bool,
+    pub wild_query: bool,
 }
 
 #[inline(always)]
 fn default_rank(route: &Route) -> isize {
-    let static_path = route.metadata.path_segments.iter().all(|s| s.kind == Kind::Static);
-    let partly_static_query = route.uri.query().map(|_| !route.metadata.fully_dynamic_query);
-    match (static_path, partly_static_query) {
-        (true, Some(true)) => -6,   // static path, partly static query
-        (true, Some(false)) => -5,  // static path, fully dynamic query
+    let static_path = route.metadata.static_path;
+    let wild_query = route.uri.query().map(|_| route.metadata.wild_query);
+    match (static_path, wild_query) {
+        (true, Some(false)) => -6,   // static path, partly static query
+        (true, Some(true)) => -5,  // static path, fully dynamic query
         (true, None) => -4,         // static path, no query
-        (false, Some(true)) => -3,  // dynamic path, partly static query
-        (false, Some(false)) => -2, // dynamic path, fully dynamic query
+        (false, Some(false)) => -3,  // dynamic path, partly static query
+        (false, Some(true)) => -2, // dynamic path, fully dynamic query
         (false, None) => -1,        // dynamic path, no query
     }
 }
@@ -186,16 +168,37 @@ impl Route {
             method, rank,
         };
 
-        route.update_metadata().unwrap_or_else(|e| panic(path, e));
+        route.update_metadata();
         route
+    }
+
+    fn metadata(&self) -> Metadata {
+        let path_segs = self.uri.raw_path_segments()
+            .map(Segment::from)
+            .collect::<Vec<_>>();
+
+        let query_segs = self.uri.raw_query_segments()
+            .map(Segment::from)
+            .collect::<Vec<_>>();
+
+        Metadata {
+            static_path: path_segs.iter().all(|s| !s.dynamic),
+            wild_path: path_segs.iter().all(|s| s.dynamic)
+                && path_segs.last().map_or(false, |p| p.trailing),
+            wild_query: query_segs.iter().all(|s| s.dynamic),
+            static_query_fields: query_segs.iter().filter(|s| !s.dynamic)
+                .map(|s| ValueField::parse(&s.value))
+                .map(|f| (f.name.source().to_string(), f.value.to_string()))
+                .collect(),
+            path_segs,
+            query_segs,
+        }
     }
 
     /// Updates the cached routing metadata. MUST be called whenver the route's
     /// URI is set or changes.
-    fn update_metadata(&mut self) -> Result<(), RouteUriError> {
-        let new_metadata = Metadata::from(&*self)?;
-        self.metadata = new_metadata;
-        Ok(())
+    fn update_metadata(&mut self) {
+        self.metadata = self.metadata();
     }
 
     /// Retrieves the path of the base mount point of this route as an `&str`.
@@ -272,7 +275,7 @@ impl Route {
 
         let new_uri = format!("{}{}", self.base, self.path);
         self.uri = Origin::parse_route(&new_uri)?.into_owned().into_normalized();
-        self.update_metadata()?;
+        self.update_metadata();
         Ok(self)
     }
 }

@@ -1,8 +1,8 @@
 error: parameter must be named
- --> $DIR/bad-ignored-segments.rs:6:11
+ --> $DIR/bad-ignored-segments.rs:6:12
   |
 6 | #[get("/c?<_>")]
-  |           ^^^
+  |            ^
   |
   = help: use a name such as `_guard` or `_param`
 

@@ -12,7 +12,7 @@ error: expected `fn`
 9 | const CATCH: &str = "Catcher";
   |       ^^^^^
 
-error: expected integer or identifier, found string literal
+error: expected integer or `default`, found string literal
   --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
   --> $DIR/catch.rs:11:9
    |

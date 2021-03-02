@@ -50,6 +50,8 @@ macro_rules! assert_form_parses_ok {
 }
 
 pub fn client(routes: Vec<rocket::Route>) -> rocket::local::blocking::Client {
-    let rocket = rocket::custom(rocket::Config::debug_default()).mount("/", routes);
+    let mut config = rocket::Config::debug_default();
+    config.log_level = rocket::config::LogLevel::Debug;
+    let rocket = rocket::custom(config).mount("/", routes);
     rocket::local::blocking::Client::tracked(rocket).unwrap()
 }

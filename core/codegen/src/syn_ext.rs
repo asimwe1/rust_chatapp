@@ -1,7 +1,5 @@
 //! Extensions to `syn` types.
 
-use devise::ext::SpanDiagnosticExt;
-
 use crate::syn::{self, Ident, ext::IdentExt as _};
 use crate::proc_macro2::Span;
 
@@ -9,6 +7,20 @@ pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
     fn append(&self, string: &str) -> syn::Ident;
     fn with_span(self, span: Span) -> syn::Ident;
+    fn rocketized(&self) -> syn::Ident;
+}
+
+pub trait ReturnTypeExt {
+    fn ty(&self) -> Option<&syn::Type>;
+}
+
+pub trait TokenStreamExt {
+    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
+}
+
+pub trait FnArgExt {
+    fn typed(&self) -> Option<(&syn::Ident, &syn::Type)>;
+    fn wild(&self) -> Option<&syn::PatWild>;
 }
 
 impl IdentExt for syn::Ident {
@@ -24,10 +36,10 @@ impl IdentExt for syn::Ident {
         self.set_span(span);
         self
     }
-}
 
-pub trait ReturnTypeExt {
-    fn ty(&self) -> Option<&syn::Type>;
+    fn rocketized(&self) -> syn::Ident {
+        self.prepend(crate::ROCKET_IDENT_PREFIX)
+    }
 }
 
 impl ReturnTypeExt for syn::ReturnType {
@@ -39,10 +51,6 @@ impl ReturnTypeExt for syn::ReturnType {
     }
 }
 
-pub trait TokenStreamExt {
-    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
-}
-
 impl TokenStreamExt for crate::proc_macro2::TokenStream {
     fn respanned(&self, span: crate::proc_macro2::Span) -> Self {
         self.clone().into_iter().map(|mut token| {
@@ -52,82 +60,24 @@ impl TokenStreamExt for crate::proc_macro2::TokenStream {
     }
 }
 
-/// Represents the source of a name read by codegen, which may or may not be a
-/// valid identifier. A `NameSource` is typically constructed indirectly via
-/// FromMeta, or From<Ident> or directly from a string via `NameSource::new()`.
-///
-/// NameSource implements Hash, PartialEq, and Eq, and additionally PartialEq<S>
-/// for all types `S: AsStr<str>`. These implementations all compare the value
-/// of `name()` only.
-#[derive(Debug, Clone)]
-pub struct NameSource {
-    name: String,
-    ident: Option<Ident>,
-}
-
-impl NameSource {
-    /// Creates a new `NameSource` from the string `name` and span `span`. If
-    /// `name` is a valid ident, the ident is stored as well.
-    pub fn new<S: AsRef<str>>(name: S, span: crate::proc_macro2::Span) -> Self {
-        let name = name.as_ref();
-        syn::parse_str::<Ident>(name)
-            .map(|mut ident| { ident.set_span(span); ident })
-            .map(|ident| NameSource::from(ident))
-            .unwrap_or_else(|_| NameSource { name: name.into(), ident: None })
-    }
-
-    /// Returns the name as a string. Notably, if `self` was constructed from an
-    /// Ident this method returns a name *without* an `r#` prefix.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Returns the Ident corresponding to `self`, if any, otherwise panics. If
-    /// `self` was constructed from an `Ident`, this never panics. Otherwise,
-    /// panics if the string `self` was constructed from was not a valid ident.
-    pub fn ident(&self) -> &Ident {
-        self.ident.as_ref().expect("ident from namesource")
-    }
-}
-
-impl devise::FromMeta for NameSource {
-    fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
-        if let syn::Lit::Str(s) = meta.lit()? {
-            return Ok(NameSource::new(s.value(), s.span()));
+impl FnArgExt for syn::FnArg {
+    fn typed(&self) -> Option<(&Ident, &syn::Type)> {
+        match self {
+            syn::FnArg::Typed(arg) => match *arg.pat {
+                syn::Pat::Ident(ref pat) => Some((&pat.ident, &arg.ty)),
+                _ => None
+            }
+            _ => None,
         }
-
-        Err(meta.value_span().error("invalid value: expected string literal"))
     }
-}
 
-impl From<Ident> for NameSource {
-    fn from(ident: Ident) -> Self {
-        Self { name: ident.unraw().to_string(), ident: Some(ident), }
-    }
-}
-
-impl std::hash::Hash for NameSource {
-    fn hash<H: std::hash::Hasher>(&self, hasher: &mut H) {
-        self.name().hash(hasher)
-    }
-}
-
-impl AsRef<str> for NameSource {
-    fn as_ref(&self) -> &str {
-        self.name()
-    }
-}
-
-impl Eq for NameSource { }
-
-impl<S: AsRef<str>> PartialEq<S> for NameSource {
-    fn eq(&self, other: &S) -> bool {
-        self.name == other.as_ref()
-    }
-}
-
-impl std::fmt::Display for NameSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.name().fmt(f)
+    fn wild(&self) -> Option<&syn::PatWild> {
+        match self {
+            syn::FnArg::Typed(arg) => match *arg.pat {
+                syn::Pat::Wild(ref pat) => Some(pat),
+                _ => None
+            }
+            _ => None,
+        }
     }
 }

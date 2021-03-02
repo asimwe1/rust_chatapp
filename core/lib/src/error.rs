@@ -205,7 +205,6 @@ impl Drop for Error {
 
 use crate::http::uri;
 use crate::http::ext::IntoOwned;
-use crate::http::route::Error as SegmentError;
 
 /// Error returned by [`Route::map_base()`] on invalid URIs.
 #[derive(Debug)]
@@ -216,12 +215,6 @@ pub enum RouteUriError {
     Uri(uri::Error<'static>),
     /// The base (mount point) contains dynamic segments.
     DynamicBase,
-}
-
-impl<'a> From<(&'a str, SegmentError<'a>)> for RouteUriError {
-    fn from((seg, err): (&'a str, SegmentError<'a>)) -> Self {
-        RouteUriError::Segment(seg.into(), err.to_string())
-    }
 }
 
 impl<'a> From<uri::Error<'a>> for RouteUriError {

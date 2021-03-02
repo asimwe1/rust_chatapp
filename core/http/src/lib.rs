@@ -27,9 +27,6 @@ mod docify;
 #[cfg(feature = "tls")]
 pub mod tls;
 
-#[doc(hidden)]
-pub mod route;
-
 #[macro_use]
 mod header;
 mod cookies;

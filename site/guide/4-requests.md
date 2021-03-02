@@ -1515,8 +1515,7 @@ segment in its query string.
 For example, the route below will match requests with path `/` and _at least_
 the query segments `hello` and `cat=♥`:
 
-```rust,ignore
-# FIXME: https://github.com/rust-lang/rust/issues/82583
+```rust
 # #[macro_use] extern crate rocket;
 
 #[get("/?hello&cat=♥")]
@@ -1524,17 +1523,17 @@ fn cats() -> &'static str {
     "Hello, kittens!"
 }
 
-// The following GET requests match `cats`.
+// The following GET requests match `cats`. `%E2%99%A5` is encoded `♥`.
 # let status = rocket_guide_tests::client(routes![cats]).get(
-"/?cat%3D%E2%99%A5%26hello"
+"/?cat=%E2%99%A5&hello"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
 # let status = rocket_guide_tests::client(routes![cats]).get(
-"/?hello&cat%3D%E2%99%A5%26"
+"/?hello&cat=%E2%99%A5"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
 # let status = rocket_guide_tests::client(routes![cats]).get(
-"/?dogs=amazing&hello&there&cat%3D%E2%99%A5%26"
+"/?dogs=amazing&hello&there&cat=%E2%99%A5"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
 ```

@@ -2,11 +2,11 @@ use devise::{*, ext::SpanDiagnosticExt};
 
 use crate::exports::*;
 use crate::proc_macro2::TokenStream;
-use crate::syn_ext::NameSource;
+use crate::name::Name;
 
 #[derive(FromMeta)]
 pub struct FieldAttr {
-    value: NameSource,
+    value: Name,
 }
 
 pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
@@ -36,10 +36,10 @@ pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
                     .map(|v| FieldAttr::one_from_attrs("field", &v.attrs).map(|o| {
                         o.map(|f| f.value).unwrap_or_else(|| v.ident.clone().into())
                     }))
-                    .collect::<Result<Vec<NameSource>>>()?;
+                    .collect::<Result<Vec<Name>>>()?;
 
                 let variant_name = variant_name_sources.iter()
-                    .map(|n| n.name())
+                    .map(|n| n.as_str())
                     .collect::<Vec<_>>();
 
                 let builder = data.variants()

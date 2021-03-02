@@ -53,11 +53,20 @@ mod private {
 /// [`UriDisplay`]: crate::uri::UriDisplay
 /// [`Formatter`]: crate::uri::Formatter
 pub trait UriPart: private::Sealed {
+    /// The dynamic version of `Self`.
+    #[doc(hidden)]
+    const KIND: Kind;
+
     /// The delimiter used to separate components of this URI part.
     /// Specifically, `/` for `Path` and `&` for `Query`.
     #[doc(hidden)]
     const DELIMITER: char;
 }
+
+/// Dynamic version of the `Path` and `Query` parts.
+#[doc(hidden)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Kind { Path, Query }
 
 /// Marker type indicating use of a type for the path [`UriPart`] of a URI.
 ///
@@ -87,9 +96,11 @@ pub enum Path {  }
 pub enum Query {  }
 
 impl UriPart for Path {
+    const KIND: Kind = Kind::Path;
     const DELIMITER: char = '/';
 }
 
 impl UriPart for Query {
+    const KIND: Kind = Kind::Query;
     const DELIMITER: char = '&';
 }

@@ -70,11 +70,11 @@ error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::u
    = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::Path, Result<_, _>>` for `Result<std::string::String, &str>`
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `isize: FromUriParam<Query, &str>` is not satisfied
+error[E0277]: the trait bound `isize: FromUriParam<rocket::http::uri::Query, &str>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:58:20
    |
 58 |     uri!(simple_q: "hi");
-   |                    ^^^^ the trait `FromUriParam<Query, &str>` is not implemented for `isize`
+   |                    ^^^^ the trait `FromUriParam<rocket::http::uri::Query, &str>` is not implemented for `isize`
    |
    = help: the following implementations were found:
              <isize as FromUriParam<P, &'x isize>>
@@ -82,11 +82,11 @@ error[E0277]: the trait bound `isize: FromUriParam<Query, &str>` is not satisfie
              <isize as FromUriParam<P, isize>>
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `isize: FromUriParam<Query, &str>` is not satisfied
+error[E0277]: the trait bound `isize: FromUriParam<rocket::http::uri::Query, &str>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:60:25
    |
 60 |     uri!(simple_q: id = "hi");
-   |                         ^^^^ the trait `FromUriParam<Query, &str>` is not implemented for `isize`
+   |                         ^^^^ the trait `FromUriParam<rocket::http::uri::Query, &str>` is not implemented for `isize`
    |
    = help: the following implementations were found:
              <isize as FromUriParam<P, &'x isize>>
@@ -94,48 +94,48 @@ error[E0277]: the trait bound `isize: FromUriParam<Query, &str>` is not satisfie
              <isize as FromUriParam<P, isize>>
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `S: FromUriParam<Query, _>` is not satisfied
+error[E0277]: the trait bound `S: FromUriParam<rocket::http::uri::Query, _>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:62:24
    |
 62 |     uri!(other_q: 100, S);
-   |                        ^ the trait `FromUriParam<Query, _>` is not implemented for `S`
+   |                        ^ the trait `FromUriParam<rocket::http::uri::Query, _>` is not implemented for `S`
    |
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `S: FromUriParam<Query, _>` is not satisfied
+error[E0277]: the trait bound `S: FromUriParam<rocket::http::uri::Query, _>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:64:26
    |
 64 |     uri!(other_q: rest = S, id = 100);
-   |                          ^ the trait `FromUriParam<Query, _>` is not implemented for `S`
+   |                          ^ the trait `FromUriParam<rocket::http::uri::Query, _>` is not implemented for `S`
    |
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `S: Ignorable<Query>` is not satisfied
+error[E0277]: the trait bound `S: Ignorable<rocket::http::uri::Query>` is not satisfied
    --> $DIR/typed-uri-bad-type.rs:66:26
     |
 66  |     uri!(other_q: rest = _, id = 100);
-    |                          ^ the trait `Ignorable<Query>` is not implemented for `S`
+    |                          ^ the trait `Ignorable<rocket::http::uri::Query>` is not implemented for `S`
     |
    ::: $WORKSPACE/core/http/src/uri/uri_display.rs
     |
     | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
     |                                        ------------ required by this bound in `assert_ignorable`
 
-error[E0277]: the trait bound `usize: Ignorable<Query>` is not satisfied
+error[E0277]: the trait bound `usize: Ignorable<rocket::http::uri::Query>` is not satisfied
    --> $DIR/typed-uri-bad-type.rs:68:34
     |
 68  |     uri!(other_q: rest = S, id = _);
-    |                                  ^ the trait `Ignorable<Query>` is not implemented for `usize`
+    |                                  ^ the trait `Ignorable<rocket::http::uri::Query>` is not implemented for `usize`
     |
    ::: $WORKSPACE/core/http/src/uri/uri_display.rs
     |
     | pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
     |                                        ------------ required by this bound in `assert_ignorable`
 
-error[E0277]: the trait bound `S: FromUriParam<Query, _>` is not satisfied
+error[E0277]: the trait bound `S: FromUriParam<rocket::http::uri::Query, _>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:68:26
    |
 68 |     uri!(other_q: rest = S, id = _);
-   |                          ^ the trait `FromUriParam<Query, _>` is not implemented for `S`
+   |                          ^ the trait `FromUriParam<rocket::http::uri::Query, _>` is not implemented for `S`
    |
    = note: required by `from_uri_param`

@@ -4,10 +4,6 @@ use devise::Diagnostic;
 
 use crate::proc_macro2::{Span, Literal};
 
-pub type PResult<T> = std::result::Result<T, Diagnostic>;
-
-pub type DResult<T> = std::result::Result<T, Diagnostics>;
-
 // An experiment.
 pub struct Diagnostics(Vec<Diagnostic>);
 
@@ -18,11 +14,6 @@ impl Diagnostics {
 
     pub fn push(&mut self, diag: Diagnostic) {
         self.0.push(diag);
-    }
-
-    pub fn join(mut self, mut diags: Diagnostics) -> Self {
-        self.0.append(&mut diags.0);
-        self
     }
 
     pub fn emit_head(self) -> Diagnostic {
@@ -37,17 +28,10 @@ impl Diagnostics {
         last
     }
 
-    pub fn head_err_or<T>(self, ok: T) -> PResult<T> {
+    pub fn head_err_or<T>(self, ok: T) -> devise::Result<T> {
         match self.0.is_empty() {
             true => Ok(ok),
             false => Err(self.emit_head())
-        }
-    }
-
-    pub fn err_or<T>(self, ok: T) -> DResult<T> {
-        match self.0.is_empty() {
-            true => Ok(ok),
-            false => Err(self)
         }
     }
 }
@@ -64,17 +48,7 @@ impl From<Vec<Diagnostic>> for Diagnostics {
     }
 }
 
-use std::ops::Deref;
-
 pub struct StringLit(pub String, pub Literal);
-
-impl Deref for StringLit {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        &self.0
-    }
-}
 
 impl StringLit {
     pub fn new<S: Into<String>>(string: S, span: Span) -> Self {
@@ -93,5 +67,19 @@ impl StringLit {
     /// build entirely.
     pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Span {
         self.1.subspan(range).unwrap_or_else(|| self.span())
+    }
+}
+
+impl devise::FromMeta for StringLit {
+    fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
+        Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))
+    }
+}
+
+impl std::ops::Deref for StringLit {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
     }
 }

@@ -19,6 +19,7 @@ indexmap = "1.0"
 quote = "1.0"
 rocket_http = { version = "0.5.0-dev", path = "../http/" }
 devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "bd221a4" }
+unicode-xid = "0.2"
 glob = "0.3"
 
 [dev-dependencies]

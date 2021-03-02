@@ -249,20 +249,5 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 }})
             })
         )
-        // .inner_mapper(MapperBuild::new()
-        //     .with_output(|_, output| quote! {
-        //         fn default() -> #_Option<Self> {
-        //             Some(Self { #output })
-        //         }
-        //     })
-        //     .try_fields_map(|m, f| mapper::fields_null(m, f))
-        //     .field_map(|_, field| {
-        //         let ident = field.ident.as_ref().expect("named");
-        //         let ty = field.ty.with_stripped_lifetimes();
-        //         quote_spanned!(ty.span() =>
-        //             #ident: <#ty as #_form::FromForm<'__f>>::default()?,
-        //         )
-        //     })
-        // )
         .to_tokens()
 }

@@ -2,11 +2,11 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 
 use crate::exports::*;
 use crate::proc_macro2::Span;
-use crate::syn_ext::NameSource;
+use crate::name::Name;
 
 pub struct FormField {
     pub span: Span,
-    pub name: NameSource,
+    pub name: Name,
 }
 
 #[derive(FromMeta)]
@@ -41,8 +41,8 @@ impl FromMeta for FormField {
             s.chars().all(|c| c.is_ascii_graphic() && !CONTROL_CHARS.contains(&c))
         }
 
-        let name = NameSource::from_meta(meta)?;
-        if !is_valid_field_name(name.name()) {
+        let name = Name::from_meta(meta)?;
+        if !is_valid_field_name(name.as_str()) {
             let chars = CONTROL_CHARS.iter()
                 .map(|c| format!("{:?}", c))
                 .collect::<Vec<_>>()
@@ -69,7 +69,7 @@ impl FieldExt for Field<'_> {
 
         let name = fields.next()
             .map(|f| f.name)
-            .unwrap_or_else(|| NameSource::from(self.ident().clone()));
+            .unwrap_or_else(|| Name::from(self.ident().clone()));
 
         if let Some(field) = fields.next() {
             return Err(field.span

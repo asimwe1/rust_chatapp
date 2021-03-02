@@ -1,5 +1,6 @@
 mod collider;
 mod route;
+mod segment;
 
 use std::collections::HashMap;
 
@@ -8,6 +9,7 @@ use crate::http::Method;
 use crate::handler::dummy;
 
 pub use self::route::Route;
+pub use self::segment::Segment;
 
 // type Selector = (Method, usize);
 type Selector = Method;

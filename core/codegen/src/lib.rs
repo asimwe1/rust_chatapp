@@ -66,13 +66,14 @@ mod attribute;
 mod bang;
 mod http_codegen;
 mod syn_ext;
+mod name;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
 use devise::{proc_macro2, syn};
 
 static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
-static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
+static ROCKET_IDENT_PREFIX: &str = "__rocket_";
 
 macro_rules! emit {
     ($tokens:expr) => ({
@@ -118,13 +119,13 @@ macro_rules! route_attribute {
         ///   * [`options`] - `OPTIONS` specific route
         ///   * [`patch`] - `PATCH` specific route
         ///
-        /// Additionally, [`route`] allows the method and path to be explicitly
+        /// Additionally, [`route`] allows the method and uri to be explicitly
         /// specified:
         ///
         /// ```rust
         /// # #[macro_use] extern crate rocket;
         /// #
-        /// #[route(GET, path = "/")]
+        /// #[route(GET, uri = "/")]
         /// fn index() -> &'static str {
         ///     "Hello, world!"
         /// }
@@ -144,22 +145,22 @@ macro_rules! route_attribute {
         /// The grammar for all method-specific route attributes is defined as:
         ///
         /// ```text
-        /// route := '"' path ('?' query)? '"' (',' parameter)*
+        /// route := '"' uri ('?' query)? '"' (',' parameter)*
         ///
-        /// path := ('/' segment)*
+        /// uri := ('/' segment)*
         ///
         /// query := segment ('&' segment)*
         ///
         /// segment := URI_SEG
         ///          | SINGLE_PARAM
-        ///          | MULTI_PARAM
+        ///          | TRAILING_PARAM
         ///
         /// parameter := 'rank' '=' INTEGER
         ///            | 'format' '=' '"' MEDIA_TYPE '"'
         ///            | 'data' '=' '"' SINGLE_PARAM '"'
         ///
         /// SINGLE_PARAM := '<' IDENT '>'
-        /// MULTI_PARAM := '<' IDENT '..>'
+        /// TRAILING_PARAM := '<' IDENT '..>'
         ///
         /// URI_SEG := valid, non-percent-encoded HTTP URI segment
         /// MEDIA_TYPE := valid HTTP media type or known shorthand
@@ -171,13 +172,13 @@ macro_rules! route_attribute {
         /// The generic route attribute is defined as:
         ///
         /// ```text
-        /// generic-route := METHOD ',' 'path' '=' route
+        /// generic-route := METHOD ',' 'uri' '=' route
         /// ```
         ///
         /// # Typing Requirements
         ///
         /// Every identifier that appears in a dynamic parameter (`SINGLE_PARAM`
-        /// or `MULTI_PARAM`) must appear as an argument to the function. For
+        /// or `TRAILING_PARAM`) must appear as an argument to the function. For
         /// example, the following route requires the decorated function to have
         /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
         ///
@@ -193,7 +194,7 @@ macro_rules! route_attribute {
         /// The type of each function argument corresponding to a dynamic
         /// parameter is required to implement one of Rocket's guard traits. The
         /// exact trait that is required to be implemented depends on the kind
-        /// of dynamic parameter (`SINGLE` or `MULTI`) and where in the route
+        /// of dynamic parameter (`SINGLE` or `TRAILING`) and where in the route
         /// attribute the parameter appears. The table below summarizes trait
         /// requirements:
         ///
@@ -201,7 +202,7 @@ macro_rules! route_attribute {
         /// |----------|-------------|-------------------|
         /// | path     | `<ident>`   | [`FromParam`]     |
         /// | path     | `<ident..>` | [`FromSegments`]  |
-        /// | query    | `<ident>`   | [`FromFormField`] |
+        /// | query    | `<ident>`   | [`FromForm`]      |
         /// | query    | `<ident..>` | [`FromFrom`]      |
         /// | data     | `<ident>`   | [`FromData`]      |
         ///
@@ -238,13 +239,10 @@ macro_rules! route_attribute {
         ///            `Failure`. See [`FromRequest` Outcomes] for further
         ///            detail.
         ///
-        ///         2. Path and query parameters from left to right as declared
-        ///            in the function argument list.
+        ///         2. Path and query guards in an unspecified order. If a path
+        ///            or query guard fails, the request is forwarded.
         ///
-        ///            If a path or query parameter guard fails, the request is
-        ///            forwarded.
-        ///
-        ///         3. Data parameter, if any.
+        ///         3. Data guard, if any.
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
@@ -359,17 +357,17 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
-    emit!(attribute::async_entry::async_test_attribute(args, input))
+    emit!(attribute::entry::async_test_attribute(args, input))
 }
 
 #[proc_macro_attribute]
 pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
-    emit!(attribute::async_entry::main_attribute(args, input))
+    emit!(attribute::entry::main_attribute(args, input))
 }
 
 #[proc_macro_attribute]
 pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
-    emit!(attribute::async_entry::launch_attribute(args, input))
+    emit!(attribute::entry::launch_attribute(args, input))
 }
 
 /// Derive for the [`FromFormField`] trait.
