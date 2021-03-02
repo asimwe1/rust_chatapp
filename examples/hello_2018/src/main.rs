@@ -8,10 +8,12 @@ fn hello() -> &'static str {
 
 #[rocket::launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", rocket::routes![hello])
+    rocket::ignite()
+        .mount("/", rocket::routes![hello])
+        .register(rocket::catchers![not_found])
 }
 
 #[rocket::catch(404)]
-fn not_found(_req: &'_ rocket::Request<'_>) -> String {
-    "404 Not Found".to_owned()
+fn not_found(_req: &'_ rocket::Request<'_>) -> &'static str {
+    "404 Not Found"
 }
