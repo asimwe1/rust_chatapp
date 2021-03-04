@@ -359,3 +359,44 @@ error: [note] error occurred while deriving `FromForm`
     |          ^^^^^^^^
     |
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0425]: cannot find function `unknown` in this scope
+   --> $DIR/from_form.rs:150:24
+    |
+150 |     #[field(validate = unknown())]
+    |                        ^^^^^^^ not found in this scope
+
+error[E0308]: mismatched types
+   --> $DIR/from_form.rs:144:24
+    |
+144 |     #[field(validate = 123)]
+    |             --------   ^^^ expected enum `std::result::Result`, found integer
+    |             |
+    |             expected due to this
+    |
+    = note: expected enum `std::result::Result<(), Errors<'_>>`
+               found type `{integer}`
+
+error[E0308]: mismatched types
+   --> $DIR/from_form.rs:157:12
+    |
+157 |     first: String,
+    |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
+    |
+    = note: expected reference `&TempFile<'_>`
+               found reference `&std::string::String`
+
+error[E0308]: mismatched types
+   --> $DIR/from_form.rs:163:12
+    |
+163 |     first: String,
+    |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
+    |
+    = note: expected reference `&TempFile<'_>`
+               found reference `&std::string::String`
+
+error[E0308]: mismatched types
+   --> $DIR/from_form.rs:162:28
+    |
+162 |     #[field(validate = ext("hello"))]
+    |                            ^^^^^^^ expected struct `ContentType`, found `&str`

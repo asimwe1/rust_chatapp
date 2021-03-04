@@ -3,8 +3,8 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 use syn::visit_mut::VisitMut;
 use syn::visit::Visit;
 
-use crate::exports::*;
 use crate::proc_macro2::{Span, TokenStream, TokenTree};
+use crate::syn_ext::IdentExt;
 use crate::name::Name;
 
 pub struct FormField {
@@ -15,7 +15,7 @@ pub struct FormField {
 #[derive(FromMeta)]
 pub struct FieldAttr {
     pub name: Option<FormField>,
-    pub validate: Option<syn::Expr>,
+    pub validate: Option<SpanWrapped<syn::Expr>>,
 }
 
 impl FieldAttr {
@@ -89,6 +89,7 @@ impl FieldExt for Field<'_> {
 
     fn name_view(&self) -> Result<syn::Expr> {
         let field_name = self.field_name()?;
+        define_spanned_export!(self.span() => _form);
         let name_view = quote_spanned! { self.span() =>
             #_form::NameBuf::from((__c.__parent, #field_name))
         };
@@ -201,7 +202,7 @@ pub fn validators<'v>(
     parent: &'v syn::Ident, // field ident (if local) or form ident (if !local)
     local: bool,
 ) -> Result<impl Iterator<Item = syn::Expr> + 'v> {
-    Ok(FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
+    let exprs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
         .filter_map(|a| a.validate)
         .map(move |expr| {
@@ -219,9 +220,21 @@ pub fn validators<'v>(
         })
         .filter(move |(_, is_local)| *is_local == local)
         .map(move |(mut expr, _)| {
-            let field = field.ident();
-            let mut v = ValidationMutator { parent, local, field, visited: false };
+            let field_span = field.ident().span()
+                .join(field.ty.span())
+                .unwrap_or(field.ty.span());
+
+            let field_ident = field.ident().clone().with_span(field_span);
+            let mut v = ValidationMutator { parent, local, field: &field_ident, visited: false };
             v.visit_expr_mut(&mut expr);
-            expr
-        }))
+
+            let span = expr.key_span.unwrap_or(field_span);
+            define_spanned_export!(span => _form);
+            syn::parse2(quote_spanned!(span => {
+                let __result: #_form::Result<'_, ()> = #expr;
+                __result
+            })).unwrap()
+        });
+
+        Ok(exprs)
 }

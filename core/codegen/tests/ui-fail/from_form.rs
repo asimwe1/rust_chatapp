@@ -139,4 +139,28 @@ struct BadName3 {
     field: String,
 }
 
+#[derive(FromForm)]
+struct Validate0 {
+    #[field(validate = 123)]
+    first: String,
+}
+
+#[derive(FromForm)]
+struct Validate1 {
+    #[field(validate = unknown())]
+    first: String,
+}
+
+#[derive(FromForm)]
+struct Validate2 {
+    #[field(validate = ext(rocket::http::ContentType::HTML))]
+    first: String,
+}
+
+#[derive(FromForm)]
+struct Validate3 {
+    #[field(validate = ext("hello"))]
+    first: String,
+}
+
 fn main() { }

@@ -328,7 +328,7 @@ fn incomplete_route(
 
     let attribute = Attribute {
         method: SpanWrapped {
-            full_span: method_span, span: method_span, value: Method(method)
+            full_span: method_span, key_span: None, span: method_span, value: Method(method)
         },
         uri: method_attribute.uri,
         data: method_attribute.data,

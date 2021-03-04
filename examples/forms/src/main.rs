@@ -1,6 +1,6 @@
 #[macro_use]extern crate rocket;
 
-use rocket::http::Status;
+use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
 use rocket::data::TempFile;
 
@@ -39,7 +39,7 @@ struct Submission<'v> {
     date: time::Date,
     #[field(validate = len(1..=250))]
     r#abstract: &'v str,
-    #[field(validate = ext("pdf"))]
+    #[field(validate = ext(ContentType::PDF))]
     file: TempFile<'v>,
     #[field(validate = len(1..))]
     category: Vec<Category>,
@@ -52,8 +52,7 @@ struct Account<'v> {
     #[field(validate = len(1..))]
     name: &'v str,
     password: Password<'v>,
-    #[field(validate = contains('@'))]
-    #[field(validate = omits(self.password.first))]
+    #[field(validate = contains('@').or_else(msg!("invalid email address")))]
     email: &'v str,
 }
 
