@@ -51,6 +51,7 @@ fn context_type(input: Input<'_>) -> (TokenStream, Option<syn::WhereClause>) {
 
 pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__f> #_form::FromForm<'__f>))
+        // NOTE: If support is widened, fix `FieldExt::ident()` `expect()`.
         .support(Support::NamedStruct | Support::Lifetime | Support::Type)
         .replace_generic(0, 0)
         .type_bound(quote!(#_form::FromForm<'__f> + '__f))
@@ -189,13 +190,6 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     .split2();
 
                 Ok(quote_spanned! { fields.span() =>
-                    // if __c.__parent.is_none() {
-                    //     let _e = #_form::Error::from(#_form::ErrorKind::Missing)
-                    //         .with_entity(#_form::Entity::Form);
-                    //
-                    //     return #_Err(_e.into());
-                    // }
-
                     #(let #ident = match #finalize_field {
                         #_ok(#ident) => #_some(#ident),
                         #_err(_e) => { __c.__errors.extend(_e); #_none }
@@ -231,7 +225,6 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                         .unwrap_or_else(|| <#ty as #_form::FromForm<'__f>>::default()
                             .ok_or_else(|| #_form::ErrorKind::Missing.into())
                         )
-                    // <#ty as #_form::FromForm<'__f>>::finalize(__c.#ident)
                         .and_then(|#ident| {
                             let mut _es = #_form::Errors::new();
                             #(if let #_err(_e) = #validator { _es.extend(_e); })*

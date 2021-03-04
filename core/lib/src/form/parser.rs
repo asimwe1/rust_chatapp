@@ -148,6 +148,8 @@ mod raw_str_parse_tests {
 }
 
 impl<'r, 'i> MultipartParser<'r, 'i> {
+    /// Returns `None` when there are no further fields. Otherwise tries to
+    /// parse the next multipart form field and returns the result.
     async fn next(&mut self) -> Option<Result<'r, Field<'r, 'i>>> {
         if self.done {
             return None;

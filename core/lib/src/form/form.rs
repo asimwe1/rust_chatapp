@@ -9,7 +9,7 @@ use crate::form::prelude::*;
 /// A data guard for [`FromForm`] types.
 ///
 /// This type implements the [`FromData`] trait. It provides a generic means to
-/// parse arbitrary structures from incoming form data of any kind.
+/// parse arbitrary structures from incoming form data.
 ///
 /// See the [forms guide](https://rocket.rs/master/guide/requests#forms) for
 /// general form support documentation.
@@ -57,19 +57,44 @@ use crate::form::prelude::*;
 ///
 /// ## Data Limits
 ///
-/// The default size limit for incoming form data is 32KiB. Setting a limit
-/// protects your application from denial of service (DOS) attacks and from
-/// resource exhaustion through high memory consumption. The limit can be
-/// modified by setting the `limits.form` configuration parameter. For instance,
-/// to increase the forms limit to 512KiB for all environments, you may add the
-/// following to your `Rocket.toml`:
+/// ### URL-Encoded Forms
+///
+/// The `form` limit specifies the data limit for an entire url-encoded form
+/// data. It defaults to 32KiB. URL-encoded form data is percent-decoded, stored
+/// in-memory, and parsed into [`ValueField`]s. If the incoming data exceeds
+/// this limit, the `Form` data guard fails without attempting to parse fields
+/// with a `413: Payload Too Large` error.
+///
+/// ### Multipart Forms
+///
+/// The `data-form` limit specifies the data limit for an entire multipart form
+/// data stream. It defaults to 2MiB. Multipart data is streamed, and form
+/// fields are processed into [`DataField`]s or [`ValueField`]s as they arrive.
+/// If the commulative data received while streaming exceeds the limit, parsing
+/// is aborted, an error is created and pushed via [`FromForm::push_error()`],
+/// and the form is finalized.
+///
+/// ### Individual Fields
+///
+/// Individual fields _may_ have data limits as well. The type of the field
+/// determines whether there is a data limit. For instance, the `&str` type
+/// imposes the `string` data limit. Consult the type's documentation or
+/// [`FromFormField`] for details.
+///
+/// ### Changing Limits
+///
+/// To change data limits, set the `limits.form` and/or `limits.data-form`
+/// configuration parameters. For instance, to increase the URL-encoded forms
+/// limit to 128KiB for all environments, you might add the following to your
+/// `Rocket.toml`:
 ///
 /// ```toml
 /// [global.limits]
-/// form = 524288
+/// form = 128KiB
 /// ```
 ///
-/// See the [`Limits`](crate::data::Limits) docs for more.
+/// See the [`Limits`](crate::data::Limits) and [`config`](crate::config) docs
+/// for more.
 #[derive(Debug)]
 pub struct Form<T>(T);
 

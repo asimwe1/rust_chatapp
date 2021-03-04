@@ -832,29 +832,34 @@ means that validation was successful while an `Err` of [`Errors<'_>`] indicates
 the error(s) that occured. For instance, if you wanted to implement an ad-hoc
 Luhn validator for credit-card-like numbers, you might write:
 
-
 ```rust
 # #[macro_use] extern crate rocket;
 extern crate time;
 
+use rocket::form::{self, Error};
+
 #[derive(FromForm)]
-struct CreditCard<'v> {
-    #[field(validate = luhn())]
-    number: &'v str,
-    # #[field(validate = luhn())]
-    # other: String,
+struct CreditCard {
+    #[field(validate = luhn(self.cvv, &self.expiration))]
+    number: u64,
     #[field(validate = range(..9999))]
     cvv: u16,
     expiration: time::Date,
 }
 
-fn luhn<'v, S: AsRef<str>>(field: S) -> rocket::form::Result<'v, ()> {
-    let num = field.as_ref().parse::<u64>()?;
+fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
+    # let valid = false;
+    if !valid {
+        Err(Error::validation("invalid credit card number"))?;
+    }
 
-    /* implementation of Luhn validator... */
-    # Ok(())
+    Ok(())
 }
 ```
+
+If a field's validation doesn't depend on other fields (validation is _local_),
+it is validated prior to those fields that do. For `CreditCard`, `cvv` and
+`expiration` will be validated prior to `number`.
 
 ### Defaults
 

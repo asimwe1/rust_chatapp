@@ -66,7 +66,7 @@ impl Name {
             type Item = &'v Key;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if self.0.is_terminal() {
+                if self.0.exhausted() {
                     return None;
                 }
 
@@ -102,7 +102,7 @@ impl Name {
             type Item = &'v Name;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if self.0.is_terminal() {
+                if self.0.exhausted() {
                     return None;
                 }
 
@@ -476,16 +476,55 @@ impl<'v> NameView<'v> {
 
     /// Shifts the current key once to the right.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use rocket::form::name::NameView;
     ///
-    /// let mut view = NameView::new("a.b[c:d]");
+    /// let mut view = NameView::new("a.b[c:d][d.e]");
     /// assert_eq!(view.key().unwrap(), "a");
     ///
     /// view.shift();
     /// assert_eq!(view.key().unwrap(), "b");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key().unwrap(), "c:d");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key().unwrap(), "d.e");
+    /// ```
+    ///
+    /// Malformed strings can have interesting results:
+    ///
+    /// ```rust
+    /// use rocket::form::name::NameView;
+    ///
+    /// let mut view = NameView::new("a[c.d");
+    /// assert_eq!(view.key_lossy(), "a");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key_lossy(), "c.d");
+    ///
+    /// let mut view = NameView::new("a[c[.d]");
+    /// assert_eq!(view.key_lossy(), "a");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key_lossy(), "c[.d");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key(), None);
+    ///
+    /// let mut view = NameView::new("foo[c[.d]]");
+    /// assert_eq!(view.key_lossy(), "foo");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key_lossy(), "c[.d");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key_lossy(), "]");
+    ///
+    /// view.shift();
+    /// assert_eq!(view.key(), None);
     /// ```
     pub fn shift(&mut self) {
         const START_DELIMS: &'static [char] = &['.', '['];
@@ -494,13 +533,10 @@ impl<'v> NameView<'v> {
         let bytes = string.as_bytes();
         let shift = match bytes.get(0) {
             None | Some(b'=') => 0,
-            Some(b'[') => match string[1..].find(&[']', '.'][..]) {
-                Some(j) => match string[1..].as_bytes()[j] {
-                    b']' => j + 2,
-                    _ => j + 1,
-                }
+            Some(b'[') => match memchr::memchr(b']', bytes) {
+                Some(j) => j + 1,
                 None => bytes.len(),
-            }
+            },
             Some(b'.') => match string[1..].find(START_DELIMS) {
                 Some(j) => j + 1,
                 None => bytes.len(),
@@ -569,6 +605,7 @@ impl<'v> NameView<'v> {
         let key = match view.as_bytes().get(0) {
             Some(b'.') => &view[1..],
             Some(b'[') if view.ends_with(']') => &view[1..view.len() - 1],
+            Some(b'[') if self.is_at_last() => &view[1..],
             _ => view
         };
 
@@ -643,7 +680,13 @@ impl<'v> NameView<'v> {
         self.name
     }
 
-    fn is_terminal(&self) -> bool {
+    // This is the last key. The next `shift()` will exhaust `self`.
+    fn is_at_last(&self) -> bool {
+        self.end == self.name.len()
+    }
+
+    // There are no more keys. A `shift` will do nothing.
+    fn exhausted(&self) -> bool {
         self.start == self.name.len()
     }
 }

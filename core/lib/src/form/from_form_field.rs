@@ -61,6 +61,7 @@ use crate::form::prelude::*;
 ///
 ///     A value is validated successfully if the `from_str` method for the given
 ///     type returns successfully. Only accepts form _values_, not binary data.
+///     No data limit applies.
 ///
 ///   * **`bool`**
 ///
@@ -69,17 +70,21 @@ use crate::form::prelude::*;
 ///     `"off"`, `"no"`, or `"false"`. Defaults to `false` otherwise. Only
 ///     accepts form _values_, not binary data.
 ///
+///     **No data limit applies.**
+///
 ///   * **`&str`, `String`**
 ///
 ///     The decoded form value or data is returned directly without
 ///     modification.
 ///
+///     **The data limit `string` applies.**
+///
 ///   * **[`TempFile`]**
 ///
 ///     Streams the form field value or data to a temporary file. See
-///     [`TempFile`] for details.
+///     [`TempFile`] for details and data limits.
 ///
-///   * **[`Capped<TempFile>`], [`Capped<String>`]**
+///   * **[`Capped<TempFile>`], [`Capped<String>`], [`Capped<&str>`]**
 ///
 ///     Streams the form value or data to the inner value, succeeding even if
 ///     the data exceeds the respective type limit by truncating the data. See
@@ -91,6 +96,8 @@ use crate::form::prelude::*;
 ///     This is the `"date"` HTML input type. Only accepts form _values_, not
 ///     binary data.
 ///
+///     **No data limit applies.**
+///
 ///   * **[`time::PrimitiveDateTime`]**
 ///
 ///     Parses a date in `%FT%R` or `%FT%T` format, that is, `YYYY-MM-DDTHH:MM`
@@ -98,11 +105,15 @@ use crate::form::prelude::*;
 ///     without support for the millisecond variant. Only accepts form _values_,
 ///     not binary data.
 ///
+///     **No data limit applies.**
+///
 ///   * **[`time::Time`]**
 ///
 ///     Parses a time in `%R` or `%T` format, that is, `HH:MM` or `HH:MM:SS`.
 ///     This is the `"time"` HTML input type without support for the millisecond
 ///     variant. Only accepts form _values_, not binary data.
+///
+///     **No data limit applies.**
 ///
 /// [`TempFile`]: crate::data::TempFile
 ///
@@ -240,7 +251,7 @@ pub struct FromFieldContext<'v, T: FromFormField<'v>> {
 }
 
 impl<'v, T: FromFormField<'v>> FromFieldContext<'v, T> {
-    fn can_push(&mut self) -> bool {
+    fn should_push(&mut self) -> bool {
         self.pushes += 1;
         self.value.is_none()
     }
@@ -273,14 +284,14 @@ impl<'v, T: FromFormField<'v>> FromForm<'v> for T {
     }
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
-        if ctxt.can_push() {
+        if ctxt.should_push() {
             ctxt.field_value = Some(field.value);
             ctxt.push(field.name, Self::from_value(field))
         }
     }
 
     async fn push_data(ctxt: &mut FromFieldContext<'v, T>, field: DataField<'v, '_>) {
-        if ctxt.can_push() {
+        if ctxt.should_push() {
             ctxt.push(field.name, Self::from_data(field).await);
         }
     }

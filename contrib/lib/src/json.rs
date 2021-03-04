@@ -445,4 +445,5 @@ macro_rules! json {
     };
 }
 
+#[doc(inline)]
 pub use json;

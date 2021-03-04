@@ -532,7 +532,7 @@ impl<'v, K, V> MapContext<'v, K, V>
             }
             _ => {
                 let error = Error::from(ErrorKind::Missing)
-                    .with_entity(Entity::Indices)
+                    .with_entity(Entity::Key)
                     .with_name(name);
 
                 self.errors.push(error);
@@ -566,14 +566,14 @@ impl<'v, K, V> MapContext<'v, K, V>
             .zip(key_map.values().map(|(_, name)| name))
             .filter_map(|(ctxt, name)| match K::finalize(ctxt) {
                 Ok(value) => Some(value),
-                Err(e) => { errors.borrow_mut().extend(e.with_name(*name)); None }
+                Err(e) => { errors.borrow_mut().extend(e.with_name(*name)); None },
             });
 
         let values = values.into_iter()
             .zip(key_map.values().map(|(_, name)| name))
             .filter_map(|(ctxt, name)| match V::finalize(ctxt) {
                 Ok(value) => Some(value),
-                Err(e) => { errors.borrow_mut().extend(e.with_name(*name)); None }
+                Err(e) => { errors.borrow_mut().extend(e.with_name(*name)); None },
             });
 
         let map: T = keys.zip(values).collect();
