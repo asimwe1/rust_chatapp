@@ -200,6 +200,12 @@ impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for MsgPack<T> {
     }
 }
 
+impl<T> From<T> for MsgPack<T> {
+    fn from(value: T) -> Self {
+        MsgPack(value)
+    }
+}
+
 impl<T> Deref for MsgPack<T> {
     type Target = T;
 

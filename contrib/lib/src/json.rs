@@ -201,6 +201,12 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     }
 }
 
+impl<T> From<T> for Json<T> {
+    fn from(value: T) -> Self {
+        Json(value)
+    }
+}
+
 impl<T> Deref for Json<T> {
     type Target = T;
 
