@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use smallvec::SmallVec;
 
-use crate::uri::{UriPart, Path, Query, UriDisplay, Origin};
+use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
@@ -214,16 +214,12 @@ impl<'i, P: UriPart> Formatter<'i, P> {
         // cases for both Path and Query, and doing it this way allows us to
         // keep the uri part generic _generic_ in other implementations that use
         // `write_raw`.
-        if self.fresh && P::DELIMITER == '/' {
-            if self.previous {
-                self.inner.write_char(P::DELIMITER)?;
-            }
-        } else if self.fresh && P::DELIMITER == '&' {
+        if self.fresh {
             if self.previous {
                 self.inner.write_char(P::DELIMITER)?;
             }
 
-            if !self.prefixes.is_empty() {
+            if P::KIND == Kind::Query && !self.prefixes.is_empty() {
                 for (i, prefix) in self.prefixes.iter().enumerate() {
                     self.inner.write_str(prefix)?;
                     if i < self.prefixes.len() - 1 {

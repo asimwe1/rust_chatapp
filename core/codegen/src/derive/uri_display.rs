@@ -1,6 +1,6 @@
 
 use devise::{*, ext::SpanDiagnosticExt};
-use rocket_http::uri::UriPart;
+use rocket_http::uri;
 
 use crate::exports::*;
 use crate::derive::form_field::FieldExt;
@@ -129,11 +129,10 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
     ts.into()
 }
 
-fn from_uri_param<P: UriPart>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {
-    let part = match P::DELIMITER {
-        '/' => quote!(#_uri::Path),
-        '&' => quote!(#_uri::Query),
-        _ => unreachable!("sealed trait with path/query")
+fn from_uri_param<P: uri::UriPart>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {
+    let part = match P::KIND {
+        uri::Kind::Path => quote!(#_uri::Path),
+        uri::Kind::Query => quote!(#_uri::Query),
     };
 
     let ty: syn::Type = syn::parse2(ty).expect("valid type");

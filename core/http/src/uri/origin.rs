@@ -3,7 +3,8 @@ use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Indexed, Extent, IndexedStr};
-use crate::uri::{as_utf8_unchecked, Error, UriPart, Query, Path, Segments, QuerySegments};
+use crate::uri::{self, UriPart, Query, Path};
+use crate::uri::{Error, Segments, QuerySegments, as_utf8_unchecked};
 use crate::RawStr;
 
 use state::Storage;
@@ -120,10 +121,9 @@ fn decode_to_indexed_str<P: UriPart>(
     value: &RawStr,
     (indexed, source): (&IndexedStr<'_>, &RawStr)
 ) -> IndexedStr<'static> {
-    let decoded = match P::DELIMITER {
-        Query::DELIMITER => value.url_decode_lossy(),
-        Path::DELIMITER => value.percent_decode_lossy(),
-        _ => unreachable!("sealed trait admits only path and query")
+    let decoded = match P::KIND {
+        uri::Kind::Path => value.percent_decode_lossy(),
+        uri::Kind::Query => value.url_decode_lossy(),
     };
 
     match decoded {
