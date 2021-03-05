@@ -71,3 +71,11 @@ impl std::fmt::Debug for LocalRequest<'_> {
         self._request().fmt(f)
     }
 }
+
+impl<'c> std::ops::Deref for LocalRequest<'c> {
+    type Target = Request<'c>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner()
+    }
+}

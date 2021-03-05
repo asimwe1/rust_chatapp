@@ -3,6 +3,9 @@ macro_rules! pub_request_impl {
 {
     /// Retrieves the inner `Request` as seen by Rocket.
     ///
+    /// Note that no routing has occurred and that there is no remote
+    /// connection.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -240,5 +243,8 @@ macro_rules! pub_request_impl {
     fn _ensure_impls_exist() {
         fn is_clone_debug<T: Clone + std::fmt::Debug>() {}
         is_clone_debug::<Self>();
+
+        fn is_deref_req<'a, T: std::ops::Deref<Target = Request<'a>>>() {}
+        is_deref_req::<Self>();
     }
 }}
