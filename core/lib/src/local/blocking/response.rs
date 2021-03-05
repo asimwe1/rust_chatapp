@@ -73,7 +73,7 @@ impl LocalResponse<'_> {
     }
 
     // Generates the public API methods, which call the private methods above.
-    pub_response_impl!("# use rocket::local::blocking::Client;
+    pub_response_impl!("# use rocket::local::blocking::Client;\n\
         use rocket::local::blocking::LocalResponse;");
 }
 

@@ -62,7 +62,7 @@ impl<'c> LocalRequest<'c> {
         LocalResponse { inner, client: self.client }
     }
 
-    pub_request_impl!("# use rocket::local::blocking::Client;
+    pub_request_impl!("# use rocket::local::blocking::Client;\n\
         use rocket::local::blocking::LocalRequest;");
 }
 

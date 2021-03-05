@@ -80,7 +80,7 @@ impl<'c> LocalResponse<'c> {
         //      otherwise, methods like `.headers()` could, in conjunction with
         //      particular crafted `Responder`s, potentially be used to obtain a
         //      reference to contents of `Request`. All methods, instead, return
-        //      references bounded by `self`. This is easily verified by nothing
+        //      references bounded by `self`. This is easily verified by noting
         //      that 1) `LocalResponse` fields are private, and 2) all `impl`s
         //      of `LocalResponse` aside from this method abstract the lifetime
         //      away as `'_`, ensuring it is not used for any output value.
@@ -117,7 +117,7 @@ impl LocalResponse<'_> {
     }
 
     // Generates the public API methods, which call the private methods above.
-    pub_response_impl!("# use rocket::local::asynchronous::Client;
+    pub_response_impl!("# use rocket::local::asynchronous::Client;\n\
         use rocket::local::asynchronous::LocalResponse;" async await);
 }
 

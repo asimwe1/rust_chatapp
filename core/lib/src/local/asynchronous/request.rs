@@ -112,7 +112,7 @@ impl<'c> LocalRequest<'c> {
         response
     }
 
-    pub_request_impl!("# use rocket::local::asynchronous::Client;
+    pub_request_impl!("# use rocket::local::asynchronous::Client;\n\
         use rocket::local::asynchronous::LocalRequest;" async await);
 }
 
