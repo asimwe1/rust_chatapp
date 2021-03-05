@@ -17,6 +17,9 @@ db.sqlite
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 Cargo.lock
 
+# Cargo config directory
+.cargo/
+
 # The upload script, for now.
 scripts/upload-docs.sh
 scripts/redirect.html
