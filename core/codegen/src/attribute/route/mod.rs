@@ -196,8 +196,6 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
         /// Rocket generated URI macro.
         macro_rules! #inner_macro_name {
             ($($token:tt)*) => {{
-                extern crate std;
-                extern crate rocket;
                 rocket::rocket_internal_uri!(#route_uri, (#(#uri_args),*), $($token)*)
             }};
         }
