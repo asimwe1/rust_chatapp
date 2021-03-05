@@ -25,7 +25,7 @@ use rocket::response::{NamedFile, Redirect};
 ///
 /// This macro is primarily intended for use with [`StaticFiles`] to serve files
 /// from a path relative to the crate root. The macro accepts one parameter,
-/// `$path`, an absolute or, preferably, a relative path. It returns a path (an
+/// `$path`, an absolute or, preferably, relative path. It returns a path (an
 /// `&'static str`) prefixed with the path to the crate root. Use `Path::new()`
 /// to retrieve an `&'static Path`.
 ///
@@ -35,13 +35,8 @@ use rocket::response::{NamedFile, Redirect};
 /// # Example
 ///
 /// ```rust
-/// use rocket_contrib::serve::{StaticFiles, crate_relative};
-///
-/// let manual = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
-/// let automatic = crate_relative!("static");
-/// assert_eq!(manual, automatic);
-///
 /// use std::path::Path;
+/// use rocket_contrib::serve::crate_relative;
 ///
 /// let manual = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
 /// let automatic_1 = Path::new(crate_relative!("static"));
@@ -233,7 +228,7 @@ impl std::ops::BitOr for Options {
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().mount("/", StaticFiles::from(crate_relative!("/static")))
+///     rocket::ignite().mount("/", StaticFiles::from(crate_relative!("static")))
 /// }
 /// ```
 #[derive(Clone)]
