@@ -43,6 +43,7 @@ pub(crate) struct Metadata {
     pub static_query_fields: Vec<(String, String)>,
     pub static_path: bool,
     pub wild_path: bool,
+    pub trailing_path: bool,
     pub wild_query: bool,
 }
 
@@ -185,6 +186,7 @@ impl Route {
             static_path: path_segs.iter().all(|s| !s.dynamic),
             wild_path: path_segs.iter().all(|s| s.dynamic)
                 && path_segs.last().map_or(false, |p| p.trailing),
+            trailing_path: path_segs.last().map_or(false, |p| p.trailing),
             wild_query: query_segs.iter().all(|s| s.dynamic),
             static_query_fields: query_segs.iter().filter(|s| !s.dynamic)
                 .map(|s| ValueField::parse(&s.value))

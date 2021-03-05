@@ -25,9 +25,9 @@ use rocket::response::{NamedFile, Redirect};
 ///
 /// This macro is primarily intended for use with [`StaticFiles`] to serve files
 /// from a path relative to the crate root. The macro accepts one parameter,
-/// `$path`, an absolute or relative path. It returns a path (an `&'static str`)
-/// prefixed with the path to the crate root. Use `Path::new()` to retrieve an
-/// `&'static Path`.
+/// `$path`, an absolute or, preferably, a relative path. It returns a path (an
+/// `&'static str`) prefixed with the path to the crate root. Use `Path::new()`
+/// to retrieve an `&'static Path`.
 ///
 /// See the [relative paths `StaticFiles`
 /// documentation](`StaticFiles`#relative-paths) for an example.
@@ -52,7 +52,11 @@ use rocket::response::{NamedFile, Redirect};
 #[macro_export]
 macro_rules! crate_relative {
     ($path:expr) => {
-        concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
+        if cfg!(windows) {
+            concat!(env!("CARGO_MANIFEST_DIR"), "\\", $path)
+        } else {
+            concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
+        }
     };
 }
 
@@ -77,32 +81,41 @@ pub struct Options(u8);
 
 #[allow(non_upper_case_globals, non_snake_case)]
 impl Options {
-    /// `Options` representing the empty set: no options are enabled. This is
-    /// different than [`Options::default()`](#impl-Default), which enables
-    /// `Index`.
+    /// All options disabled.
+    ///
+    /// This is different than [`Options::default()`](#impl-Default), which
+    /// enables `Options::Index`.
     pub const None: Options = Options(0b0000);
 
-    /// `Options` enabling responding to requests for a directory with the
-    /// `index.html` file in that directory, if it exists. When this is enabled,
-    /// the [`StaticFiles`] handler will respond to requests for a directory
-    /// `/foo` of `/foo/` with the file `${root}/foo/index.html` if it exists.
-    /// This is enabled by default.
+    /// Respond to requests for a directory with the `index.html` file in that
+    /// directory, if it exists.
+    ///
+    /// When enabled, [`StaticFiles`] will respond to requests for a directory
+    /// `/foo` or `/foo/` with the file at `${root}/foo/index.html` if it
+    /// exists. When disabled, requests to directories will always forward.
+    ///
+    /// **Enabled by default.**
     pub const Index: Options = Options(0b0001);
 
-    /// `Options` enabling returning dot files. When this is enabled, the
-    /// [`StaticFiles`] handler will respond to requests for files or
+    /// Allow requests to dotfiles.
+    ///
+    /// When enabled, [`StaticFiles`] will respond to requests for files or
     /// directories beginning with `.`. When disabled, any dotfiles will be
-    /// treated as missing. This is _not_ enabled by default.
+    /// treated as missing.
+    ///
+    /// **Disabled by default.**
     pub const DotFiles: Options = Options(0b0010);
 
-    /// `Options` that normalizes directory requests by redirecting requests to
-    /// directory paths without a trailing slash to ones with a trailing slash.
+    /// Normalizes directory requests by redirecting requests to directory paths
+    /// without a trailing slash to ones with a trailing slash.
     ///
     /// When enabled, the [`StaticFiles`] handler will respond to requests for a
     /// directory without a trailing `/` with a permanent redirect (308) to the
     /// same path with a trailing `/`. This ensures relative URLs within any
     /// document served from that directory will be interpreted relative to that
-    /// directory rather than its parent. This is _not_ enabled by default.
+    /// directory rather than its parent.
+    ///
+    /// **Disabled by default.**
     ///
     /// # Example
     ///
@@ -339,58 +352,41 @@ impl StaticFiles {
 
 impl Into<Vec<Route>> for StaticFiles {
     fn into(self) -> Vec<Route> {
-        let non_index = Route::ranked(self.rank, Method::Get, "/<path..>", self.clone());
-        // `Index` requires routing the index for obvious reasons.
-        // `NormalizeDirs` requires routing the index so a `.mount("/foo")` with
-        // a request `/foo`, can be redirected to `/foo/`.
-        if self.options.contains(Options::Index) || self.options.contains(Options::NormalizeDirs) {
-            let index = Route::ranked(self.rank, Method::Get, "/", self);
-            vec![index, non_index]
-        } else {
-            vec![non_index]
-        }
+        let mut route = Route::ranked(self.rank, Method::Get, "/<path..>", self);
+        route.name = Some("StaticFiles");
+        // route.name = format!("StaticFiles({})", self.root.fancy_display());
+        vec![route]
     }
-}
-
-async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> Outcome<'r>
-    where P: AsRef<Path>
-{
-    if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
-        let new_path = r.uri().map_path(|p| format!("{}/", p))
-            .expect("adding a trailing slash to a known good path results in a valid path")
-            .into_owned();
-
-        return Outcome::from_or_forward(r, d, Redirect::permanent(new_path));
-    }
-
-    if !opt.contains(Options::Index) {
-        return Outcome::forward(d);
-    }
-
-    let file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
-    Outcome::from_or_forward(r, d, file)
 }
 
 #[rocket::async_trait]
 impl Handler for StaticFiles {
     async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
-        // If this is not the route with segments, handle it only if the user
-        // requested a handling of index files.
-        let current_route = req.route().expect("route while handling");
-        let is_segments_route = current_route.uri.path().ends_with(">");
-        if !is_segments_route {
-            return handle_dir(self.options, req, data, &self.root).await;
-        }
-
-        // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
-        // only allowing dotfiles if the user allowed it.
-        let allow_dotfiles = self.options.contains(Options::DotFiles);
+        // Get the segments as a `PathBuf`, allowing dotfiles requested.
+        let options = self.options;
+        let allow_dotfiles = options.contains(Options::DotFiles);
         let path = req.segments::<Segments<'_>>(0..).ok()
             .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
         match path {
-            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
+            Some(p) if p.is_dir() => {
+                // Normalize '/a/b/foo' to '/a/b/foo/'.
+                if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
+                    let normal = req.uri().map_path(|p| format!("{}/", p))
+                        .expect("adding a trailing slash to a known good path => valid path")
+                        .into_owned();
+
+                    return Outcome::from_or_forward(req, data, Redirect::permanent(normal));
+                }
+
+                if !options.contains(Options::Index) {
+                    return Outcome::forward(data);
+                }
+
+                let index = NamedFile::open(p.join("index.html")).await.ok();
+                Outcome::from_or_forward(req, data, index)
+            },
             Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
             None => Outcome::forward(data),
         }

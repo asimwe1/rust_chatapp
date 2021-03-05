@@ -46,6 +46,10 @@ impl Route {
 }
 
 fn paths_collide(route: &Route, other: &Route) -> bool {
+    if route.metadata.wild_path || other.metadata.wild_path {
+        return true;
+    }
+
     let a_segments = &route.metadata.path_segs;
     let b_segments = &other.metadata.path_segs;
     for (seg_a, seg_b) in a_segments.iter().zip(b_segments.iter()) {
@@ -60,13 +64,15 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
         }
     }
 
-    a_segments.len() == b_segments.len()
+    a_segments.get(b_segments.len()).map_or(false, |s| s.trailing)
+        || b_segments.get(a_segments.len()).map_or(false, |s| s.trailing)
+        || a_segments.len() == b_segments.len()
 }
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.metadata.path_segs;
     let req_segments = req.routed_segments(0..);
-    if route_segments.len() > req_segments.len() {
+    if route_segments.len() > req_segments.len() + 1 {
         return false;
     }
 
@@ -84,7 +90,8 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
         }
     }
 
-    route_segments.len() == req_segments.len()
+    route_segments.get(req_segments.len()).map_or(false, |s| s.trailing)
+        || route_segments.len() == req_segments.len()
 }
 
 fn queries_match(route: &Route, req: &Request<'_>) -> bool {
@@ -188,6 +195,8 @@ mod tests {
 
     #[test]
     fn simple_param_collisions() {
+        assert!(unranked_collide("/<a>", "/<b>"));
+        assert!(unranked_collide("/<a>", "/b"));
         assert!(unranked_collide("/hello/<name>", "/hello/<person>"));
         assert!(unranked_collide("/hello/<name>/hi", "/hello/<person>/hi"));
         assert!(unranked_collide("/hello/<name>/hi/there", "/hello/<person>/hi/there"));
@@ -203,10 +212,12 @@ mod tests {
         assert!(unranked_collide("/a/<b>/<c>/<a..>", "/a/hi/hey/hayo"));
         assert!(unranked_collide("/<b>/<c>/<a..>", "/a/hi/hey/hayo"));
         assert!(unranked_collide("/<b>/<c>/hey/hayo", "/a/hi/hey/hayo"));
+        assert!(unranked_collide("/<a..>", "/foo"));
     }
 
     #[test]
     fn medium_param_collisions() {
+        assert!(unranked_collide("/<a>", "/b"));
         assert!(unranked_collide("/hello/<name>", "/hello/bob"));
         assert!(unranked_collide("/<name>", "//bob"));
     }
@@ -217,6 +228,13 @@ mod tests {
         assert!(unranked_collide("/<a..>", "//a/bcjdklfj//<c>"));
         assert!(unranked_collide("/a/<a..>", "//a/bcjdklfj//<c>"));
         assert!(unranked_collide("/a/<b>/<c..>", "//a/bcjdklfj//<c>"));
+        assert!(unranked_collide("/<a..>", "/"));
+        assert!(unranked_collide("/", "/<_..>"));
+        assert!(unranked_collide("/a/b/<a..>", "/a/<b..>"));
+        assert!(unranked_collide("/a/b/<a..>", "/a/<b>/<b..>"));
+        assert!(unranked_collide("/hi/<a..>", "/hi"));
+        assert!(unranked_collide("/hi/<a..>", "/hi/"));
+        assert!(unranked_collide("/<a..>", "//////"));
     }
 
     #[test]
@@ -244,10 +262,6 @@ mod tests {
         assert!(!unranked_collide("/hello", "/a/c"));
         assert!(!unranked_collide("/hello/there", "/hello/there/guy"));
         assert!(!unranked_collide("/a/<b>", "/b/<b>"));
-        assert!(!unranked_collide("/<a..>", "/"));
-        assert!(!unranked_collide("/hi/<a..>", "/hi"));
-        assert!(!unranked_collide("/hi/<a..>", "/hi/"));
-        assert!(!unranked_collide("/<a..>", "//////"));
         assert!(!unranked_collide("/t", "/test"));
         assert!(!unranked_collide("/a", "/aa"));
         assert!(!unranked_collide("/a", "/aaa"));
@@ -271,6 +285,7 @@ mod tests {
         assert!(!m_collide((Post, "/a"), (Put, "/")));
         assert!(!m_collide((Get, "/a"), (Put, "/")));
         assert!(!m_collide((Get, "/hello"), (Put, "/hello")));
+        assert!(!m_collide((Get, "/<foo..>"), (Post, "/")));
     }
 
     #[test]
@@ -303,13 +318,14 @@ mod tests {
         assert!(!s_s_collide("/hello", "/a/c"));
         assert!(!s_s_collide("/hello/there", "/hello/there/guy"));
         assert!(!s_s_collide("/a/<b>", "/b/<b>"));
-        assert!(!s_s_collide("/<a..>", "/"));
-        assert!(!s_s_collide("/hi/<a..>", "/hi/"));
-        assert!(!s_s_collide("/a/hi/<a..>", "/a/hi/"));
         assert!(!s_s_collide("/t", "/test"));
         assert!(!s_s_collide("/a", "/aa"));
         assert!(!s_s_collide("/a", "/aaa"));
         assert!(!s_s_collide("/", "/a"));
+
+        assert!(s_s_collide("/a/hi/<a..>", "/a/hi/"));
+        assert!(s_s_collide("/hi/<a..>", "/hi/"));
+        assert!(s_s_collide("/<a..>", "/"));
     }
 
     fn mt_mt_collide(mt1: &str, mt2: &str) -> bool {

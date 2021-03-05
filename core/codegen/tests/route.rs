@@ -296,3 +296,49 @@ fn test_query_collection() {
     let rocket = rocket::ignite().mount("/", routes![query_collection_2]);
     run_tests(rocket);
 }
+
+use rocket::request::FromSegments;
+use rocket::http::uri::Segments;
+
+struct PathString(String);
+
+impl FromSegments<'_> for PathString {
+    type Error = std::convert::Infallible;
+
+    fn from_segments(segments: Segments<'_>) -> Result<Self, Self::Error> {
+        Ok(PathString(segments.collect::<Vec<_>>().join("/")))
+    }
+
+}
+
+#[get("/<_>/b/<path..>", rank = 1)]
+fn segments(path: PathString) -> String {
+    format!("nonempty+{}", path.0)
+}
+
+#[get("/<path..>", rank = 2)]
+fn segments_empty(path: PathString) -> String {
+    format!("empty+{}", path.0)
+}
+
+#[test]
+fn test_inclusive_segments() {
+    let rocket = rocket::ignite()
+        .mount("/", routes![segments])
+        .mount("/", routes![segments_empty]);
+
+    let client = Client::untracked(rocket).unwrap();
+    let get = |uri| client.get(uri).dispatch().into_string().unwrap();
+
+    assert_eq!(get("/"), "empty+");
+    assert_eq!(get("//"), "empty+");
+    assert_eq!(get("//a/"), "empty+a");
+    assert_eq!(get("//a//"), "empty+a");
+    assert_eq!(get("//a//c/d"), "empty+a/c/d");
+
+    assert_eq!(get("//a/b"), "nonempty+");
+    assert_eq!(get("//a/b/c"), "nonempty+c");
+    assert_eq!(get("//a/b//c"), "nonempty+c");
+    assert_eq!(get("//a//b////c"), "nonempty+c");
+    assert_eq!(get("//a//b////c/d/e"), "nonempty+c/d/e");
+}

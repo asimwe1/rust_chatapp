@@ -120,28 +120,27 @@ path. The type of such parameters, known as _segments guards_, must implement
 text after a segments guard will result in a compile-time error.
 
 As an example, the following route matches against all paths that begin with
-`/page/`:
+`/page`:
 
 ```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
+# use rocket::get;
 use std::path::PathBuf;
 
 #[get("/page/<path..>")]
 fn get_page(path: PathBuf) { /* ... */ }
 ```
 
-The path after `/page/` will be available in the `path` parameter. The
+The path after `/page/` will be available in the `path` parameter, which may be
+empty for paths that are simply `/page`, `/page/`, `/page//`, and so on. The
 `FromSegments` implementation for `PathBuf` ensures that `path` cannot lead to
-[path traversal attacks](https://www.owasp.org/index.php/Path_Traversal). With
-this, a safe and secure static file server can be implemented in 4 lines:
+[path traversal attacks]. With this, a safe and secure static file server can be
+implemented in just 4 lines:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 use rocket::response::NamedFile;
 
 #[get("/<file..>")]
@@ -150,13 +149,15 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 }
 ```
 
+[path traversal attacks]: https://www.owasp.org/index.php/Path_Traversal
+
 ! tip: Rocket makes it even _easier_ to serve static files!
 
   If you need to serve static files from your Rocket application, consider using
   the [`StaticFiles`] custom handler from [`rocket_contrib`], which makes it as
   simple as:
 
-  `rocket.mount("/public", StaticFiles::from("/static"))`
+  `rocket.mount("/public", StaticFiles::from("static/"))`
 
 [`rocket_contrib`]: @api/rocket_contrib/
 [`StaticFiles`]: @api/rocket_contrib/serve/struct.StaticFiles.html

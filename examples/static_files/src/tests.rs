@@ -6,6 +6,7 @@ use rocket::http::Status;
 
 use super::rocket;
 
+#[track_caller]
 fn test_query_file<T> (path: &str, file: T, status: Status)
     where T: Into<Option<&'static str>>
 {
@@ -33,19 +34,33 @@ fn test_index_html() {
     test_query_file("/", "static/index.html", Status::Ok);
     test_query_file("/?v=1", "static/index.html", Status::Ok);
     test_query_file("/?this=should&be=ignored", "static/index.html", Status::Ok);
+    test_query_file("/second/", "static/index.html", Status::Ok);
+    test_query_file("/second/?v=1", "static/index.html", Status::Ok);
+}
+
+#[test]
+fn test_hidden_index_html() {
+    test_query_file("/hidden", "static/hidden/index.html", Status::Ok);
+    test_query_file("/hidden/", "static/hidden/index.html", Status::Ok);
+    test_query_file("//hidden//", "static/hidden/index.html", Status::Ok);
+    test_query_file("/second/hidden", "static/hidden/index.html", Status::Ok);
+    test_query_file("/second/hidden/", "static/hidden/index.html", Status::Ok);
+    test_query_file("/second/hidden///", "static/hidden/index.html", Status::Ok);
 }
 
 #[test]
 fn test_hidden_file() {
     test_query_file("/hidden/hi.txt", "static/hidden/hi.txt", Status::Ok);
+    test_query_file("/second/hidden/hi.txt", "static/hidden/hi.txt", Status::Ok);
     test_query_file("/hidden/hi.txt?v=1", "static/hidden/hi.txt", Status::Ok);
     test_query_file("/hidden/hi.txt?v=1&a=b", "static/hidden/hi.txt", Status::Ok);
+    test_query_file("/second/hidden/hi.txt?v=1&a=b", "static/hidden/hi.txt", Status::Ok);
 }
 
 #[test]
 fn test_icon_file() {
     test_query_file("/rocket-icon.jpg", "static/rocket-icon.jpg", Status::Ok);
-    test_query_file("/rocket-icon.jpg", "static/rocket-icon.jpg", Status::Ok);
+    test_query_file("/second/rocket-icon.jpg", "static/rocket-icon.jpg", Status::Ok);
 }
 
 #[test]
