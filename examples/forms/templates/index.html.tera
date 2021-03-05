@@ -89,13 +89,13 @@
             <div class="col">
               <label>Applicable Categories</label>
               <br />
-              {{ m::checkbox(name="submission.category", value="Biology") }}
+              {{ m::checkbox(name="submission.category", label="Biology", value="Biology") }}
               <br />
-              {{ m::checkbox(name="submission.category", value="Chemistry") }}
+              {{ m::checkbox(name="submission.category", label="Chemistry", value="Chemistry") }}
               <br />
-              {{ m::checkbox(name="submission.category", value="Physics") }}
+              {{ m::checkbox(name="submission.category", label="Chemistry", value="Physics") }}
               <br />
-              {{ m::checkbox(name="submission.category", value="CS") }}
+              {{ m::checkbox(name="submission.category", label="CS", value="CS") }}
             </div>
           </div>
 
@@ -125,8 +125,7 @@
 
           <div class="row">
             <div class="col">
-                {{ m::checkbox(name="submission.ready", value="Submission is
-                ready for review.") }}
+                {{ m::checkbox(name="submission.ready", label="Submission is ready for review.") }}
             </div>
           </div>
 

@@ -25,9 +25,9 @@
     {{ self::errors_for(name=name) }}
 {% endmacro input %}
 
-{% macro checkbox(name, value) %}
+{% macro checkbox(name, label, value="yes") %}
     <label {% if name in errors %} class="bd-error" {% endif %}>
-    <input type="checkbox" name="{{ name }}" value="{{ value }}"
+    <input type="checkbox" name="{{ name }}" value={{ value }}
     {% if name in values %}
         {% set field_values = values | get(key=name) %}
         {% if field_values is containing(value) %}
@@ -35,7 +35,7 @@
         {% endif %}
     {% endif %}
     >
-        {{ value }}
+        {{ label }}
     </label>
 {% endmacro input %}
 
