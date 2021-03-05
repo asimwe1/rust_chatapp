@@ -646,53 +646,41 @@ impl<'r> Request<'r> {
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request
-    /// URI beginning and including the 0-indexed `n`th non-empty segment. `T`
-    /// must implement [`FromSegments`], which is used to parse the segments.
+    /// URI beginning and including the 0-indexed `n`th non-empty segment
+    /// _after_ the mount point.,that is, the `n`th segment _after_ the mount
+    /// point. If the request has not been routed, then this is simply the `n`th
+    /// non-empty request URI segment.
+    ///
+    /// `T` must implement [`FromSegments`], which is used to parse the
+    /// segments. If there are no non-empty segments, the `Segments` iterator
+    /// will be empty.
     ///
     /// This method exists only to be used by manual routing. To retrieve
     /// segments from a request, use Rocket's code generation facilities.
     ///
-    /// # Error
-    ///
-    /// If there are fewer than `n` non-empty segments, returns `None`. If
-    /// parsing the segments failed, returns `Some(Err(T:Error))`.
-    ///
     /// # Example
     ///
     /// ```rust
-    /// # use rocket::{Request, http::Method};
     /// use std::path::PathBuf;
     ///
-    /// use rocket::http::uri::Origin;
+    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let get = |uri| c.get(uri);
+    /// assert_eq!(get("/").segments(0..), Ok(PathBuf::new()));
+    /// assert_eq!(get("/").segments(2..), Ok(PathBuf::new()));
     ///
-    /// # Request::example(Method::Get, "/", |req| {
-    /// fn path<'s>(req: &'s mut Request, uri: &'static str, n: usize) -> PathBuf {
-    ///     req.set_uri(Origin::parse(uri).unwrap());
-    ///
-    ///     req.segments(n..)
-    ///         .and_then(|r| r.ok())
-    ///         .unwrap_or_else(|| "whoops".into())
-    /// }
-    ///
-    /// assert_eq!(path(req, "/", 0), PathBuf::from("whoops"));
-    /// assert_eq!(path(req, "/a/", 0), PathBuf::from("a"));
-    /// assert_eq!(path(req, "/a/b/c", 0), PathBuf::from("a/b/c"));
-    /// assert_eq!(path(req, "/a/b/c", 1), PathBuf::from("b/c"));
-    /// assert_eq!(path(req, "/a/b/c", 2), PathBuf::from("c"));
-    /// assert_eq!(path(req, "/a/b/c", 6), PathBuf::from("whoops"));
-    /// # });
+    /// // Empty segments are skipped.
+    /// assert_eq!(get("///").segments(2..), Ok(PathBuf::new()));
+    /// assert_eq!(get("/a/b/c").segments(0..), Ok(PathBuf::from("a/b/c")));
+    /// assert_eq!(get("/a/b/c").segments(1..), Ok(PathBuf::from("b/c")));
+    /// assert_eq!(get("/a/b/c").segments(2..), Ok(PathBuf::from("c")));
+    /// assert_eq!(get("/a/b/c").segments(3..), Ok(PathBuf::new()));
+    /// assert_eq!(get("/a/b/c").segments(4..), Ok(PathBuf::new()));
     /// ```
     #[inline]
-    pub fn segments<'a, T>(&'a self, n: RangeFrom<usize>) -> Option<Result<T, T::Error>>
+    pub fn segments<'a, T>(&'a self, n: RangeFrom<usize>) -> Result<T, T::Error>
         where T: FromSegments<'a>
     {
-        // FIXME: https://github.com/SergioBenitez/Rocket/issues/985.
-        let segments = self.routed_segments(n);
-        if segments.is_empty() {
-            None
-        } else {
-            Some(T::from_segments(segments))
-        }
+        T::from_segments(self.routed_segments(n))
     }
 
     /// Retrieves and parses into `T` the query value with field name `name`.

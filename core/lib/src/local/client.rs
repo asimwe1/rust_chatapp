@@ -95,6 +95,14 @@ macro_rules! pub_client_impl {
         Self::_new(rocket, false) $(.$suffix)?
     }
 
+    #[doc(hidden)]
+    pub $($prefix)? fn debug(base: &str, routes: Vec<crate::Route>) -> Result<Self, Error> {
+        let mut config = crate::Config::debug_default();
+        config.log_level = crate::config::LogLevel::Debug;
+        let rocket = crate::custom(config).mount(base, routes);
+        Self::tracked(rocket) $(.$suffix)?
+    }
+
     /// Deprecated alias to [`Client::tracked()`].
     #[deprecated(
         since = "0.5",
