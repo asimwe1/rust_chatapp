@@ -4,14 +4,15 @@ use std::collections::HashMap;
 
 use rocket::State;
 use rocket_contrib::uuid::Uuid;
-use rocket_contrib::uuid::uuid_crate as uuid;
+use rocket_contrib::uuid::extern_uuid;
 
 #[cfg(test)] mod tests;
 
 // A small people mapping in managed state for the sake of this example. In a
-// real application this would be a database. Notice that we use the uuid::Uuid
-// type here and not the rocket_contrib::uuid::Uuid type.
-struct People(HashMap<uuid::Uuid, &'static str>);
+// real application this would be a database. Notice that we use the external
+// Uuid type here and not the rocket_contrib::uuid::Uuid type. We do this purely
+// for demonstrative purposes; in practice, we could use the contrib `Uuid`.
+struct People(HashMap<extern_uuid::Uuid, &'static str>);
 
 #[get("/people/<id>")]
 fn people(id: Uuid, people: State<People>) -> Result<String, String> {
