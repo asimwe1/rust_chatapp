@@ -43,14 +43,11 @@ either = "1"
 pin-project-lite = "0.1"
 indexmap = { version = "1.0", features = ["serde"] }
 tempfile = "3"
+async-trait = "0.1.43"
 
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
 rev = "7576652"
-
-[dependencies.async-trait]
-git = "https://github.com/SergioBenitez/async-trait.git"
-rev = "0cda89bd"
 
 [dependencies.rocket_codegen]
 version = "0.5.0-dev"
