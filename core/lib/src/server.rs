@@ -1,5 +1,6 @@
 use std::io;
 use std::sync::Arc;
+use std::panic::AssertUnwindSafe;
 
 use futures::stream::StreamExt;
 use futures::future::{Future, FutureExt, BoxFuture};
@@ -20,6 +21,20 @@ use crate::http::uri::Origin;
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct Token;
+
+macro_rules! info_panic {
+    ($e:expr) => {{
+        error_!("A handler has panicked. This is an application bug.");
+        info_!("A panic in Rust must be treated as an exceptional event.");
+        info_!("Panicking is not a suitable error handling mechanism.");
+        info_!("Unwinding, the result of a panic, is an expensive operation.");
+        info_!("Panics will severely degrade application performance.");
+        info_!("Instead of panicking, return `Option` and/or `Result`.");
+        info_!("Values of either type can be returned directly from handlers.");
+        warn_!("Forwarding to the {} error catcher.", Paint::blue(500).bold());
+        $e
+    }}
+}
 
 // This function tries to hide all of the Hyper-ness from Rocket. It essentially
 // converts Hyper types into Rocket types, then calls the `dispatch` function,
@@ -266,14 +281,9 @@ impl Rocket {
                 request.set_route(route);
 
                 // Dispatch the request to the handler.
-                let outcome = std::panic::AssertUnwindSafe(route.handler.handle(request, data))
-                    .catch_unwind()
-                    .await
-                    .unwrap_or_else(|_| {
-                        error_!("A request handler panicked.");
-                        warn_!("Handling as a 500 error.");
-                        Outcome::Failure(Status::InternalServerError)
-                    });
+                let outcome = AssertUnwindSafe(route.handler.handle(request, data))
+                    .catch_unwind().await
+                    .unwrap_or_else(|_| info_panic!(Outcome::Failure(Status::InternalServerError)));
 
                 // Check if the request processing completed (Some) or if the
                 // request needs to be forwarded. If it does, continue the loop
@@ -290,53 +300,69 @@ impl Rocket {
         }
     }
 
-    // Finds the error catcher for the status `status` and executes it for the
-    // given request `req`. If a user has registered a catcher for `status`, the
-    // catcher is called. If the catcher fails to return a good response, the
-    // 500 catcher is executed. If there is no registered catcher for `status`,
-    // the default catcher is used.
-    pub(crate) fn handle_error<'s, 'r: 's>(
+    /// Invokes the handler with `req` for catcher with status `status`.
+    ///
+    /// In order of preference, invoked handler is:
+    ///   * the user's registered handler for `status`
+    ///   * the user's registered `default` handler
+    ///   * Rocket's default handler for `status`
+    ///
+    /// Return `Ok(result)` if the handler succeeded. Returns `Ok(Some(Status))`
+    /// if the handler ran to completion but failed. Returns `Ok(None)` if the
+    /// handler panicked while executing.
+    async fn invoke_catcher<'s, 'r: 's>(
         &'s self,
         status: Status,
         req: &'r Request<'s>
-    ) -> impl Future<Output = Response<'r>> + 's {
-        async move {
-            warn_!("Responding with {} catcher.", Paint::red(&status));
+    ) -> Result<Response<'r>, Option<Status>> {
+        // For now, we reset the delta state to prevent any modifications
+        // from earlier, unsuccessful paths from being reflected in error
+        // response. We may wish to relax this in the future.
+        req.cookies().reset_delta();
 
-            // For now, we reset the delta state to prevent any modifications
-            // from earlier, unsuccessful paths from being reflected in error
-            // response. We may wish to relax this in the future.
-            req.cookies().reset_delta();
+        // Try to get the active catcher
+        let catcher = self.catchers.get(&status.code)
+            .or_else(|| self.default_catcher.as_ref());
 
-            // Try to get the active catcher but fallback to user's 500 catcher.
-            let code = Paint::red(status.code);
-            let response = if let Some(catcher) = self.catchers.get(&status.code) {
-                std::panic::AssertUnwindSafe(catcher.handler.handle(status, req)).catch_unwind().await
-            } else if let Some(ref default) =  self.default_catcher {
-                warn_!("No {} catcher found. Using default catcher.", code);
-                std::panic::AssertUnwindSafe(default.handler.handle(status, req)).catch_unwind().await
-            } else {
-                warn_!("No {} or default catcher found. Using Rocket default catcher.", code);
-                Ok(crate::catcher::default(status, req))
-            };
+        if let Some(catcher) = catcher {
+            warn_!("Responding with registered {} catcher.", catcher);
+            let handler = AssertUnwindSafe(catcher.handler.handle(status, req));
+            handler.catch_unwind().await
+                .map(|result| result.map_err(Some))
+                .unwrap_or_else(|_| info_panic!(Err(None)))
+        } else {
+            let code = Paint::blue(status.code).bold();
+            warn_!("No {} catcher registered. Using Rocket default.", code);
+            Ok(crate::catcher::default(status, req))
+        }
+    }
 
-            // Dispatch to the catcher. If it fails, use the Rocket default 500.
-            match response {
-                Ok(Ok(r)) => r,
-                Ok(Err(err_status)) => {
-                    error_!("Catcher unexpectedly failed with {}.", err_status);
-                    warn_!("Using Rocket's default 500 error catcher.");
-                    let default = crate::catcher::default(Status::InternalServerError, req);
-                    default.expect("Rocket has default 500 response")
-                }
-                Err(_) => {
-                    error_!("Catcher panicked!");
-                    warn_!("Using Rocket's default 500 error catcher.");
-                    let default = crate::catcher::default(Status::InternalServerError, req);
-                    default.expect("Rocket has default 500 response")
-                }
+    // Invokes the catcher for `status`. Returns the response on success.
+    //
+    // On catcher failure, the 500 error catcher is attempted. If _that_ fails,
+    // the (infallible) default 500 error cather is used.
+    pub(crate) async fn handle_error<'s, 'r: 's>(
+        &'s self,
+        mut status: Status,
+        req: &'r Request<'s>
+    ) -> Response<'r> {
+        // Dispatch to the `status` catcher.
+        if let Ok(r) = self.invoke_catcher(status, req).await {
+            return r;
+        }
+
+        // If it fails and it's not a 500, try the 500 catcher.
+        if status != Status::InternalServerError {
+            error_!("Catcher failed. Attemping 500 error catcher.");
+            status = Status::InternalServerError;
+            if let Ok(r) = self.invoke_catcher(status, req).await {
+                return r;
             }
         }
+
+        // If it failed again or if it was already a 500, use Rocket's default.
+        error_!("{} catcher failed. Using Rocket default 500.", status.code);
+        crate::catcher::default(Status::InternalServerError, req)
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public

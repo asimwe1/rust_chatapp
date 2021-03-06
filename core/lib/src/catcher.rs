@@ -2,10 +2,12 @@
 //! values.
 
 use std::fmt;
+use std::io::Cursor;
 
 use crate::response::Response;
 use crate::codegen::StaticCatcherInfo;
 use crate::request::Request;
+use crate::http::ContentType;
 
 use futures::future::BoxFuture;
 use yansi::Paint;
@@ -148,7 +150,7 @@ impl Catcher {
 impl Default for Catcher {
     fn default() -> Self {
         fn async_default<'r>(status: Status, request: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
-            Box::pin(async move { default(status, request) })
+            Box::pin(async move { Ok(default(status, request)) })
         }
 
         Catcher { code: None, handler: Box::new(async_default) }
@@ -340,17 +342,17 @@ macro_rules! default_catcher_fn {
     ($($code:expr, $reason:expr, $description:expr),+) => (
         use std::borrow::Cow;
         use crate::http::Status;
-        use crate::response::{content, status, Responder};
 
-        pub(crate) fn default<'r>(status: Status, req: &'r Request<'_>) -> Result<'r> {
-            if req.accept().map(|a| a.preferred().is_json()).unwrap_or(false) {
+        pub(crate) fn default<'r>(status: Status, req: &'r Request<'_>) -> Response<'r> {
+            let preferred = req.accept().map(|a| a.preferred());
+            let (mime, text) = if preferred.map_or(false, |a| a.is_json()) {
                 let json: Cow<'_, str> = match status.code {
                     $($code => json_error_template!($code, $reason, $description).into(),)*
                     code => format!(json_error_fmt_template!("{}", "Unknown Error",
                             "An unknown error has occurred."), code).into()
                 };
 
-                status::Custom(status, content::Json(json)).respond_to(req)
+                (ContentType::JSON, json)
             } else {
                 let html: Cow<'_, str> = match status.code {
                     $($code => html_error_template!($code, $reason, $description).into(),)*
@@ -358,8 +360,16 @@ macro_rules! default_catcher_fn {
                             "An unknown error has occurred."), code, code).into(),
                 };
 
-                status::Custom(status, content::Html(html)).respond_to(req)
-            }
+                (ContentType::HTML, html)
+            };
+
+            let mut r = Response::build().status(status).header(mime).finalize();
+            match text {
+                Cow::Owned(v) => r.set_sized_body(v.len(), Cursor::new(v)),
+                Cow::Borrowed(v) => r.set_sized_body(v.len(), Cursor::new(v)),
+            };
+
+            r
         }
     )
 }
