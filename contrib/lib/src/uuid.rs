@@ -27,8 +27,8 @@ use rocket::form::{self, FromFormField, ValueField};
 
 /// UUID data and form guard: consume UUID values.
 ///
-/// `Uuuid` implements [`FromParam`] and [`FromForm`] for accepting UUID values
-/// in paths, queries, and forms.
+/// `Uuid` implements [`FromParam`] and [`FromForm`], allowing UUID values to be
+/// accepted directly in paths, queries, and forms.
 ///
 /// # Usage
 ///
