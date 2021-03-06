@@ -764,16 +764,17 @@ By default, Rocket matches the name of an incoming form field to the name of a
 structure field. While this behavior is typical, it may also be desired to use
 different names for form fields and struct fields while still parsing as
 expected. You can ask Rocket to look for a different form field for a given
-structure field by using the `#[field(name = "name")]` field annotation.
+structure field by using one or more `#[field(name = "name")]` or `#[field(name
+= uncased("name")]` field annotation. The `uncased` variant case-insensitively
+matches field names.
 
 As an example, say that you're writing an application that receives data from an
 external service. The external service `POST`s a form with a field named
-`first-Name` which you'd like to write as `first_name` in Rust. Field renaming
-helps:
+`first-Name` which you'd like to write as `first_name` in Rust. Such a form
+structure can be written as:
 
 ```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
+# use rocket::form::FromForm;
 
 #[derive(FromForm)]
 struct External {
@@ -782,8 +783,41 @@ struct External {
 }
 ```
 
-Rocket will then match the form field named `first-Name` to the structure field
-named `first_name`.
+If you want to accept both `firstName` case-insensitively as well as
+`first_name` case-sensitively, you'll need to use two annotations:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct External {
+    #[field(name = uncased("firstName"))]
+    #[field(name = "first_name")]
+    first_name: String
+}
+```
+
+This will match any casing of `firstName` including `FirstName`, `firstname`,
+`FIRSTname`, and so on, but only match exactly on `first_name`.
+
+If instead you wanted to match any of `first-name`, `first_name` or `firstName`,
+in each instance case-insensitively, you would write:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct External {
+    #[field(name = uncased("first-name"))]
+    #[field(name = uncased("first_name"))]
+    #[field(name = uncased("firstname"))]
+    first_name: String
+}
+```
+
+Cased and uncased renamings can be mixed and matched, and any number of
+renamings is allowed. Rocket will emit an error at compile-time if field names
+conflict, preventing ambiguous parsing at runtime.
 
 ### Ad-Hoc Validation
 

@@ -34,7 +34,7 @@ pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
             .try_enum_map(|_, data| {
                 let variant_name_sources = data.variants()
                     .map(|v| FieldAttr::one_from_attrs("field", &v.attrs).map(|o| {
-                        o.map(|f| f.value).unwrap_or_else(|| v.ident.clone().into())
+                        o.map(|f| f.value).unwrap_or_else(|| Name::from(&v.ident))
                     }))
                     .collect::<Result<Vec<Name>>>()?;
 

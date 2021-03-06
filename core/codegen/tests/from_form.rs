@@ -227,6 +227,60 @@ fn field_renaming() {
 
     let form: Option<RenamedForm> = strict(&form_string).ok();
     assert!(form.is_none());
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct MultiName<'r> {
+        single: usize,
+        #[field(name = "SomeCase")]
+        #[field(name = "some_case")]
+        some_case: &'r str,
+    }
+
+    let form_string = &["single=123", "some_case=hi_im_here"].join("&");
+    let form: Option<MultiName> = strict(&form_string).ok();
+    assert_eq!(form, Some(MultiName { single: 123, some_case: "hi_im_here", }));
+
+    let form_string = &["single=123", "SomeCase=HiImHere"].join("&");
+    let form: Option<MultiName> = strict(&form_string).ok();
+    assert_eq!(form, Some(MultiName { single: 123, some_case: "HiImHere", }));
+
+    let form_string = &["single=123", "some_case=hi_im_here", "SomeCase=HiImHere"].join("&");
+    let form: Option<MultiName> = strict(&form_string).ok();
+    assert!(form.is_none());
+
+    let form_string = &["single=123", "some_case=hi_im_here", "SomeCase=HiImHere"].join("&");
+    let form: Option<MultiName> = lenient(&form_string).ok();
+    assert_eq!(form, Some(MultiName { single: 123, some_case: "hi_im_here", }));
+
+    let form_string = &["single=123", "SomeCase=HiImHere", "some_case=hi_im_here"].join("&");
+    let form: Option<MultiName> = lenient(&form_string).ok();
+    assert_eq!(form, Some(MultiName { single: 123, some_case: "HiImHere", }));
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct CaseInsensitive<'r> {
+        #[field(name = uncased("SomeCase"))]
+        #[field(name = "some_case")]
+        some_case: &'r str,
+
+        #[field(name = uncased("hello"))]
+        hello: usize,
+    }
+
+    let form_string = &["HeLLO=123", "sOMECASe=hi_im_here"].join("&");
+    let form: Option<CaseInsensitive> = strict(&form_string).ok();
+    assert_eq!(form, Some(CaseInsensitive { hello: 123, some_case: "hi_im_here", }));
+
+    let form_string = &["hello=456", "SomeCase=HiImHere"].join("&");
+    let form: Option<CaseInsensitive> = strict(&form_string).ok();
+    assert_eq!(form, Some(CaseInsensitive { hello: 456, some_case: "HiImHere", }));
+
+    let form_string = &["helLO=789", "some_case=hi_there"].join("&");
+    let form: Option<CaseInsensitive> = strict(&form_string).ok();
+    assert_eq!(form, Some(CaseInsensitive { hello: 789, some_case: "hi_there", }));
+
+    let form_string = &["hello=123", "SOme_case=hi_im_here"].join("&");
+    let form: Option<CaseInsensitive> = strict(&form_string).ok();
+    assert!(form.is_none());
 }
 
 #[test]

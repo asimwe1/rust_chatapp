@@ -36,4 +36,33 @@ enum Bar2 {
     A,
 }
 
+#[derive(FromForm)]
+struct Renamed0 {
+    #[field(name = "foo")]
+    #[field(name = uncased("FOO"))]
+    single: usize,
+}
+
+#[derive(FromForm)]
+struct Renamed1 {
+    #[field(name = "foo")]
+    single: usize,
+    #[field(name = "foo")]
+    other: usize,
+}
+
+#[derive(FromForm)]
+struct Renamed2 {
+    #[field(name = uncased("HELLO_THERE"))]
+    single: usize,
+    hello_there: usize,
+}
+
+#[derive(FromForm)]
+struct Renamed3 {
+    #[field(name = "hello_there")]
+    single: usize,
+    hello_there: usize,
+}
+
 fn main() { }

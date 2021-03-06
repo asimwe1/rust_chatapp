@@ -1,17 +1,18 @@
 use crate::syn::{self, Ident, ext::IdentExt};
+use crate::http::uncased::UncasedStr;
 use crate::proc_macro2::Span;
 
-/// A "name" read by codegen, which may or may not be a valid identifier. A
-/// `Name` is typically constructed indirectly via FromMeta, or From<Ident> or
-/// directly from a string via `Name::new()`.
+/// A "name" read by codegen, which may or may not be an identifier. A `Name` is
+/// typically constructed indirectly via FromMeta, or From<Ident> or directly
+/// from a string via `Name::new()`.
 ///
 /// Some "names" in Rocket include:
 ///   * Dynamic parameter: `name` in `<name>`
 ///   * Renamed fields: `foo` in #[field(name = "foo")].
 ///
 /// `Name` implements Hash, PartialEq, and Eq, and additionally PartialEq<S> for
-/// all types `S: AsStr<str>`. These implementations all compare the value of
-/// `name()` only.
+/// all types `S: PartialEq<str>`. These implementations all compare the value
+/// of `as_str()` only.
 #[derive(Debug, Clone)]
 pub struct Name {
     value: String,
@@ -29,6 +30,11 @@ impl Name {
     /// Ident this method returns a name *without* an `r#` prefix.
     pub fn as_str(&self) -> &str {
         &self.value
+    }
+
+    /// Like `as_str()` but into an `&UncasedStr`.
+    pub fn as_uncased_str(&self) -> &UncasedStr {
+        UncasedStr::new(self.as_str())
     }
 
     pub fn span(&self) -> Span {
@@ -50,18 +56,12 @@ impl devise::FromMeta for Name {
 
 impl quote::ToTokens for Name {
     fn to_tokens(&self, tokens: &mut devise::proc_macro2::TokenStream) {
-        self.as_str().to_tokens(tokens)
+        syn::LitStr::new(self.as_str(), self.span()).to_tokens(tokens)
     }
 }
 
 impl From<&Ident> for Name {
     fn from(ident: &Ident) -> Self {
-        Name::new(ident.unraw().to_string(), ident.span())
-    }
-}
-
-impl From<Ident> for Name {
-    fn from(ident: Ident) -> Self {
         Name::new(ident.unraw().to_string(), ident.span())
     }
 }
@@ -88,9 +88,9 @@ impl std::ops::Deref for Name {
 
 impl Eq for Name { }
 
-impl<S: AsRef<str> + ?Sized> PartialEq<S> for Name {
+impl<S: PartialEq<str> + ?Sized> PartialEq<S> for Name {
     fn eq(&self, other: &S) -> bool {
-        self.as_str() == other.as_ref()
+        other == self.as_str()
     }
 }
 

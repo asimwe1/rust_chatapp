@@ -63,7 +63,7 @@ note: error occurred while deriving `UriDisplay`
    |          ^^^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: invalid value: expected string literal
+error: expected list `#[attr(..)]`, found bare integer literal
   --> $DIR/uri_display.rs:22:20
    |
 22 |     #[field(name = 123)]

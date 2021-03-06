@@ -200,7 +200,7 @@ impl Route {
                     .chain(query_params.iter().filter_map(|p| p.guard()))
                     .chain(data_guard.as_ref().into_iter());
 
-                all_other_guards.all(|g| g.name != name)
+                all_other_guards.all(|g| &g.name != *name)
             })
             .enumerate()
             .map(|(index, (name, (ident, ty)))| Guard {

@@ -2,25 +2,30 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt, GenericsExt, Split2, quote_res
 
 use crate::exports::*;
 use crate::proc_macro2::TokenStream;
-use crate::derive::form_field::*;
+use crate::derive::form_field::{*, FieldName::*};
 
 // F: fn(field_ty: Ty, field_context: Expr)
 fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
     where F: Fn(&syn::Type, &syn::Expr) -> TokenStream
 {
-    let matchers = fields.iter()
-        .map(|f| {
-            let (ident, field_name, ty) = (f.ident(), f.field_name()?, f.stripped_ty());
-            let field_context = quote_spanned!(ty.span() => {
-                let _o = __c.__opts;
-                __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'__f>>::init(_o))
-            });
+    let mut matchers = vec![];
+    for field in fields.iter() {
+        let (ident, ty) = (field.ident(), field.stripped_ty());
+        let field_context = quote_spanned!(ty.span() => {
+            let _o = __c.__opts;
+            __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'__f>>::init(_o))
+        });
 
-            let field_context = syn::parse2(field_context).expect("valid expr");
-            let expr = map_f(&ty, &field_context);
-            Ok(quote!(#field_name => { #expr }))
-        })
-        .collect::<Result<Vec<TokenStream>>>()?;
+        let field_names = field.field_names()?;
+        let field_context = syn::parse2(field_context).expect("valid expr");
+        let push = map_f(&ty, &field_context);
+        let field_matchers = field_names.iter().map(|f| match f {
+            Cased(name) => quote!(#name => { #push }),
+            Uncased(name) => quote!(__n if __n.as_uncased() == #name => { #push }),
+        });
+
+        matchers.extend(field_matchers);
+    }
 
     Ok(quote! {
         __c.__parent = __f.name.parent();
@@ -65,15 +70,33 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     return Err(fields.span().error("at least one field is required"));
                 }
 
-                let mut names = ::std::collections::HashMap::new();
+                let mut names = vec![];
+                let mut field_map = vec![];
                 for field in fields.iter() {
-                    let name = field.field_name()?;
-                    if let Some(span) = names.get(&name) {
-                        return Err(field.span().error("duplicate form field")
-                            .span_note(*span, "previously defined here"));
-                    }
+                    names.append(&mut field.field_names()?);
+                    field_map.push((names.len(), field));
+                }
 
-                    names.insert(name, field.span());
+                // get the field corresponding to name index `k`.
+                let field = |k| field_map.iter().find(|(i, _)| k < *i).expect("k < *i");
+
+                for (i, a) in names.iter().enumerate() {
+                    let rest = names.iter().enumerate().skip(i + 1);
+                    if let Some((j, b)) = rest.filter(|(_, b)| b == &a).next() {
+                        let ((fa_i, field_a), (fb_i, field_b)) = (field(i), field(j));
+
+                        if fa_i == fb_i {
+                            return Err(field_a.span()
+                                .error("field has conflicting names")
+                                .span_note(a.span(), "this field name...")
+                                .span_note(b.span(), "...conflicts with this name"));
+                        } else {
+                            return Err(b.span()
+                                .error("field name conflicts with previous name")
+                                .span_note(field_a.span(), "previous field with conflicting name")
+                                .span_help(field_b.span(), "field name is part of this field"));
+                        }
+                    }
                 }
 
                 Ok(())
@@ -105,6 +128,10 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 quote_spanned!(ty.span() => #ident: #field_ty,)
             })
         )
+        .outer_mapper(quote! {
+            #[allow(unused_imports)]
+            use #_http::uncased::AsUncased;
+        })
         .outer_mapper(quote!(#[rocket::async_trait]))
         .inner_mapper(MapperBuild::new()
             .try_input_map(|mapper, input| {

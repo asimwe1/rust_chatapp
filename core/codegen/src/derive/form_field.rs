@@ -3,18 +3,19 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 use syn::visit_mut::VisitMut;
 use syn::visit::Visit;
 
-use crate::proc_macro2::{Span, TokenStream, TokenTree};
+use crate::proc_macro2::{TokenStream, TokenTree};
 use crate::syn_ext::IdentExt;
 use crate::name::Name;
 
-pub struct FormField {
-    pub span: Span,
-    pub name: Name,
+#[derive(Debug)]
+pub enum FieldName {
+    Cased(Name),
+    Uncased(Name),
 }
 
 #[derive(FromMeta)]
 pub struct FieldAttr {
-    pub name: Option<FormField>,
+    pub name: Option<FieldName>,
     pub validate: Option<SpanWrapped<syn::Expr>>,
 }
 
@@ -24,12 +25,13 @@ impl FieldAttr {
 
 pub(crate) trait FieldExt {
     fn ident(&self) -> &syn::Ident;
-    fn field_name(&self) -> Result<String>;
+    fn field_names(&self) -> Result<Vec<FieldName>>;
+    fn one_field_name(&self) -> Result<FieldName>;
     fn stripped_ty(&self) -> syn::Type;
     fn name_view(&self) -> Result<syn::Expr>;
 }
 
-impl FromMeta for FormField {
+impl FromMeta for FieldName {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         // These are used during parsing.
         const CONTROL_CHARS: &[char] = &['&', '=', '?', '.', '[', ']'];
@@ -44,8 +46,23 @@ impl FromMeta for FormField {
             s.chars().all(|c| c.is_ascii_graphic() && !CONTROL_CHARS.contains(&c))
         }
 
-        let name = Name::from_meta(meta)?;
-        if !is_valid_field_name(name.as_str()) {
+        let field_name = match Name::from_meta(meta) {
+            Ok(name) => FieldName::Cased(name),
+            Err(_) => {
+                #[derive(FromMeta)]
+                struct Inner {
+                    #[meta(naked)]
+                    uncased: Name
+                }
+
+                let expr = meta.expr()?;
+                let item: MetaItem = syn::parse2(quote!(#expr))?;
+                let inner = Inner::from_meta(&item)?;
+                FieldName::Uncased(inner.uncased)
+            }
+        };
+
+        if !is_valid_field_name(field_name.as_str()) {
             let chars = CONTROL_CHARS.iter()
                 .map(|c| format!("{:?}", c))
                 .collect::<Vec<_>>()
@@ -56,7 +73,35 @@ impl FromMeta for FormField {
                 .help(format!("field name cannot be `isindex` or contain {}", chars)));
         }
 
-        Ok(FormField { span: meta.value_span(), name })
+        Ok(field_name)
+    }
+}
+
+impl std::ops::Deref for FieldName {
+    type Target = Name;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            FieldName::Cased(n) | FieldName::Uncased(n) => n,
+        }
+    }
+}
+
+impl quote::ToTokens for FieldName {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        (self as &Name).to_tokens(tokens)
+    }
+}
+
+impl PartialEq for FieldName {
+    fn eq(&self, other: &Self) -> bool {
+        use FieldName::*;
+
+        match (self, other) {
+            (Cased(a), Cased(b)) => a == b,
+            (Cased(a), Uncased(u)) | (Uncased(u), Cased(a)) => a == u.as_uncased_str(),
+            (Uncased(u1), Uncased(u2)) => u1.as_uncased_str() == u2.as_uncased_str(),
+        }
     }
 }
 
@@ -65,22 +110,31 @@ impl FieldExt for Field<'_> {
         self.ident.as_ref().expect("named")
     }
 
-    fn field_name(&self) -> Result<String> {
-        let mut fields = FieldAttr::from_attrs(FieldAttr::NAME, &self.attrs)?
+    fn field_names(&self) -> Result<Vec<FieldName>> {
+        let attr_names = FieldAttr::from_attrs(FieldAttr::NAME, &self.attrs)?
             .into_iter()
-            .filter_map(|attr| attr.name);
+            .filter_map(|attr| attr.name)
+            .collect::<Vec<_>>();
 
-        let name = fields.next()
-            .map(|f| f.name)
-            .unwrap_or_else(|| Name::from(self.ident().clone()));
-
-        if let Some(field) = fields.next() {
-            return Err(field.span
-                .error("duplicate form field renaming")
-                .help("a field can only be renamed once"));
+        if attr_names.is_empty() {
+            let ident_name = Name::from(self.ident());
+            return Ok(vec![FieldName::Cased(ident_name)]);
         }
 
-        Ok(name.to_string())
+        Ok(attr_names)
+    }
+
+    fn one_field_name(&self) -> Result<FieldName> {
+        let mut names = self.field_names()?.into_iter();
+        let first = names.next().expect("always have >= 1 name");
+
+        if let Some(name) = names.next() {
+            return Err(name.span()
+                .error("unexpected second field name")
+                .note("only one field rename is allowed in this context"));
+        }
+
+        Ok(first)
     }
 
     fn stripped_ty(&self) -> syn::Type {
@@ -88,7 +142,8 @@ impl FieldExt for Field<'_> {
     }
 
     fn name_view(&self) -> Result<syn::Expr> {
-        let field_name = self.field_name()?;
+        let field_names = self.field_names()?;
+        let field_name = field_names.first().expect("always have name");
         define_spanned_export!(self.span() => _form);
         let name_view = quote_spanned! { self.span() =>
             #_form::NameBuf::from((__c.__parent, #field_name))

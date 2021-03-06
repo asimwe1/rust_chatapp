@@ -78,7 +78,7 @@ impl Parameter {
 impl Dynamic {
     // This isn't public since this `Dynamic` should always be an `Ignored`.
     pub fn is_wild(&self) -> bool {
-        self.name == "_"
+        &self.name == "_"
     }
 }
 

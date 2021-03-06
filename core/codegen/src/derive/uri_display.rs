@@ -56,7 +56,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
                 let span = field.span().into();
                 let accessor = field.accessor();
                 let tokens = if field.ident.is_some() {
-                    let name = field.field_name()?;
+                    let name = field.one_field_name()?;
                     quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
                 } else {
                     quote_spanned!(span => f.write_value(&#accessor)?;)

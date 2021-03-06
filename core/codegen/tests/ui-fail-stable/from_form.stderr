@@ -83,17 +83,23 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
+error: field name conflicts with previous name
   --> $DIR/from_form.rs:33:5
    |
 33 |     foo: usize,
    |     ^^^
 
-error: [note] previously defined here
+error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:31:5
    |
 31 |     #[field(name = "foo")]
    |     ^
+
+error: [help] field name is part of this field
+  --> $DIR/from_form.rs:33:5
+   |
+33 |     foo: usize,
+   |     ^^^
 
 error: [note] error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:29:10
@@ -103,16 +109,22 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
-  --> $DIR/from_form.rs:40:5
+error: field name conflicts with previous name
+  --> $DIR/from_form.rs:40:20
    |
 40 |     #[field(name = "hello")]
-   |     ^
+   |                    ^^^^^^^
 
-error: [note] previously defined here
+error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:38:5
    |
 38 |     #[field(name = "hello")]
+   |     ^
+
+error: [help] field name is part of this field
+  --> $DIR/from_form.rs:40:5
+   |
+40 |     #[field(name = "hello")]
    |     ^
 
 error: [note] error occurred while deriving `FromForm`
@@ -123,17 +135,23 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
-  --> $DIR/from_form.rs:47:5
+error: field name conflicts with previous name
+  --> $DIR/from_form.rs:47:20
    |
 47 |     #[field(name = "first")]
-   |     ^
+   |                    ^^^^^^^
 
-error: [note] previously defined here
+error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:46:5
    |
 46 |     first: String,
    |     ^^^^^
+
+error: [help] field name is part of this field
+  --> $DIR/from_form.rs:47:5
+   |
+47 |     #[field(name = "first")]
+   |     ^
 
 error: [note] error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:44:10
@@ -213,8 +231,19 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field renaming
-  --- help: a field can only be renamed once
+error: field has conflicting names
+  --> $DIR/from_form.rs:83:5
+   |
+83 |     #[field(name = "blah")]
+   |     ^
+
+error: [note] this field name...
+  --> $DIR/from_form.rs:83:20
+   |
+83 |     #[field(name = "blah")]
+   |                    ^^^^^^
+
+error: [note] ...conflicts with this name
   --> $DIR/from_form.rs:84:20
    |
 84 |     #[field(name = "blah")]
@@ -228,7 +257,7 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: invalid value: expected string literal
+error: expected list `#[attr(..)]`, found bare boolean literal
   --> $DIR/from_form.rs:90:20
    |
 90 |     #[field(name = true)]
@@ -242,7 +271,7 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: expected literal, found bare path "name"
+error: expected expression, found bare path "name"
   --> $DIR/from_form.rs:96:13
    |
 96 |     #[field(name)]
@@ -256,7 +285,7 @@ error: [note] error occurred while deriving `FromForm`
    |
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: invalid value: expected string literal
+error: expected list `#[attr(..)]`, found bare integer literal
    --> $DIR/from_form.rs:102:20
     |
 102 |     #[field(name = 123)]

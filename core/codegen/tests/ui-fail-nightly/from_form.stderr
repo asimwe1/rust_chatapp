@@ -77,18 +77,23 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
+error: field name conflicts with previous name
   --> $DIR/from_form.rs:33:5
    |
 33 |     foo: usize,
-   |     ^^^^^^^^^^
+   |     ^^^
    |
-note: previously defined here
+note: previous field with conflicting name
   --> $DIR/from_form.rs:31:5
    |
 31 | /     #[field(name = "foo")]
 32 | |     field: String,
    | |_________________^
+help: field name is part of this field
+  --> $DIR/from_form.rs:33:5
+   |
+33 |     foo: usize,
+   |     ^^^^^^^^^^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:29:10
    |
@@ -96,18 +101,23 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
-  --> $DIR/from_form.rs:40:5
+error: field name conflicts with previous name
+  --> $DIR/from_form.rs:40:20
    |
-40 | /     #[field(name = "hello")]
-41 | |     other: String,
-   | |_________________^
+40 |     #[field(name = "hello")]
+   |                    ^^^^^^^
    |
-note: previously defined here
+note: previous field with conflicting name
   --> $DIR/from_form.rs:38:5
    |
 38 | /     #[field(name = "hello")]
 39 | |     first: String,
+   | |_________________^
+help: field name is part of this field
+  --> $DIR/from_form.rs:40:5
+   |
+40 | /     #[field(name = "hello")]
+41 | |     other: String,
    | |_________________^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:36:10
@@ -116,18 +126,23 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field
+error: field name conflicts with previous name
+  --> $DIR/from_form.rs:47:20
+   |
+47 |     #[field(name = "first")]
+   |                    ^^^^^^^
+   |
+note: previous field with conflicting name
+  --> $DIR/from_form.rs:46:5
+   |
+46 |     first: String,
+   |     ^^^^^^^^^^^^^
+help: field name is part of this field
   --> $DIR/from_form.rs:47:5
    |
 47 | /     #[field(name = "first")]
 48 | |     other: String,
    | |_________________^
-   |
-note: previously defined here
-  --> $DIR/from_form.rs:46:5
-   |
-46 |     first: String,
-   |     ^^^^^^^^^^^^^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:44:10
    |
@@ -200,13 +215,24 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: duplicate form field renaming
+error: field has conflicting names
+  --> $DIR/from_form.rs:83:5
+   |
+83 | /     #[field(name = "blah")]
+84 | |     #[field(name = "blah")]
+85 | |     my_field: String,
+   | |____________________^
+   |
+note: this field name...
+  --> $DIR/from_form.rs:83:20
+   |
+83 |     #[field(name = "blah")]
+   |                    ^^^^^^
+note: ...conflicts with this name
   --> $DIR/from_form.rs:84:20
    |
 84 |     #[field(name = "blah")]
    |                    ^^^^^^
-   |
-   = help: a field can only be renamed once
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:81:10
    |
@@ -214,7 +240,7 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: invalid value: expected string literal
+error: expected list `#[attr(..)]`, found bare boolean literal
   --> $DIR/from_form.rs:90:20
    |
 90 |     #[field(name = true)]
@@ -227,7 +253,7 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: expected literal, found bare path "name"
+error: expected expression, found bare path "name"
   --> $DIR/from_form.rs:96:13
    |
 96 |     #[field(name)]
@@ -240,7 +266,7 @@ note: error occurred while deriving `FromForm`
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: invalid value: expected string literal
+error: expected list `#[attr(..)]`, found bare integer literal
    --> $DIR/from_form.rs:102:20
     |
 102 |     #[field(name = 123)]
