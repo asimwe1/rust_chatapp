@@ -20,7 +20,12 @@ fn post2() -> &'static str { "html" }
 fn post3() -> &'static str { "plain" }
 
 fn rocket() -> rocket::Rocket {
-    rocket::custom(rocket::Config::figment().merge(("log_level", "off")))
+    let config = rocket::Config {
+        log_level: rocket::config::LogLevel::Off,
+        ..rocket::Config::debug_default()
+    };
+
+    rocket::custom(config)
         .mount("/", routes![get, get2, get3])
         .mount("/", routes![post, post2, post3])
 }

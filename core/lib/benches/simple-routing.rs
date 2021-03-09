@@ -23,7 +23,11 @@ fn index_c() -> &'static str { "index" }
 fn index_dyn_a(_a: &str) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
-    let config = rocket::Config::figment().merge(("log_level", "off"));
+    let config = rocket::Config {
+        log_level: rocket::config::LogLevel::Off,
+        ..rocket::Config::debug_default()
+    };
+
     rocket::custom(config).mount("/", routes![hello_world])
 }
 

@@ -47,7 +47,7 @@ async-trait = "0.1.43"
 
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
-rev = "7576652"
+rev = "0a7457d2"
 
 [dependencies.rocket_codegen]
 version = "0.5.0-dev"
@@ -74,6 +74,7 @@ version_check = "0.9.1"
 [dev-dependencies]
 bencher = "0.1"
 figment = { version = "0.10", features = ["test"] }
+pretty_assertions = "0.7"
 
 [[bench]]
 name = "format-routing"

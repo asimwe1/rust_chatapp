@@ -16,7 +16,7 @@ use crate::http::Method;
 /// The following snippet creates a `Client` from a `Rocket` instance and
 /// dispatches a local `POST /` request with a body of `Hello, world!`.
 ///
-/// ```rust
+/// ```rust,no_run
 /// use rocket::local::blocking::Client;
 ///
 /// let rocket = rocket::ignite();
@@ -47,8 +47,7 @@ impl Client {
     pub fn _test<T, F>(f: F) -> T
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
-        let rocket = crate::ignite();
-        let client = Client::untracked(rocket).expect("valid rocket");
+        let client = Client::debug(crate::ignite()).unwrap();
         let request = client.get("/");
         let response = request.clone().dispatch();
         f(&client, request, response)
@@ -91,6 +90,12 @@ impl Client {
 
     // Generates the public API methods, which call the private methods above.
     pub_client_impl!("use rocket::local::blocking::Client;");
+}
+
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self._rocket().fmt(f)
+    }
 }
 
 impl Drop for Client {

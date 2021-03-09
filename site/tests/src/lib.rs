@@ -50,5 +50,5 @@ macro_rules! assert_form_parses_ok {
 }
 
 pub fn client(routes: Vec<rocket::Route>) -> rocket::local::blocking::Client {
-    rocket::local::blocking::Client::debug("/", routes).unwrap()
+    rocket::local::blocking::Client::debug_with(routes).unwrap()
 }

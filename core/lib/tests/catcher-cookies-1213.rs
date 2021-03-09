@@ -29,7 +29,7 @@ mod tests {
                 req.cookies().add(Cookie::new("fairing", "woo"));
             })));
 
-        let client = Client::tracked(rocket).unwrap();
+        let client = Client::debug(rocket).unwrap();
 
         // Check that the index returns the `index` and `fairing` cookie.
         let response = client.get("/").dispatch();

@@ -35,7 +35,7 @@ use crate::error::Error;
 /// The following snippet creates a `Client` from a `Rocket` instance and
 /// dispatches a local `POST /` request with a body of `Hello, world!`.
 ///
-/// ```rust
+/// ```rust,no_run
 /// use rocket::local::asynchronous::Client;
 ///
 /// # rocket::async_test(async {
@@ -69,8 +69,7 @@ impl Client {
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
         crate::async_test(async {
-            let rocket = crate::ignite();
-            let client = Client::untracked(rocket).await.expect("valid rocket");
+            let client = Client::debug(crate::ignite()).await.unwrap();
             let request = client.get("/");
             let response = request.clone().dispatch().await;
             f(&client, request, response)
@@ -105,6 +104,12 @@ impl Client {
 
     // Generates the public API methods, which call the private methods above.
     pub_client_impl!("use rocket::local::asynchronous::Client;" @async await);
+}
+
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self._rocket().fmt(f)
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-#[macro_use]extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::{Request, Data};
 use rocket::local::blocking::Client;
@@ -33,7 +33,7 @@ fn simple<'r>(simple: Simple<'r>) -> &'r str { simple.0 }
 #[test]
 fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
-    let client = Client::tracked(rocket).unwrap();
+    let client = Client::debug(rocket).unwrap();
 
     let response = client.post("/f")
         .header(ContentType::Form)

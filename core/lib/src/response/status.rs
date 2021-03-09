@@ -69,8 +69,7 @@ impl<'r, R> Created<R> {
     ///     status::Created::new("http://myservice.com/resource.json")
     /// }
     ///
-    /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::tracked(rocket).unwrap();
+    /// # let client = Client::debug_with(routes![create]).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
@@ -98,8 +97,7 @@ impl<'r, R> Created<R> {
     ///         .body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
-    /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::tracked(rocket).unwrap();
+    /// # let client = Client::debug_with(routes![create]).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
@@ -131,8 +129,7 @@ impl<'r, R> Created<R> {
     ///         .tagged_body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
-    /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::tracked(rocket).unwrap();
+    /// # let client = Client::debug_with(routes![create]).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");

@@ -130,7 +130,8 @@ pub use secret_key::SecretKey;
 #[cfg(test)]
 mod tests {
     use std::net::Ipv4Addr;
-    use figment::Figment;
+    use figment::{Figment, Profile};
+    use pretty_assertions::assert_eq;
 
     use crate::config::{Config, TlsConfig};
     use crate::logger::LogLevel;
@@ -140,19 +141,10 @@ mod tests {
     fn test_default_round_trip() {
         figment::Jail::expect_with(|_| {
             let original = Config::figment();
-            let profile = original.profile().clone();
-            let roundtrip = Figment::from(Config::from(&original)).select(profile);
+            let roundtrip = Figment::from(Config::from(&original));
             for figment in &[original, roundtrip] {
-                assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
-
-                #[cfg(debug_assertions)] assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
-                #[cfg(not(debug_assertions))] assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
-
-                let config: Config = figment.extract().unwrap();
+                let config = Config::from(figment);
                 assert_eq!(config, Config::default());
-
-                #[cfg(debug_assertions)] assert_eq!(config, Config::debug_default());
-                #[cfg(not(debug_assertions))] assert_eq!(config, Config::release_default());
             }
 
             Ok(())
@@ -305,6 +297,7 @@ mod tests {
             jail.set_env("ROCKET_PROFILE", "unknown");
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
+                profile: Profile::const_new("unknown"),
                 limits: Limits::default()
                     .limit("stream", 50.kilobytes())
                     .limit("forms", 2.kilobytes()),
@@ -314,6 +307,7 @@ mod tests {
             jail.set_env("ROCKET_PROFILE", "debug");
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
+                profile: Profile::const_new("debug"),
                 limits: Limits::default()
                     .limit("stream", 50.kilobytes())
                     .limit("forms", 2.kilobytes())
@@ -400,6 +394,62 @@ mod tests {
             jail.set_env("ROCKET_PROFILE", "foo");
             let val: Result<String, _> = Config::figment().extract_inner("profile");
             assert!(val.is_err());
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "secrets")]
+    #[should_panic]
+    fn test_err_on_non_debug_and_no_secret_key() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PROFILE", "release");
+            let rocket = crate::custom(Config::figment());
+            let _result = crate::local::blocking::Client::untracked(rocket);
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "secrets")]
+    #[should_panic]
+    fn test_err_on_non_debug2_and_no_secret_key() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PROFILE", "boop");
+            let rocket = crate::custom(Config::figment());
+            let _result = crate::local::blocking::Client::tracked(rocket);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_no_err_on_debug_and_no_secret_key() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PROFILE", "debug");
+            let figment = Config::figment();
+            assert!(crate::local::blocking::Client::untracked(crate::custom(&figment)).is_ok());
+            crate::async_main(async {
+                let rocket = crate::custom(&figment);
+                assert!(crate::local::asynchronous::Client::tracked(rocket).await.is_ok());
+            });
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_no_err_on_release_and_custom_secret_key() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PROFILE", "release");
+            let key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk=";
+            let figment = Config::figment().merge(("secret_key", key));
+
+            assert!(crate::local::blocking::Client::tracked(crate::custom(&figment)).is_ok());
+            crate::async_main(async {
+                let rocket = crate::custom(&figment);
+                assert!(crate::local::asynchronous::Client::untracked(rocket).await.is_ok());
+            });
 
             Ok(())
         });

@@ -4,6 +4,7 @@ use std::{io, fmt};
 use std::sync::atomic::{Ordering, AtomicBool};
 
 use yansi::Paint;
+use figment::Profile;
 
 use crate::router::Route;
 
@@ -80,8 +81,10 @@ pub enum ErrorKind {
     Runtime(Box<dyn std::error::Error + Send + Sync>),
     /// Route collisions were detected.
     Collision(Vec<(Route, Route)>),
-    /// A launch fairing reported an error.
-    FailedFairings(Vec<&'static str>),
+    /// Launch fairing(s) failed.
+    FailedFairings(Vec<crate::fairing::Info>),
+    /// The configuration profile is not debug but not secret key is configured.
+    InsecureSecretKey(Profile),
 }
 
 impl From<ErrorKind> for Error {
@@ -137,9 +140,10 @@ impl fmt::Display for ErrorKind {
         match self {
             ErrorKind::Bind(e) => write!(f, "binding failed: {}", e),
             ErrorKind::Io(e) => write!(f, "I/O error: {}", e),
-            ErrorKind::Collision(_) => write!(f, "route collisions detected"),
-            ErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
-            ErrorKind::Runtime(e) => write!(f, "runtime error: {}", e)
+            ErrorKind::Collision(_) => "route collisions detected".fmt(f),
+            ErrorKind::FailedFairings(_) => "a launch fairing failed".fmt(f),
+            ErrorKind::Runtime(e) => write!(f, "runtime error: {}", e),
+            ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
         }
     }
 }
@@ -166,7 +170,7 @@ impl Drop for Error {
             return
         }
 
-        match *self.kind() {
+        match self.kind() {
             ErrorKind::Bind(ref e) => {
                 error!("Rocket failed to bind network socket to given address/port.");
                 info_!("{}", e);
@@ -189,7 +193,7 @@ impl Drop for Error {
             ErrorKind::FailedFairings(ref failures) => {
                 error!("Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info_!("{}", fairing);
+                    info_!("{}", fairing.name);
                 }
 
                 panic!("aborting due to launch fairing failure");
@@ -198,6 +202,12 @@ impl Drop for Error {
                 error!("An error occured in the runtime:");
                 info_!("{}", err);
                 panic!("aborting due to runtime failure");
+            }
+            ErrorKind::InsecureSecretKey(profile) => {
+                error!("secrets enabled in non-debug without `secret_key`");
+                info_!("selected profile: {}", Paint::white(profile));
+                info_!("disable `secrets` feature or configure a `secret_key`");
+                panic!("aborting due to insecure configuration")
             }
         }
     }

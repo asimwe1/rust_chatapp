@@ -30,34 +30,40 @@ enum Kind {
 /// ```
 ///
 /// When configured in the debug profile with the `secrets` feature enabled, a
-/// key set a `0` is automatically regenerated from the OS's random source if
-/// available.
+/// key set as `0` is automatically regenerated at launch time from the OS's
+/// random source if available.
 ///
-/// ```rust,ignore
-/// # // FIXME: Don't special case `SecretKey`.
+/// ```rust
 /// use rocket::config::Config;
+/// use rocket::local::blocking::Client;
 ///
 /// let figment = Config::figment()
 ///     .merge(("secret_key", vec![0u8; 64]))
 ///     .select("debug");
 ///
-/// let config = Config::from(figment);
-/// assert!(!config.secret_key.is_zero());
+/// let rocket = rocket::custom(figment);
+/// let client = Client::tracked(rocket).expect("okay in debug");
+/// assert!(!client.rocket().config().secret_key.is_zero());
 /// ```
 ///
 /// When running in any other profile with the `secrets` feature enabled,
 /// providing a key of `0` or not provided a key at all results in a failure at
 /// launch-time:
 ///
-/// ```rust,should_panic,ignore
-/// # // FIXME: Don't special case `SecretKey` checking on test/unsafe_key.
+/// ```rust
 /// use rocket::config::Config;
+/// use rocket::figment::Profile;
+/// use rocket::local::blocking::Client;
+/// use rocket::error::ErrorKind;
 ///
+/// let profile = Profile::const_new("staging");
 /// let figment = Config::figment()
 ///     .merge(("secret_key", vec![0u8; 64]))
-///     .select("staging");
+///     .select(profile.clone());
 ///
-/// let config = Config::from(figment);
+/// let rocket = rocket::custom(figment);
+/// let error = Client::tracked(rocket).expect_err("failure in non-debug");
+/// assert!(matches!(error.kind(), ErrorKind::InsecureSecretKey(profile)));
 /// ```
 ///
 /// [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies

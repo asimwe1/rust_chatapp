@@ -38,7 +38,7 @@ use crate::config::SecretKey;
 ///
 ///   * **Profile**
 ///
-///     This provider does not set a profile.
+///     The profile is set to the value of the `profile` field.
 ///
 ///   * **Metadata**
 ///
@@ -54,6 +54,12 @@ use crate::config::SecretKey;
 /// Note that these behaviors differ from those of [`Config::figment()`].
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Config {
+    /// The selected profile. **(default: _debug_ `debug` / _release_ `release`)**
+    ///
+    /// **Note:** This field is never serialized nor deserialized. It is set to
+    /// the value of the selected `Profile` during extraction.
+    #[serde(skip)]
+    pub profile: Profile,
     /// IP address to serve on. **(default: `127.0.0.1`)**
     pub address: IpAddr,
     /// Port to serve on. **(default: `8000`)**
@@ -106,10 +112,10 @@ impl Default for Config {
 }
 
 impl Config {
-    /// The default "debug" profile.
+    /// The default debug profile: `debug`.
     pub const DEBUG_PROFILE: Profile = Profile::const_new("debug");
 
-    /// The default "release" profile.
+    /// The default release profile: `release`.
     pub const RELEASE_PROFILE: Profile = Profile::const_new("release");
 
     /// The default profile: "debug" on `debug`, "release" on `release`.
@@ -145,6 +151,7 @@ impl Config {
     /// ```
     pub fn debug_default() -> Config {
         Config {
+            profile: Self::DEBUG_PROFILE,
             address: Ipv4Addr::new(127, 0, 0, 1).into(),
             port: 8000,
             workers: num_cpus::get(),
@@ -177,6 +184,7 @@ impl Config {
     /// ```
     pub fn release_default() -> Config {
         Config {
+            profile: Self::RELEASE_PROFILE,
             log_level: LogLevel::Critical,
             ..Config::debug_default()
         }
@@ -217,52 +225,55 @@ impl Config {
             .merge(Env::prefixed("ROCKET_").ignore(&["PROFILE"]).global())
     }
 
-    /// Attempts to extract a `Config` from `provider`.
-    ///
-    /// # Panics
-    ///
-    /// If extraction fails, prints an error message indicating the failure and
-    /// panics.
+    /// Attempts to extract a `Config` from `provider`, returning the result.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use figment::{Figment, providers::{Toml, Format, Env}};
+    /// use rocket::Config;
+    /// use rocket::figment::providers::{Toml, Format, Env};
     ///
     /// // Use Rocket's default `Figment`, but allow values from `MyApp.toml`
     /// // and `MY_APP_` prefixed environment variables to supersede its values.
-    /// let figment = rocket::Config::figment()
+    /// let figment = Config::figment()
+    ///     .merge(("some-thing", 123))
+    ///     .merge(Env::prefixed("CONFIG_"));
+    ///
+    /// let config = Config::try_from(figment);
+    /// ```
+    pub fn try_from<T: Provider>(provider: T) -> Result<Self> {
+        let figment = Figment::from(provider);
+        let mut config = figment.extract::<Self>()?;
+        config.profile = figment.profile().clone();
+        Ok(config)
+    }
+
+    /// Extract a `Config` from `provider`, panicking if extraction fails.
+    ///
+    /// # Panics
+    ///
+    /// If extraction fails, prints an error message indicating the failure and
+    /// panics. For a version that doesn't panic, use [`Config::try_from()`].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Config;
+    /// use rocket::figment::providers::{Toml, Format, Env};
+    ///
+    /// // Use Rocket's default `Figment`, but allow values from `MyApp.toml`
+    /// // and `MY_APP_` prefixed environment variables to supersede its values.
+    /// let figment = Config::figment()
     ///     .merge(Toml::file("MyApp.toml").nested())
     ///     .merge(Env::prefixed("MY_APP_"));
     ///
-    /// let config = rocket::Config::from(figment);
+    /// let config = Config::from(figment);
     /// ```
-    #[track_caller]
     pub fn from<T: Provider>(provider: T) -> Self {
-        let figment = Figment::from(&provider);
-
-        #[allow(unused_mut)]
-        let mut config = figment.extract::<Self>().unwrap_or_else(|e| {
+        Self::try_from(provider).unwrap_or_else(|e| {
             pretty_print_error(e);
             panic!("aborting due to configuration error(s)")
-        });
-
-        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
-        if !config.secret_key.is_provided() {
-            if figment.profile() == Self::DEBUG_PROFILE {
-                // in debug, try to generate a key for a bit more security
-                let key = SecretKey::generate().unwrap_or(SecretKey::zero());
-                config.secret_key = key;
-            } else {
-                crate::logger::try_init(LogLevel::Debug, true, false);
-                error!("secrets enabled in non-debug without `secret_key`");
-                info_!("selected profile: {}", Paint::white(figment.profile()));
-                info_!("disable `secrets` feature or configure a `secret_key`");
-                panic!("aborting due to configuration error(s)")
-            }
-        }
-
-        config
+        })
     }
 
     /// Returns `true` if TLS is enabled.
@@ -306,17 +317,8 @@ impl Config {
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
         }
 
-        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))] {
-            launch_info_!("secret key: {:?}",
-                Paint::default(&self.secret_key).bold());
-
-            if !self.secret_key.is_provided() {
-                warn!("secrets enabled without a configured `secret_key`");
-                info_!("disable `secrets` feature or configure a `secret_key`");
-                info_!("this becomes a {} in non-debug profiles",
-                    Paint::red("hard error").bold());
-            }
-        }
+        #[cfg(feature = "secrets")]
+        launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
 
         launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
         launch_info_!("log level: {}", Paint::default(self.log_level).bold());
@@ -372,6 +374,9 @@ impl Provider for Config {
         Ok(map)
     }
 
+    fn profile(&self) -> Option<Profile> {
+        Some(self.profile.clone())
+    }
 }
 
 #[crate::async_trait]
@@ -387,7 +392,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'r Config {
 pub fn pretty_print_error(error: figment::Error) {
     use figment::error::{Kind, OneOf};
 
-    crate::logger::try_init(LogLevel::Debug, true, false);
+    let mut config = Config::debug_default();
+    config.log_level = LogLevel::Debug;
+    crate::logger::init(&config);
 
     error!("Rocket configuration extraction from provider failed.");
     for e in error {

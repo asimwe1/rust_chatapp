@@ -32,7 +32,7 @@ fn rocket() -> Rocket {
 
 #[test]
 fn catches_route_panic() {
-    let client = Client::untracked(rocket()).unwrap();
+    let client = Client::debug(rocket()).unwrap();
     let response = client.get("/panic").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");
@@ -40,7 +40,7 @@ fn catches_route_panic() {
 }
 #[test]
 fn catches_catcher_panic() {
-    let client = Client::untracked(rocket()).unwrap();
+    let client = Client::debug(rocket()).unwrap();
     let response = client.get("/noroute").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");
@@ -49,7 +49,7 @@ fn catches_catcher_panic() {
 #[test]
 fn catches_double_panic() {
     let rocket = rocket().register(catchers![double_panic]);
-    let client = Client::untracked(rocket).unwrap();
+    let client = Client::debug(rocket).unwrap();
     let response = client.get("/noroute").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert!(!response.into_string().unwrap().contains(":("));

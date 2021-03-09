@@ -27,10 +27,9 @@ mod flash_lazy_remove_tests {
     #[test]
     fn test() {
         use super::*;
-        let r = rocket::ignite().mount("/", routes![set, unused, used]);
-        let client = Client::tracked(r).unwrap();
 
         // Ensure the cookie's not there at first.
+        let client = Client::debug_with(routes![set, unused, used]).unwrap();
         let response = client.get("/unused").dispatch();
         assert_eq!(response.status(), Status::NotFound);
 

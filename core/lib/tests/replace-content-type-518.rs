@@ -22,7 +22,7 @@ fn rocket() -> rocket::Rocket {
 
 #[test]
 fn check_fairing_changes_content_type() {
-    let client = Client::untracked(rocket()).unwrap();
+    let client = Client::debug(rocket()).unwrap();
     let response = client.post("/").header(ContentType::PNG).dispatch();
     assert_eq!(response.into_string().unwrap(), "other");
 

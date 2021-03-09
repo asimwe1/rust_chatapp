@@ -163,27 +163,25 @@ impl log::Log for RocketLogger {
     }
 }
 
-pub(crate) fn try_init(level: LogLevel, colors: bool, verbose: bool) -> bool {
-    if level == LogLevel::Off {
+pub(crate) fn init(config: &crate::Config) -> bool {
+    if config.log_level == LogLevel::Off {
         return false;
     }
 
     if !atty::is(atty::Stream::Stdout)
         || (cfg!(windows) && !Paint::enable_windows_ascii())
-        || !colors
+        || !config.cli_colors
     {
         Paint::disable();
     }
 
-    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(level))) {
-        if verbose {
+    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(config.log_level))) {
+        if config.log_level == LogLevel::Debug {
             eprintln!("Logger failed to initialize: {}", e);
         }
-
-        return false;
     }
 
-    log::set_max_level(level.to_level_filter());
+    log::set_max_level(config.log_level.to_level_filter());
     true
 }
 
@@ -197,11 +195,6 @@ impl PaintExt for Paint<&str> {
         #[cfg(windows)] { Paint::masked("") }
         #[cfg(not(windows))] { Paint::masked(_item) }
     }
-}
-
-#[doc(hidden)]
-pub fn init(level: LogLevel) -> bool {
-    try_init(level, true, true)
 }
 
 // Expose logging macros as (hidden) funcions for use by core/contrib codegen.

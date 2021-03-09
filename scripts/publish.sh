@@ -23,11 +23,10 @@ if ! [ -z "$(git status --porcelain)" ]; then
 fi
 
 # Ensure everything passes before trying to publish.
-echo ":::: Running test suite..."
+echo ":::: Running complete test suite..."
 cargo clean
-bash "${SCRIPT_DIR}/test.sh"
-bash "${SCRIPT_DIR}/test.sh" --contrib
-bash "${SCRIPT_DIR}/test.sh" --release
+bash "${SCRIPT_DIR}/test.sh" --all
+bash "${SCRIPT_DIR}/test.sh" --all --release
 
 # Temporarily remove dev-dependencies so crates.io verifies.
 echo ":::: Stripping [dev-dependencies]..."

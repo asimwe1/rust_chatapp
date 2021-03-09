@@ -19,8 +19,7 @@ mod conditionally_set_server_header {
 
     #[test]
     fn do_not_overwrite_server_header() {
-        let rocket = rocket::ignite().mount("/", routes![do_not_overwrite, use_default]);
-        let client = Client::tracked(rocket).unwrap();
+        let client = Client::debug_with(routes![do_not_overwrite, use_default]).unwrap();
 
         let response = client.get("/do_not_overwrite").dispatch();
         let server = response.headers().get_one("Server");

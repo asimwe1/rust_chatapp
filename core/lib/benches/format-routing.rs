@@ -10,8 +10,12 @@ fn get() -> &'static str { "get" }
 fn post() -> &'static str { "post" }
 
 fn rocket() -> rocket::Rocket {
-    rocket::custom(rocket::Config::figment().merge(("log_level", "off")))
-        .mount("/", routes![get, post])
+    let config = rocket::Config {
+        log_level: rocket::config::LogLevel::Off,
+        ..rocket::Config::debug_default()
+    };
+
+    rocket::custom(config).mount("/", routes![get, post])
 }
 
 use bencher::Bencher;

@@ -96,11 +96,17 @@ macro_rules! pub_client_impl {
     }
 
     #[doc(hidden)]
-    pub $($prefix)? fn debug(base: &str, routes: Vec<crate::Route>) -> Result<Self, Error> {
-        let mut config = crate::Config::debug_default();
+    pub $($prefix)? fn debug_with(routes: Vec<crate::Route>) -> Result<Self, Error> {
+        let rocket = crate::custom(crate::Config::debug_default());
+        Self::debug(rocket.mount("/", routes)) $(.$suffix)?
+    }
+
+    #[doc(hidden)]
+    pub $($prefix)? fn debug(rocket: Rocket) -> Result<Self, Error> {
+        let mut config = rocket.config().clone();
         config.log_level = crate::config::LogLevel::Debug;
-        let rocket = crate::custom(config).mount(base, routes);
-        Self::tracked(rocket) $(.$suffix)?
+        config.profile = crate::Config::DEBUG_PROFILE;
+        Self::tracked(rocket.reconfigure(config)) $(.$suffix)?
     }
 
     /// Deprecated alias to [`Client::tracked()`].
@@ -117,7 +123,7 @@ macro_rules! pub_client_impl {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```rust
     #[doc = $import]
     ///
     /// # Client::_test(|client, _, _| {
@@ -196,5 +202,8 @@ macro_rules! pub_client_impl {
     fn _ensure_impls_exist() {
         fn is_send<T: Send>() {}
         is_send::<Self>();
+
+        fn is_debug<T: std::fmt::Debug>() {}
+        is_debug::<Self>();
     }
 }}

@@ -1,5 +1,5 @@
 use crate::{Rocket, Request, Response, Data};
-use crate::fairing::{Fairing, Kind};
+use crate::fairing::{Fairing, Info, Kind};
 use crate::logger::PaintExt;
 
 use yansi::Paint;
@@ -7,8 +7,9 @@ use yansi::Paint;
 #[derive(Default)]
 pub struct Fairings {
     all_fairings: Vec<Box<dyn Fairing>>,
-    attach_failures: Vec<&'static str>,
+    attach_failures: Vec<Info>,
     // The vectors below hold indices into `all_fairings`.
+    attach: Vec<usize>,
     launch: Vec<usize>,
     request: Vec<usize>,
     response: Vec<usize>,
@@ -23,26 +24,39 @@ impl Fairings {
     pub async fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
-        let name = fairing.info().name;
+        let fairing = self.add(fairing);
         if kind.is(Kind::Attach) {
+            let info = fairing.info();
             rocket = fairing.on_attach(rocket).await
-                .unwrap_or_else(|r| { self.attach_failures.push(name); r })
+                .unwrap_or_else(|r| { self.attach_failures.push(info); r })
         }
 
-        self.add(fairing);
         rocket
     }
 
-    fn add(&mut self, fairing: Box<dyn Fairing>) {
+    fn add(&mut self, fairing: Box<dyn Fairing>) -> &dyn Fairing {
         let kind = fairing.info().kind;
-        if !kind.is_exactly(Kind::Attach) {
-            let index = self.all_fairings.len();
-            self.all_fairings.push(fairing);
+        let index = self.all_fairings.len();
+        self.all_fairings.push(fairing);
 
-            if kind.is(Kind::Launch) { self.launch.push(index); }
-            if kind.is(Kind::Request) { self.request.push(index); }
-            if kind.is(Kind::Response) { self.response.push(index); }
-        }
+        if kind.is(Kind::Attach) { self.attach.push(index); }
+        if kind.is(Kind::Launch) { self.launch.push(index); }
+        if kind.is(Kind::Request) { self.request.push(index); }
+        if kind.is(Kind::Response) { self.response.push(index); }
+
+        &*self.all_fairings[index]
+    }
+
+    #[inline(always)]
+    fn fairings(&self, kind: Kind) -> impl Iterator<Item = &dyn Fairing> {
+        let indices = match kind {
+            k if k.is(Kind::Attach) => &self.attach,
+            k if k.is(Kind::Launch) => &self.launch,
+            k if k.is(Kind::Request) => &self.request,
+            _ => &self.response,
+        };
+
+        indices.iter().map(move |i| &*self.all_fairings[*i])
     }
 
     pub fn append(&mut self, others: Fairings) {
@@ -53,26 +67,26 @@ impl Fairings {
 
     #[inline(always)]
     pub fn handle_launch(&self, rocket: &Rocket) {
-        for &i in &self.launch {
-            self.all_fairings[i].on_launch(rocket);
+        for fairing in self.fairings(Kind::Launch) {
+            fairing.on_launch(rocket);
         }
     }
 
     #[inline(always)]
     pub async fn handle_request(&self, req: &mut Request<'_>, data: &mut Data) {
-        for &i in &self.request {
-            self.all_fairings[i].on_request(req, data).await;
+        for fairing in self.fairings(Kind::Request) {
+            fairing.on_request(req, data).await
         }
     }
 
     #[inline(always)]
     pub async fn handle_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
-        for &i in &self.response {
-            self.all_fairings[i].on_response(request, response).await;
+        for fairing in self.fairings(Kind::Response) {
+            fairing.on_response(request, response).await;
         }
     }
 
-    pub fn failures(&self) -> Option<&[&'static str]> {
+    pub fn failures(&self) -> Option<&[Info]> {
         if self.attach_failures.is_empty() {
             None
         } else {
@@ -80,24 +94,35 @@ impl Fairings {
         }
     }
 
-    fn info_for(&self, kind: &str, fairings: &[usize]) {
-        if !fairings.is_empty() {
-            let num = fairings.len();
-            let names = fairings.iter().cloned()
-                .map(|i| self.all_fairings[i].info().name)
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(names).bold());
-        }
-    }
-
     pub fn pretty_print_counts(&self) {
+        fn pretty_print(f: &Fairings, prefix: &str, kind: Kind) {
+            let names: Vec<_> = f.fairings(kind).map(|f| f.info().name).collect();
+            let num = names.len();
+            let joined = names.join(", ");
+            info_!("{} {}: {}", Paint::default(num).bold(), prefix, Paint::default(joined).bold());
+        }
+
         if !self.all_fairings.is_empty() {
             info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
-            self.info_for("launch", &self.launch);
-            self.info_for("request", &self.request);
-            self.info_for("response", &self.response);
+            pretty_print(self, "attach", Kind::Attach);
+            pretty_print(self, "launch", Kind::Launch);
+            pretty_print(self, "request", Kind::Request);
+            pretty_print(self, "response", Kind::Response);
         }
+    }
+}
+
+impl std::fmt::Debug for Fairings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn debug_info(fs: &Fairings, kind: Kind) -> Vec<Info> {
+            fs.fairings(kind).map(|f| f.info()).collect()
+        }
+
+        f.debug_struct("Fairings")
+            .field("attach", &debug_info(self, Kind::Attach))
+            .field("launch", &debug_info(self, Kind::Launch))
+            .field("request", &debug_info(self, Kind::Request))
+            .field("response", &debug_info(self, Kind::Response))
+            .finish()
     }
 }

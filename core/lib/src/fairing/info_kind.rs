@@ -22,7 +22,7 @@ use std::ops::BitOr;
 /// }
 /// # ;
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Info {
     /// The name of the fairing.
     pub name: &'static str,

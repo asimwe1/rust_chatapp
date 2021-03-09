@@ -15,7 +15,7 @@ mod test_session_cookies {
     #[test]
     fn session_cookie_is_session() {
         let rocket = rocket::ignite().mount("/", rocket::routes![index]);
-        let client = Client::tracked(rocket).unwrap();
+        let client = Client::debug(rocket).unwrap();
 
         let response = client.get("/").dispatch();
         let cookie = response.cookies().get_private("key").unwrap();

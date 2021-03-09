@@ -18,6 +18,7 @@ use crate::error::{Error, ErrorKind};
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
+#[derive(Debug)]
 pub struct Rocket {
     pub(crate) config: Config,
     pub(crate) figment: Figment,
@@ -53,6 +54,7 @@ impl Rocket {
     /// # };
     /// ```
     #[track_caller]
+    #[inline(always)]
     pub fn ignite() -> Rocket {
         Rocket::custom(Config::figment())
     }
@@ -63,10 +65,10 @@ impl Rocket {
     ///
     /// # Panics
     ///
-    /// If there is an error reading configuration sources, this function prints
-    /// a nice error message and then exits the process.
+    /// If there is an error reading a [`Config`] from `provider`, function
+    /// prints a nice error message and then exits the process.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```rust
     /// use figment::{Figment, providers::{Toml, Env, Format}};
@@ -80,18 +82,17 @@ impl Rocket {
     ///     rocket::custom(figment)
     /// }
     /// ```
-    #[inline]
     #[track_caller]
     pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
-        let (config, figment) = (Config::from(&provider), Figment::from(provider));
-        logger::try_init(config.log_level, config.cli_colors, false);
+        let config = Config::from(&provider);
+        let figment = Figment::from(provider);
+        logger::init(&config);
         config.pretty_print(&figment);
 
         let managed_state = <Container![Send + Sync]>::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         Rocket {
-            config, figment,
-            managed_state,
+            config, figment, managed_state,
             shutdown_handle: Shutdown(shutdown_sender),
             router: Router::new(),
             default_catcher: None,
@@ -99,6 +100,56 @@ impl Rocket {
             fairings: Fairings::new(),
             shutdown_receiver: Some(shutdown_receiver),
         }
+    }
+
+    /// Resets the configuration in `self` to that provided by `provider`.
+    ///
+    /// # Panics
+    ///
+    /// Like [`Rocket::custom()`], panics if `provider` does not provide a valid
+    /// [`Config`]. The error message is printed.
+    ///
+    /// # Examples
+    ///
+    /// To modify only some values, use the existing `config`:
+    ///
+    /// ```rust
+    /// use std::net::Ipv4Addr;
+    ///
+    /// let config = rocket::Config {
+    ///     port: 7777,
+    ///     address: Ipv4Addr::new(18, 127, 0, 1).into(),
+    ///     ..rocket::Config::default()
+    /// };
+    ///
+    /// let rocket = rocket::custom(&config);
+    /// assert_eq!(rocket.config().port, 7777);
+    /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
+    ///
+    /// // Modifying the existing config:
+    /// let mut new_config = rocket.config().clone();
+    /// new_config.port = 8888;
+    ///
+    /// let rocket = rocket.reconfigure(new_config);
+    /// assert_eq!(rocket.config().port, 8888);
+    /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
+    ///
+    /// // Modifying the existing figment:
+    /// let mut new_figment = rocket.figment().clone()
+    ///     .merge(("address", "171.64.200.10"));
+    ///
+    /// let rocket = rocket.reconfigure(new_figment);
+    /// assert_eq!(rocket.config().port, 8888);
+    /// assert_eq!(rocket.config().address, Ipv4Addr::new(171, 64, 200, 10));
+    /// ```
+    #[inline]
+    #[track_caller]
+    pub fn reconfigure<T: figment::Provider>(mut self, provider: T) -> Rocket {
+        self.config = Config::from(&provider);
+        self.figment = Figment::from(provider);
+        logger::init(&self.config);
+        self.config.pretty_print(&self.figment);
+        self
     }
 
     /// Mounts all of the routes in the supplied vector at the given `base`
@@ -152,7 +203,6 @@ impl Rocket {
     /// #     .launch().await;
     /// # };
     /// ```
-    #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         let base_uri = Origin::parse_owned(base.to_string())
             .unwrap_or_else(|e| {
@@ -210,7 +260,6 @@ impl Rocket {
     ///     rocket::ignite().register(catchers![internal_error, not_found])
     /// }
     /// ```
-    #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
         info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
 
@@ -294,7 +343,6 @@ impl Rocket {
     ///         }))
     /// }
     /// ```
-    #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         let future = async move {
             let fairing = Box::new(fairing);
@@ -472,8 +520,10 @@ impl Rocket {
         self.shutdown_handle.clone()
     }
 
-    /// Perform "pre-launch" checks: verify that there are no routing colisions
-    /// and that there were no fairing failures.
+    /// Perform "pre-launch" checks: verify:
+    ///     * there are no routing colisionns
+    ///     * there were no fairing failures
+    ///     * a secret key, if needed, is securely configured
     pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
         if let Err(e) = self.router.collisions() {
             return Err(Error::new(ErrorKind::Collision(e)));
@@ -482,6 +532,25 @@ impl Rocket {
         if let Some(failures) = self.fairings.failures() {
             return Err(Error::new(ErrorKind::FailedFairings(failures.to_vec())))
         }
+
+        #[cfg(feature = "secrets")]
+        if !self.config.secret_key.is_provided() {
+            let profile = self.figment.profile();
+            if profile != Config::DEBUG_PROFILE {
+                return Err(Error::new(ErrorKind::InsecureSecretKey(profile.clone())));
+            } else {
+                self.config.secret_key = crate::config::SecretKey::generate()
+                    .unwrap_or(crate::config::SecretKey::zero());
+
+                warn!("secrets enabled without a configured `secret_key`");
+                info_!("disable `secrets` feature or configure a `secret_key`");
+                info_!("this becomes an {} in non-debug profiles", Paint::red("error"));
+
+                if !self.config.secret_key.is_zero() {
+                    warn_!("a random key has been generated for this launch");
+                }
+            }
+        };
 
         Ok(())
     }

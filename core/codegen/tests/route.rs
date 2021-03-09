@@ -87,7 +87,7 @@ fn test_full_route() {
         .mount("/1", routes![post1])
         .mount("/2", routes![post2]);
 
-    let client = Client::tracked(rocket).unwrap();
+    let client = Client::debug(rocket).unwrap();
 
     let a = RawStr::new("A%20A");
     let name = RawStr::new("Bob%20McDonald");
@@ -171,7 +171,7 @@ fn filtered_raw_query(bird: usize, color: &str, rest: Contextual<'_, Filtered<'_
 #[test]
 fn test_filtered_raw_query() {
     let rocket = rocket::ignite().mount("/", routes![filtered_raw_query]);
-    let client = Client::untracked(rocket).unwrap();
+    let client = Client::debug(rocket).unwrap();
 
     #[track_caller]
     fn run(client: &Client, birds: &[&str], colors: &[&str], cats: &[&str]) -> (Status, String) {
@@ -259,7 +259,7 @@ fn test_query_collection() {
     }
 
     fn run_tests(rocket: rocket::Rocket) {
-        let client = Client::untracked(rocket).unwrap();
+        let client = Client::debug(rocket).unwrap();
 
         let colors = &["blue", "green"];
         let dog = &["name=Fido", "age=10"];
@@ -327,7 +327,7 @@ fn test_inclusive_segments() {
         .mount("/", routes![segments])
         .mount("/", routes![segments_empty]);
 
-    let client = Client::untracked(rocket).unwrap();
+    let client = Client::debug(rocket).unwrap();
     let get = |uri| client.get(uri).dispatch().into_string().unwrap();
 
     assert_eq!(get("/"), "empty+");

@@ -14,14 +14,14 @@ instance. Usage is straightforward:
 
   1. Construct a `Rocket` instance that represents the application.
 
-     ```rust
+     ```rust,no_run
      let rocket = rocket::ignite();
      # let _ = rocket;
      ```
 
   2. Construct a `Client` using the `Rocket` instance.
 
-     ```rust
+     ```rust,no_run
      # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      let client = Client::tracked(rocket).unwrap();
@@ -30,7 +30,7 @@ instance. Usage is straightforward:
 
   3. Construct requests using the `Client` instance.
 
-     ```rust
+     ```rust,no_run
      # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      # let client = Client::tracked(rocket).unwrap();
@@ -40,7 +40,7 @@ instance. Usage is straightforward:
 
   4. Dispatch the request to retrieve the response.
 
-     ```rust
+     ```rust,no_run
      # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      # let client = Client::tracked(rocket).unwrap();
@@ -97,11 +97,11 @@ These methods are typically used in combination with the `assert_eq!` or
 #         .finalize()
 # }
 
-use rocket::local::blocking::Client;
+# use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
-let rocket = rocket::ignite().mount("/", routes![hello]);
-let client = Client::tracked(rocket).expect("valid rocket instance");
+# let rocket = rocket::ignite().mount("/", routes![hello]);
+# let client = Client::debug(rocket).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
@@ -165,7 +165,9 @@ To test our "Hello, world!" application, we create a `Client` for our
 testing: we _want_ our tests to panic when something goes wrong.
 
 ```rust
-# fn rocket() -> rocket::Rocket { rocket::ignite() }
+# fn rocket() -> rocket::Rocket {
+#     rocket::ignite().reconfigure(rocket::Config::debug_default())
+# }
 # use rocket::local::blocking::Client;
 
 let client = Client::tracked(rocket()).expect("valid rocket instance");
@@ -175,7 +177,9 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
-# fn rocket() -> rocket::Rocket { rocket::ignite() }
+# fn rocket() -> rocket::Rocket {
+#     rocket::ignite().reconfigure(rocket::Config::debug_default())
+# }
 # use rocket::local::blocking::Client;
 # let client = Client::tracked(rocket()).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
@@ -199,7 +203,7 @@ We do this by checking the `Response` object directly:
 use rocket::http::{ContentType, Status};
 #
 # let rocket = rocket::ignite().mount("/", routes![hello]);
-# let client = Client::tracked(rocket).expect("valid rocket instance");
+# let client = Client::debug(rocket).expect("valid rocket instance");
 # let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
@@ -232,7 +236,10 @@ mod test {
     #[test]
     # */ pub
     fn hello_world() {
+        # /*
         let client = Client::tracked(rocket()).expect("valid rocket instance");
+        # */
+        # let client = Client::debug(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string(), Some("Hello, world!".into()));

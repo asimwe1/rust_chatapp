@@ -104,7 +104,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use rocket::http::Method;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// # let post = |uri| c.post(uri);
     /// assert_eq!(get("/").method(), Method::Get);
@@ -139,7 +139,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/hello/rocketeer").uri().path(), "/hello/rocketeer");
     /// assert_eq!(get("/hello").uri().query(), None);
@@ -231,7 +231,7 @@ impl<'r> Request<'r> {
     /// use std::net::Ipv4Addr;
     /// use rocket::http::Header;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let req = c.get("/");
     /// assert_eq!(req.real_ip(), None);
     ///
@@ -292,7 +292,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use rocket::http::Cookie;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// # let req = request.inner();
     /// req.cookies().add(Cookie::new("key", "val"));
@@ -312,7 +312,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use rocket::http::{Accept, ContentType};
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert!(get("/").headers().is_empty());
     ///
@@ -384,7 +384,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use rocket::http::ContentType;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/").content_type(), None);
     ///
@@ -406,7 +406,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use rocket::http::Accept;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/").accept(), None);
     /// assert_eq!(get("/").header(Accept::JSON).accept(), Some(&Accept::JSON));
@@ -432,7 +432,7 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::http::{Accept, ContentType, MediaType};
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// # let post = |uri| c.post(uri);
     ///
@@ -472,7 +472,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// let config = request.config();
     /// ```
@@ -486,7 +486,7 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::data::ToByteUnit;
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     ///
     /// // This is the default `form` limit.
@@ -508,7 +508,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// let route = request.route();
     /// ```
@@ -525,7 +525,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # type User = rocket::http::Method;
     /// # rocket::async_test(async move {
-    /// # let c = rocket::local::asynchronous::Client::debug("/", vec![]).await.unwrap();
+    /// # let c = rocket::local::asynchronous::Client::debug_with(vec![]).await.unwrap();
     /// # let request = c.get("/");
     /// let outcome = request.guard::<User>().await;
     /// # })
@@ -541,7 +541,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// # type Pool = usize;
     /// let pool = request.managed_state::<Pool>();
@@ -567,7 +567,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// // The first store into local cache for a given type wins.
     /// let value = request.local_cache(|| "hello");
@@ -602,7 +602,7 @@ impl<'r> Request<'r> {
     /// }
     ///
     /// # rocket::async_test(async move {
-    /// # let c = rocket::local::asynchronous::Client::debug("/", vec![]).await.unwrap();
+    /// # let c = rocket::local::asynchronous::Client::debug_with(vec![]).await.unwrap();
     /// # let request = c.get("/");
     /// let current_user = request.local_cache_async(async {
     ///     current_user(&request).await
@@ -636,7 +636,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/a/b/c").param(0), Some(Ok("a")));
     /// assert_eq!(get("/a/b/c").param(1), Some(Ok("b")));
@@ -674,7 +674,7 @@ impl<'r> Request<'r> {
     /// ```rust
     /// use std::path::PathBuf;
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/").segments(0..), Ok(PathBuf::new()));
     /// assert_eq!(get("/").segments(2..), Ok(PathBuf::new()));
@@ -723,7 +723,7 @@ impl<'r> Request<'r> {
     ///     age: usize
     /// }
     ///
-    /// # let c = rocket::local::blocking::Client::debug("/", vec![]).unwrap();
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// let req = get("/?a=apple&z=zebra&a=aardvark");
     /// assert_eq!(req.query_value::<&str>("a").unwrap(), Ok("apple"));

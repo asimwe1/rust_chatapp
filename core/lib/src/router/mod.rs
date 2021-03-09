@@ -14,7 +14,7 @@ pub use self::segment::Segment;
 // type Selector = (Method, usize);
 type Selector = Method;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }

@@ -24,11 +24,10 @@ use super::Client;
 ///     "Hello, world!"
 /// }
 ///
-/// # /*
 /// #[launch]
-/// # */
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite().mount("/", routes![hello_world])
+///     #    .reconfigure(rocket::Config::debug_default())
 /// }
 ///
 /// # fn read_body_manually() -> io::Result<()> {

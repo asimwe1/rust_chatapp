@@ -13,7 +13,7 @@ use super::{Client, LocalResponse};
 /// The following snippet uses the available builder methods to construct and
 /// dispatch a `POST` request to `/` with a JSON body:
 ///
-/// ```rust
+/// ```rust,no_run
 /// use rocket::local::blocking::{Client, LocalRequest};
 /// use rocket::http::{ContentType, Cookie};
 ///

@@ -5,7 +5,7 @@ use rocket::futures::channel::oneshot;
 #[rocket::async_test]
 async fn on_launch_fairing_can_inspect_port() {
     let (tx, rx) = oneshot::channel();
-    let rocket = rocket::custom(Config { port: 0, ..Default::default() })
+    let rocket = rocket::custom(Config { port: 0, ..Config::debug_default() })
         .attach(AdHoc::on_launch("Send Port -> Channel", move |rocket| {
             tx.send(rocket.config().port).unwrap();
         }));

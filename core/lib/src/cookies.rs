@@ -47,8 +47,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// }
 /// # fn main() {
 /// #     use rocket::local::blocking::Client;
-/// #     let rocket = rocket::ignite().mount("/", routes![message]);
-/// #     let client = Client::tracked(rocket).unwrap();
+/// #     let client = Client::debug_with(routes![message]).unwrap();
 /// #     let response = client.get("/message")
 /// #         .cookie(Cookie::new("message", "hi"))
 /// #         .dispatch();

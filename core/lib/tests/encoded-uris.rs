@@ -10,8 +10,7 @@ mod encoded_uris {
 
     #[test]
     fn can_route_to_encoded_uri() {
-        let rocket = rocket::ignite().mount("/", routes![super::index]);
-        let client = Client::untracked(rocket).unwrap();
+        let client = Client::debug_with(routes![super::index]).unwrap();
         let response = client.get("/hello%20s%C3%BCper%20%24?a&%3F&value=a+b")
             .dispatch()
             .into_string();

@@ -46,7 +46,7 @@ mod nested_fairing_attaches_tests {
 
     #[test]
     fn test_counts() {
-        let client = Client::tracked(rocket()).unwrap();
+        let client = Client::debug(rocket()).unwrap();
         let response = client.get("/").dispatch();
         assert_eq!(response.into_string(), Some("1, 1".into()));
 

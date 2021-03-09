@@ -27,11 +27,10 @@ use crate::{Request, Response};
 ///     "Hello, world!"
 /// }
 ///
-/// # /*
 /// #[launch]
-/// # */
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite().mount("/", routes![hello_world])
+///     #    .reconfigure(rocket::Config::debug_default())
 /// }
 ///
 /// # async fn read_body_manually() -> io::Result<()> {

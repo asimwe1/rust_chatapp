@@ -19,7 +19,8 @@ mod many_cookie_jars_tests {
     use rocket::http::Status;
 
     fn rocket() -> rocket::Rocket {
-        rocket::ignite().mount("/", routes![add, get])
+        rocket::custom(rocket::Config::debug_default())
+            .mount("/", routes![add, get])
     }
 
     #[test]

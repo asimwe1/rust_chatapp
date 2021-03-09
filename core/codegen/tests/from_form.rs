@@ -587,7 +587,7 @@ fn test_nested_multi() {
 //         Ok("hi")
 //     }
 //
-//     let client = Client::untracked(crate::ignite().mount("/", routes![form])).unwrap();
+//     let client = Client::debug_with(routes![form]).unwrap();
 //     let ct = "multipart/form-data; boundary=X-BOUNDARY"
 //         .parse::<ContentType>()
 //         .unwrap();

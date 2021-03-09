@@ -32,7 +32,7 @@ mod helmet_tests {
     macro_rules! dispatch {
         ($helmet:expr, $closure:expr) => {{
             let rocket = rocket::ignite().mount("/", routes![hello]).attach($helmet);
-            let client = Client::tracked(rocket).unwrap();
+            let client = Client::debug(rocket).unwrap();
             let response = client.get("/").dispatch();
             assert_eq!(response.status(), Status::Ok);
             $closure(response)

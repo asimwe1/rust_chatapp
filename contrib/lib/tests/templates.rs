@@ -40,12 +40,10 @@ mod templates_tests {
             Err("error reloading templates!".into())
         }));
 
-        match Client::untracked(rocket) {
-            Err(e) => match e.kind() {
-                FailedFairings(failures) => assert_eq!(failures[0], "Templates"),
-                _ => panic!("Wrong kind of launch error"),
-            }
-            _ => panic!("Wrong kind of error"),
+        let error = Client::debug(rocket).expect_err("client failure");
+        match error.kind() {
+            FailedFairings(failures) => assert_eq!(failures[0].name, "Templates"),
+            _ => panic!("Wrong kind of launch error"),
         }
     }
 
@@ -79,7 +77,7 @@ mod templates_tests {
 
         #[test]
         fn test_template_metadata_with_tera() {
-            let client = Client::tracked(rocket()).unwrap();
+            let client = Client::debug(rocket()).unwrap();
 
             let response = client.get("/tera/txt_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -119,7 +117,7 @@ mod templates_tests {
 
         #[test]
         fn test_template_metadata_with_handlebars() {
-            let client = Client::tracked(rocket()).unwrap();
+            let client = Client::debug(rocket()).unwrap();
 
             let response = client.get("/hbs/test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -156,7 +154,7 @@ mod templates_tests {
             write_file(&reload_path, INITIAL_TEXT);
 
             // set up the client. if we can't reload templates, then just quit
-            let client = Client::tracked(rocket()).unwrap();
+            let client = Client::debug(rocket()).unwrap();
             let res = client.get("/is_reloading").dispatch();
             if res.status() != Status::Ok {
                 return;
