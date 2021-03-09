@@ -70,13 +70,14 @@
 //! An application that wants to use Rocket's defaults for [`Config`], but not
 //! its configuration sources, while allowing the application to be configured
 //! via an `App.toml` file that uses top-level keys as profiles (`.nested()`)
-//! and `APP_` environment variables as global overrides (`.global()`), can be
-//! structured as follows:
+//! and `APP_` environment variables as global overrides (`.global()`), and
+//! `APP_PROFILE` to configure the selected profile, can be structured as
+//! follows:
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
 //! use serde::{Serialize, Deserialize};
-//! use figment::{Figment, providers::{Format, Toml, Serialized, Env}};
+//! use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
 //! use rocket::fairing::AdHoc;
 //!
 //! #[derive(Debug, Deserialize, Serialize)]
@@ -96,7 +97,8 @@
 //!     let figment = Figment::from(rocket::Config::default())
 //!         .merge(Serialized::defaults(Config::default()))
 //!         .merge(Toml::file("App.toml").nested())
-//!         .merge(Env::prefixed("APP_").global());
+//!         .merge(Env::prefixed("APP_").global())
+//!         .select(Profile::from_env_or("APP_PROFILE", "default"));
 //!
 //!     rocket::custom(figment)
 //!         .mount("/", routes![/* .. */])
@@ -109,16 +111,21 @@
 //! [`Toml`]: figment::providers::Toml
 //! [`Env`]: figment::providers::Env
 
-mod secret_key;
 mod config;
 mod tls;
+
+#[cfg(feature = "secrets")]
+mod secret_key;
 
 #[doc(hidden)] pub use config::pretty_print_error;
 
 pub use config::Config;
 pub use crate::logger::LogLevel;
-pub use secret_key::SecretKey;
 pub use tls::TlsConfig;
+
+#[cfg(feature = "secrets")]
+#[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+pub use secret_key::SecretKey;
 
 #[cfg(test)]
 mod tests {
@@ -132,26 +139,21 @@ mod tests {
     #[test]
     fn test_default_round_trip() {
         figment::Jail::expect_with(|_| {
-            let figment = Figment::from(Config::default());
+            let original = Config::figment();
+            let profile = original.profile().clone();
+            let roundtrip = Figment::from(Config::from(&original)).select(profile);
+            for figment in &[original, roundtrip] {
+                assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
 
-            assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
+                #[cfg(debug_assertions)] assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
+                #[cfg(not(debug_assertions))] assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
 
-            #[cfg(debug_assertions)]
-            assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
+                let config: Config = figment.extract().unwrap();
+                assert_eq!(config, Config::default());
 
-            #[cfg(not(debug_assertions))]
-            assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
-
-            let config: Config = figment.extract().unwrap();
-            assert_eq!(config, Config::default());
-
-            #[cfg(debug_assertions)]
-            assert_eq!(config, Config::debug_default());
-
-            #[cfg(not(debug_assertions))]
-            assert_eq!(config, Config::release_default());
-
-            assert_eq!(Config::from(Config::default()), Config::default());
+                #[cfg(debug_assertions)] assert_eq!(config, Config::debug_default());
+                #[cfg(not(debug_assertions))] assert_eq!(config, Config::release_default());
+            }
 
             Ok(())
         });
@@ -161,15 +163,15 @@ mod tests {
     fn test_profile_env() {
         figment::Jail::expect_with(|jail| {
             jail.set_env("ROCKET_PROFILE", "debug");
-            let figment = Figment::from(Config::default());
+            let figment = Config::figment();
             assert_eq!(figment.profile(), "debug");
 
             jail.set_env("ROCKET_PROFILE", "release");
-            let figment = Figment::from(Config::default());
+            let figment = Config::figment();
             assert_eq!(figment.profile(), "release");
 
             jail.set_env("ROCKET_PROFILE", "random");
-            let figment = Figment::from(Config::default());
+            let figment = Config::figment();
             assert_eq!(figment.profile(), "random");
 
             Ok(())

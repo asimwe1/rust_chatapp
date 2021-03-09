@@ -18,8 +18,7 @@ mod test_absolute_uris_okay {
 
     #[test]
     fn redirect_works() {
-        let rocket = rocket::ignite().mount("/", routes![google, redirect]);
-        let client = Client::tracked(rocket).unwrap();
+        let client = Client::debug("/", routes![google, redirect]).unwrap();
 
         let response = client.get("/google").dispatch();
         let location = response.headers().get_one("Location");

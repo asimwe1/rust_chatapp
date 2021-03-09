@@ -89,7 +89,7 @@ impl<'r> Request<'r> {
                 managed: &rocket.managed_state,
                 shutdown: &rocket.shutdown_handle,
                 route: Atomic::new(None),
-                cookies: CookieJar::new(&rocket.config.secret_key),
+                cookies: CookieJar::new(&rocket.config),
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(<Container![Send + Sync]>::new()),

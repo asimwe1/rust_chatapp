@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 /// The following example illustrates manual configuration:
 ///
 /// ```rust
-/// # use rocket::figment::Figment;
-/// let figment = Figment::from(rocket::Config::default())
+/// use rocket::Config;
+///
+/// let figment = rocket::Config::figment()
 ///     .merge(("tls.certs", "strings/are/paths/certs.pem"))
 ///     .merge(("tls.key", vec![0; 32]));
 ///
@@ -79,8 +80,9 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket::figment::Figment;
-    /// let figment = Figment::from(rocket::Config::default())
+    /// use rocket::Config;
+    ///
+    /// let figment = Config::figment()
     ///     .merge(("tls.certs", vec![0; 32]))
     ///     .merge(("tls.key", "/etc/ssl/key.pem"));
     ///
@@ -101,9 +103,10 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket::figment::Figment;
-    /// # use std::path::Path;
-    /// let figment = Figment::from(rocket::Config::default())
+    /// use std::path::Path;
+    /// use rocket::Config;
+    ///
+    /// let figment = Config::figment()
     ///     .merge(("tls.certs", vec![0; 32]))
     ///     .merge(("tls.key", "/etc/ssl/key.pem"));
     ///

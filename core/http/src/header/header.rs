@@ -627,6 +627,18 @@ impl<'h> HeaderMap<'h> {
     }
 }
 
+impl From<cookie::Cookie<'_>> for Header<'static> {
+    fn from(cookie: cookie::Cookie<'_>) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
+impl From<&cookie::Cookie<'_>> for Header<'static> {
+    fn from(cookie: &cookie::Cookie<'_>) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::HeaderMap;

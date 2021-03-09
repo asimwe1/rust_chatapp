@@ -2,41 +2,11 @@ use std::fmt;
 
 use parking_lot::Mutex;
 
-use crate::Header;
+use crate::Config;
+use crate::http::private::cookie;
 
-pub use cookie::{Cookie, SameSite, Iter};
-#[doc(hidden)] pub use self::key::*;
-
-/// Types and methods to manage a `Key` when private cookies are enabled.
-#[cfg(feature = "private-cookies")]
-mod key {
-    pub use cookie::Key;
-}
-
-/// Types and methods to manage a `Key` when private cookies are disabled.
-#[cfg(not(feature = "private-cookies"))]
-#[allow(missing_docs)]
-mod key {
-    #[derive(Copy, Clone)]
-    pub struct Key;
-
-    impl Key {
-        pub fn from(_: &[u8]) -> Self { Key }
-        pub fn derive_from(_: &[u8]) -> Self { Key }
-        pub fn generate() -> Self { Key }
-        pub fn try_generate() -> Option<Self> { Some(Key) }
-        pub fn master(&self) -> &[u8] {
-            static ZERO: &'static [u8; 64] = &[0; 64];
-            &ZERO[..]
-        }
-    }
-
-    impl PartialEq for Key {
-        fn eq(&self, _: &Self) -> bool {
-            true
-        }
-    }
-}
+#[doc(inline)]
+pub use self::cookie::{Cookie, SameSite, Iter};
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -133,7 +103,7 @@ mod key {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[cfg(feature = "private-cookies")] {
+/// # #[cfg(feature = "secrets")] {
 /// use rocket::http::Status;
 /// use rocket::outcome::IntoOutcome;
 /// use rocket::request::{self, Request, FromRequest};
@@ -187,16 +157,16 @@ mod key {
 /// 32`.
 pub struct CookieJar<'a> {
     jar: cookie::CookieJar,
-    key: &'a Key,
     ops: Mutex<Vec<Op>>,
+    config: &'a Config,
 }
 
 impl<'a> Clone for CookieJar<'a> {
     fn clone(&self) -> Self {
         CookieJar {
             jar: self.jar.clone(),
-            key: self.key,
             ops: Mutex::new(self.ops.lock().clone()),
+            config: self.config,
         }
     }
 }
@@ -216,6 +186,15 @@ impl Op {
 }
 
 impl<'a> CookieJar<'a> {
+    #[inline(always)]
+    pub(crate) fn new(config: &'a Config) -> Self {
+        CookieJar::from(cookie::CookieJar::new(), config)
+    }
+
+    pub(crate) fn from(jar: cookie::CookieJar, config: &'a Config) -> Self {
+        CookieJar { jar, config, ops: Mutex::new(Vec::new()) }
+    }
+
     /// Returns a reference to the _original_ `Cookie` inside this container
     /// with the name `name`. If no such cookie exists, returns `None`.
     ///
@@ -258,10 +237,10 @@ impl<'a> CookieJar<'a> {
     ///     let cookie = jar.get_private("name");
     /// }
     /// ```
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private(&self, name: &str) -> Option<Cookie<'static>> {
-        self.jar.private(&*self.key).get(name)
+        self.jar.private(&self.config.secret_key.key).get(name)
     }
 
     /// Returns a reference to the _original or pending_ `Cookie` inside this
@@ -308,11 +287,11 @@ impl<'a> CookieJar<'a> {
     ///     let pending_cookie = jar.get_private_pending("name");
     /// }
     /// ```
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private_pending(&self, name: &str) -> Option<Cookie<'static>> {
         let cookie = self.get_pending(name)?;
-        self.jar.private(&*self.key).decrypt(cookie)
+        self.jar.private(&self.config.secret_key.key).decrypt(cookie)
     }
 
     /// Adds `cookie` to this collection.
@@ -374,7 +353,7 @@ impl<'a> CookieJar<'a> {
     ///     jar.add_private(Cookie::new("name", "value"));
     /// }
     /// ```
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn add_private(&self, mut cookie: Cookie<'static>) {
         Self::set_private_defaults(&mut cookie);
@@ -428,7 +407,7 @@ impl<'a> CookieJar<'a> {
     ///     jar.remove_private(Cookie::named("name"));
     /// }
     /// ```
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn remove_private(&self, mut cookie: Cookie<'static>) {
         if cookie.path().is_none() {
@@ -460,42 +439,26 @@ impl<'a> CookieJar<'a> {
     pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
         self.jar.iter()
     }
-}
-
-/// WARNING: These are unstable! Do not use outside of Rocket!
-#[doc(hidden)]
-impl<'a> CookieJar<'a> {
-    #[inline(always)]
-    pub fn new(key: &'a Key) -> Self {
-        CookieJar {
-            jar: cookie::CookieJar::new(),
-            key, ops: Mutex::new(Vec::new()),
-        }
-    }
-
-    #[inline(always)]
-    pub fn from(jar: cookie::CookieJar, key: &'a Key) -> CookieJar<'a> {
-        CookieJar { jar, key, ops: Mutex::new(Vec::new()) }
-    }
 
     /// Removes all delta cookies.
     #[inline(always)]
-    pub fn reset_delta(&self) {
+    pub(crate) fn reset_delta(&self) {
         self.ops.lock().clear();
     }
 
     /// TODO: This could be faster by just returning the cookies directly via
     /// an ordered hash-set of sorts.
-    #[inline(always)]
-    pub fn take_delta_jar(&self) -> cookie::CookieJar {
+    pub(crate) fn take_delta_jar(&self) -> cookie::CookieJar {
         let ops = std::mem::replace(&mut *self.ops.lock(), Vec::new());
         let mut jar = cookie::CookieJar::new();
 
         for op in ops {
             match op {
                 Op::Add(c, false) => jar.add(c),
-                #[cfg(feature = "private-cookies")]
-                Op::Add(c, true) => jar.private_mut(self.key).add(c),
+                #[cfg(feature = "secrets")]
+                Op::Add(c, true) => {
+                    jar.private_mut(&self.config.secret_key.key).add(c);
+                }
                 Op::Remove(mut c, _) => {
                     if self.jar.get(c.name()).is_some() {
                         c.make_removal();
@@ -514,16 +477,16 @@ impl<'a> CookieJar<'a> {
 
     /// Adds an original `cookie` to this collection.
     #[inline(always)]
-    pub fn add_original(&mut self, cookie: Cookie<'static>) {
+    pub(crate) fn add_original(&mut self, cookie: Cookie<'static>) {
         self.jar.add_original(cookie)
     }
 
     /// Adds an original, private `cookie` to the collection.
-    #[inline(always)]
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    pub fn add_original_private(&mut self, cookie: Cookie<'static>) {
-        self.jar.private_mut(&*self.key).add_original(cookie);
+    #[inline(always)]
+    pub(crate) fn add_original_private(&mut self, cookie: Cookie<'static>) {
+        self.jar.private_mut(&self.config.secret_key.key).add_original(cookie);
     }
 
     /// For each property mentioned below, this method checks if there is a
@@ -552,7 +515,7 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    #[cfg(feature = "private-cookies")]
+    #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     fn set_private_defaults(cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
@@ -586,16 +549,5 @@ impl fmt::Debug for CookieJar<'_> {
             .field("pending", &pending)
             .finish()
     }
-}
 
-impl From<Cookie<'_>> for Header<'static> {
-    fn from(cookie: Cookie<'_>) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
-}
-
-impl From<&Cookie<'_>> for Header<'static> {
-    fn from(cookie: &Cookie<'_>) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
 }

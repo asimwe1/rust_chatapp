@@ -133,6 +133,9 @@ pub mod http {
 
     #[doc(inline)]
     pub use rocket_http::*;
+
+    #[doc(inline)]
+    pub use crate::cookies::*;
 }
 
 mod shutdown;
@@ -142,6 +145,7 @@ mod server;
 mod codegen;
 mod ext;
 mod state;
+mod cookies;
 
 #[doc(hidden)] pub use log::{info, warn, error, debug};
 #[doc(inline)] pub use crate::response::Response;

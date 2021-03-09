@@ -1,7 +1,5 @@
 #![recursion_limit="512"]
 
-#![cfg_attr(nightly, feature(doc_cfg))]
-
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
 
@@ -23,13 +21,8 @@ pub mod ext;
 #[macro_use]
 mod docify;
 
-#[doc(hidden)]
-#[cfg(feature = "tls")]
-pub mod tls;
-
 #[macro_use]
 mod header;
-mod cookies;
 mod method;
 mod status;
 mod raw_str;
@@ -45,22 +38,20 @@ pub mod uncased {
     #[doc(inline)] pub use uncased::*;
 }
 
-// Types that we expose for use by core.
+// Types that we expose for use _only_ by core. Please don't use this.
 #[doc(hidden)]
+#[path = "."]
 pub mod private {
+    #[cfg(feature = "tls")]
+    pub mod tls;
+
     pub use crate::parse::Indexed;
     pub use smallvec::{SmallVec, Array};
-
-    pub mod cookie {
-        pub use cookie::*;
-        pub use crate::cookies::Key;
-    }
-
     pub use crate::listener::{Incoming, Listener, Connection, bind_tcp};
+    pub use cookie;
 }
 
 pub use crate::method::Method;
 pub use crate::status::{Status, StatusClass};
 pub use crate::raw_str::RawStr;
-pub use crate::cookies::{Cookie, CookieJar, SameSite};
 pub use crate::header::*;

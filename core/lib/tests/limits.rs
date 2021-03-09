@@ -14,8 +14,11 @@ mod limits_tests {
     use rocket::data::Limits;
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
-        let limits = Limits::default().limit("form", limit.into());
-        let config = rocket::Config::figment().merge(("limits", limits));
+        let config = rocket::Config {
+            limits: Limits::default().limit("form", limit.into()),
+            ..rocket::Config::debug_default()
+        };
+
         rocket::custom(config).mount("/", routes![super::index])
     }
 

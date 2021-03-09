@@ -1,3 +1,5 @@
+#![cfg(feature = "secrets")]
+
 use rocket::figment::Figment;
 use rocket::config::{Config, SecretKey};
 

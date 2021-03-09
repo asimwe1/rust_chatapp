@@ -52,6 +52,7 @@ impl Rocket {
     /// rocket::ignite()
     /// # };
     /// ```
+    #[track_caller]
     pub fn ignite() -> Rocket {
         Rocket::custom(Config::figment())
     }
@@ -67,19 +68,20 @@ impl Rocket {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use figment::{Figment, providers::{Toml, Env, Format}};
     ///
     /// #[rocket::launch]
     /// fn rocket() -> _ {
     ///     let figment = Figment::from(rocket::Config::default())
     ///         .merge(Toml::file("MyApp.toml").nested())
-    ///         .merge(Env::prefixed("MY_APP_"));
+    ///         .merge(Env::prefixed("MY_APP_").global());
     ///
     ///     rocket::custom(figment)
     /// }
     /// ```
     #[inline]
+    #[track_caller]
     pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
         let (config, figment) = (Config::from(&provider), Figment::from(provider));
         logger::try_init(config.log_level, config.cli_colors, false);
@@ -529,7 +531,7 @@ impl Rocket {
 
         #[cfg(feature = "tls")]
         let server = {
-            use crate::http::tls::bind_tls;
+            use crate::http::private::tls::bind_tls;
 
             if let Some(tls_config) = &self.config.tls {
                 let (certs, key) = tls_config.to_readers().map_err(ErrorKind::Io)?;

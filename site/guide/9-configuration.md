@@ -314,14 +314,14 @@ fn rocket() -> _ {
 More involved, consider an application that wants to use Rocket's defaults for
 [`Config`], but not its configuration sources, while allowing the application to
 be configured via an `App.toml` file that uses top-level keys as profiles
-(`.nested()`) and `APP_` environment variables as global overrides
-(`.global()`):
+(`.nested()`), `APP_` environment variables as global overrides (`.global()`),
+and `APP_PROFILE` to configure the selected profile:
 
 ```rust
 # #[macro_use] extern crate rocket;
 
 use serde::{Serialize, Deserialize};
-use figment::{Figment, providers::{Format, Toml, Serialized, Env}};
+use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
 use rocket::fairing::AdHoc;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -341,7 +341,8 @@ fn rocket() -> _ {
     let figment = Figment::from(rocket::Config::default())
         .merge(Serialized::defaults(Config::default()))
         .merge(Toml::file("App.toml").nested())
-        .merge(Env::prefixed("APP_").global());
+        .merge(Env::prefixed("APP_").global())
+        .select(Profile::from_env_or("APP_PROFILE", "default"));
 
     rocket::custom(figment)
         .mount("/", routes![/* .. */])

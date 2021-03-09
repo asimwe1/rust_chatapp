@@ -7,9 +7,12 @@ use figment::value::{Map, Dict};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::config::{SecretKey, TlsConfig, LogLevel};
+use crate::config::{TlsConfig, LogLevel};
 use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
+
+#[cfg(feature = "secrets")]
+use crate::config::SecretKey;
 
 /// Rocket server configuration.
 ///
@@ -35,13 +38,7 @@ use crate::data::Limits;
 ///
 ///   * **Profile**
 ///
-///     The selected profile is the value of the `ROCKET_PROFILE` environment
-///     variable. If the environment variable is not set, the profile is
-///     selected based on whether compilation is in debug mode, where "debug" is
-///     selected, or release mode, where "release" is selected.
-///     [`Config::DEBUG_PROFILE`] and [`Config::RELEASE_PROFILE`] encode these
-///     values as constants, while [`Config::DEFAULT_PROFILE`] selects the
-///     appropriate of the two at compile-time.
+///     This provider does not set a profile.
 ///
 ///   * **Metadata**
 ///
@@ -53,6 +50,8 @@ use crate::data::Limits;
 ///     The data emitted by this provider are the keys and values corresponding
 ///     to the fields and values of the structure. The dictionary is emitted to
 ///     the "default" meta-profile.
+///
+/// Note that these behaviors differ from those of [`Config::figment()`].
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Config {
     /// IP address to serve on. **(default: `127.0.0.1`)**
@@ -68,6 +67,12 @@ pub struct Config {
     /// The TLS configuration, if any. **(default: `None`)**
     pub tls: Option<TlsConfig>,
     /// The secret key for signing and encrypting. **(default: `0`)**
+    ///
+    /// **Note:** This field _always_ serializes as a 256-bit array of `0`s to
+    /// aid in preventing leakage of the secret key.
+    #[cfg(feature = "secrets")]
+    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
+    #[serde(serialize_with = "SecretKey::serialize_zero")]
     pub secret_key: SecretKey,
     /// The directory to store temporary files in. **(default:
     /// [`std::env::temp_dir`]).
@@ -83,8 +88,8 @@ pub struct Config {
 }
 
 impl Default for Config {
-    /// Returns the default configuration based on the compilation profile. This
-    /// is [`Config::debug_default()`] in `debug` and
+    /// Returns the default configuration based on the Rust compilation profile.
+    /// This is [`Config::debug_default()`] in `debug` and
     /// [`Config::release_default()`] in `release`.
     ///
     /// # Example
@@ -123,10 +128,13 @@ impl Config {
         ("dev", Some("debug")), ("prod", Some("release")),
     ];
 
-    /// Returns the default configuration for the `debug` profile, irrespective
-    /// of the compilation profile. For the default Rocket will use, which is
-    /// chosen based on the configuration profile, call [`Config::default()`].
-    /// See [Defaults](#Defaults) for specifics.
+    /// Returns the default configuration for the `debug` profile, _irrespective
+    /// of the Rust compilation profile_ and `ROCKET_PROFILE`.
+    ///
+    /// This may differ from the configuration used by default,
+    /// [`Config::default()`], which is selected based on the Rust compilation
+    /// profile. See [defaults](#defaults) and [provider
+    /// details](#provider-details) for specifics.
     ///
     /// # Example
     ///
@@ -141,20 +149,24 @@ impl Config {
             port: 8000,
             workers: num_cpus::get(),
             keep_alive: 5,
+            limits: Limits::default(),
+            tls: None,
+            #[cfg(feature = "secrets")]
+            secret_key: SecretKey::zero(),
+            temp_dir: std::env::temp_dir(),
             log_level: LogLevel::Normal,
             cli_colors: true,
-            secret_key: SecretKey::zero(),
-            tls: None,
-            limits: Limits::default(),
-            temp_dir: std::env::temp_dir(),
             ctrlc: true,
         }
     }
 
     /// Returns the default configuration for the `release` profile,
-    /// irrespective of the compilation profile. For the default Rocket will
-    /// use, which is chosen based on the configuration profile, call
-    /// [`Config::default()`]. See [Defaults](#Defaults) for specifics.
+    /// _irrespective of the Rust compilation profile_ and `ROCKET_PROFILE`.
+    ///
+    /// This may differ from the configuration used by default,
+    /// [`Config::default()`], which is selected based on the Rust compilation
+    /// profile. See [defaults](#defaults) and [provider
+    /// details](#provider-details) for specifics.
     ///
     /// # Example
     ///
@@ -200,6 +212,7 @@ impl Config {
     /// ```
     pub fn figment() -> Figment {
         Figment::from(Config::default())
+            .select(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
             .merge(Toml::file(Env::var_or("ROCKET_CONFIG", "Rocket.toml")).nested())
             .merge(Env::prefixed("ROCKET_").ignore(&["PROFILE"]).global())
     }
@@ -224,6 +237,7 @@ impl Config {
     ///
     /// let config = rocket::Config::from(figment);
     /// ```
+    #[track_caller]
     pub fn from<T: Provider>(provider: T) -> Self {
         let figment = Figment::from(&provider);
 
@@ -235,15 +249,17 @@ impl Config {
 
         #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
         if !config.secret_key.is_provided() {
-            if figment.profile() != Self::DEBUG_PROFILE {
+            if figment.profile() == Self::DEBUG_PROFILE {
+                // in debug, try to generate a key for a bit more security
+                let key = SecretKey::generate().unwrap_or(SecretKey::zero());
+                config.secret_key = key;
+            } else {
                 crate::logger::try_init(LogLevel::Debug, true, false);
-                error!("secrets enabled in non-`debug` without `secret_key`");
+                error!("secrets enabled in non-debug without `secret_key`");
+                info_!("selected profile: {}", Paint::white(figment.profile()));
                 info_!("disable `secrets` feature or configure a `secret_key`");
                 panic!("aborting due to configuration error(s)")
             }
-
-            // in debug, generate a key for a bit more security
-            config.secret_key = SecretKey::generate().unwrap_or(SecretKey::zero());
         }
 
         config
@@ -290,13 +306,16 @@ impl Config {
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
         }
 
-        launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
+        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))] {
+            launch_info_!("secret key: {:?}",
+                Paint::default(&self.secret_key).bold());
 
-        #[cfg(all(feature = "secrets", not(test), not(rocket_unsafe_secret_key)))]
-        if !self.secret_key.is_provided() {
-            warn!("secrets enabled without a configured `secret_key`");
-            info_!("disable `secrets` feature or configure a `secret_key`");
-            info_!("this becomes a {} in non-debug profiles", Paint::red("hard error").bold());
+            if !self.secret_key.is_provided() {
+                warn!("secrets enabled without a configured `secret_key`");
+                info_!("disable `secrets` feature or configure a `secret_key`");
+                info_!("this becomes a {} in non-debug profiles",
+                    Paint::red("hard error").bold());
+            }
         }
 
         launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
@@ -339,20 +358,20 @@ impl Provider for Config {
 
     #[track_caller]
     fn data(&self) -> Result<Map<Profile, Dict>> {
+        #[allow(unused_mut)]
         let mut map: Map<Profile, Dict> = Serialized::defaults(self).data()?;
+
         // We need to special-case `secret_key` since its serializer zeroes.
+        #[cfg(feature = "secrets")]
         if !self.secret_key.is_zero() {
             if let Some(map) = map.get_mut(&Profile::Default) {
-                map.insert("secret_key".into(), self.secret_key.master().into());
+                map.insert("secret_key".into(), self.secret_key.key.master().into());
             }
         }
 
         Ok(map)
     }
 
-    fn profile(&self) -> Option<Profile> {
-        Some(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
-    }
 }
 
 #[crate::async_trait]
@@ -370,6 +389,7 @@ pub fn pretty_print_error(error: figment::Error) {
 
     crate::logger::try_init(LogLevel::Debug, true, false);
 
+    error!("Rocket configuration extraction from provider failed.");
     for e in error {
         fn w<T: std::fmt::Display>(v: T) -> Paint<T> { Paint::white(v) }
 

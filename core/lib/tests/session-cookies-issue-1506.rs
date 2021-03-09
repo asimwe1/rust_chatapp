@@ -1,25 +1,24 @@
-#[cfg(feature = "secrets")]
-mod with_secrets {
-    use rocket::http::{CookieJar, Cookie};
+#![cfg(feature = "secrets")]
 
-    #[rocket::get("/")]
-    fn index(jar: &CookieJar<'_>) {
-        let session_cookie = Cookie::build("key", "value").expires(None);
-        jar.add_private(session_cookie.finish());
-    }
+use rocket::http::{CookieJar, Cookie};
 
-    mod test_session_cookies {
-        use super::*;
-        use rocket::local::blocking::Client;
+#[rocket::get("/")]
+fn index(jar: &CookieJar<'_>) {
+    let session_cookie = Cookie::build("key", "value").expires(None);
+    jar.add_private(session_cookie.finish());
+}
 
-        #[test]
-        fn session_cookie_is_session() {
-            let rocket = rocket::ignite().mount("/", rocket::routes![index]);
-            let client = Client::tracked(rocket).unwrap();
+mod test_session_cookies {
+    use super::*;
+    use rocket::local::blocking::Client;
 
-            let response = client.get("/").dispatch();
-            let cookie = response.cookies().get_private("key").unwrap();
-            assert_eq!(cookie.expires_datetime(), None);
-        }
+    #[test]
+    fn session_cookie_is_session() {
+        let rocket = rocket::ignite().mount("/", rocket::routes![index]);
+        let client = Client::tracked(rocket).unwrap();
+
+        let response = client.get("/").dispatch();
+        let cookie = response.cookies().get_private("key").unwrap();
+        assert_eq!(cookie.expires_datetime(), None);
     }
 }

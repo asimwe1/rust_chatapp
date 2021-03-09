@@ -52,9 +52,5 @@ optional = true
 default-features = false
 features = ["std"]
 
-
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }
-
-[build-dependencies]
-version_check = "0.9"
