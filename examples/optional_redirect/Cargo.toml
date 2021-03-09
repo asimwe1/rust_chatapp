@@ -1,7 +1,7 @@
 [package]
 name = "optional_redirect"
 version = "0.0.0"
-workspace = "../../"
+workspace = "../"
 edition = "2018"
 publish = false
 

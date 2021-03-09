@@ -73,14 +73,12 @@ function test_contrib() {
   echo ":: Building and testing contrib [default]..."
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
-
     $CARGO test $@
 
     for feature in "${FEATURES[@]}"; do
       echo ":: Building and testing contrib [${feature}]..."
       $CARGO test --no-default-features --features "${feature}" $@
     done
-
   popd > /dev/null 2>&1
 }
 
@@ -91,7 +89,6 @@ function test_core() {
   )
 
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
-
     echo ":: Building and testing core [no features]..."
     $CARGO test --no-default-features $@
 
@@ -99,36 +96,27 @@ function test_core() {
       echo ":: Building and testing core [${feature}]..."
       $CARGO test --no-default-features --features "${feature}" $@
     done
-
   popd > /dev/null 2>&1
 }
 
 function test_examples() {
-  for dir in $(find "${EXAMPLES_DIR}" -maxdepth 1 -mindepth 1 -type d); do
-    echo ":: Building and testing example [${dir#"${EXAMPLES_DIR}/"}]..."
+  echo ":: Building and testing examples..."
 
-    pushd "${dir}" > /dev/null 2>&1
-      $CARGO test $@
-    popd > /dev/null 2>&1
-  done
-}
-
-function test_guide() {
-  echo ":: Building and testing guide..."
-
-  pushd "${GUIDE_TESTS_ROOT}" > /dev/null 2>&1
-    $CARGO test $@
+  pushd "${EXAMPLES_DIR}" > /dev/null 2>&1
+    # Rust compiles Rocket once with the `secrets` feature enabled, so when run
+    # in production, we need a secret key or tests will fail needlessly. We
+    # ensure in core that secret key failing/not failing works as expected.
+    ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
+      $CARGO test --all $@
   popd > /dev/null 2>&1
 }
 
 function test_default() {
-  for project in "${ALL_PROJECT_DIRS[@]}"; do
-    echo ":: Building and testing ${project#"${PROJECT_ROOT}/"}..."
+  echo ":: Building and testing core libraries..."
 
-    pushd "${project}" > /dev/null 2>&1
-      $CARGO test --all-features $@
-    popd > /dev/null 2>&1
-  done
+  pushd "${PROJET_ROOT}" > /dev/null 2>&1
+    $CARGO test --all --all-features $@
+  popd > /dev/null 2>&1
 }
 
 if [[ $1 == +* ]]; then
@@ -138,7 +126,7 @@ fi
 
 # The kind of test we'll be running.
 TEST_KIND="default"
-KINDS=("contrib" "core" "examples" "guide" "all")
+KINDS=("contrib" "core" "examples" "default" "all")
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
     TEST_KIND=${1#"--"}
@@ -165,24 +153,16 @@ if ! $CARGO update ; then
 fi
 
 case $TEST_KIND in
-  contrib) test_contrib $@ ;;
   core) test_core $@ ;;
+  contrib) test_contrib $@ ;;
   examples) test_examples $@ ;;
-  guide) test_guide $@ ;;
-  default)
-    test_examples $@ & examples=$!
-    test_default $@ & default=$!
-    test_guide $@ & guide=$!
-
-    wait $examples && wait $default && wait $guide
-    ;;
+  default) test_default $@ ;;
   all)
     test_core $@ & core=$!
     test_contrib $@ & contrib=$!
     test_examples $@ & examples=$!
     test_default $@ & default=$!
-    test_guide $@ & guide=$!
 
-    wait $core && wait $contrib && wait $examples && wait $default && wait $guide
+    wait $core && wait $contrib && wait $examples && wait $default
     ;;
 esac

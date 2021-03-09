@@ -19,6 +19,7 @@ jobs:
         test:
           - { name: Debug, flag: }
           - { name: Contrib, flag: "--contrib" }
+          - { name: Examples, flag: "--examples" }
         toolchain: [stable]
         allow-failures: [false]
         include:
@@ -32,11 +33,7 @@ jobs:
             allow-failures: false
           - toolchain: nightly
             os: { name: Linux, distro: ubuntu-latest }
-            test: { name: Debug, flag: }
-            allow-failures: true
-          - toolchain: nightly
-            os: { name: Linux, distro: ubuntu-latest }
-            test: { name: Contrib, flag: "--contrib" }
+            test: { name: Debug, flag: "--all" }
             allow-failures: true
 
     continue-on-error: ${{ matrix.allow-failures }}
