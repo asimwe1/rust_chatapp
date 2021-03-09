@@ -59,10 +59,19 @@ if [[ $1 == +* ]]; then
     shift
 fi
 
+# The kind of test we'll be running.
+TEST_KIND="all"
+
+if [[ "$1" == "--contrib" ]] || [[ "$1" == "--core" ]]; then
+    TEST_KIND=${1#"--"}
+    shift
+fi
+
 echo ":: Preparing. Environment is..."
 print_environment
 echo "  CARGO: $CARGO"
 echo "  RUSTFLAGS: $RUSTFLAGS"
+echo "  EXTRA FLAGS: $@"
 
 echo ":: Ensuring all crate versions match..."
 check_versions_match "${ALL_PROJECT_DIRS[@]}"
@@ -78,7 +87,7 @@ if ! $CARGO update ; then
   echo "   WARNING: Update failed! Proceeding with possibly outdated deps..."
 fi
 
-if [ "$1" = "--contrib" ]; then
+if [ $TEST_KIND = "contrib" ]; then
   FEATURES=(
     json
     msgpack
@@ -100,15 +109,15 @@ if [ "$1" = "--contrib" ]; then
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
 
   echo ":: Building and testing contrib [default]..."
-  $CARGO test
+  $CARGO test $@
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing contrib [${feature}]..."
-    $CARGO test --no-default-features --features "${feature}"
+    $CARGO test --no-default-features --features "${feature}" $@
   done
 
   popd > /dev/null 2>&1
-elif [ "$1" = "--core" ]; then
+elif [ $TEST_KIND = "core" ]; then
   FEATURES=(
     secrets
     tls
@@ -117,11 +126,11 @@ elif [ "$1" = "--core" ]; then
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
 
   echo ":: Building and testing core [no features]..."
-  $CARGO test --no-default-features
+  $CARGO test --no-default-features $@
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing core [${feature}]..."
-    $CARGO test --no-default-features --features "${feature}"
+    $CARGO test --no-default-features --features "${feature}" $@
   done
 
   popd > /dev/null 2>&1
