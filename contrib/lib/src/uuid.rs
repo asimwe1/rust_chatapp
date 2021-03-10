@@ -70,6 +70,8 @@ use rocket::form::{self, FromFormField, ValueField};
 #[serde(transparent)]
 pub struct Uuid(_uuid::Uuid);
 
+pub type Error = <_uuid::Uuid as std::str::FromStr>::Err;
+
 impl Uuid {
     /// Consumes the Uuid wrapper, returning the underlying `Uuid` type.
     ///
@@ -102,9 +104,8 @@ impl fmt::Display for Uuid {
     }
 }
 
-
 impl<'a> FromParam<'a> for Uuid {
-    type Error = _uuid::Error;
+    type Error = Error;
 
     /// A value is successfully parsed if `param` is a properly formatted Uuid.
     /// Otherwise, an error is returned.
@@ -121,7 +122,7 @@ impl<'v> FromFormField<'v> for Uuid {
 }
 
 impl FromStr for Uuid {
-    type Err = _uuid::Error;
+    type Err = Error;
 
     #[inline]
     fn from_str(s: &str) -> Result<Uuid, Self::Err> {
