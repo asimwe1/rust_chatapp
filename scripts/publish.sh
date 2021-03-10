@@ -25,8 +25,8 @@ fi
 # Ensure everything passes before trying to publish.
 echo ":::: Running complete test suite..."
 cargo clean
-bash "${SCRIPT_DIR}/test.sh" --all
-bash "${SCRIPT_DIR}/test.sh" --all --release
+bash "${SCRIPT_DIR}/test.sh" +stable --all
+bash "${SCRIPT_DIR}/test.sh" +stable --all --release
 
 # Temporarily remove dev-dependencies so crates.io verifies.
 echo ":::: Stripping [dev-dependencies]..."
