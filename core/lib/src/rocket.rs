@@ -538,11 +538,11 @@ impl Rocket {
             let profile = self.figment.profile();
             if profile != Config::DEBUG_PROFILE {
                 return Err(Error::new(ErrorKind::InsecureSecretKey(profile.clone())));
-            } else {
+            } else if self.config.secret_key.is_zero() {
                 self.config.secret_key = crate::config::SecretKey::generate()
                     .unwrap_or(crate::config::SecretKey::zero());
 
-                warn!("secrets enabled without a configured `secret_key`");
+                warn!("secrets enabled without a stable `secret_key`");
                 info_!("disable `secrets` feature or configure a `secret_key`");
                 info_!("this becomes an {} in non-debug profiles", Paint::red("error"));
 
