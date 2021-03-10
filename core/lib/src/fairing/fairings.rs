@@ -97,6 +97,10 @@ impl Fairings {
     pub fn pretty_print_counts(&self) {
         fn pretty_print(f: &Fairings, prefix: &str, kind: Kind) {
             let names: Vec<_> = f.fairings(kind).map(|f| f.info().name).collect();
+            if names.is_empty() {
+                return;
+            }
+
             let num = names.len();
             let joined = names.join(", ");
             info_!("{} {}: {}", Paint::default(num).bold(), prefix, Paint::default(joined).bold());
