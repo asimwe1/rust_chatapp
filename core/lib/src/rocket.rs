@@ -35,8 +35,8 @@ impl Rocket {
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
     /// reading the file, the defaults, overridden by any environment-based
-    /// paramparameters, are used. See the [`config`](crate::config)
-    /// documentation for more information on defaults.
+    /// parameters, are used. See the [`config`](crate::config) documentation
+    /// for more information on defaults.
     ///
     /// This method is typically called through the
     /// [`rocket::ignite()`](crate::ignite) alias.
