@@ -5,47 +5,39 @@ on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
 
+
 jobs:
   test:
-    name: "${{ matrix.os.name }} ${{ matrix.test.name }} (${{ matrix.toolchain }})"
+    name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
 
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - { name: Linux, distro: ubuntu-latest }
-          - { name: Windows, distro: windows-latest }
-          - { name: macOS, distro: macOS-latest }
+        platform:
+          - { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - { name: Windows, distro: windows-latest, toolchain: stable }
+          - { name: macOS, distro: macOS-latest, toolchain: stable }
+          - { name: Linux, distro: ubuntu-latest, toolchain: nightly }
         test:
           - { name: Debug, flag: }
           - { name: Contrib, flag: "--contrib" }
           - { name: Examples, flag: "--examples" }
-        toolchain: [stable]
-        allow-failures: [false]
         include:
-          - toolchain: stable
-            os: { name: Linux, distro: ubuntu-latest }
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Core, flag: "--core" }
-            allow-failures: false
-          - toolchain: stable
-            os: { name: Linux, distro: ubuntu-latest }
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
-            allow-failures: false
-          - toolchain: nightly
-            os: { name: Linux, distro: ubuntu-latest }
-            test: { name: Debug, flag: "--all" }
-            allow-failures: true
 
-    continue-on-error: ${{ matrix.allow-failures }}
+    continue-on-error: ${{ matrix.platform.toolchain == 'nightly' }}
 
-    runs-on: ${{ matrix.os.distro }}
+    runs-on: ${{ matrix.platform.distro }}
 
     steps:
       - name: Checkout Sources
         uses: actions/checkout@v2
 
       - name: Install Native Dependencies (macOS)
-        if: matrix.os.name == 'macOS'
+        if: matrix.platform.name == 'macOS'
         run: |
             brew install mysql-client libpq sqlite coreutils
             echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
@@ -53,7 +45,7 @@ jobs:
       # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
       # + vcpkg/installed/vcpkg (in particular, the status file)
       - name: Install Native Dependencies (Windows)
-        if: matrix.os.name == 'Windows'
+        if: matrix.platform.name == 'Windows'
         run: |
           curl -fsS -o vcpkg.7z https://rocket.rs/static/vcpkg-2019-07-05.7z
           7z x vcpkg.7z -y -bb0
@@ -64,7 +56,7 @@ jobs:
           echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
 
       - name: Install Native Dependencies (Linux)
-        if: matrix.os.name == 'Linux'
+        if: matrix.platform.name == 'Linux'
         run: |
           sudo apt-get install -y libmariadb-client-lgpl-dev-compat libpq-dev libsqlite3-dev
 
@@ -72,8 +64,20 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: ${{ matrix.platform.toolchain }}
           override: true
+
+      - name: Cache Example Workspace
+        if: matrix.test.name == 'Examples'
+        uses: Swatinem/rust-cache@v1
+        with:
+          working-directory: "examples"
+
+      - name: Cache Root Workspace
+        if: matrix.test.name != 'Examples'
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.test.name }}
 
       - name: Run Tests
         run: ./scripts/test.sh ${{ matrix.test.flag }}
