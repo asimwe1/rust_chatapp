@@ -682,10 +682,13 @@ response is returned. The handler above is complete. It really is that simple!
 ## Forms
 
 Forms are one of the most common types of data handled in web applications, and
-Rocket makes handling them easy. Say your application is processing a form
-submission for a new todo `Task`. The form contains two fields: `complete`, a
-checkbox, and `type`, a text field. You can easily handle the form request in
-Rocket as follows:
+Rocket makes handling them easy. Rocket supports both `multipart` and
+`x-www-form-urlencoded` forms out of the box, enabled by the [`Form`] data guard
+and derivable [`FromForm`] trait.
+
+Say your application is processing a form submission for a new todo `Task`. The
+form contains two fields: `complete`, a checkbox, and `type`, a text field. You
+can easily handle the form request in Rocket as follows:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -841,31 +844,36 @@ to the function call. The rest of the fields are pass as written in the
 expression.
 
 Any function in the [`form::validate`] module can be called, and other fields of
-the form can be passed in by using `self.$field` `$field` is the name of the
-field in the structure. For example, the following form validates that the value
-of the field `confirm` is equal to the value of the field `value`:
+the form can be passed in by using `self.$field` where `$field` is the name of
+the field in the structure. You can also apply more than one validation to a
+fiel by using multiple attributes. For example, the following form validates
+that the value of the field `confirm` is equal to the value of the field `value`
+and that it doesn't contain `no`:
 
 ```rust
 # #[macro_use] extern crate rocket;
 
 #[derive(FromForm)]
-struct Password {
+struct Password<'r> {
     #[field(name = "password")]
-    value: String,
-    #[field(validate = eq(&*self.value))]
-    confirm: String,
+    value: &'r str,
+    #[field(validate = eq(self.value))]
+    #[field(validate = omits("no"))]
+    confirm: &'r str,
 }
 ```
 
 [`form::validate`]: @api/rocket/form/validate/index.html
 [`form::validate::range`]: @api/rocket/form/validate/fn.range.html
+[`form::Result`]: @api/rocket/form/type.Result.html
 [`Errors<'_>`]: @api/rocket/form/error/struct.Errors.html
 
 In reality, the expression after `validate =` can be _any_ expression as long as
-it evaluates to a value of type `Result<(), Errors<'_>>`, where an `Ok` value
-means that validation was successful while an `Err` of [`Errors<'_>`] indicates
-the error(s) that occured. For instance, if you wanted to implement an ad-hoc
-Luhn validator for credit-card-like numbers, you might write:
+it evaluates to a value of type `Result<(), Errors<'_>>` (aliased by
+[`form::Result`]), where an `Ok` value means that validation was successful while
+an `Err` of [`Errors<'_>`] indicates the error(s) that occured. For instance, if
+you wanted to implement an ad-hoc Luhn validator for credit-card-like numbers,
+you might write:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -903,7 +911,6 @@ provided in a submitted form. This includes types such as `bool`, useful for
 checkboxes, and `Option<T>`. Additionally, `FromForm` is implemented for
 `Result<T, Errors<'_>>` where the error value is [`Errors<'_>`]. All of these
 types can be used just like any other form field:
-
 
 ```rust
 # use rocket::form::FromForm;
