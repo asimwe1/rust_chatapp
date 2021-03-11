@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
 use std::convert::From;
+use std::borrow::Cow;
 
 use yansi::Paint;
 
@@ -16,7 +17,7 @@ use crate::form::ValueField;
 #[derive(Clone)]
 pub struct Route {
     /// The name of this route, if one was given.
-    pub name: Option<&'static str>,
+    pub name: Option<Cow<'static, str>>,
     /// The method this route matches against.
     pub method: Method,
     /// The function that should be called when the route matches.
@@ -284,7 +285,7 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(n) = self.name {
+        if let Some(ref n) = self.name {
             write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
         }
 
@@ -327,7 +328,7 @@ impl From<StaticRouteInfo> for Route {
         // This should never panic since `info.path` is statically checked.
         let mut route = Route::new(info.method, info.path, info.handler);
         route.format = info.format;
-        route.name = Some(info.name);
+        route.name = Some(info.name.into());
         if let Some(rank) = info.rank {
             route.rank = rank;
         }

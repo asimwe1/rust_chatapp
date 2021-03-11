@@ -347,9 +347,9 @@ impl StaticFiles {
 
 impl Into<Vec<Route>> for StaticFiles {
     fn into(self) -> Vec<Route> {
+        let source = rocket::figment::Source::File(self.root.clone());
         let mut route = Route::ranked(self.rank, Method::Get, "/<path..>", self);
-        route.name = Some("StaticFiles");
-        // route.name = format!("StaticFiles({})", self.root.fancy_display());
+        route.name = Some(format!("StaticFiles: {}/", source).into());
         vec![route]
     }
 }
