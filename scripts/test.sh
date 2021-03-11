@@ -114,7 +114,7 @@ function test_examples() {
 function test_default() {
   echo ":: Building and testing core libraries..."
 
-  pushd "${PROJET_ROOT}" > /dev/null 2>&1
+  pushd "${PROJECT_ROOT}" > /dev/null 2>&1
     $CARGO test --all --all-features $@
   popd > /dev/null 2>&1
 }
@@ -158,11 +158,27 @@ case $TEST_KIND in
   examples) test_examples $@ ;;
   default) test_default $@ ;;
   all)
+    test_default $@ & default=$!
+    test_examples $@ & examples=$!
     test_core $@ & core=$!
     test_contrib $@ & contrib=$!
-    test_examples $@ & examples=$!
-    test_default $@ & default=$!
 
-    wait $core && wait $contrib && wait $examples && wait $default
+    failures=()
+    if ! wait $default ; then failures+=("ROOT WORKSPACE"); fi
+    if ! wait $examples ; then failures+=("EXAMPLES"); fi
+    if ! wait $core ; then failures+=("CORE"); fi
+    if ! wait $contrib ; then failures+=("CONTRIB"); fi
+
+    if [ ${#failures[@]} -ne 0 ]; then
+      tput setaf 1;
+      echo -e "\n!!! ${#failures[@]} TEST SUITE FAILURE(S) !!!"
+      for failure in "${failures[@]}"; do
+        echo "    :: ${failure}"
+      done
+
+      tput sgr0
+      exit ${#failures[@]}
+    fi
+
     ;;
 esac
