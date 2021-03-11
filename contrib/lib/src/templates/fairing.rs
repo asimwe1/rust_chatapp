@@ -49,7 +49,7 @@ mod context {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<Mutex<(RecommendedWatcher, Receiver<RawEvent>)>>,
+        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
     }
 
     impl ContextManager {
@@ -61,7 +61,7 @@ mod context {
             });
 
             let watcher = match watcher {
-                Ok(watcher) => Some(Mutex::new((watcher, rx))),
+                Ok(watcher) => Some((watcher, Mutex::new(rx))),
                 Err(e) => {
                     warn!("Failed to enable live template reloading: {}", e);
                     debug_!("Reload error: {:?}", e);
@@ -70,10 +70,7 @@ mod context {
                 }
             };
 
-            ContextManager {
-                watcher,
-                context: RwLock::new(ctxt),
-            }
+            ContextManager { watcher, context: RwLock::new(ctxt), }
         }
 
         pub fn context(&self) -> impl Deref<Target=Context> + '_ {
@@ -93,31 +90,26 @@ mod context {
         /// reinitialized from disk and the user's customization callback is run
         /// again.
         pub fn reload_if_needed(&self, callback: &Callback) {
-            self.watcher.as_ref().map(|w| {
-                let rx_lock = w.lock().expect("receive queue lock");
-                let mut changed = false;
-                while let Ok(_) = rx_lock.1.try_recv() {
-                    changed = true;
-                }
+            let templates_changes = self.watcher.as_ref()
+                .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
 
-                if changed {
-                    info_!("Change detected: reloading templates.");
-                    let mut ctxt = self.context_mut();
-                    if let Some(mut new_ctxt) = Context::initialize(&ctxt.root) {
-                        match callback(&mut new_ctxt.engines) {
-                            Ok(()) => *ctxt = new_ctxt,
-                            Err(e) => {
-                                warn_!("The template customization callback returned an error:");
-                                warn_!("{}", e);
-                                warn_!("The existing templates will remain active.");
-                            }
+            if let Some(true) = templates_changes {
+                info_!("Change detected: reloading templates.");
+                let root = self.context().root.clone();
+                if let Some(mut new_ctxt) = Context::initialize(&root) {
+                    match callback(&mut new_ctxt.engines) {
+                        Ok(()) => *self.context_mut() = new_ctxt,
+                        Err(e) => {
+                            warn_!("The template customization callback returned an error:");
+                            warn_!("{}", e);
+                            warn_!("The existing templates will remain active.");
                         }
-                    } else {
-                        warn_!("An error occurred while reloading templates.");
-                        warn_!("The existing templates will remain active.");
-                    };
-                }
-            });
+                    }
+                } else {
+                    warn_!("An error occurred while reloading templates.");
+                    warn_!("The existing templates will remain active.");
+                };
+            }
         }
     }
 }
