@@ -4,9 +4,9 @@ use std::io::Cursor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use rocket::{Rocket, Request, State, Data, Response};
+use rocket::{Rocket, Request, State, Data};
 use rocket::fairing::{AdHoc, Fairing, Info, Kind};
-use rocket::http::{Method, ContentType, Status};
+use rocket::http::Method;
 
 struct Token(i64);
 
