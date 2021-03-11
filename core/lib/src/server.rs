@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::panic::AssertUnwindSafe;
 
 use futures::stream::StreamExt;
-use futures::future::{Future, FutureExt, BoxFuture};
+use futures::future::FutureExt;
 use tokio::sync::oneshot;
 use yansi::Paint;
 
@@ -221,44 +221,36 @@ impl Rocket {
         response
     }
 
-    /// Route the request and process the outcome to eventually get a response.
-    fn route_and_process<'s, 'r: 's>(
+    async fn route_and_process<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
         data: Data
-    ) -> impl Future<Output = Response<'r>> + Send + 's {
-        async move {
-            let mut response = match self.route(request, data).await {
-                Outcome::Success(response) => response,
-                Outcome::Forward(data) => {
-                    // There was no matching route. Autohandle `HEAD` requests.
-                    if request.method() == Method::Head {
-                        info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+    ) -> Response<'r> {
+        let mut response = match self.route(request, data).await {
+            Outcome::Success(response) => response,
+            Outcome::Forward(data) if request.method() == Method::Head => {
+                info_!("Autohandling {} request.", Paint::default("HEAD").bold());
 
-                        // Dispatch the request again with Method `GET`.
-                        request._set_method(Method::Get);
-
-                        // Return early so we don't set cookies twice.
-                        let try_next: BoxFuture<'_, _> =
-                            Box::pin(self.route_and_process(request, data));
-                        return try_next.await;
-                    } else {
-                        // No match was found and it can't be autohandled. 404.
-                        self.handle_error(Status::NotFound, request).await
-                    }
+                // Dispatch the request again with Method `GET`.
+                request._set_method(Method::Get);
+                match self.route(request, data).await {
+                    Outcome::Success(response) => response,
+                    Outcome::Failure(status) => self.handle_error(status, request).await,
+                    Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
                 }
-                Outcome::Failure(status) => self.handle_error(status, request).await,
-            };
-
-            // Set the cookies. Note that error responses will only include
-            // cookies set by the error handler. See `handle_error` for more.
-            let delta_jar = request.cookies().take_delta_jar();
-            for cookie in delta_jar.delta() {
-                response.adjoin_header(cookie);
             }
+            Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
+            Outcome::Failure(status) => self.handle_error(status, request).await,
+        };
 
-            response
+        // Set the cookies. Note that error responses will only include cookies
+        // set by the error handler. See `handle_error` for more.
+        let delta_jar = request.cookies().take_delta_jar();
+        for cookie in delta_jar.delta() {
+            response.adjoin_header(cookie);
         }
+
+        response
     }
 
     /// Tries to find a `Responder` for a given `request`. It does this by
@@ -267,37 +259,35 @@ impl Rocket {
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
     #[inline]
-    fn route<'s, 'r: 's>(
+    async fn route<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
-    ) -> impl Future<Output = handler::Outcome<'r>> + 's {
-        async move {
-            // Go through the list of matching routes until we fail or succeed.
-            let matches = self.router.route(request);
-            for route in matches {
-                // Retrieve and set the requests parameters.
-                info_!("Matched: {}", route);
-                request.set_route(route);
+    ) -> handler::Outcome<'r> {
+        // Go through the list of matching routes until we fail or succeed.
+        let matches = self.router.route(request);
+        for route in matches {
+            // Retrieve and set the requests parameters.
+            info_!("Matched: {}", route);
+            request.set_route(route);
 
-                // Dispatch the request to the handler.
-                let outcome = AssertUnwindSafe(route.handler.handle(request, data))
-                    .catch_unwind().await
-                    .unwrap_or_else(|_| info_panic!(Outcome::Failure(Status::InternalServerError)));
+            // Dispatch the request to the handler.
+            let outcome = AssertUnwindSafe(route.handler.handle(request, data))
+                .catch_unwind().await
+                .unwrap_or_else(|_| info_panic!(Outcome::Failure(Status::InternalServerError)));
 
-                // Check if the request processing completed (Some) or if the
-                // request needs to be forwarded. If it does, continue the loop
-                // (None) to try again.
-                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-                match outcome {
-                    o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                    Outcome::Forward(unused_data) => data = unused_data,
-                }
+            // Check if the request processing completed (Some) or if the
+            // request needs to be forwarded. If it does, continue the loop
+            // (None) to try again.
+            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+            match outcome {
+                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                Outcome::Forward(unused_data) => data = unused_data,
             }
-
-            error_!("No matching routes for {}.", request);
-            Outcome::Forward(data)
         }
+
+        error_!("No matching routes for {}.", request);
+        Outcome::Forward(data)
     }
 
     /// Invokes the handler with `req` for catcher with status `status`.
