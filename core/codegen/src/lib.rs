@@ -754,12 +754,12 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
 ///
 /// let index_route = &my_routes[0];
 /// assert_eq!(index_route.method, Method::Get);
-/// assert_eq!(index_route.name, Some("index"));
+/// assert_eq!(index_route.name.as_ref().unwrap(), "index");
 /// assert_eq!(index_route.uri.path(), "/");
 ///
 /// let hello_route = &my_routes[1];
 /// assert_eq!(hello_route.method, Method::Post);
-/// assert_eq!(hello_route.name, Some("hello"));
+/// assert_eq!(hello_route.name.as_ref().unwrap(), "hello");
 /// assert_eq!(hello_route.uri.path(), "/hi/<person>");
 /// ```
 ///
