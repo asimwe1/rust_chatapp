@@ -128,7 +128,8 @@
 //! This implementation is complete except for the following details:
 //!
 //!   * not being pseudocode, of course
-//!   * checking for duplicate pushes when paring is requested as `strict`
+//!   * checking for duplicate pushes when parsing is `strict`
+//!   * disallowing defaults when parsing is `strict`
 //!   * tracking the field's name and value to generate a complete `Error`
 //!
 //! See [`FromForm`] for full details on push-parsing and a complete example.

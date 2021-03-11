@@ -247,11 +247,13 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 let _err = _Err;
                 Ok(quote_spanned! { ty.span() => {
                     let _name = #name_view;
+                    let _opts = __c.__opts;
                     __c.#ident
                         .map(<#ty as #_form::FromForm<'__f>>::finalize)
-                        .unwrap_or_else(|| <#ty as #_form::FromForm<'__f>>::default()
-                            .ok_or_else(|| #_form::ErrorKind::Missing.into())
-                        )
+                        .unwrap_or_else(|| {
+                            <#ty as #_form::FromForm<'__f>>::default(_opts)
+                                .ok_or_else(|| #_form::ErrorKind::Missing.into())
+                        })
                         .and_then(|#ident| {
                             let mut _es = #_form::Errors::new();
                             #(if let #_err(_e) = #validator { _es.extend(_e); })*

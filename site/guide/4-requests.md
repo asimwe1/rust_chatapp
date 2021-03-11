@@ -716,11 +716,8 @@ parse or is simply invalid, a customizable error is returned. As before, a
 forward or failure can be caught by using the `Option` and `Result` types:
 
 ```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket::form::Form;
-# #[derive(FromForm)] struct Task { complete: bool }
+# use rocket::{post, form::Form};
+# type Task = String;
 
 #[post("/todo", data = "<task>")]
 fn new(task: Option<Form<Task>>) { /* .. */ }
@@ -732,11 +729,12 @@ fn new(task: Option<Form<Task>>) { /* .. */ }
 ### Strict Parsing
 
 Rocket's `FromForm` parsing is _lenient_ by default: a `Form<T>` will parse
-successfully from an incoming form even if it contains extra or duplicate
-fields. The extras or duplicates are ignored -- no validation or parsing of the
-fields occurs. To change this behavior and make form parsing _strict_, use the
-[`Form<Strict<T>>`] data type, which errors if there are any extra, undeclared
-fields.
+successfully from an incoming form even if it contains extra, duplicate, or
+missing fields. Extras or duplicates are ignored -- no validation or parsing of
+the fields occurs -- and missing fields are filled with defaults when available.
+To change this behavior and make form parsing _strict_, use the
+[`Form<Strict<T>>`] data type, which emits errors if there are any extra or
+missing fields, irrespective of defaults.
 
 You can use a `Form<Strict<T>>` anywhere you'd use a `Form<T>`. Its generic
 parameter is also required to implement `FromForm`. For instance, we can simply
@@ -744,19 +742,30 @@ replace `Form<T>` with `Form<Strict<T>>` above to get strict parsing:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# fn main() {}
 
 use rocket::form::{Form, Strict};
 
-#[derive(FromForm)]
-struct Task {
-    /* .. */
-    # complete: bool,
-    # description: String,
-}
+# #[derive(FromForm)] struct Task { complete: bool, description: String, }
 
 #[post("/todo", data = "<task>")]
 fn new(task: Form<Strict<Task>>) { /* .. */ }
+```
+
+`Strict` can also be used to make individual fields strict while keeping the
+overall structure and remaining fields lenient:
+
+```rust
+# #[macro_use] extern crate rocket;
+# use rocket::form::{Form, Strict};
+
+#[derive(FromForm)]
+struct Input {
+    required: Strict<bool>,
+    uses_default: bool
+}
+
+#[post("/", data = "<input>")]
+fn new(input: Form<Input>) { /* .. */ }
 ```
 
 [`Form<Strict<T>>`]: @api/rocket/form/struct.Strict.html

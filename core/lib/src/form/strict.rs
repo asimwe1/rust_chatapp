@@ -9,7 +9,8 @@ use crate::http::uri::{Query, FromUriParam};
 /// generic parameter to the [`Form`] data guard: `Form<Strict<T>>`, where `T`
 /// implements `FromForm`. Unlike using `Form` directly, this type uses a
 /// _strict_ parsing strategy: forms that contains a superset of the expected
-/// fields (i.e, extra fields) will fail to parse.
+/// fields (i.e, extra fields) will fail to parse and defaults will not be use
+/// for missing fields.
 ///
 /// # Strictness
 ///
@@ -36,6 +37,20 @@ use crate::http::uri::{Query, FromUriParam};
 /// #[post("/submit", data = "<user_input>")]
 /// fn submit_task(user_input: Form<Strict<UserInput>>) -> String {
 ///     format!("Your value: {}", user_input.value)
+/// }
+/// ```
+///
+/// `Strict` can also be used to make individual fields strict while keeping the
+/// overall structure and remaining fields lenient:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::form::{Form, Strict};
+///
+/// #[derive(FromForm)]
+/// struct UserInput {
+///     required: Strict<bool>,
+///     uses_default: bool
 /// }
 /// ```
 #[derive(Debug)]

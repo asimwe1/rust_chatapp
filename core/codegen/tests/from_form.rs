@@ -1,6 +1,4 @@
-#[macro_use]extern crate rocket;
-
-use rocket::form::{Form, Strict, FromForm, Errors};
+use rocket::form::{Form, Strict, FromForm, FromFormField, Errors};
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -135,13 +133,13 @@ fn base_conditions() {
     }));
 
     // Check that a `bool` value that isn't in the form is marked as `false`.
-    let manual: Option<UnpresentCheckbox> = strict("").ok();
+    let manual: Option<UnpresentCheckbox> = lenient("").ok();
     assert_eq!(manual, Some(UnpresentCheckbox {
         checkbox: false
     }));
 
     // Check that a `bool` value that isn't in the form is marked as `false`.
-    let manual: Option<UnpresentCheckboxTwo<'_>> = strict("something=hello").ok();
+    let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("something=hello").ok();
     assert_eq!(manual, Some(UnpresentCheckboxTwo {
         checkbox: false,
         something: "hello".into()
@@ -152,7 +150,6 @@ fn base_conditions() {
     assert_eq!(manual, Some(FieldNamedV {
         v: "abc".into()
     }));
-
 }
 
 #[test]
@@ -343,63 +340,65 @@ fn form_errors() {
 
     let errors = strict::<WhoopsForm>("complete=true&other=unknown").unwrap_err();
     assert!(errors.iter().any(|e| {
-        "other" == e.name.as_ref().unwrap()
-            && Some("unknown") == e.value.as_deref()
-            && match e.kind {
-                ErrorKind::Int(..) => true,
-                _ => false
-            }
+        e.name.as_ref().unwrap() == "other"
+            && e.value.as_deref() == Some("unknown")
+            && matches!(e.kind, ErrorKind::Int(..))
     }));
 
     let errors = strict::<WhoopsForm>("complete=unknown&other=unknown").unwrap_err();
     assert!(errors.iter().any(|e| {
-        e.name.as_ref().unwrap() == "complete"
-            && Some("unknown") == e.value.as_deref()
-            && match e.kind {
-                ErrorKind::Bool(..) => true,
-                _ => false
-            }
+        "complete" == e.name.as_ref().unwrap()
+            && e.value.as_deref() == Some("unknown")
+            && matches!(e.kind, ErrorKind::Bool(..))
     }));
 
     let errors = strict::<WhoopsForm>("complete=true&other=1&extra=foo").unwrap_err();
-    dbg!(&errors);
     assert!(errors.iter().any(|e| {
-        "extra" == e.name.as_ref().unwrap()
-            && Some("foo") == e.value.as_deref()
-            && match e.kind {
-                ErrorKind::Unexpected => true,
-                _ => false
-            }
+        e.name.as_ref().unwrap() == "extra"
+            && e.value.as_deref() == Some("foo")
+            && matches!(e.kind, ErrorKind::Unexpected)
     }));
 
     let errors = strict::<WhoopsForm>("complete=unknown&unknown=!").unwrap_err();
     assert!(errors.iter().any(|e| {
-        "complete" == e.name.as_ref().unwrap()
-            && Some("unknown") == e.value.as_deref()
-            && match e.kind {
-                ErrorKind::Bool(..) => true,
-                _ => false
-            }
+        e.name.as_ref().unwrap() == "complete"
+            && e.value.as_deref() == Some("unknown")
+            && matches!(e.kind, ErrorKind::Bool(..))
     }));
 
     assert!(errors.iter().any(|e| {
-        "unknown" == e.name.as_ref().unwrap()
-            && Some("!") == e.value.as_deref()
-            && match e.kind {
-                ErrorKind::Unexpected => true,
-                _ => false
-            }
+        e.name.as_ref().unwrap() == "unknown"
+            && e.value.as_deref() == Some("!")
+            && matches!(e.kind, ErrorKind::Unexpected)
+    }));
+
+    let errors = strict::<WhoopsForm>("unknown=!").unwrap_err();
+    assert!(errors.iter().any(|e| {
+        e.name.as_ref().unwrap() == "unknown"
+            && e.value.as_deref() == Some("!")
+            && matches!(e.kind, ErrorKind::Unexpected)
+    }));
+
+    assert!(errors.iter().any(|e| {
+        e.name.as_ref().unwrap() == "complete"
+            && e.value.is_none()
+            && e.entity == Entity::Field
+            && matches!(e.kind, ErrorKind::Missing)
+    }));
+
+    assert!(errors.iter().any(|e| {
+        e.name.as_ref().unwrap() == "other"
+            && e.value.is_none()
+            && e.entity == Entity::Field
+            && matches!(e.kind, ErrorKind::Missing)
     }));
 
     let errors = strict::<WhoopsForm>("complete=true").unwrap_err();
     assert!(errors.iter().any(|e| {
-        "other" == e.name.as_ref().unwrap()
+        e.name.as_ref().unwrap() == "other"
             && e.value.is_none()
             && e.entity == Entity::Field
-            && match e.kind {
-                ErrorKind::Missing => true,
-                _ => false
-            }
+            && matches!(e.kind, ErrorKind::Missing)
     }));
 }
 

@@ -257,9 +257,9 @@ impl<'v, T: FromFormField<'v>> FromFieldContext<'v, T> {
     }
 
     fn push(&mut self, name: NameView<'v>, result: Result<'v, T>) {
-        let is_unexpected = |e: &Errors<'_>| e.last().map_or(false, |e| {
-            if let ErrorKind::Unexpected = e.kind { true } else { false }
-        });
+        fn is_unexpected(e: &Errors<'_>) -> bool {
+            matches!(e.last().map(|e| &e.kind), Some(ErrorKind::Unexpected))
+        }
 
         self.field_name = Some(name);
         match result {
@@ -299,12 +299,13 @@ impl<'v, T: FromFormField<'v>> FromForm<'v> for T {
     fn finalize(ctxt: Self::Context) -> Result<'v, Self> {
         let mut errors = match ctxt.value {
             Some(Ok(val)) if !ctxt.opts.strict || ctxt.pushes <= 1 => return Ok(val),
-            Some(Err(e)) => e,
             Some(Ok(_)) => Errors::from(ErrorKind::Duplicate),
-            None => match <T as FromFormField>::default() {
+            Some(Err(errors)) => errors,
+            None if !ctxt.opts.strict => match <T as FromFormField>::default() {
                 Some(default) => return Ok(default),
                 None => Errors::from(ErrorKind::Missing)
-            }
+            },
+            None => Errors::from(ErrorKind::Missing),
         };
 
         if let Some(name) = ctxt.field_name {
@@ -362,7 +363,9 @@ impl<'v> FromFormField<'v> for Capped<String> {
 impl_strict_from_form_field_from_capped!(String);
 
 impl<'v> FromFormField<'v> for bool {
-    fn default() -> Option<Self> { Some(false) }
+    fn default() -> Option<Self> {
+        Some(false)
+    }
 
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
         match field.value.as_uncased() {

@@ -387,10 +387,10 @@ pub trait FromForm<'r>: Send + Sized {
     /// Returns a default value, if any, to use when a value is desired and
     /// parsing fails.
     ///
-    /// The default implementation initializes `Self` with lenient options and
-    /// finalizes immediately, returning the value if finalization succeeds.
-    fn default() -> Option<Self> {
-        Self::finalize(Self::init(Options::Lenient)).ok()
+    /// The default implementation initializes `Self` with `opts` and finalizes
+    /// immediately, returning the value if finalization succeeds.
+    fn default(opts: Options) -> Option<Self> {
+        Self::finalize(Self::init(opts)).ok()
     }
 }
 

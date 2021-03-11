@@ -156,9 +156,4 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Contextual<'v, T> {
 
         Ok(Contextual { value, context })
     }
-
-
-    fn default() -> Option<Self> {
-        Self::finalize(Self::init(Options::Lenient)).ok()
-    }
 }
