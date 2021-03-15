@@ -5,6 +5,7 @@
 forms = "64 kB"
 json = "1 MiB"
 msgpack = "2 MiB"
+"file/jpg" = "5 MiB"
 
 [debug]
 address = "127.0.0.1"

@@ -61,7 +61,8 @@ use crate::form::prelude::*;
 ///
 ///     A value is validated successfully if the `from_str` method for the given
 ///     type returns successfully. Only accepts form _values_, not binary data.
-///     No data limit applies.
+///
+///     **No type-specific data limit applies.**
 ///
 ///   * **`bool`**
 ///
@@ -70,7 +71,7 @@ use crate::form::prelude::*;
 ///     `"off"`, `"no"`, or `"false"`. Defaults to `false` otherwise. Only
 ///     accepts form _values_, not binary data.
 ///
-///     **No data limit applies.**
+///     **No type-specific data limit applies.**
 ///
 ///   * **`&str`, `String`**
 ///
@@ -81,14 +82,16 @@ use crate::form::prelude::*;
 ///
 ///   * **[`TempFile`]**
 ///
-///     Streams the form field value or data to a temporary file. See
-///     [`TempFile`] for details and data limits.
+///     Streams the form field value or data to a temporary file.
+///
+///     **See [`TempFile`] for details and data limits.**
 ///
 ///   * **[`Capped<TempFile>`], [`Capped<String>`], [`Capped<&str>`]**
 ///
 ///     Streams the form value or data to the inner value, succeeding even if
-///     the data exceeds the respective type limit by truncating the data. See
-///     [`Capped`] for details.
+///     the data exceeds the respective type limit by truncating the data.
+///
+///     **See [`Capped`] for details.**
 ///
 ///   * **[`time::Date`]**
 ///
@@ -96,7 +99,7 @@ use crate::form::prelude::*;
 ///     This is the `"date"` HTML input type. Only accepts form _values_, not
 ///     binary data.
 ///
-///     **No data limit applies.**
+///     **No type-specific data limit applies.**
 ///
 ///   * **[`time::PrimitiveDateTime`]**
 ///
@@ -105,7 +108,7 @@ use crate::form::prelude::*;
 ///     without support for the millisecond variant. Only accepts form _values_,
 ///     not binary data.
 ///
-///     **No data limit applies.**
+///     **No type-specific data limit applies.**
 ///
 ///   * **[`time::Time`]**
 ///
@@ -113,7 +116,7 @@ use crate::form::prelude::*;
 ///     This is the `"time"` HTML input type without support for the millisecond
 ///     variant. Only accepts form _values_, not binary data.
 ///
-///     **No data limit applies.**
+///     **No type-specific data limit applies.**
 ///
 /// [`TempFile`]: crate::data::TempFile
 ///

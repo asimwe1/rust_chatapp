@@ -38,19 +38,19 @@ use either::Either;
 ///
 /// # Configuration
 ///
-/// * **temporary file directory**
+/// `TempFile` is configured via the following [`config`](crate::config)
+/// parameters:
 ///
-///   Configured via the [`temp_dir`](crate::Config::temp_dir) configuration
-///   parameter, defaulting to the system's default temporary
-///   ([`std::env::temp_dir()`]). Specifies where the files are stored.
+/// | Name               | Default             | Description                             |
+/// |--------------------|---------------------|-----------------------------------------|
+/// | `temp_dir`         | [`env::temp_dir()`] | Directory files are temporarily stored. |
+/// | `limits.file`      | 1MiB                | Default limit for all file extensions.  |
+/// | `limits.file/$ext` | _N/A_               | Limit for files with extension `$ext`.  |
 ///
-/// * **data limit**
-///
-///   Controlled via [limits](crate::data::Limits) named `file` and `file/$ext`.
-///   When used as a form guard, the extension `ext` is identified by the form
-///   field's `Content-Type` ([`ContentType::extension()`]). When used as a data
-///   guard, the extension is identified by the Content-Type of the request, if
-///   any. If there is no Content-Type, the limit `file` is used.
+/// When used as a form guard, the extension `$ext` is identified by the form
+/// field's `Content-Type` ([`ContentType::extension()`]). When used as a data
+/// guard, the extension is identified by the Content-Type of the request, if
+/// any. If there is no Content-Type, the limit `file` is used.
 ///
 /// # Cappable
 ///
