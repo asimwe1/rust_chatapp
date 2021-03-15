@@ -47,7 +47,7 @@ async-trait = "0.1.43"
 
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
-rev = "0a7457d2"
+rev = "504ef71a"
 
 [dependencies.rocket_codegen]
 version = "0.5.0-dev"

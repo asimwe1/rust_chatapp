@@ -43,7 +43,7 @@ cookie = { version = "0.15", features = ["percent-encode"] }
 
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
-rev = "7576652"
+rev = "504ef71a"
 
 [dependencies._serde]
 package = "serde"
