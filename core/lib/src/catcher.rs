@@ -250,13 +250,21 @@ pub trait ErrorHandler: Cloneable + Send + Sync + 'static {
     async fn handle<'r, 's: 'r>(&'s self, status: Status, req: &'r Request<'_>) -> Result<'r>;
 }
 
-#[crate::async_trait]
+// We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> ErrorHandler for F
-    where for<'x> F: Fn(Status, &'x Request<'_>) -> ErrorHandlerFuture<'x>
+    where for<'x> F: Fn(Status, &'x Request<'_>) -> ErrorHandlerFuture<'x>,
 {
-    #[inline(always)]
-    async fn handle<'r, 's: 'r>(&'s self, status: Status, req: &'r Request<'_>) -> Result<'r> {
-        self(status, req).await
+    fn handle<'r, 's: 'r, 'life0, 'async_trait>(
+        &'s self,
+        status: Status,
+        req: &'r Request<'life0>,
+    ) -> ErrorHandlerFuture<'r>
+        where 'r: 'async_trait,
+              's: 'async_trait,
+              'life0: 'async_trait,
+              Self: 'async_trait,
+    {
+        self(status, req)
     }
 }
 

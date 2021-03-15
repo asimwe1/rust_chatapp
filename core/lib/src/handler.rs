@@ -151,13 +151,22 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     async fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
 }
 
-#[crate::async_trait]
+// We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'x> F: Fn(&'x Request<'_>, Data) -> HandlerFuture<'x>
+    where for<'x> F: Fn(&'x Request<'_>, Data) -> HandlerFuture<'x>,
 {
     #[inline(always)]
-    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
-        self(req, data).await
+    fn handle<'r, 's: 'r, 'life0, 'async_trait>(
+        &'s self,
+        req: &'r Request<'life0>,
+        data: Data,
+    ) -> HandlerFuture<'r>
+        where 'r: 'async_trait,
+              's: 'async_trait,
+              'life0: 'async_trait,
+              Self: 'async_trait,
+    {
+        self(req, data)
     }
 }
 

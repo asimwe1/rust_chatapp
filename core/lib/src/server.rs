@@ -1,9 +1,8 @@
 use std::io;
 use std::sync::Arc;
-use std::panic::AssertUnwindSafe;
 
 use futures::stream::StreamExt;
-use futures::future::FutureExt;
+use futures::future::{FutureExt, Future};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
@@ -22,18 +21,40 @@ use crate::http::uri::Origin;
 // A token returned to force the execution of one method before another.
 pub(crate) struct Token;
 
-macro_rules! info_panic {
-    ($e:expr) => {{
-        error_!("A handler has panicked. This is an application bug.");
-        info_!("A panic in Rust must be treated as an exceptional event.");
-        info_!("Panicking is not a suitable error handling mechanism.");
-        info_!("Unwinding, the result of a panic, is an expensive operation.");
-        info_!("Panics will severely degrade application performance.");
-        info_!("Instead of panicking, return `Option` and/or `Result`.");
-        info_!("Values of either type can be returned directly from handlers.");
-        warn_!("Forwarding to the {} error catcher.", Paint::blue(500).bold());
-        $e
-    }}
+async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
+    where F: FnOnce() -> Fut, Fut: Future<Output = T>,
+{
+    use std::panic::AssertUnwindSafe;
+
+    macro_rules! panic_info {
+        ($name:expr, $e:expr) => {{
+            match $name {
+                Some(name) => error_!("Handler {} panicked.", Paint::white(name)),
+                None => error_!("A handler panicked.")
+            };
+
+            info_!("This is an application bug.");
+            info_!("A panic in Rust must be treated as an exceptional event.");
+            info_!("Panicking is not a suitable error handling mechanism.");
+            info_!("Unwinding, the result of a panic, is an expensive operation.");
+            info_!("Panics will severely degrade application performance.");
+            info_!("Instead of panicking, return `Option` and/or `Result`.");
+            info_!("Values of either type can be returned directly from handlers.");
+            warn_!("A panic is treated as an internal server error.");
+            $e
+        }}
+    }
+
+    let run = AssertUnwindSafe(run);
+    let fut = std::panic::catch_unwind(move || run())
+        .map_err(|e| panic_info!(name, e))
+        .ok()?;
+
+    AssertUnwindSafe(fut)
+        .catch_unwind()
+        .await
+        .map_err(|e| panic_info!(name, e))
+        .ok()
 }
 
 // This function tries to hide all of the Hyper-ness from Rocket. It essentially
@@ -271,10 +292,9 @@ impl Rocket {
             info_!("Matched: {}", route);
             request.set_route(route);
 
-            // Dispatch the request to the handler.
-            let outcome = AssertUnwindSafe(route.handler.handle(request, data))
-                .catch_unwind().await
-                .unwrap_or_else(|_| info_panic!(Outcome::Failure(Status::InternalServerError)));
+            let name = route.name.as_deref();
+            let outcome = handle(name, || route.handler.handle(request, data)).await
+                .unwrap_or_else(|| Outcome::Failure(Status::InternalServerError));
 
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
@@ -316,10 +336,9 @@ impl Rocket {
 
         if let Some(catcher) = catcher {
             warn_!("Responding with registered {} catcher.", catcher);
-            let handler = AssertUnwindSafe(catcher.handler.handle(status, req));
-            handler.catch_unwind().await
+            handle(None, || catcher.handler.handle(status, req)).await
                 .map(|result| result.map_err(Some))
-                .unwrap_or_else(|_| info_panic!(Err(None)))
+                .unwrap_or_else(|| Err(None))
         } else {
             let code = Paint::blue(status.code).bold();
             warn_!("No {} catcher registered. Using Rocket default.", code);
