@@ -54,11 +54,11 @@ fn default_rank(route: &Route) -> isize {
     let wild_query = route.uri.query().map(|_| route.metadata.wild_query);
     match (static_path, wild_query) {
         (true, Some(false)) => -6,   // static path, partly static query
-        (true, Some(true)) => -5,  // static path, fully dynamic query
-        (true, None) => -4,         // static path, no query
+        (true, Some(true)) => -5,    // static path, fully dynamic query
+        (true, None) => -4,          // static path, no query
         (false, Some(false)) => -3,  // dynamic path, partly static query
-        (false, Some(true)) => -2, // dynamic path, fully dynamic query
-        (false, None) => -1,        // dynamic path, no query
+        (false, Some(true)) => -2,   // dynamic path, fully dynamic query
+        (false, None) => -1,         // dynamic path, no query
     }
 }
 
