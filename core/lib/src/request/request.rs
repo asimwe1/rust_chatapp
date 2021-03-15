@@ -531,7 +531,7 @@ impl<'r> Request<'r> {
     /// # })
     /// ```
     pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
-        where T: FromRequest<'a, 'r> + 'z, 'a: 'z, 'r: 'z
+        where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
     {
         T::from_request(self)
     }

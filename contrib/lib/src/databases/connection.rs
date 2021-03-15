@@ -172,11 +172,11 @@ impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
 }
 
 #[rocket::async_trait]
-impl<'a, 'r, K: 'static, C: Poolable> FromRequest<'a, 'r> for Connection<K, C> {
+impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
     type Error = ();
 
     #[inline]
-    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
         match request.managed_state::<ConnectionPool<K, C>>() {
             Some(c) => c.get().await.into_outcome(Status::ServiceUnavailable),
             None => {

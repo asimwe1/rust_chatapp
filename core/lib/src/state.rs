@@ -53,24 +53,33 @@ use crate::http::Status;
 /// # Within Request Guards
 ///
 /// Because `State` is itself a request guard, managed state can be retrieved
-/// from another request guard's implementation. In the following code example,
-/// `Item` retrieves the `MyConfig` managed state in its [`FromRequest`]
-/// implementation using the [`Request::guard()`] method.
+/// from another request guard's implementation using either
+/// [`Request::guard()`] or [`Request::managed_state()`]. In the following code
+/// example, the `Item` request guard retrieves `MyConfig` from managed state:
 ///
 /// ```rust
 /// use rocket::State;
 /// use rocket::request::{self, Request, FromRequest};
+/// use rocket::outcome::IntoOutcome;
 ///
 /// # struct MyConfig{ user_val: String };
-/// struct Item(String);
+/// struct Item<'r>(&'r str);
 ///
 /// #[rocket::async_trait]
-/// impl<'a, 'r> FromRequest<'a, 'r> for Item {
+/// impl<'r> FromRequest<'r> for Item<'r> {
 ///     type Error = ();
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Item, ()> {
-///         request.guard::<State<MyConfig>>().await
-///             .map(|my_config| Item(my_config.user_val.clone()))
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+///         // Using `State` as a request guard. Use `inner()` to get an `'r`.
+///         let outcome = request.guard::<State<MyConfig>>().await
+///             .map(|my_config| Item(&my_config.inner().user_val));
+///
+///         // Or alternatively, using `Request::managed_state()`:
+///         let outcome = request.managed_state::<MyConfig>()
+///             .map(|my_config| Item(&my_config.user_val))
+///             .or_forward(());
+///
+///         outcome
 ///     }
 /// }
 /// ```
@@ -160,11 +169,11 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
 }
 
 #[crate::async_trait]
-impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
+impl<'r, T: Send + Sync + 'static> FromRequest<'r> for State<'r, T> {
     type Error = ();
 
     #[inline(always)]
-    async fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
         match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {

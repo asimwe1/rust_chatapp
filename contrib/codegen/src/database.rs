@@ -47,10 +47,10 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
     };
 
     Ok(DatabaseInvocation {
+        structure,
         type_name: input.ident,
         visibility: input.vis,
         db_name: string_lit.value(),
-        structure: structure,
         connection_type: inner_type,
     })
 }
@@ -109,10 +109,10 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
         }
 
         #[::rocket::async_trait]
-        impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
+        impl<'r> #request::FromRequest<'r> for #guard_type {
             type Error = ();
 
-            async fn from_request(__r: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+            async fn from_request(__r: &'r #request::Request<'_>) -> #request::Outcome<Self, ()> {
                 <#conn>::from_request(__r).await.map(Self)
             }
         }

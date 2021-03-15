@@ -41,16 +41,16 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
     |     async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error>;
     |                                         -- required by this bound in `rocket::data::FromData::from_data`
 
-error[E0277]: the trait bound `Q: FromRequest<'_, '_>` is not satisfied
+error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:21:10
     |
 21  | fn f5(a: Q, foo: Q) {}
-    |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
     |
    ::: $WORKSPACE/core/lib/src/request/from_request.rs
     |
-    | pub trait FromRequest<'a, 'r>: Sized {
-    |                           -- required by this bound in `from_request`
+    |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
+    |                                                -- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:21:18
@@ -60,16 +60,16 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |
    = note: required by `from_param`
 
-error[E0277]: the trait bound `Q: FromRequest<'_, '_>` is not satisfied
+error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:24:10
     |
 24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-    |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
     |
    ::: $WORKSPACE/core/lib/src/request/from_request.rs
     |
-    | pub trait FromRequest<'a, 'r>: Sized {
-    |                           -- required by this bound in `from_request`
+    |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
+    |                                                -- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:24:18

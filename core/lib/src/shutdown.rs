@@ -50,11 +50,11 @@ impl Shutdown {
 }
 
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for Shutdown {
+impl<'r> FromRequest<'r> for Shutdown {
     type Error = std::convert::Infallible;
 
     #[inline]
-    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         Outcome::Success(request.state.shutdown.clone())
     }
 }

@@ -128,10 +128,10 @@ use rocket::request::{self, Request, FromRequest};
 # struct HitCount { count: AtomicUsize }
 # type ErrorType = ();
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for T {
+impl<'r> FromRequest<'r> for T {
     type Error = ErrorType;
 
-    async fn from_request(req: &'a Request<'r>) -> request::Outcome<T, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<T, Self::Error> {
         let hit_count_state = try_outcome!(req.guard::<State<HitCount>>().await);
         let current_count = hit_count_state.count.load(Ordering::Relaxed);
         /* ... */
@@ -173,10 +173,10 @@ struct RequestId(pub usize);
 
 /// Returns the current request's ID, assigning one only as necessary.
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for &'a RequestId {
+impl<'r> FromRequest<'r> for &'r RequestId {
     type Error = ();
 
-    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         // The closure passed to `local_cache` will be executed at most once per
         // request: the first time the `RequestId` guard is used. If it is
         // requested again, `local_cache` will return the same value.

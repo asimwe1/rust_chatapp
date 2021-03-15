@@ -380,10 +380,10 @@ impl Provider for Config {
 }
 
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for &'r Config {
+impl<'r> FromRequest<'r> for &'r Config {
     type Error = std::convert::Infallible;
 
-    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         request::Outcome::Success(req.config())
     }
 }

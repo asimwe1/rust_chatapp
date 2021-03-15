@@ -85,10 +85,10 @@ impl Metadata<'_> {
 /// an error is printed and an empty `Err` with status `InternalServerError`
 /// (`500`) is returned.
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
+impl<'r> FromRequest<'r> for Metadata<'r> {
     type Error = ();
 
-    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
         request.guard::<State<'_, ContextManager>>().await
             .succeeded()
             .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))

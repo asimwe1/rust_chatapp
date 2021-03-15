@@ -353,10 +353,10 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// // Allows a route to access the time a request was initiated.
 /// #[rocket::async_trait]
-/// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
+/// impl<'r> FromRequest<'r> for StartTime {
 ///     type Error = ();
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
 ///             TimerStart(None) => request::Outcome::Failure((Status::InternalServerError, ())),

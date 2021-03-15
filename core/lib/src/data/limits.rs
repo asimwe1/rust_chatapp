@@ -300,10 +300,10 @@ impl fmt::Display for Limits {
 }
 
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for &'r Limits {
+impl<'r> FromRequest<'r> for &'r Limits {
     type Error = std::convert::Infallible;
 
-    async fn from_request(req: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         Outcome::Success(req.limits())
     }
 }

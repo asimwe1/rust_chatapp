@@ -7,10 +7,10 @@ use rocket::outcome::IntoOutcome;
 struct HasContentType;
 
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
+impl<'r> FromRequest<'r> for HasContentType {
     type Error = ();
 
-    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
         req.content_type().map(|_| HasContentType).or_forward(())
     }
 }

@@ -111,10 +111,10 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// struct User(usize);
 ///
 /// #[rocket::async_trait]
-/// impl<'a, 'r> FromRequest<'a, 'r> for User {
+/// impl<'r> FromRequest<'r> for User {
 ///     type Error = std::convert::Infallible;
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|c| c.value().parse().ok())

@@ -645,10 +645,10 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
 /// struct Guard2;
 ///
 /// #[rocket::async_trait]
-/// impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
+/// impl<'r> FromRequest<'r> for Guard1 {
 ///     type Error = ();
 ///
-///     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
 ///         // Attempt to fetch the guard, passing through any error or forward.
 ///         let atomics = try_outcome!(req.guard::<State<'_, Atomics>>().await);
 ///         atomics.uncached.fetch_add(1, Ordering::Relaxed);
@@ -659,10 +659,10 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
 /// }
 ///
 /// #[rocket::async_trait]
-/// impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
+/// impl<'r> FromRequest<'r> for Guard2 {
 ///     type Error = ();
 ///
-///     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+///     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
 ///         // Attempt to fetch the guard, passing through any error or forward.
 ///         let guard1: Guard1 = try_outcome!(req.guard::<Guard1>().await);
 ///         Success(Guard2)
