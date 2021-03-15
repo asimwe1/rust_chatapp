@@ -101,6 +101,9 @@ pub type ErrorHandlerFuture<'r> = BoxFuture<'r, Result<'r>>;
 /// [`Status`]: crate::http::Status
 #[derive(Clone)]
 pub struct Catcher {
+    /// The name of this catcher, if one was given.
+    pub name: Option<Cow<'static, str>>,
+
     /// The HTTP status code to match against if this route is not `default`.
     pub code: Option<u16>,
 
@@ -143,7 +146,7 @@ impl Catcher {
     pub fn new<C, H>(code: C, handler: H) -> Catcher
         where C: Into<Option<u16>>, H: ErrorHandler
     {
-        Catcher { code: code.into(), handler: Box::new(handler) }
+        Catcher { name: None, code: code.into(), handler: Box::new(handler) }
     }
 }
 
@@ -153,7 +156,8 @@ impl Default for Catcher {
             Box::pin(async move { Ok(default(status, request)) })
         }
 
-        Catcher { code: None, handler: Box::new(async_default) }
+        let name = Some("<Rocket Catcher>".into());
+        Catcher { name, code: None, handler: Box::new(async_default) }
     }
 }
 
@@ -272,12 +276,18 @@ impl<F: Clone + Sync + Send + 'static> ErrorHandler for F
 impl From<StaticCatcherInfo> for Catcher {
     #[inline]
     fn from(info: StaticCatcherInfo) -> Catcher {
-        Catcher::new(info.code, info.handler)
+        let mut catcher = Catcher::new(info.code, info.handler);
+        catcher.name = Some(info.name.into());
+        catcher
     }
 }
 
 impl fmt::Display for Catcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref n) = self.name {
+            write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
+        }
+
         match self.code {
             Some(code) => write!(f, "{}", Paint::blue(code)),
             None => write!(f, "{}", Paint::blue("default"))

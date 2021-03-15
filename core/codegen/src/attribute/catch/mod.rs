@@ -78,6 +78,7 @@ pub fn _catch(
                 }
 
                 #StaticCatcherInfo {
+                    name: stringify!(#user_catcher_fn_name),
                     code: #status_code,
                     handler: monomorphized_function,
                 }

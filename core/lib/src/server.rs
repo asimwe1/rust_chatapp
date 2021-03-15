@@ -336,7 +336,8 @@ impl Rocket {
 
         if let Some(catcher) = catcher {
             warn_!("Responding with registered {} catcher.", catcher);
-            handle(None, || catcher.handler.handle(status, req)).await
+            let name = catcher.name.as_deref();
+            handle(name, || catcher.handler.handle(status, req)).await
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
         } else {
