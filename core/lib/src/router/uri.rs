@@ -3,18 +3,64 @@ use std::borrow::Cow;
 
 use crate::http::uri::{self, Origin};
 use crate::http::ext::IntoOwned;
-use crate::router::Segment;
 use crate::form::ValueField;
+use crate::router::segment::Segment;
 
+/// A URI or a route, used to match against requests.
+///
+/// A route URI is composed of two components:
+///
+///   * `base`
+///
+///     Otherwise known as the route's "mount point", the `base` is a static
+///     [`Origin`] that prefixes the route URI. All route URIs have a `base`.
+///     When routes are created manually with [`Route::new()`], the base
+///     defaults to `/`. When mounted via [`Rocket::mount()`], the base is
+///     explicitly specified as the first argument.
+///
+///     ```rust
+///     use rocket::Route;
+///     use rocket::http::Method;
+///     # use rocket::handler::dummy as handler;
+///
+///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
+///     assert_eq!(route.uri.base(), "/");
+///
+///     let rocket = rocket::ignite().mount("/base", vec![route]);
+///     let routes: Vec<_> = rocket.routes().collect();
+///     assert_eq!(routes[0].uri.base(), "/base");
+///     ```
+///
+///   * `origin`
+///
+///     Otherwise known as the "route URI", the `origin` is an [`Origin`] with
+///     potentially dynamic (`<dyn>` or `<dyn..>`) segments. It is prefixed with
+///     the `base`. This is the URI which is matched against incoming requests
+///     for routing.
+///
+///     ```rust
+///     use rocket::Route;
+///     use rocket::http::Method;
+///     # use rocket::handler::dummy as handler;
+///
+///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
+///     assert_eq!(route.uri, "/foo/<bar>");
+///
+///     let rocket = rocket::ignite().mount("/base", vec![route]);
+///     let routes: Vec<_> = rocket.routes().collect();
+///     assert_eq!(routes[0].uri, "/base/foo/<bar>");
+///     ```
+///
+/// [`Rocket::mount()`]: crate::Rocket::mount()
 #[derive(Clone)]
 pub struct RouteUri<'a> {
     /// The source string for this URI.
     source: Cow<'a, str>,
-    /// The mount point of this `Route`.
+    /// The mount point.
     pub base: Origin<'a>,
-    /// The URI _without_ the `base`.
+    /// The URI _without_ the `base` mount point.
     pub unmounted_origin: Origin<'a>,
-    /// The URI _with_ the base. This is the canoncical route URI.
+    /// The URI _with_ the base mount point. This is the canoncical route URI.
     pub origin: Origin<'a>,
     /// Cached metadata about this URI.
     pub(crate) metadata: Metadata,
@@ -154,33 +200,12 @@ impl<'a> RouteUri<'a> {
         &self.source
     }
 
-    #[inline(always)]
-
-    /// The full URI as an [`&Origin`][`crate::http::uri::Origin`].
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Route;
-    /// use rocket::http::{Method, uri::Origin};
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
-    ///
-    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
-    /// assert_eq!(index.uri.as_origin(), &Origin::parse("/foo/bar?a=1").unwrap());
-    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.as_origin(), &Origin::parse("/boo/foo/bar?a=1").unwrap());
-    /// ```
-    pub fn as_origin(&self) -> &Origin<'a> {
-        &self.origin
-    }
-
-
     /// Get the default rank of a route with this URI.
     ///
     /// The route's default rank is determined based on the presence or absence
     /// of static and dynamic paths and queries. See the documentation for
     /// [`Route::new`][`crate::Route::new`] for a table summarizing the exact default ranks.
-    pub fn default_rank(&self) -> isize {
+    pub(crate) fn default_rank(&self) -> isize {
         let static_path = self.metadata.static_path;
         let wild_query = self.query().map(|_| self.metadata.wild_query);
         match (static_path, wild_query) {
@@ -229,7 +254,7 @@ impl<'a> std::ops::Deref for RouteUri<'a> {
     type Target = Origin<'a>;
 
     fn deref(&self) -> &Self::Target {
-        self.as_origin()
+        &self.origin
     }
 }
 
@@ -243,7 +268,20 @@ impl fmt::Debug for RouteUri<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RouteUri")
             .field("base", &self.base)
-            .field("uri", &self.as_origin())
+            .field("unmounted_origin", &self.unmounted_origin)
+            .field("origin", &self.origin)
             .finish()
     }
+}
+
+impl<'a, 'b> PartialEq<Origin<'b>> for RouteUri<'a> {
+    fn eq(&self, other: &Origin<'b>) -> bool { &self.origin == other }
+}
+
+impl PartialEq<str> for RouteUri<'_> {
+    fn eq(&self, other: &str) -> bool { self.as_str() == other }
+}
+
+impl PartialEq<&str> for RouteUri<'_> {
+    fn eq(&self, other: &&str) -> bool { self.as_str() == *other }
 }

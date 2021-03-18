@@ -10,14 +10,13 @@ use crate::http::Method;
 use crate::handler::dummy;
 
 pub use self::route::Route;
-pub use self::segment::Segment;
 pub use self::uri::RouteUri;
 
 // type Selector = (Method, usize);
 type Selector = Method;
 
 #[derive(Debug, Default)]
-pub struct Router {
+pub(crate) struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }
 

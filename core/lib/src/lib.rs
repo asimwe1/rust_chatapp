@@ -123,6 +123,7 @@ pub mod handler;
 pub mod fairing;
 pub mod error;
 pub mod catcher;
+pub mod router;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -139,7 +140,6 @@ pub mod http {
 }
 
 mod shutdown;
-mod router;
 mod rocket;
 mod server;
 mod codegen;
@@ -153,7 +153,7 @@ mod cookies;
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
-pub use crate::router::Route;
+#[doc(inline)] pub use crate::router::Route;
 pub use crate::request::Request;
 pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
