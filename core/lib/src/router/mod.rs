@@ -7,7 +7,6 @@ use std::collections::HashMap;
 
 use crate::request::Request;
 use crate::http::Method;
-use crate::handler::dummy;
 
 pub use self::route::Route;
 pub use self::uri::RouteUri;
@@ -34,64 +33,33 @@ impl Router {
         entries.insert(i, route);
     }
 
-    pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
+    pub fn route<'r, 'a: 'r>(&'a self, req: &'r Request<'r>) -> impl Iterator<Item = &'a Route> + 'r {
         // Note that routes are presorted by rank on each `add`.
-        let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
-            routes.iter()
-                .filter(|r| r.matches(req))
-                .collect()
-        });
-
-        trace_!("Routing the request: {}", req);
-        trace_!("All matches: {:?}", matches);
-        matches
+        self.routes.get(&req.method())
+            .into_iter()
+            .flat_map(move |routes| routes.iter().filter(move |r| r.matches(req)))
     }
 
-    pub(crate) fn collisions(&mut self) -> Result<(), Vec<(Route, Route)>> {
-        let mut collisions = vec![];
-        for routes in self.routes.values_mut() {
-            for i in 0..routes.len() {
-                let (left, right) = routes.split_at_mut(i);
-                for a_route in left.iter_mut() {
-                    for b_route in right.iter_mut() {
-                        if a_route.collides_with(b_route) {
-                            let dummy_a = Route::new(Method::Get, "/", dummy);
-                            let a = std::mem::replace(a_route, dummy_a);
-                            let dummy_b = Route::new(Method::Get, "/", dummy);
-                            let b = std::mem::replace(b_route, dummy_b);
-                            collisions.push((a, b));
-                        }
-                    }
-                }
-            }
-        }
-
-        if collisions.is_empty() {
-            Ok(())
-        } else {
-            Err(collisions)
-        }
+    pub(crate) fn collisions(&self) -> impl Iterator<Item = (&Route, &Route)> {
+        let all_routes = self.routes.values().flat_map(|v| v.iter());
+        all_routes.clone().enumerate()
+            .flat_map(move |(i, a)| {
+                all_routes.clone()
+                    .skip(i + 1)
+                    .filter(move |b| b.collides_with(a))
+                    .map(move |b| (a, b))
+            })
     }
 
     #[inline]
-    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+    pub fn routes(&self) -> impl Iterator<Item = &Route> {
         self.routes.values().flat_map(|v| v.iter())
     }
 
     // This is slow. Don't expose this publicly; only for tests.
     #[cfg(test)]
     fn has_collisions(&self) -> bool {
-        for routes in self.routes.values() {
-            for (i, a_route) in routes.iter().enumerate() {
-                for b_route in routes.iter().skip(i + 1) {
-                    if a_route.collides_with(b_route) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
+        self.collisions().next().is_some()
     }
 }
 
@@ -266,21 +234,17 @@ mod test {
         assert!(!default_rank_route_collisions(&["/hi?<c>", "/hi?c"]));
     }
 
-    fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
+    fn route<'a>(router: &'a Router, method: Method, uri: &'a str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::default());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        let matches = router.route(&request);
-        if matches.len() > 0 {
-            Some(matches[0])
-        } else {
-            None
-        }
+        let route = router.route(&request).next();
+        route
     }
 
-    fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
+    fn matches<'a>(router: &'a Router, method: Method, uri: &'a str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::default());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        router.route(&request)
+        router.route(&request).collect()
     }
 
     #[test]

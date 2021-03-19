@@ -286,8 +286,7 @@ impl Rocket {
         mut data: Data,
     ) -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
-        let matches = self.router.route(request);
-        for route in matches {
+        for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
             request.set_route(route);

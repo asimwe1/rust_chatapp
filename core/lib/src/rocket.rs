@@ -525,8 +525,10 @@ impl Rocket {
     ///     * there were no fairing failures
     ///     * a secret key, if needed, is securely configured
     pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
-        if let Err(e) = self.router.collisions() {
-            return Err(Error::new(ErrorKind::Collision(e)));
+        let collisions: Vec<_> = self.router.collisions().collect();
+        if !collisions.is_empty() {
+            let owned = collisions.into_iter().map(|(a, b)| (a.clone(), b.clone()));
+            return Err(Error::new(ErrorKind::Collision(owned.collect())));
         }
 
         if let Some(failures) = self.fairings.failures() {

@@ -71,7 +71,7 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.uri.metadata.path_segs;
-    let req_segments = req.routed_segments(0..);
+    let req_segments = req.uri().path_segments();
     if route_segments.len() > req_segments.len() + 1 {
         return false;
     }
