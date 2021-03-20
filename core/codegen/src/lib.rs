@@ -262,14 +262,14 @@ macro_rules! route_attribute {
         ///   3. A macro used by [`uri!`] to type-check and generate an
         ///      [`Origin`].
         ///
-        /// [`Handler`]: ../rocket/trait.Handler.html
+        /// [`Handler`]: rocket::handler::Handler
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
-        /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
-        /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
-        /// [`Response`]: ../rocket/struct.Response.html
-        /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
-        /// [`FromData` Outcomes]: ../rocket/data/trait.FromData.html#outcomes
+        /// [`Origin`]: rocket::http::uri::Origin
+        /// [`Outcome`]: rocket::outcome::Outcome
+        /// [`Response`]: rocket::Response
+        /// [`FromRequest` Outcomes]: rocket::request::FromRequest#outcomes
+        /// [`FromData` Outcomes]: rocket::data::FromData#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -343,13 +343,13 @@ route_attribute!(options => Method::Options);
 ///      name (the function's name) and status code from the route attribute or
 ///      `None` if `default`. The handler is set to the generated handler.
 ///
-/// [`&Request`]: ../rocket/struct.Request.html
-/// [`Status`]: ../rocket/http/struct.Status.html
-/// [`ErrorHandler`]: ../rocket/type.ErrorHandler.html
+/// [`&Request`]: rocket::Request
+/// [`Status`]: rocket::http::Status
+/// [`ErrorHandler`]: rocket::catcher::ErrorHandler
 /// [`catchers!`]: macro.catchers.html
-/// [`Catcher`]: ../rocket/struct.Catcher.html
-/// [`Response`]: ../rocket/struct.Response.html
-/// [`Responder`]: ../rocket/response/trait.Responder.html
+/// [`Catcher`]: rocket::Catcher
+/// [`Response`]: rocket::Response
+/// [`Responder`]: rocket::Responder
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
@@ -425,9 +425,8 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 /// variant. In the example above, the the strings `"fourth"`, `"FOUrth"` and so
 /// on would parse as `MyValue::Third`.
 ///
-/// [`FromFormField`]: ../rocket/request/trait.FromFormField.html
-/// [`FromFormField::Error`]: ../rocket/request/trait.FromFormField.html#associatedtype.Error
-// FIXME(rustdoc): We should be able to refer to items in `rocket`.
+/// [`FromFormField`]: rocket::form::FromFormField
+/// [`FromFormField::Error`]: rocket::form::FromFormField::Error
 #[proc_macro_derive(FromFormField, attributes(field))]
 pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
     emit!(derive::from_form_field::derive_from_form_field(input))
@@ -441,35 +440,43 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[derive(FromForm)]
-/// struct MyStruct {
+/// struct MyStruct<'r> {
 ///     field: usize,
-///     other: String
+///     #[field(name = "renamed_field")]
+///     #[field(name = uncased("RenamedField"))]
+///     other: &'r str,
+///     #[field(validate = range(1..))]
+///     r#type: usize,
 /// }
 /// ```
 ///
-/// Each field's type is required to implement [`FromFormField`].
+/// Each field's type is required to implement [`FromForm`].
 ///
 /// The derive generates an implementation of the [`FromForm`] trait. The
 /// implementation parses a form whose field names match the field names of the
 /// structure on which the derive was applied. Each field's value is parsed with
-/// the [`FromFormField`] implementation of the field's type. The `FromForm`
-/// implementation succeeds only when all of the field parses succeed. If
-/// parsing fails, an error ([`FromForm::Error`]) of type [`FormParseError`] is
-/// returned.
+/// the [`FromForm`] implementation of the field's type. The `FromForm`
+/// implementation succeeds only when all of the field parses succeed or return
+/// a default. Errors are collected into a [`form::Errors`] and return if
+/// non-empty after parsing all fields.
 ///
 /// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
 /// field := name? validate*
 ///
-/// name := 'name' '=' '"' IDENT '"'
+/// name := 'name' '=' name_val
+/// name_val :=  '"' FIELD_NAME '"'
+///          | 'uncased(' '"' FIELD_NAME '"' ')
+///
 /// validate := 'validate' '=' EXPR
 ///
-/// IDENT := valid identifier, as defined by Rust
+/// FIELD_NAME := valid field name, according to the HTML5 spec
 /// EXPR := valid expression, as defined by Rust
 /// ```
 ///
-/// When applied, the attribute looks as follows:
+/// The attribute can be applied any number of times on a field. When applied,
+/// the attribute looks as follows:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -478,20 +485,30 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// struct MyStruct {
 ///     field: usize,
 ///     #[field(name = "renamed_field")]
+///     #[field(name = uncased("anotherName"))]
+///     #[field(validate = eq("banana"))]
+///     #[field(validate = neq("orange"))]
 ///     other: String
 /// }
 /// ```
 ///
-/// The field attribute directs that a different incoming field name is
-/// expected, the value of `name`, which is used instead of the structure's
-/// actual field name when parsing a form. In the example above, the value of
-/// the `MyStruct::other` struct field will be parsed from the incoming form's
-/// `renamed_field` field.
+/// **`name`**
 ///
-/// [`FromForm`]: ../rocket/request/trait.FromForm.html
-/// [`FromFormField`]: ../rocket/request/trait.FromFormField.html
-/// [`FormParseError`]: ../rocket/request/enum.FormParseError.html
-/// [`FromForm::Error`]: ../rocket/request/trait.FromForm.html#associatedtype.Error
+/// A `name` attribute changes the name to match against when parsing the form
+/// field. The value is either an exact string to match against (`"foo"`), or
+/// `uncased("foo")`, which causes the match to be case-insensitive but
+/// case-preserving. When more than one `name` attribute is applied, the field
+/// will match against _any_ of the names.
+///
+/// **`validate`**
+///
+/// The validation expression will be run if the field type parses successfully.
+/// The expression must return a value of type `Result<(), form::Errors>`. On
+/// `Err`, the errors are added to the thus-far collected errors. If more than
+/// one `validate` attribute is applied, _all_ validations are run.
+///
+/// [`FromForm`]: rocket::form::FromForm
+/// [`form::Errors`]: rocket::form::Errors
 #[proc_macro_derive(FromForm, attributes(field))]
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
     emit!(derive::from_form::derive_from_form(input))

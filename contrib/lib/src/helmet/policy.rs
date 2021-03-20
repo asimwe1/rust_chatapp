@@ -118,7 +118,7 @@ pub enum Referrer {
     NoReferrerWhenDowngrade,
 
     /// Only send the origin of part of the URL, e.g. the origin of
-    /// https://foo.com/bob.html is https://foo.com
+    /// `https://foo.com/bob.html` is `https://foo.com`.
     Origin,
 
     /// Send full URL for same-origin requests, only send origin part when

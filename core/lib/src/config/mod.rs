@@ -46,7 +46,7 @@
 //! A custom provider can be set via [`rocket::custom()`], which replaces calls to
 //! [`rocket::ignite()`]. The configured provider can be built on top of
 //! [`Config::figment()`], [`Config::default()`], both, or neither. The
-//! [Figment](@figment) documentation has full details on instantiating existing
+//! [Figment](figment) documentation has full details on instantiating existing
 //! providers like [`Toml`]() and [`Env`] as well as creating custom providers for
 //! more complex cases.
 //!

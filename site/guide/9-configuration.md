@@ -53,7 +53,7 @@ selected profile doesn't contain a requested values, while values in the
 [`Provider`]: @figment/trait.Provider.html
 [`Profile`]: @figment/struct.Profile.html
 [`Config`]: @api/rocket/struct.Config.html
-[`Config::figment()`]: @api/struct.Config.html#method.figment
+[`Config::figment()`]: @api/rocket/struct.Config.html#method.figment
 [`Toml`]: @figment/providers/struct.Toml.html
 [`Json`]: @figment/providers/struct.Json.html
 [`Figment`]: @api/rocket/struct.Figment.html

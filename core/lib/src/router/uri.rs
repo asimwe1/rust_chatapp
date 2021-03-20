@@ -52,6 +52,7 @@ use crate::router::segment::Segment;
 ///     ```
 ///
 /// [`Rocket::mount()`]: crate::Rocket::mount()
+/// [`Route::new()`]: crate::Route::new()
 #[derive(Clone)]
 pub struct RouteUri<'a> {
     /// The source string for this URI.

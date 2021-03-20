@@ -284,7 +284,7 @@ impl<L, T: Len<L>> Len<L> for Result<'_, T> {
 /// The value must implement [`Len`]. On failure, returns an [`InvalidLength`]
 /// error. See [`Len`] for supported types and how their length is computed.
 ///
-/// [`InvalidLength`]: rocket::form::error::ErrorKind::InvalidLength
+/// [`InvalidLength`]: crate::form::error::ErrorKind::InvalidLength
 ///
 /// # Data Limits
 ///
@@ -559,7 +559,7 @@ pub fn verbose_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// The value must be an integer type that implement `TryInto<isize> + Copy`. On
 /// failure, returns an [`OutOfRange`] error.
 ///
-/// [`OutOfRange`]: rocket::form::error::ErrorKind::OutOfRange
+/// [`OutOfRange`]: crate::form::error::ErrorKind::OutOfRange
 ///
 /// # Example
 ///
@@ -609,7 +609,7 @@ pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
 /// On failure, returns a [`InvalidChoice`] error with the debug representation
 /// of each item in `items`.
 ///
-/// [`InvalidChoice`]: rocket::form::error::ErrorKind::InvalidChoice
+/// [`InvalidChoice`]: crate::form::error::ErrorKind::InvalidChoice
 ///
 /// # Example
 ///

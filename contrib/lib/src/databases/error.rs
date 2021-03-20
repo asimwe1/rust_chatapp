@@ -4,6 +4,8 @@ use rocket::figment;
 ///
 /// This type is only relevant to implementors of the [`Poolable`] trait. See
 /// the [`Poolable`] documentation for more information on how to use this type.
+///
+/// [`Poolable`]: crate::databases::Poolable
 #[derive(Debug)]
 pub enum Error<T> {
     /// A custom error of type `T`.

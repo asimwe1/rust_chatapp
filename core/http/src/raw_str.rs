@@ -45,12 +45,7 @@ use crate::uncased::UncasedStr;
 /// # Usage
 ///
 /// A `RawStr` is a dynamically sized type (just like `str`). It is always used
-/// through a reference an as `&RawStr` (just like &str). You'll likely
-/// encounter an `&RawStr` as a parameter via [`FromParam`] or as a form value
-/// via [`FromFormValue`].
-///
-/// [`FromParam`]: rocket::request::FromParam
-/// [`FromFormValue`]: rocket::request::FromFormValue
+/// through a reference an as `&RawStr` (just like &str).
 #[repr(transparent)]
 #[derive(RefCast, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);

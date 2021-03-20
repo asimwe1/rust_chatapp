@@ -695,9 +695,8 @@ impl<'r> Request<'r> {
     }
 
     /// Retrieves and parses into `T` the query value with field name `name`.
-    /// `T` must implement [`FromFormValue`], which is used to parse the query's
-    /// value. Key matching is performed case-sensitively. If there are multiple
-    /// pairs with key `key`, the _first_ one is returned.
+    /// `T` must implement [`FromForm`], which is used to parse the query's
+    /// value. Key matching is performed case-sensitively.
     ///
     /// # Warning
     ///
@@ -710,7 +709,7 @@ impl<'r> Request<'r> {
     /// # Error
     ///
     /// If a query segment with name `name` isn't present, returns `None`. If
-    /// parsing the value fails, returns `Some(Err(T:Error))`.
+    /// parsing the value fails, returns `Some(Err(_))`.
     ///
     /// # Example
     ///

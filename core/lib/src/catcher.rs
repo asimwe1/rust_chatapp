@@ -95,7 +95,7 @@ pub type ErrorHandlerFuture<'r> = BoxFuture<'r, Result<'r>>;
 ///
 /// See the [`catch`] documentation for full details.
 ///
-/// [`catch`]: rocket_codegen::catch
+/// [`catch`]: crate::catch
 /// [`Responder`]: crate::response::Responder
 /// [`&Request`]: crate::request::Request
 /// [`Status`]: crate::http::Status

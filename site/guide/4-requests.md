@@ -935,7 +935,7 @@ struct MyForm<'v> {
 # rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
-[`Errors<'_>`]: @api/rocket/forms/struct.Errors.html
+[`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 
 ### Collections
 

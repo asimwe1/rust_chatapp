@@ -233,7 +233,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// Imagine that we want to record the number of `GET` and `POST` requests that
 /// our application has received. While we could do this with [request guards]
-/// and [managed state](crate::request::State), it would require us to annotate every
+/// and [managed state](crate::State), it would require us to annotate every
 /// `GET` and `POST` request with custom types, polluting handler signatures.
 /// Instead, we can create a simple fairing that acts globally.
 ///

@@ -339,7 +339,8 @@ impl<'v> Errors<'v> {
 
     /// Returns the highest [`Error::status()`] of all of the errors in `self`
     /// or [`Status::InternalServerError`] if `self` is empty. This is the
-    /// status that is set by the [`Form`] data guard on failure.
+    /// status that is set by the [`Form`](crate::form::Form) data guard on
+    /// failure.
     ///
     /// # Example
     ///

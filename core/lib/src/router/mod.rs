@@ -1,3 +1,5 @@
+//! Routing types: [`Route`] and [`RouteUri`].
+
 mod collider;
 mod route;
 mod segment;

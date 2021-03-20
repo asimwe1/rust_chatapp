@@ -42,6 +42,8 @@ use crate::http::uncased::AsUncased;
 /// [`FromForm`]. Form fields with the struct field's name are [shifted] and
 /// then pushed to the struct field's `FromForm` parser.
 ///
+/// [shifted]: NameView::shift()
+///
 /// ```rust
 /// use rocket::form::FromForm;
 ///

@@ -47,6 +47,8 @@ use either::Either;
 /// | `limits.file`      | 1MiB                | Default limit for all file extensions.  |
 /// | `limits.file/$ext` | _N/A_               | Limit for files with extension `$ext`.  |
 ///
+/// [`env::temp_dir()`]: std::env::temp_dir()
+///
 /// When used as a form guard, the extension `$ext` is identified by the form
 /// field's `Content-Type` ([`ContentType::extension()`]). When used as a data
 /// guard, the extension is identified by the Content-Type of the request, if

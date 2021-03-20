@@ -146,7 +146,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **&[`Config`](crate::config::Config)**
+///   * **&[`Config`]**
 ///
 ///     Extracts the application [`Config`].
 ///
@@ -184,6 +184,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     returned in `Ok`. If the derivation is a `Failure`, the error value is
 ///     returned in `Err`. If the derivation is a `Forward`, the request is
 ///     forwarded.
+///
+/// [`Config`]: crate::config::Config
 ///
 /// # Example
 ///

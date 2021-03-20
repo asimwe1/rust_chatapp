@@ -66,7 +66,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// [`add()`], [`add_private()`], [`remove()`], and [`remove_private()`]
 /// methods.
 ///
-/// [`Request::cookies()`]: rocket::Request::cookies()
+/// [`Request::cookies()`]: crate::Request::cookies()
 /// [`get()`]: #method.get
 /// [`get_private()`]: #method.get_private
 /// [`get_pending()`]: #method.get_pending

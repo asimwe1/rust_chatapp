@@ -50,33 +50,32 @@ instance. Usage is straightforward:
      ```
 
 [`local`]: @api/rocket/local/
-[`Client`]: @api/rocket/local/struct.Client.html
-[`LocalRequest`]: @api/rocket/local/struct.LocalRequest.html
+[`Client`]: @api/rocket/local/#client
+[`LocalRequest`]: @api/rocket/local/#localrequest
 [`Rocket`]: @api/rocket/struct.Rocket.html
 
 ## Validating Responses
 
-A `dispatch` of a `LocalRequest` returns a [`LocalResponse`] which can be used
-transparently as a [`Response`] value. During testing, the response is usually
-validated against expected properties. These includes things like the response
-HTTP status, the inclusion of headers, and expected body data.
+A `dispatch` of a `LocalRequest` returns a [`LocalResponse`] which can be
+inspected for validaty. During testing, the response is usually validated
+against expected properties. These includes things like the response HTTP
+status, the inclusion of headers, and expected body data.
 
-The [`Response`] type provides methods to ease this sort of validation. We list
+[`LocalResponse`] type provides methods to ease this sort of validation. We list
 a few below:
 
   * [`status`]: returns the HTTP status in the response.
   * [`content_type`]: returns the Content-Type header in the response.
   * [`headers`]: returns a map of all of the headers in the response.
-  * [`body_string`]: returns the body data as a `String`.
-  * [`body_bytes`]: returns the body data as a `Vec<u8>`.
+  * [`into_string`]: reads the body data into a `String`.
+  * [`into_bytes`]: reads the body data into a `Vec<u8>`.
 
-[`LocalResponse`]: @api/rocket/local/struct.LocalResponse.html
-[`Response`]: @api/rocket/struct.Response.html
-[`status`]: @api/rocket/struct.Response.html#method.status
-[`content_type`]: @api/rocket/struct.Response.html#method.content_type
-[`headers`]: @api/rocket/struct.Response.html#method.headers
-[`body_string`]: @api/rocket/struct.Response.html#method.body_string
-[`body_bytes`]: @api/rocket/struct.Response.html#method.body_bytes
+[`LocalResponse`]: @api/rocket/local/blocking/struct.LocalResponse.html
+[`status`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.status
+[`content_type`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.content_type
+[`headers`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.headers
+[`into_string`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_string
+[`into_bytes`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
@@ -283,18 +282,32 @@ During compilation, you should see output like:
 
 ```rust,ignore
 note: emitting Rocket code generation debug output
- --> examples/hello_world/src/main.rs:7:1
-  |
-7 | #[get("/")]
-  | ^^^^^^^^^^^
-  |
-  = note:
-    fn rocket_route_fn_hello<'_b>(
-        __req: &'_b ::rocket::Request,
-        __data: ::rocket::Data
-    ) -> ::rocket::handler::Outcome<'_b> {
-        let responder = hello();
-        ::rocket::handler::Outcome::from(__req, responder)
+  --> examples/hello_world/src/main.rs:14:1
+   |
+14 | #[get("/world")]
+   | ^^^^^^^^^^^^^^^^
+   |
+   = note:
+    impl From<world> for rocket::StaticRouteInfo {
+        fn from(_: world) -> rocket::StaticRouteInfo {
+            fn monomorphized_function<'_b>(
+                __req: &'_b rocket::request::Request<'_>,
+                __data: rocket::data::Data,
+            ) -> rocket::handler::HandlerFuture<'_b> {
+                ::std::boxed::Box::pin(async move {
+                    let ___responder = world();
+                    rocket::handler::Outcome::from(__req, ___responder)
+                })
+            }
+            rocket::StaticRouteInfo {
+                name: "world",
+                method: ::rocket::http::Method::Get,
+                path: "/world",
+                handler: monomorphized_function,
+                format: ::std::option::Option::None,
+                rank: ::std::option::Option::None,
+            }
+        }
     }
 ```
 
