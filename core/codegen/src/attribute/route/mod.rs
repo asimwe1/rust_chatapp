@@ -24,6 +24,10 @@ impl Route {
 fn query_decls(route: &Route) -> Option<TokenStream> {
     use devise::ext::{Split2, Split6};
 
+    if route.query_params.is_empty() && route.query_guards().next().is_none() {
+        return None;
+    }
+
     define_spanned_export!(Span::call_site() =>
         __req, __data, _log, _form, Outcome, _Ok, _Err, _Some, _None
     );
