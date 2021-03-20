@@ -16,16 +16,16 @@ impl Route {
     ///
     /// Because query parsing is lenient, and dynamic query parameters can be
     /// missing, queries do not impact whether two routes collide.
-    #[doc(hidden)]
-    pub fn collides_with(&self, other: &Route) -> bool {
+    pub(crate) fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
             && paths_collide(self, other)
             && formats_collide(self, other)
     }
 
-    /// Determines if this route matches against the given request. This means
-    /// that:
+    /// Determines if this route matches against the given request.
+    ///
+    /// This means that:
     ///
     ///   * The route's method matches that of the incoming request.
     ///   * The route's format (if any) matches that of the incoming request.
@@ -34,10 +34,9 @@ impl Route {
     ///   * All static components in the route's path match the corresponding
     ///     components in the same position in the incoming request.
     ///   * All static components in the route's query string are also in the
-    ///     request query string, though in any position.
-    ///     - If no query in route, requests with/without queries match.
-    #[doc(hidden)]
-    pub fn matches(&self, req: &Request<'_>) -> bool {
+    ///     request query string, though in any position. If there is no query
+    ///     in the route, requests with/without queries match.
+    pub(crate) fn matches(&self, req: &Request<'_>) -> bool {
         self.method == req.method()
             && paths_match(self, req)
             && queries_match(self, req)
