@@ -32,7 +32,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
         )
         .inner_mapper(MapperBuild::new()
             .with_output(|_, output| quote! {
-                fn respond_to(self, __req: &'__r #Request) -> #_response::Result<'__o> {
+                fn respond_to(self, __req: &'__r #Request<'_>) -> #_response::Result<'__o> {
                     #output
                 }
             })

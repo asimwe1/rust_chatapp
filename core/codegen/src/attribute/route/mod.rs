@@ -262,7 +262,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn from(_: #handler_fn_name) -> #StaticRouteInfo {
                 fn monomorphized_function<'_b>(
-                    #__req: &'_b #Request,
+                    #__req: &'_b #Request<'_>,
                     #__data: #Data
                 ) -> #HandlerFuture<'_b> {
                     #_Box::pin(async move {
