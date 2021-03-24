@@ -13,7 +13,7 @@ use atomic::{Atomic, Ordering};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 
-use crate::{Rocket, Config, Shutdown, Route};
+use crate::{Rocket, Config, Route};
 use crate::http::{hyper, uri::{Origin, Segments}, uncased::UncasedStr};
 use crate::http::{Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
@@ -34,9 +34,7 @@ pub struct Request<'r> {
 }
 
 pub(crate) struct RequestState<'r> {
-    pub config: &'r Config,
-    pub managed: &'r Container![Send + Sync],
-    pub shutdown: &'r Shutdown,
+    pub rocket: &'r Rocket,
     pub route: Atomic<Option<&'r Route>>,
     pub cookies: CookieJar<'r>,
     pub accept: Storage<Option<Accept>>,
@@ -59,9 +57,7 @@ impl Request<'_> {
 impl RequestState<'_> {
     fn clone(&self) -> Self {
         RequestState {
-            config: self.config,
-            managed: self.managed,
-            shutdown: self.shutdown,
+            rocket: self.rocket,
             route: Atomic::new(self.route.load(Ordering::Acquire)),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
@@ -85,9 +81,7 @@ impl<'r> Request<'r> {
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
-                config: &rocket.config,
-                managed: &rocket.managed_state,
-                shutdown: &rocket.shutdown_handle,
+                rocket,
                 route: Atomic::new(None),
                 cookies: CookieJar::new(&rocket.config),
                 accept: Storage::new(),
@@ -477,7 +471,7 @@ impl<'r> Request<'r> {
     /// let config = request.config();
     /// ```
     pub fn config(&self) -> &'r Config {
-        &self.state.config
+        &self.state.rocket.config
     }
 
     /// Returns the configured application data limits.
@@ -496,7 +490,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.limits().get("file/pdf"), Some(1.mebibytes()));
     /// ```
     pub fn limits(&self) -> &'r Limits {
-        &self.state.config.limits
+        &self.config().limits
     }
 
     /// Get the presently matched route, if any.
@@ -550,7 +544,7 @@ impl<'r> Request<'r> {
     pub fn managed_state<T>(&self) -> Option<&'r T>
         where T: Send + Sync + 'static
     {
-        self.state.managed.try_get::<T>()
+        self.state.rocket.state::<T>()
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached

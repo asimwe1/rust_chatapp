@@ -55,6 +55,6 @@ impl<'r> FromRequest<'r> for Shutdown {
 
     #[inline]
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(request.state.shutdown.clone())
+        Outcome::Success(request.state.rocket.shutdown())
     }
 }

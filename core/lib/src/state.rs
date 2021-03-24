@@ -174,10 +174,10 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for State<'r, T> {
 
     #[inline(always)]
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        match req.state.managed.try_get::<T>() {
+        match req.managed_state::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
-                error_!("Attempted to retrieve unmanaged state!");
+                error_!("Attempted to retrieve unmanaged state `{}`!", std::any::type_name::<T>());
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }

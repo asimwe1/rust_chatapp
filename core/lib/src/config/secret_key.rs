@@ -186,7 +186,7 @@ impl<'r> FromRequest<'r> for &'r SecretKey {
     type Error = std::convert::Infallible;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(&req.state.config.secret_key)
+        Outcome::Success(&req.config().secret_key)
     }
 }
 
