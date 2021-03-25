@@ -57,6 +57,19 @@ use crate::form::prelude::*;
 ///
 /// ## Data Limits
 ///
+/// The total amount of data accepted by the `Form` data guard is limited by the
+/// following limits:
+///
+/// | Limit Name  | Default | Description                        |
+/// |-------------|---------|------------------------------------|
+/// | `form`      | 32KiB   | total limit for url-encoded forms  |
+/// | `data-form` | 2MiB    | total limit for multipart forms    |
+/// | `*`         | N/A     | each field type has its own limits |
+///
+/// As noted above, each form field type (a form guard) typically imposes its
+/// own limits. For example, the `&str` form guard imposes a data limit of
+/// `string` when multipart data is streamed.
+///
 /// ### URL-Encoded Forms
 ///
 /// The `form` limit specifies the data limit for an entire url-encoded form
@@ -95,7 +108,7 @@ use crate::form::prelude::*;
 ///
 /// See the [`Limits`](crate::data::Limits) and [`config`](crate::config) docs
 /// for more.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Form<T>(T);
 
 impl<T> Form<T> {
@@ -137,28 +150,98 @@ impl<T> From<T> for Form<T> {
     }
 }
 
-impl Form<()> {
-    /// `string` must represent a decoded string.
-    pub fn values(string: &str) -> impl Iterator<Item = ValueField<'_>> {
-        // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
-        string.split('&')
-            .filter(|s| !s.is_empty())
-            .map(ValueField::parse)
-    }
-}
-
 impl<'r, T: FromForm<'r>> Form<T> {
-    /// `string` must represent a decoded string.
+    /// Leniently parses a `T` from a **percent-decoded**
+    /// `x-www-form-urlencoded` form string. Specifically, this method
+    /// implements [§5.1 of the WHATWG URL Living Standard] with the exception
+    /// of steps 3.4 and 3.5, which are assumed to already be relfected in
+    /// `string`, and then parses the fields as `T`.
+    ///
+    /// [§5.1 of the WHATWG URL Living Standard]: https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::{Form, FromForm};
+    ///
+    /// #[derive(FromForm)]
+    /// struct Pet<'r> {
+    ///     name: &'r str,
+    ///     wags: bool,
+    /// }
+    ///
+    /// let string = "name=Benson Wagger!&wags=true";
+    /// let pet: Pet<'_> = Form::parse(string).unwrap();
+    /// assert_eq!(pet.name, "Benson Wagger!");
+    /// assert_eq!(pet.wags, true);
+    /// ```
+    #[inline]
     pub fn parse(string: &'r str) -> Result<'r, T> {
         // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
+        Self::parse_iter(Form::values(string))
+    }
+
+    /// Leniently parses a `T` from the **percent-decoded** `fields`.
+    /// Specifically, this method implements [§5.1 of the WHATWG URL Living
+    /// Standard] with the exception of step 3.
+    ///
+    /// [§5.1 of the WHATWG URL Living Standard]: https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::{Form, FromForm, ValueField};
+    ///
+    /// #[derive(FromForm)]
+    /// struct Pet<'r> {
+    ///     name: &'r str,
+    ///     wags: bool,
+    /// }
+    ///
+    /// let fields = vec![
+    ///     ValueField::parse("name=Bob, the cat. :)"),
+    ///     ValueField::parse("wags=no"),
+    /// ];
+    ///
+    /// let pet: Pet<'_> = Form::parse_iter(fields).unwrap();
+    /// assert_eq!(pet.name, "Bob, the cat. :)");
+    /// assert_eq!(pet.wags, false);
+    /// ```
+    pub fn parse_iter<I>(fields: I) -> Result<'r, T>
+        where I: IntoIterator<Item = ValueField<'r>>
+    {
+        // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
         let mut ctxt = T::init(Options::Lenient);
-        Form::values(string).for_each(|f| T::push_value(&mut ctxt, f));
+        fields.into_iter().for_each(|f| T::push_value(&mut ctxt, f));
         T::finalize(ctxt)
     }
 }
 
 impl<T: for<'a> FromForm<'a> + 'static> Form<T> {
-    /// `string` must represent an undecoded string.
+    /// Leniently parses a `T` from a raw, `x-www-form-urlencoded` form string.
+    /// Specifically, this method implements [§5.1 of the WHATWG URL Living
+    /// Standard]. Because percent-decoding might modify the input string, the
+    /// output type `T` must be `'static`.
+    ///
+    /// [§5.1 of the WHATWG URL Living Standard]:https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::RawStr;
+    /// use rocket::form::{Form, FromForm};
+    ///
+    /// #[derive(FromForm)]
+    /// struct Pet {
+    ///     name: String,
+    ///     wags: bool,
+    /// }
+    ///
+    /// let string = RawStr::new("name=Benson+Wagger%21&wags=true");
+    /// let pet: Pet = Form::parse_encoded(string).unwrap();
+    /// assert_eq!(pet.name, "Benson Wagger!");
+    /// assert_eq!(pet.wags, true);
+    /// ```
     pub fn parse_encoded(string: &RawStr) -> Result<'static, T> {
         let buffer = Buffer::new();
         let mut ctxt = T::init(Options::Lenient);
@@ -167,6 +250,33 @@ impl<T: for<'a> FromForm<'a> + 'static> Form<T> {
         }
 
         T::finalize(ctxt).map_err(|e| e.into_owned())
+    }
+}
+
+impl Form<()> {
+    /// Returns an iterator of fields parsed from a `x-www-form-urlencoded` form
+    /// string. Specifically, this method implements steps 1, 2, and 3.1 - 3.3
+    /// of [§5.1 of the WHATWG URL Living Standard]. Fields in the returned
+    /// iterator _are not_ percent-decoded.
+    ///
+    /// [§5.1 of the WHATWG URL Living Standard]:https://url.spec.whatwg.org/#application/x-www-form-urlencoded
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::{Form, ValueField};
+    ///
+    /// let string = "name=Bobby Brown&&&email=me@rocket.rs";
+    /// let mut values = Form::values(string);
+    /// assert_eq!(values.next().unwrap(), ValueField::parse("name=Bobby Brown"));
+    /// assert_eq!(values.next().unwrap(), ValueField::parse("email=me@rocket.rs"));
+    /// assert!(values.next().is_none());
+    /// ```
+    pub fn values(string: &str) -> impl Iterator<Item = ValueField<'_>> {
+        // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
+        string.split('&')
+            .filter(|s| !s.is_empty())
+            .map(ValueField::parse)
     }
 }
 

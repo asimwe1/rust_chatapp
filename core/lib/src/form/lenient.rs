@@ -3,63 +3,48 @@ use std::ops::{Deref, DerefMut};
 use crate::form::prelude::*;
 use crate::http::uri::{Query, FromUriParam};
 
-/// A form guard for parsing form types strictly.
+/// A form guard for parsing form types leniently.
 ///
 /// This type implements the [`FromForm`] trait and thus can be used as a
-/// generic parameter to the [`Form`] data guard: `Form<Strict<T>>`, where `T`
+/// generic parameter to the [`Form`] data guard: `Form<Lenient<T>>`, where `T`
 /// implements `FromForm`. Unlike using `Form` directly, this type uses a
-/// _strict_ parsing strategy: forms that contains a superset of the expected
+/// _lenient_ parsing strategy: forms that contains a superset of the expected
 /// fields (i.e, extra fields) will fail to parse and defaults will not be use
 /// for missing fields.
 ///
-/// # Strictness
+/// # Lenient Parsing
 ///
-/// A `Strict<T>` will parse successfully from an incoming form only if
-/// the form contains the exact set of fields in `T`. Said another way, a
-/// `Strict<T>` will error on missing and/or extra fields. For instance, if an
-/// incoming form contains the fields "a", "b", and "c" while `T` only contains
-/// "a" and "c", the form _will not_ parse as `Strict<T>`.
+/// A `Lenient<T>` will parse successfully from an incoming form even if the
+/// form contains extra or missing fields. If fields are missing, the form field
+/// type's default will be used, if there is one. Extra fields are ignored; only
+/// the first is parsed and validated. This is the default strategy for
+/// [`Form`].
 ///
 /// # Usage
 ///
-/// `Strict<T>` implements [`FromForm`] as long as `T` implements `FromForm`. As
-/// such, `Form<Strict<T>>` is a data guard:
+/// `Lenient<T>` implements [`FromForm`] as long as `T` implements `FromForm`.
+/// As such, `Form<Lenient<T>>` is a data guard.
+///
+/// Note that `Form<T>` _already_ parses leniently, so a `Form<Lenient<T>>` is
+/// redundant and equal to `Form<T>`. `Lenient`, however, can be used to make
+/// otherwise strict parses lenient, for example, in `Option<Lenient<T>>`:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::form::{Form, Strict};
+/// use rocket::form::Lenient;
 ///
 /// #[derive(FromForm)]
 /// struct UserInput {
-///     value: String
-/// }
-///
-/// #[post("/submit", data = "<user_input>")]
-/// fn submit_task(user_input: Form<Strict<UserInput>>) -> String {
-///     format!("Your value: {}", user_input.value)
+///     lenient_inner_option: Option<Lenient<bool>>,
 /// }
 /// ```
-///
-/// `Strict` can also be used to make individual fields strict while keeping the
-/// overall structure and remaining fields lenient:
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// use rocket::form::{Form, Strict};
-///
-/// #[derive(FromForm)]
-/// struct UserInput {
-///     required: Strict<bool>,
-///     uses_default: bool
-/// }
-/// ```
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Strict<T>(T);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Lenient<T>(T);
 
-impl<T> Strict<T> {
+impl<T> Lenient<T> {
     /// Consumes `self` and returns the inner value.
     ///
-    /// Note that since `Strict` implements [`Deref`] and [`DerefMut`] with
+    /// Note that since `Lenient` implements [`Deref`] and [`DerefMut`] with
     /// target `T`, reading and writing an inner value can be accomplished
     /// transparently.
     ///
@@ -67,7 +52,7 @@ impl<T> Strict<T> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::form::{Form, Strict};
+    /// use rocket::form::{Form, Lenient};
     ///
     /// #[derive(FromForm)]
     /// struct MyForm {
@@ -75,7 +60,7 @@ impl<T> Strict<T> {
     /// }
     ///
     /// #[post("/submit", data = "<form>")]
-    /// fn submit(form: Form<Strict<MyForm>>) -> String {
+    /// fn submit(form: Form<Lenient<MyForm>>) -> String {
     ///     // We can read or mutate a value transparently:
     ///     let field: &str = &form.field;
     ///
@@ -89,12 +74,12 @@ impl<T> Strict<T> {
 }
 
 #[crate::async_trait]
-impl<'v, T: FromForm<'v>> FromForm<'v> for Strict<T> {
+impl<'v, T: FromForm<'v>> FromForm<'v> for Lenient<T> {
     type Context = T::Context;
 
     #[inline(always)]
     fn init(opts: Options) -> Self::Context {
-        T::init(Options { strict: true, ..opts })
+        T::init(Options { strict: false, ..opts })
     }
 
     #[inline(always)]
@@ -113,7 +98,7 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Strict<T> {
     }
 }
 
-impl<T> Deref for Strict<T> {
+impl<T> Deref for Lenient<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -121,20 +106,20 @@ impl<T> Deref for Strict<T> {
     }
 }
 
-impl<T> DerefMut for Strict<T> {
+impl<T> DerefMut for Lenient<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<T> From<T> for Strict<T> {
+impl<T> From<T> for Lenient<T> {
     #[inline]
-    fn from(val: T) -> Strict<T> {
-        Strict(val)
+    fn from(val: T) -> Lenient<T> {
+        Lenient(val)
     }
 }
 
-impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for Strict<T> {
+impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for Lenient<T> {
     type Target = T::Target;
 
     #[inline(always)]

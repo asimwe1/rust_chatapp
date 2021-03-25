@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use crate::form::*;
 
 fn parse<'v, T: FromForm<'v>>(values: &[&'v str]) -> Result<'v, T> {
-    let mut context = T::init(Options::Lenient);
-    values.iter().for_each(|v| T::push_value(&mut context, ValueField::parse(*v)));
-    T::finalize(context)
+    Form::parse_iter(values.iter().cloned().map(ValueField::parse))
 }
 
 macro_rules! map {
@@ -27,7 +25,7 @@ macro_rules! vec {
 macro_rules! assert_values_parse_eq {
     ($($v:expr => $T:ty = $expected:expr),* $(,)?) => (
         $(
-            assert_value_parse_eq!($v => $T = $expected);
+            assert_value_parse_eq!($v as &[&str] => $T = $expected);
         )*
     )
 }
@@ -41,7 +39,25 @@ macro_rules! assert_value_parse_eq {
                 panic!("unexpected parse of {:?}\n {:?} instead of {:?}",
                     $v, actual, expected)
             }
-            Err(e) => panic!("parse of {:?} failed: {:?}", $v, e)
+            Err(e) => panic!("parse `{:?} {}` failed: {:?}", $v, stringify!(=> $T = $expected), e)
+        }
+    )
+}
+
+macro_rules! assert_parses_fail {
+    ($($v:expr => $T:ty),* $(,)?) => (
+        $(
+            assert_parse_fails!($v as &[&str] => $T);
+        )*
+    )
+}
+
+macro_rules! assert_parse_fails {
+    ($v:expr => $T:ty) => (
+        let diag = format!("{:?} {}", $v, stringify!(=> $T = $expected));
+        match parse::<$T>($v) {
+            Ok(actual) => panic!("unexpectedly parsed {} as {:?}", diag, actual),
+            Err(_) => { /* ok */ }
         }
     )
 }
@@ -65,6 +81,41 @@ fn bool() {
     assert_values_parse_eq! {
         &["=true", "=yes", "=on"] => Vec<bool> = vec![true, true, true],
         &["=false", "=no", "=off"] => Vec<bool> = vec![false, false, false],
+        &["=tRuE", "=YES", "=On"] => Vec<bool> = vec![true, true, true],
+        &["=fAlSE", "=NO", "=OFF"] => Vec<bool> = vec![false, false, false],
+    }
+
+    assert_parses_fail! {
+        &[] => Strict<bool>,
+        &["=unknown"] => bool,
+        &["=unknown", "=please"] => Vec<bool>,
+    }
+}
+
+#[test]
+fn defaults() {
+    assert_values_parse_eq! {
+        &[] => bool = false,
+        &[] => Option<&str> = None,
+        &[] => Option<time::Date> = None,
+
+        &[] => Option<bool> = None,
+        &[] => Option<Strict<bool>> = None,
+
+        &[] => Result<'_, bool> = Ok(false),
+        &[] => Result<'_, Strict<bool>> = Err(error::ErrorKind::Missing.into()),
+
+        &["=unknown"] => Option<bool> = None,
+        &["=unknown"] => Option<Strict<bool>> = None,
+        &["=unknown"] => Option<Lenient<bool>> = None,
+
+        &[] => Option<Lenient<bool>> = Some(false.into()),
+        &["=123"] => Option<time::Date> = None,
+
+        &["=no"] => Option<bool> = Some(false),
+        &["=yes"] => Option<bool> = Some(true),
+        &["=yes"] => Option<Lenient<bool>> = Some(true.into()),
+        &["=yes"] => Option<Strict<bool>> = Some(true.into()),
     }
 }
 

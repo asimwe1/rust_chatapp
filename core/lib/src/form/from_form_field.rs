@@ -46,79 +46,8 @@ use crate::form::prelude::*;
 ///
 /// # Provided Implementations
 ///
-/// Rocket implements `FromFormField` for many types. Their behavior is
-/// documented here.
-///
-///   *
-///       * Numeric types: **`f32`, `f64`, `isize`, `i8`, `i16`, `i32`, `i64`,
-///         `i128`, `usize`, `u8`, `u16`, `u32`, `u64`, `u128`**
-///       * Address types: **`IpAddr`, `Ipv4Addr`, `Ipv6Addr`, `SocketAddrV4`,
-///         `SocketAddrV6`, `SocketAddr`**
-///       * Non-zero types: **`NonZeroI8`, `NonZeroI16`, `NonZeroI32`,
-///         `NonZeroI64`, `NonZeroI128`, `NonZeroIsize`, `NonZeroU8`,
-///         `NonZeroU16`, `NonZeroU32`, `NonZeroU64`, `NonZeroU128`,
-///         `NonZeroUsize`**
-///
-///     A value is validated successfully if the `from_str` method for the given
-///     type returns successfully. Only accepts form _values_, not binary data.
-///
-///     **No type-specific data limit applies.**
-///
-///   * **`bool`**
-///
-///     A value is validated successfully as `true` if the the form value is one
-///     of `"on"`, `"yes"`, or `"true"` and `false` if the value is one of
-///     `"off"`, `"no"`, or `"false"`. Defaults to `false` otherwise. Only
-///     accepts form _values_, not binary data.
-///
-///     **No type-specific data limit applies.**
-///
-///   * **`&str`, `String`**
-///
-///     The decoded form value or data is returned directly without
-///     modification.
-///
-///     **The data limit `string` applies.**
-///
-///   * **[`TempFile`]**
-///
-///     Streams the form field value or data to a temporary file.
-///
-///     **See [`TempFile`] for details and data limits.**
-///
-///   * **[`Capped<TempFile>`], [`Capped<String>`], [`Capped<&str>`]**
-///
-///     Streams the form value or data to the inner value, succeeding even if
-///     the data exceeds the respective type limit by truncating the data.
-///
-///     **See [`Capped`] for details.**
-///
-///   * **[`time::Date`]**
-///
-///     Parses a date in the `%F` format, that is, `%Y-$m-%d` or `YYYY-MM-DD`.
-///     This is the `"date"` HTML input type. Only accepts form _values_, not
-///     binary data.
-///
-///     **No type-specific data limit applies.**
-///
-///   * **[`time::PrimitiveDateTime`]**
-///
-///     Parses a date in `%FT%R` or `%FT%T` format, that is, `YYYY-MM-DDTHH:MM`
-///     or `YYYY-MM-DDTHH:MM:SS`. This is the `"datetime-local"` HTML input type
-///     without support for the millisecond variant. Only accepts form _values_,
-///     not binary data.
-///
-///     **No type-specific data limit applies.**
-///
-///   * **[`time::Time`]**
-///
-///     Parses a time in `%R` or `%T` format, that is, `HH:MM` or `HH:MM:SS`.
-///     This is the `"time"` HTML input type without support for the millisecond
-///     variant. Only accepts form _values_, not binary data.
-///
-///     **No type-specific data limit applies.**
-///
-/// [`TempFile`]: crate::data::TempFile
+/// See [`FromForm`](crate::form::FromForm#provided-implementations) for a list
+/// of all form guards, including those implemented via `FromFormField`.
 ///
 /// # Implementing
 ///
@@ -228,19 +157,30 @@ use crate::form::prelude::*;
 // this concern. Thus, for now, we keep this as one trait.
 #[crate::async_trait]
 pub trait FromFormField<'v>: Send + Sized {
+    /// Parse a value of `T` from a form value field.
+    ///
+    /// The default implementation returns an error of
+    /// [`ValueField::unexpected()`].
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
         Err(field.unexpected())?
     }
 
+    /// Parse a value of `T` from a form data field.
+    ///
+    /// The default implementation returns an error of
+    /// [`DataField::unexpected()`].
     async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
         Err(field.unexpected())?
     }
 
-    /// Returns a default value to be used when the form field does not exist or
-    /// parsing otherwise fails.
+    /// Returns a default value, if any exists, to be used during lenient
+    /// parsing when the form field is missing.
     ///
-    /// If this returns `None`, the field is required. Otherwise, this should
-    /// return `Some(default_value)`. The default implementation returns `None`.
+    /// A return value of `None` means that field is required to exist and parse
+    /// successfully, always. A return value of `Some(default)` means that
+    /// `default` should be used when a field is missing.
+    ///
+    /// The default implementation returns `None`.
     fn default() -> Option<Self> { None }
 }
 

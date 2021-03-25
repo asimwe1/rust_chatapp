@@ -45,94 +45,7 @@
 //!   * `map[k:1]=Bob`
 //!   * `people[bob]nickname=Stan`
 //!
-//! # Parsing
-//!
-//! The [`FromForm`] trait describes a push-based parser for this wire format.
-//! Fields are preprocessed into either [`ValueField`]s or [`DataField`]s which
-//! are then pushed to the parser in [`FromForm::push_value()`] or
-//! [`FromForm::push_data()`], respectively. Both url-encoded forms and
-//! multipart forms are supported. All url-encoded form fields are preprocessed
-//! as [`ValueField`]s. Multipart form fields with Content-Types are processed
-//! as [`DataField`]s while those without a set Content-Type are processed as
-//! [`ValueField`]s. `ValueField` field names and values are percent-decoded.
-//!
-//! # Data Limits
-//!
-//! The total amount of data accepted by the [`Form`] data guard is limited by
-//! the following limits:
-//!
-//! | Limit Name  | Default | Description                        |
-//! |-------------|---------|------------------------------------|
-//! | `form`      | 32KiB   | total limit for url-encoded forms  |
-//! | `data-form` | 2MiB    | total limit for multipart forms    |
-//! | `*`         | N/A     | each field type has its own limits |
-//!
-//! Additionally, as noted above, each form field type (a form guard) typically
-//! imposes its own limits. For example, the `&str` form guard imposes a data
-//! limit of `string` when multipart data is streamed.
-//!
-//! See the [`Limits`](crate::data::Limits) and [`Form#data-limits`] docs for
-//! more.
-//!
-//! # A Simple Example
-//!
-//! The following example uses `f1=v1&f2=v2` to illustrate field/value pairs
-//! `(f1, v2)` and `(f2, v2)`. This is the same encoding used to send HTML forms
-//! over HTTP but Rocket's push-parsers are unaware of any specific encoding,
-//! dealing only with logical `field`s, `index`es, and `value`s.
-//!
-//! ## A Single Field (`T: FormFormField`)
-//!
-//! The simplest example parses a single value of type `T` from a string with an
-//! optional default value: this is `impl<T: FromFormField> FromForm for T`:
-//!
-//!   1. **Initialization.** The context stores form options and an `Option` of
-//!      `Result<T, form::Error>` for storing the `result` of parsing `T`, which
-//!      is initially set to `None`.
-//!
-//!      ```rust,ignore
-//!      struct Context<T> {
-//!          opts: Options,
-//!          result: Option<Result<T>>,
-//!      }
-//!      ```
-//!
-//!   2. **Push.** If `context.result` is `None`, `T` is parsed from `field`,
-//!      and the result is stored in `context.result`. Otherwise a field has
-//!      already been parsed and nothing is done.
-//!
-//!      ```rust,ignore
-//!      fn push(ctxt: &mut Self::Context, field: Field<'v>) {
-//!          if ctxt.result.is_none() {
-//!              ctxt.result = Some(Self::from_field(field));
-//!          }
-//!      }
-//!      ```
-//!
-//!   3. **Finalization.** If `ctxt.result` is `None` and `T` has a default,
-//!      the default is returned. Otherwise a `Missing` error is returned. If
-//!      `ctxt.result` is `Some(v)`, the result `v` is returned.
-//!
-//!      ```rust,ignore
-//!      fn finalize(ctxt: Self::Context) -> Result<Self> {
-//!          match ctxt.result {
-//!              Some(value) => Ok(value),
-//!              None => match <T as FromFormField>::default() {
-//!                  Some(default) => Ok(default),
-//!                  None => Err(ErrorKind::Missing)?,
-//!              }
-//!          }
-//!      }
-//!      ```
-//!
-//! This implementation is complete except for the following details:
-//!
-//!   * not being pseudocode, of course
-//!   * checking for duplicate pushes when parsing is `strict`
-//!   * disallowing defaults when parsing is `strict`
-//!   * tracking the field's name and value to generate a complete `Error`
-//!
-//! See [`FromForm`] for full details on push-parsing and a complete example.
+//! See [`FromForm`] for full details on push-parsing and complete examples.
 
 // ## Maps w/named Fields (`struct`)
 //
@@ -453,6 +366,7 @@ mod from_form_field;
 mod form;
 mod context;
 mod strict;
+mod lenient;
 mod parser;
 pub mod validate;
 pub mod name;
@@ -477,6 +391,7 @@ pub use from_form::*;
 pub use form::*;
 pub use context::*;
 pub use strict::*;
+pub use lenient::*;
 
 #[doc(hidden)]
 pub mod prelude {

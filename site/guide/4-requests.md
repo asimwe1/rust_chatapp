@@ -726,7 +726,7 @@ fn new(task: Option<Form<Task>>) { /* .. */ }
 [`Form`]: @api/rocket/form/struct.Form.html
 [`FromForm`]: @api/rocket/form/trait.FromForm.html
 
-### Strict Parsing
+### Parsing Strategy
 
 Rocket's `FromForm` parsing is _lenient_ by default: a `Form<T>` will parse
 successfully from an incoming form even if it contains extra, duplicate, or
@@ -768,7 +768,41 @@ struct Input {
 fn new(input: Form<Input>) { /* .. */ }
 ```
 
+[`Lenient`] is the _lenient_ analog to `Strict`, which forces parsing to be
+lenient. `Form` is lenient by default, so a `Form<Lenient<T>>` is redundant, but
+`Lenient` can be used to overwrite a strict parse as lenient:
+`Option<Lenient<T>>`.
+
 [`Form<Strict<T>>`]: @api/rocket/form/struct.Strict.html
+[`Lenient`]: @api/rocket/form/struct.Lenient.html
+
+### Defaults
+
+A form guard may specify a default value to use when a field is missing. The
+default value is used only when parsing is _lenient_. When _strict_, all errors,
+including, missing fields are propagated directly.
+
+Some types with defaults include `bool`, which defaults to `false`, useful for
+checkboxes, `Option<T>`, which defaults to `None`, and [`form::Result`], which
+defaults to `Err(Missing)` or otherwise collects errors in an `Err` of
+[`Errors<'_>`]. Defaulting guards can be used just like any other form guard:
+
+```rust
+# use rocket::form::FromForm;
+use rocket::form::{self, Errors};
+
+#[derive(FromForm)]
+struct MyForm<'v> {
+    maybe_string: Option<&'v str>,
+    ok_or_error: form::Result<'v, Vec<&'v str>>,
+    here_or_false: bool,
+}
+
+# rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
+```
+
+[`Errors<'_>`]: @api/rocket/form/struct.Errors.html
+[`form::Result`]: @api/rocket/form/type.Result.html
 
 ### Field Renaming
 
@@ -912,30 +946,6 @@ fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
 If a field's validation doesn't depend on other fields (validation is _local_),
 it is validated prior to those fields that do. For `CreditCard`, `cvv` and
 `expiration` will be validated prior to `number`.
-
-### Defaults
-
-The [`FromForm`] trait allows types to specify a default value if one isn't
-provided in a submitted form. This includes types such as `bool`, useful for
-checkboxes, and `Option<T>`. Additionally, `FromForm` is implemented for
-`Result<T, Errors<'_>>` where the error value is [`Errors<'_>`]. All of these
-types can be used just like any other form field:
-
-```rust
-# use rocket::form::FromForm;
-use rocket::form::Errors;
-
-#[derive(FromForm)]
-struct MyForm<'v> {
-    maybe_string: Option<String>,
-    ok_or_error: Result<Vec<String>, Errors<'v>>,
-    here: bool,
-}
-
-# rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
-```
-
-[`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 
 ### Collections
 

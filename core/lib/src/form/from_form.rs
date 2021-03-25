@@ -66,15 +66,80 @@ use crate::http::uncased::AsUncased;
 /// [`key()`]: NameView::key()
 /// [forms guide]: https://rocket.rs/master/guide/requests/#forms
 ///
+/// # Parsing Strategy
+///
+/// Form parsing is either _strict_ or _lenient_, controlled by
+/// [`Options::strict`]. A _strict_ parse errors when there are missing or extra
+/// fields, while a _lenient_ parse allows both, providing there is a
+/// [`default()`](FromForm::default()) in the case of a missing field.
+///
+/// Most type inherit their strategy on [`FromForm::init()`], but some types
+/// like `Option` override the requested strategy. The strategy can also be
+/// overwritted manually, per-field or per-value, by using the [`Strict`] or
+/// [`Lenient`] form guard:
+///
+/// ```rust
+/// use rocket::form::{self, FromForm, Strict, Lenient};
+///
+/// #[derive(FromForm)]
+/// struct TodoTask<'r> {
+///     strict_bool: Strict<bool>,
+///     lenient_inner_option: Option<Lenient<bool>>,
+///     strict_inner_result: form::Result<'r, Strict<bool>>,
+/// }
+/// ```
+///
+/// # Defaults
+///
+/// A form guard may have a _default_ which is used in case of a missing field
+/// when parsing is _lenient_. When parsing is strict, all errors, including
+/// missing fields, are propagated directly.
+///
 /// # Provided Implementations
 ///
-/// Rocket implements `FromForm` for several types. Their behavior is documented
-/// here.
+/// Rocket implements `FromForm` for many common types. As a result, most
+/// applications will never need a custom implementation of `FromForm` or
+/// `FromFormField`. Their behavior is documented in the table below.
 ///
-///   * **`T` where `T: FromFormField`**
+/// | Type               | Strategy    | Default           | Data   | Value  | Notes                                              |
+/// |--------------------|-------------|-------------------|--------|--------|----------------------------------------------------|
+/// | [`Strict<T>`]      | **strict**  | if `strict` `T`   | if `T` | if `T` | `T: FromForm`                                      |
+/// | [`Lenient<T>`]     | **lenient** | if `lenient` `T`  | if `T` | if `T` | `T: FromForm`                                      |
+/// | `Option<T>`        | **strict**  | `None`            | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | [`Result<T>`]      | _inherit_   | `T::finalize()`   | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | `Vec<T>`           | _inherit_   | `vec![]`          | if `T` | if `T` | `T: FromForm`                                      |
+/// | [`HashMap<K, V>`]  | _inherit_   | `HashMap::new()`  | if `V` | if `V` | `K: FromForm + Eq + Hash`, `V: FromForm`           |
+/// | [`BTreeMap<K, V>`] | _inherit_   | `BTreeMap::new()` | if `V` | if `V` | `K: FromForm + Ord`, `V: FromForm`                 |
+/// | `bool`             | _inherit_   | `false`           | No     | Yes    | `"yes"/"on"/"true"`, `"no"/"off"/"false"`          |
+/// | (un)signed int     | _inherit_   | **no default**    | No     | Yes    | `{u,i}{size,8,16,32,64,128}`                       |
+/// | _nonzero_ int      | _inherit_   | **no default**    | No     | Yes    | `NonZero{I,U}{size,8,16,32,64,128}`                |
+/// | float              | _inherit_   | **no default**    | No     | Yes    | `f{32,64}`                                         |
+/// | `&str`             | _inherit_   | **no default**    | Yes    | Yes    | Percent-decoded. Data limit `string` applies.      |
+/// | `String`           | _inherit_   | **no default**    | Yes    | Yes    | Exactly `&str`, but owned. Prefer `&str`.          |
+/// | IP Address         | _inherit_   | **no default**    | No     | Yes    | [`IpAddr`], [`Ipv4Addr`], [`Ipv6Addr`]             |
+/// | Socket Address     | _inherit_   | **no default**    | No     | Yes    | [`SocketAddr`], [`SocketAddrV4`], [`SocketAddrV6`] |
+/// | [`TempFile`]       | _inherit_   | **no default**    | Yes    | Yes    | Data limits apply. See [`TempFile`].               |
+/// | [`Capped<C>`]      | _inherit_   | **no default**    | Yes    | Yes    | `C` is `&str`, `String`, or `TempFile`.            |
+/// | [`time::Date`]     | _inherit_   | **no default**    | No     | Yes    | `%F` (`YYYY-MM-DD`). HTML "date" input.            |
+/// | [`time::DateTime`] | _inherit_   | **no default**    | No     | Yes    | `%FT%R` or `%FT%T` (`YYYY-MM-DDTHH:MM[:SS]`)       |
+/// | [`time::Time`]     | _inherit_   | **no default**    | No     | Yes    | `%R` or `%T` (`HH:MM[:SS]`)                        |
 ///
-///     This includes types like `&str`, `usize`, and [`Date`](time::Date). See
-///     [`FromFormField`] for details.
+/// [`Result<T>`]: crate::form::Result
+/// [`Strict<T>`]: crate::form::Strict
+/// [`Lenient<T>`]: crate::form::Lenient
+/// [`HashMap<K, V>`]: std::collections::HashMap
+/// [`BTreeMap<K, V>`]: std::collections::BTreeMap
+/// [`TempFile`]: crate::data::TempFile
+/// [`Capped<C>`]: crate::data::Capped
+/// [`time::DateTime`]: time::PrimitiveDateTime
+/// [`IpAddr`]: std::net::IpAddr
+/// [`Ipv4Addr`]: std::net::Ipv4Addr
+/// [`Ipv6Addr`]: std::net::Ipv6Addr
+/// [`SocketAddr`]: std::net::SocketAddr
+/// [`SocketAddrV4`]: std::net::SocketAddrV4
+/// [`SocketAddrV6`]: std::net::SocketAddrV6
+///
+/// ## Additional Notes
 ///
 ///   * **`Vec<T>` where `T: FromForm`**
 ///
@@ -106,26 +171,32 @@ use crate::http::uncased::AsUncased;
 ///     Errors are collected as they occur. Finalization finalizes all pairs and
 ///     returns errors, if any, or the map.
 ///
-///   * **`Option<T>` where `T: FromForm`**
+///   * **[`time::DateTime`]**
 ///
-///     _This form guard always succeeds._
+///     Parses a date in `%FT%R` or `%FT%T` format, that is, `YYYY-MM-DDTHH:MM`
+///     or `YYYY-MM-DDTHH:MM:SS`. This is the `"datetime-local"` HTML input type
+///     without support for the millisecond variant.
 ///
-///     Forwards all pushes to `T` without shifting. Finalizes successfully as
-///     `Some(T)` if `T` finalizes without error or `None` otherwise.
+///   * **[`time::Time`]**
 ///
-///   * **`Result<T, Errors<'r>>` where `T: FromForm`**
-///
-///     _This form guard always succeeds._
-///
-///     Forwards all pushes to `T` without shifting. Finalizes successfully as
-///     `Some(T)` if `T` finalizes without error or `Err(Errors)` with the
-///     errors from `T` otherwise.
+///     Parses a time in `%R` or `%T` format, that is, `HH:MM` or `HH:MM:SS`.
+///     This is the `"time"` HTML input type without support for the millisecond
+///     variant.
 ///
 /// # Push Parsing
 ///
-/// `FromForm` describes a 3-stage push-based interface to form parsing. After
-/// preprocessing (see [the top-level docs](crate::form#parsing)), the three
-/// stages are:
+/// `FromForm` describes a push-based parser for Rocket's [field wire format].
+/// Fields are preprocessed into either [`ValueField`]s or [`DataField`]s which
+/// are then pushed to the parser in [`FromForm::push_value()`] or
+/// [`FromForm::push_data()`], respectively. Both url-encoded forms and
+/// multipart forms are supported. All url-encoded form fields are preprocessed
+/// as [`ValueField`]s. Multipart form fields with Content-Types are processed
+/// as [`DataField`]s while those without a set Content-Type are processed as
+/// [`ValueField`]s. `ValueField` field names and values are percent-decoded.
+///
+/// [field wire format]: crate::form#field-wire-format
+///
+/// Parsing is split into 3 stages. After preprocessing, the three stages are:
 ///
 ///   1. **Initialization.** The type sets up a context for later `push`es.
 ///
@@ -215,6 +286,86 @@ use crate::http::uncased::AsUncased;
 /// [`shift()`]: NameView::shift()
 /// [`key()`]: NameView::key()
 ///
+/// ## A Simple Example
+///
+/// The following example uses `f1=v1&f2=v2` to illustrate field/value pairs
+/// `(f1, v2)` and `(f2, v2)`. This is the same encoding used to send HTML forms
+/// over HTTP, though Rocket's push-parsers are unaware of any specific
+/// encoding, dealing only with logical `field`s, `index`es, and `value`s.
+///
+/// ### A Single Field (`T: FormFormField`)
+///
+/// The simplest example parses a single value of type `T` from a string with an
+/// optional default value: this is `impl<T: FromFormField> FromForm for T`:
+///
+///   1. **Initialization.** The context stores form options and an `Option` of
+///      `Result<T, form::Error>` for storing the `result` of parsing `T`, which
+///      is initially set to `None`.
+///
+///      ```rust
+///      use rocket::form::{self, FromFormField};
+///
+///      struct Context<'r, T: FromFormField<'r>> {
+///          opts: form::Options,
+///          result: Option<form::Result<'r, T>>,
+///      }
+///
+///      # impl<'r, T: FromFormField<'r>> Context<'r, T> {
+///      fn init(opts: form::Options) -> Context<'r, T> {
+///         Context { opts, result: None }
+///      }
+///      # }
+///      ```
+///
+///   2. **Push.** If `ctxt.result` is `None`, `T` is parsed from `field`, and
+///      the result is stored in `context.result`. Otherwise a field has already
+///      been parsed and nothing is done.
+///
+///      ```rust
+///      # use rocket::form::{self, ValueField, FromFormField};
+///      # struct Context<'r, T: FromFormField<'r>> {
+///      #     opts: form::Options,
+///      #     result: Option<form::Result<'r, T>>,
+///      # }
+///      # impl<'r, T: FromFormField<'r>> Context<'r, T> {
+///      fn push_value(ctxt: &mut Context<'r, T>, field: ValueField<'r>) {
+///          if ctxt.result.is_none() {
+///              ctxt.result = Some(T::from_value(field));
+///          }
+///      }
+///      # }
+///      ```
+///
+///   3. **Finalization.** If `ctxt.result` is `None`, parsing is lenient, and
+///      `T` has a default, the default is returned. Otherwise a `Missing` error
+///      is returned. If `ctxt.result` is `Some(v)`, the result `v` is returned.
+///
+///      ```rust
+///      # use rocket::form::{self, FromFormField, error::{Errors, ErrorKind}};
+///      # struct Context<'r, T: FromFormField<'r>> {
+///      #     opts: form::Options,
+///      #     result: Option<form::Result<'r, T>>,
+///      # }
+///      # impl<'r, T: FromFormField<'r>> Context<'r, T> {
+///      fn finalize(ctxt: Context<'r, T>) -> form::Result<'r, T> {
+///          match ctxt.result {
+///              Some(result) => result,
+///              None if ctxt.opts.strict => Err(Errors::from(ErrorKind::Missing)),
+///              None => match T::default() {
+///                  Some(default) => Ok(default),
+///                  None => Err(Errors::from(ErrorKind::Missing)),
+///              }
+///          }
+///      }
+///      # }
+///      ```
+///
+/// This implementation is complete except for the following details:
+///
+///   * handling both `push_data` and `push_value`
+///   * checking for duplicate pushes when parsing is `strict`
+///   * tracking the field's name and value to generate a complete [`Error`]
+///
 /// # Implementing
 ///
 /// Implementing `FromForm` should be a rare occurrence. Prefer instead to use
@@ -253,11 +404,9 @@ use crate::http::uncased::AsUncased;
 /// }
 /// ```
 ///
-/// ## Lifetime
-///
 /// The lifetime `'r` correponds to the lifetime of the request.
 ///
-/// ## Example
+/// ## A More Involved Example
 ///
 /// We illustrate implementation of `FromForm` through an example. The example
 /// implements `FromForm` for a `Pair(A, B)` type where `A: FromForm` and `B:
@@ -278,8 +427,8 @@ use crate::http::uncased::AsUncased;
 ///   * `pair.0=2012-10-12&pair.1=100` as `Pair(time::Date, usize)`
 ///
 /// ```rust
-/// use rocket::form::{self, FromForm, ValueField, DataField, Error, Errors};
 /// use either::Either;
+/// use rocket::form::{self, FromForm, ValueField, DataField, Error, Errors};
 ///
 /// /// A form guard parseable from fields `.0` and `.1`.
 /// struct Pair<A, B>(A, B);
@@ -377,7 +526,7 @@ pub trait FromForm<'r>: Send + Sized {
     /// Processes the data field `field`.
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'r, '_>);
 
-    /// Processes the extern form or field error `_error`.
+    /// Processes the external form or field error `_error`.
     ///
     /// The default implementation does nothing, which is always correct.
     fn push_error(_ctxt: &mut Self::Context, _error: Error<'r>) { }
@@ -390,7 +539,9 @@ pub trait FromForm<'r>: Send + Sized {
     /// parsing fails.
     ///
     /// The default implementation initializes `Self` with `opts` and finalizes
-    /// immediately, returning the value if finalization succeeds.
+    /// immediately, returning the value if finalization succeeds. This is
+    /// always correct and should likely not be changed. Returning a different
+    /// value may result in ambiguous parses.
     fn default(opts: Options) -> Option<Self> {
         Self::finalize(Self::init(opts)).ok()
     }
@@ -638,7 +789,7 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
     type Context = <T as FromForm<'v>>::Context;
 
     fn init(opts: Options) -> Self::Context {
-        T::init(opts)
+        T::init(Options { strict: true, ..opts })
     }
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
@@ -650,10 +801,7 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
     }
 
     fn finalize(this: Self::Context) -> Result<'v, Self> {
-        match T::finalize(this) {
-            Ok(v) => Ok(Some(v)),
-            Err(_) => Ok(None)
-        }
+        Ok(T::finalize(this).ok())
     }
 }
 
@@ -674,10 +822,7 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Result<'v, T> {
     }
 
     fn finalize(this: Self::Context) -> Result<'v, Self> {
-        match T::finalize(this) {
-            Ok(v) => Ok(Ok(v)),
-            Err(e) => Ok(Err(e))
-        }
+        Ok(T::finalize(this))
     }
 }
 

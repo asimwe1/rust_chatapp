@@ -564,57 +564,51 @@ fn test_nested_multi() {
     });
 }
 
-// fn test_multipart() {
-//     use std::{io, path::Path};
-//
-//     use crate::*;
-//     use crate::http::ContentType;
-//     use crate::local::blocking::Client;
-//     use crate::{data::TempFile, form::Errors};
-//
-//     #[derive(FromForm)]
-//     struct MyForm {
-//         names: Vec<String>,
-//         file: String,
-//     }
-//
-//     #[post("/", data = "<form>")]
-//     async fn form(mut form: Form<MyForm>) -> io::Result<&'static str> {
-//         let path = Path::new("/tmp").join(form.file_name().unwrap_or("upload"));
-//         form.persist(path).await?;
-//         println!("result: {:?}", form);
-//         Ok("hi")
-//     }
-//
-//     let client = Client::debug_with(routes![form]).unwrap();
-//     let ct = "multipart/form-data; boundary=X-BOUNDARY"
-//         .parse::<ContentType>()
-//         .unwrap();
-//
-//     let body = &[
-//         // "--X-BOUNDARY",
-//         // r#"Content-Disposition: form-data; name="names[]""#,
-//         // "",
-//         // "abcd",
-//         // "--X-BOUNDARY",
-//         // r#"Content-Disposition: form-data; name="names[]""#,
-//         // "",
-//         // "123",
-//         "--X-BOUNDARY",
-//         r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
-//         "Content-Type: text/plain",
-//         "",
-//         "hi there",
-//         "--X-BOUNDARY--",
-//         "",
-//     ].join("\r\n");
-//
-//     let response = client.post("/")
-//         .header(ct)
-//         .body(body)
-//         .dispatch();
-//
-//     let string = response.into_string().unwrap();
-//     println!("String: {}", string);
-//     panic!(string);
-// }
+#[test]
+fn test_multipart() {
+    use rocket::http::ContentType;
+    use rocket::local::blocking::Client;
+    use rocket::data::TempFile;
+
+    #[derive(FromForm)]
+    struct MyForm<'r> {
+        names: Vec<&'r str>,
+        file: TempFile<'r>,
+    }
+
+    #[rocket::post("/", data = "<form>")]
+    fn form(form: Form<MyForm>) {
+        assert_eq!(form.names, &["abcd", "123"]);
+        assert_eq!(form.file.file_name(), Some("foo"));
+    }
+
+    let client = Client::debug_with(rocket::routes![form]).unwrap();
+    let ct = "multipart/form-data; boundary=X-BOUNDARY"
+        .parse::<ContentType>()
+        .unwrap();
+
+    let body = &[
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="names[]""#,
+        "",
+        "abcd",
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="names[]""#,
+        "",
+        "123",
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
+        "Content-Type: text/plain",
+        "",
+        "hi there",
+        "--X-BOUNDARY--",
+        "",
+    ].join("\r\n");
+
+    let response = client.post("/")
+        .header(ct)
+        .body(body)
+        .dispatch();
+
+    assert!(response.status().class().is_success());
+}
