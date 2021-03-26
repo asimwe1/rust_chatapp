@@ -46,7 +46,7 @@ fn test_rank_collision() {
     let rocket = rocket::ignite().mount("/", routes![get0, get0b]);
     let client_result = Client::debug(rocket);
     match client_result.as_ref().map_err(|e| e.kind()) {
-        Err(ErrorKind::Collision(..)) => { /* o.k. */ },
+        Err(ErrorKind::Collisions(..)) => { /* o.k. */ },
         Ok(_) => panic!("client succeeded unexpectedly"),
         Err(e) => panic!("expected collision, got {}", e)
     }

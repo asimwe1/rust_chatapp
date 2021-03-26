@@ -329,11 +329,7 @@ impl Rocket {
         // response. We may wish to relax this in the future.
         req.cookies().reset_delta();
 
-        // Try to get the active catcher
-        let catcher = self.catchers.get(&status.code)
-            .or_else(|| self.default_catcher.as_ref());
-
-        if let Some(catcher) = catcher {
+        if let Some(catcher) = self.router.catch(status, req) {
             warn_!("Responding with registered {} catcher.", catcher);
             let name = catcher.name.as_deref();
             handle(name, || catcher.handler.handle(status, req)).await

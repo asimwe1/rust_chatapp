@@ -14,11 +14,11 @@ fn test_hello() {
 }
 
 #[test]
-fn forced_error_and_default_catcher() {
+fn forced_error() {
     let client = Client::tracked(super::rocket()).unwrap();
 
     let request = client.get("/404");
-    let expected = super::not_found(request.inner());
+    let expected = super::general_not_found();
     let response = request.dispatch();
     assert_eq!(response.status(), Status::NotFound);
     assert_eq!(response.into_string().unwrap(), expected.0);
@@ -46,11 +46,24 @@ fn forced_error_and_default_catcher() {
 fn test_hello_invalid_age() {
     let client = Client::tracked(super::rocket()).unwrap();
 
-    for &(name, age) in &[("Ford", -129), ("Trillian", 128)] {
-        let request = client.get(format!("/hello/{}/{}", name, age));
-        let expected = super::not_found(request.inner());
+    for path in &["Ford/-129", "Trillian/128", "foo/bar/baz"] {
+        let request = client.get(format!("/hello/{}", path));
+        let expected = super::hello_not_found(request.inner());
         let response = request.dispatch();
         assert_eq!(response.status(), Status::NotFound);
         assert_eq!(response.into_string().unwrap(), expected.0);
+    }
+}
+
+#[test]
+fn test_hello_sergio() {
+    let client = Client::tracked(super::rocket()).unwrap();
+
+    for path in &["oops", "-129", "foo/bar", "/foo/bar/baz"] {
+        let request = client.get(format!("/hello/Sergio/{}", path));
+        let expected = super::sergio_error();
+        let response = request.dispatch();
+        assert_eq!(response.status(), Status::NotFound);
+        assert_eq!(response.into_string().unwrap(), expected);
     }
 }

@@ -23,7 +23,7 @@ fn catch(r#raw: &rocket::Request) -> String {
 fn test_raw_ident() {
     let rocket = rocket::ignite()
         .mount("/", routes![get, swap])
-        .register(catchers![catch]);
+        .register("/", catchers![catch]);
 
     let client = Client::debug(rocket).unwrap();
 

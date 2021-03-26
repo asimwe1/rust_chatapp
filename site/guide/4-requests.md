@@ -1716,8 +1716,8 @@ Application processing is fallible. Errors arise from the following sources:
   * A routing failure.
 
 If any of these occur, Rocket returns an error to the client. To generate the
-error, Rocket invokes the _catcher_ corresponding to the error's status code.
-Catchers are similar to routes except in that:
+error, Rocket invokes the _catcher_ corresponding to the error's status code and
+scope. Catchers are similar to routes except in that:
 
   1. Catchers are only invoked on error conditions.
   2. Catchers are declared with the `catch` attribute.
@@ -1725,6 +1725,7 @@ Catchers are similar to routes except in that:
   4. Any modifications to cookies are cleared before a catcher is invoked.
   5. Error catchers cannot invoke guards.
   6. Error catchers should not fail to produce a response.
+  7. Catchers are scoped to a path prefix.
 
 To declare a catcher for a given status code, use the [`catch`] attribute, which
 takes a single integer corresponding to the HTTP status code to catch. For
@@ -1770,36 +1771,96 @@ looks like:
 # #[catch(404)] fn not_found(req: &Request) { /* .. */ }
 
 fn main() {
-    rocket::ignite().register(catchers![not_found]);
+    rocket::ignite().register("/", catchers![not_found]);
 }
 ```
 
-### Default Catchers
+### Scoping
 
-If no catcher for a given status code has been registered, Rocket calls the
-_default_ catcher. Rocket provides a default catcher for all applications
-automatically, so providing one is usually unnecessary. Rocket's built-in
-default catcher can handle all errors. It produces HTML or JSON, depending on
-the value of the `Accept` header. As such, a default catcher, or catchers in
-general, only need to be registered if an error needs to be handled in a custom
-fashion.
+The first argument to `register()` is a path to scope the catcher under called
+the catcher's _base_. A catcher's base determines which requests it will handle
+errors for. Specifically, a catcher's base must be a prefix of the erroring
+request for it to be invoked. When multiple catchers can be invoked, the catcher
+with the longest base takes precedence.
 
-Declaring a default catcher is done with `#[catch(default)]`:
+As an example, consider the following application:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# fn main() {}
+
+#[catch(404)]
+fn general_not_found() -> &'static str {
+    "General 404"
+}
+
+#[catch(404)]
+fn foo_not_found() -> &'static str {
+    "Foo 404"
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::ignite()
+        .register("/", catchers![general_not_found])
+        .register("/foo", catchers![foo_not_found])
+}
+
+# let client = rocket::local::blocking::Client::debug(rocket()).unwrap();
+#
+# let response = client.get("/").dispatch();
+# assert_eq!(response.into_string().unwrap(), "General 404");
+#
+# let response = client.get("/bar").dispatch();
+# assert_eq!(response.into_string().unwrap(), "General 404");
+#
+# let response = client.get("/bar/baz").dispatch();
+# assert_eq!(response.into_string().unwrap(), "General 404");
+#
+# let response = client.get("/foo").dispatch();
+# assert_eq!(response.into_string().unwrap(), "Foo 404");
+#
+# let response = client.get("/foo/bar").dispatch();
+# assert_eq!(response.into_string().unwrap(), "Foo 404");
+```
+
+Since there are no mounted routes, all requests will `404`. Any request whose
+path begins with `/foo` (i.e, `GET /foo`, `GET /foo/bar`, etc) will be handled
+by the `foo_not_found` catcher while all other requests will be handled by the
+`general_not_found` catcher.
+
+### Default Catchers
+
+A _default_ catcher is a catcher that handles _all_ status codes. They are
+invoked as a fallback if no status-specific catcher is registered for a given
+error. Declaring a default catcher is done with `#[catch(default)]` and must
+similarly be registered with [`register()`]:
+
+```rust
+# #[macro_use] extern crate rocket;
 
 use rocket::Request;
 use rocket::http::Status;
 
 #[catch(default)]
 fn default_catcher(status: Status, request: &Request) { /* .. */ }
+
+#[launch]
+fn rocket() -> _ {
+    rocket::ignite().register("/", catchers![default_catcher])
+}
 ```
 
-It must similarly be registered with [`register()`].
+Catchers with longer bases are preferred, even when there is a status-specific
+catcher. In other words, a default catcher with a longer matching base than a
+status-specific catcher takes precedence.
 
-The [error catcher example](@example/errors) illustrates their use in full,
+### Built-In Catcher
+
+Rocket provides a built-in default catcher. It produces HTML or JSON, depending
+on the value of the `Accept` header. As such, custom catchers only need to be
+registered for custom error handling.
+
+The [error catcher example](@example/errors) illustrates catcher use in full,
 while the [`Catcher`] API documentation provides further details.
 
 [`catch`]: @api/rocket/attr.catch.html

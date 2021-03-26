@@ -69,7 +69,7 @@ fn wow_helper(
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, hello, about])
-        .register(catchers![not_found])
+        .register("/", catchers![not_found])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
         }))

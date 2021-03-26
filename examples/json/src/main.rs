@@ -75,6 +75,6 @@ fn not_found() -> JsonValue {
 fn rocket() -> _ {
     rocket::ignite()
         .mount("/message", routes![new, update, get, echo])
-        .register(catchers![not_found])
+        .register("/", catchers![not_found])
         .manage(Mutex::new(HashMap::<Id, String>::new()))
 }

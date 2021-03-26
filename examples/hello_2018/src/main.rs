@@ -10,7 +10,7 @@ fn hello() -> &'static str {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", rocket::routes![hello])
-        .register(rocket::catchers![not_found])
+        .register("/", rocket::catchers![not_found])
 }
 
 #[rocket::catch(404)]

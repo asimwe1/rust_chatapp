@@ -6,8 +6,6 @@ use std::sync::atomic::{Ordering, AtomicBool};
 use yansi::Paint;
 use figment::Profile;
 
-use crate::router::Route;
-
 /// An error that occurs during launch.
 ///
 /// An `Error` is returned by [`launch()`](crate::Rocket::launch()) when
@@ -80,7 +78,7 @@ pub enum ErrorKind {
     /// An I/O error occurred in the runtime.
     Runtime(Box<dyn std::error::Error + Send + Sync>),
     /// Route collisions were detected.
-    Collision(Vec<(Route, Route)>),
+    Collisions(crate::router::Collisions),
     /// Launch fairing(s) failed.
     FailedFairings(Vec<crate::fairing::Info>),
     /// The configuration profile is not debug but not secret key is configured.
@@ -140,7 +138,7 @@ impl fmt::Display for ErrorKind {
         match self {
             ErrorKind::Bind(e) => write!(f, "binding failed: {}", e),
             ErrorKind::Io(e) => write!(f, "I/O error: {}", e),
-            ErrorKind::Collision(_) => "route collisions detected".fmt(f),
+            ErrorKind::Collisions(_) => "collisions detected".fmt(f),
             ErrorKind::FailedFairings(_) => "a launch fairing failed".fmt(f),
             ErrorKind::Runtime(e) => write!(f, "runtime error: {}", e),
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
@@ -181,14 +179,21 @@ impl Drop for Error {
                 info_!("{}", e);
                 panic!("aborting due to i/o error");
             }
-            ErrorKind::Collision(ref collisions) => {
-                error!("Rocket failed to launch due to the following routing collisions:");
-                for &(ref a, ref b) in collisions {
-                    info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
+            ErrorKind::Collisions(ref collisions) => {
+                fn log_collisions<T: fmt::Display>(kind: &str, collisions: &[(T, T)]) {
+                    if collisions.is_empty() { return }
+
+                    error!("Rocket failed to launch due to the following {} collisions:", kind);
+                    for &(ref a, ref b) in collisions {
+                        info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
+                    }
                 }
 
-                info_!("Note: Collisions can usually be resolved by ranking routes.");
-                panic!("route collisions detected");
+                log_collisions("route", &collisions.routes);
+                log_collisions("catcher", &collisions.catchers);
+
+                info_!("Note: Route collisions can usually be resolved by ranking routes.");
+                panic!("routing collisions detected");
             }
             ErrorKind::FailedFairings(ref failures) => {
                 error!("Rocket failed to launch due to failing fairings:");

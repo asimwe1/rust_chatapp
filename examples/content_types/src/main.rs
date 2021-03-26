@@ -63,5 +63,5 @@ fn not_found(request: &Request<'_>) -> Html<String> {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])
-        .register(catchers![not_found])
+        .register("/", catchers![not_found])
 }

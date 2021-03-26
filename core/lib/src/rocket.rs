@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::fmt::Display;
+use std::convert::TryInto;
 
 use yansi::Paint;
 use state::Container;
@@ -13,7 +14,7 @@ use crate::router::{Router, Route};
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::shutdown::Shutdown;
-use crate::http::uri::Origin;
+use crate::http::{uri::Origin, ext::IntoOwned};
 use crate::error::{Error, ErrorKind};
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
@@ -24,8 +25,6 @@ pub struct Rocket {
     pub(crate) figment: Figment,
     pub(crate) managed_state: Container![Send + Sync],
     pub(crate) router: Router,
-    pub(crate) default_catcher: Option<Catcher>,
-    pub(crate) catchers: HashMap<u16, Catcher>,
     pub(crate) fairings: Fairings,
     pub(crate) shutdown_receiver: Option<mpsc::Receiver<()>>,
     pub(crate) shutdown_handle: Shutdown,
@@ -95,8 +94,6 @@ impl Rocket {
             config, figment, managed_state,
             shutdown_handle: Shutdown(shutdown_sender),
             router: Router::new(),
-            default_catcher: None,
-            catchers: HashMap::new(),
             fairings: Fairings::new(),
             shutdown_receiver: Some(shutdown_receiver),
         }
@@ -203,10 +200,15 @@ impl Rocket {
     /// #     .launch().await;
     /// # };
     /// ```
-    pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
-        let base_uri = Origin::parse_owned(base.to_string())
+    pub fn mount<'a, B, R>(mut self, base: B, routes: R) -> Self
+        where B: TryInto<Origin<'a>> + Clone + Display,
+              B::Error: Display,
+              R: Into<Vec<Route>>
+    {
+        let base_uri = base.clone().try_into()
+            .map(|origin| origin.into_owned())
             .unwrap_or_else(|e| {
-                error!("Invalid mount point URI: {}.", Paint::white(base));
+                error!("Invalid route base: {}.", Paint::white(&base));
                 panic!("Error: {}", e);
             });
 
@@ -215,11 +217,11 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        info!("{}{} {}{}",
+        info!("{}{} {} {}",
               Paint::emoji("🛰  "),
               Paint::magenta("Mounting"),
               Paint::blue(&base_uri),
-              Paint::magenta(":"));
+              Paint::magenta("routes:"));
 
         for route in routes.into() {
             let mounted_route = route.clone()
@@ -231,13 +233,18 @@ impl Rocket {
                 });
 
             info_!("{}", mounted_route);
-            self.router.add(mounted_route);
+            self.router.add_route(mounted_route);
         }
 
         self
     }
 
-    /// Registers all of the catchers in the supplied vector.
+    /// Registers all of the catchers in the supplied vector, scoped to `base`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `base` is not a valid static path: a valid origin URI without
+    /// dynamic parameters.
     ///
     /// # Examples
     ///
@@ -257,23 +264,31 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite().register(catchers![internal_error, not_found])
+    ///     rocket::ignite().register("/", catchers![internal_error, not_found])
     /// }
     /// ```
-    pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+    pub fn register<'a, B, C>(mut self, base: B, catchers: C) -> Self
+        where B: TryInto<Origin<'a>> + Clone + Display,
+              B::Error: Display,
+              C: Into<Vec<Catcher>>
+    {
+        info!("{}{} {} {}",
+              Paint::emoji("👾 "),
+              Paint::magenta("Registering"),
+              Paint::blue(&base),
+              Paint::magenta("catchers:"));
 
-        for catcher in catchers {
-            info_!("{}", catcher);
+        for catcher in catchers.into() {
+            let mounted_catcher = catcher.clone()
+                .map_base(|old| format!("{}{}", base, old))
+                .unwrap_or_else(|e| {
+                    error_!("Catcher `{}` has a malformed URI.", catcher);
+                    error_!("{}", e);
+                    panic!("Invalid catcher URI.");
+                });
 
-            let existing = match catcher.code {
-                Some(code) => self.catchers.insert(code, catcher),
-                None => self.default_catcher.replace(catcher)
-            };
-
-            if let Some(existing) = existing {
-                warn_!("Replacing existing '{}' catcher.", existing);
-            }
+            info_!("{}", mounted_catcher);
+            self.router.add_catcher(mounted_catcher);
         }
 
         self
@@ -444,7 +459,7 @@ impl Rocket {
     /// }
     /// ```
     #[inline(always)]
-    pub fn routes(&self) -> impl Iterator<Item = &Route> + '_ {
+    pub fn routes(&self) -> impl Iterator<Item = &Route> {
         self.router.routes()
     }
 
@@ -464,7 +479,7 @@ impl Rocket {
     ///
     /// fn main() {
     ///     let mut rocket = rocket::ignite()
-    ///         .register(catchers![not_found, just_500, some_default]);
+    ///         .register("/", catchers![not_found, just_500, some_default]);
     ///
     ///     let mut codes: Vec<_> = rocket.catchers().map(|c| c.code).collect();
     ///     codes.sort();
@@ -473,8 +488,8 @@ impl Rocket {
     /// }
     /// ```
     #[inline(always)]
-    pub fn catchers(&self) -> impl Iterator<Item = &Catcher> + '_ {
-        self.catchers.values().chain(self.default_catcher.as_ref())
+    pub fn catchers(&self) -> impl Iterator<Item = &Catcher> {
+        self.router.catchers()
     }
 
     /// Returns `Some` of the managed state value for the type `T` if it is
@@ -525,10 +540,8 @@ impl Rocket {
     ///     * there were no fairing failures
     ///     * a secret key, if needed, is securely configured
     pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
-        let collisions: Vec<_> = self.router.collisions().collect();
-        if !collisions.is_empty() {
-            let owned = collisions.into_iter().map(|(a, b)| (a.clone(), b.clone()));
-            return Err(Error::new(ErrorKind::Collision(owned.collect())));
+        if let Err(collisions) = self.router.finalize() {
+            return Err(Error::new(ErrorKind::Collisions(collisions)));
         }
 
         if let Some(failures) = self.fairings.failures() {

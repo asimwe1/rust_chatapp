@@ -110,5 +110,5 @@ fn rocket() -> rocket::Rocket {
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
         .mount("/custom", CustomHandler::new("some data here"))
-        .register(vec![not_found_catcher])
+        .register("/", vec![not_found_catcher])
 }

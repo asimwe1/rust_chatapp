@@ -282,11 +282,32 @@ impl Display for Uri<'_> {
     }
 }
 
+/// The error type returned when a URI conversion fails.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct TryFromUriError(());
+
+impl fmt::Display for TryFromUriError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "invalid conversion from general to specific URI variant".fmt(f)
+    }
+}
+
 macro_rules! impl_uri_from {
     ($type:ident) => (
         impl<'a> From<$type<'a>> for Uri<'a> {
             fn from(other: $type<'a>) -> Uri<'a> {
                 Uri::$type(other)
+            }
+        }
+
+        impl<'a> TryFrom<Uri<'a>> for $type<'a> {
+            type Error = TryFromUriError;
+
+            fn try_from(uri: Uri<'a>) -> Result<Self, Self::Error> {
+                match uri {
+                    Uri::$type(inner) => Ok(inner),
+                    _ => Err(TryFromUriError(()))
+                }
             }
         }
     )

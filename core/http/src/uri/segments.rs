@@ -75,6 +75,16 @@ impl<'o> Segments<'o> {
             .map(|i| i.from_source(Some(self.source.as_str())))
     }
 
+    /// Returns `true` if `self` is a prefix of `other`.
+    #[inline]
+    pub fn prefix_of<'b>(self, other: Segments<'b>) -> bool {
+        if self.len() > other.len() {
+            return false;
+        }
+
+        self.zip(other).all(|(a, b)| a == b)
+    }
+
     /// Creates a `PathBuf` from `self`. The returned `PathBuf` is
     /// percent-decoded. If a segment is equal to "..", the previous segment (if
     /// any) is skipped.

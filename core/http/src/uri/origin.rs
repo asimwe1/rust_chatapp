@@ -1,5 +1,6 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::convert::TryFrom;
+use std::fmt::{self, Display};
 
 use crate::ext::IntoOwned;
 use crate::parse::{Indexed, Extent, IndexedStr};
@@ -605,6 +606,22 @@ impl<'a> Origin<'a> {
         self.query()
             .into_iter()
             .flat_map(|q| q.split(Query::DELIMITER))
+    }
+}
+
+impl TryFrom<String> for Origin<'static> {
+    type Error = Error<'static>;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Origin::parse_owned(value)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Origin<'a> {
+    type Error = Error<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Origin::parse(value)
     }
 }
 

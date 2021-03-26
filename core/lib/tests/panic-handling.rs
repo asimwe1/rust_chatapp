@@ -22,30 +22,20 @@ fn ise() -> &'static str {
     "Hey, sorry! :("
 }
 
-#[catch(500)]
-fn double_panic() {
-    panic!("so, so sorry...")
-}
-
 fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> HandlerFuture<'r> {
     panic!("hey now...");
 }
 
-fn pre_future_catcher<'r>(_: Status, _: &'r Request) -> ErrorHandlerFuture<'r> {
-    panic!("a panicking pre-future catcher")
-}
-
 fn rocket() -> Rocket {
-    let pre_future_panic = Route::new(Method::Get, "/pre", pre_future_route);
     rocket::ignite()
         .mount("/", routes![panic_route])
-        .mount("/", vec![pre_future_panic])
-        .register(catchers![panic_catcher, ise])
+        .mount("/", vec![Route::new(Method::Get, "/pre", pre_future_route)])
 }
 
 #[test]
 fn catches_route_panic() {
-    let client = Client::debug(rocket()).unwrap();
+    let rocket = rocket().register("/", catchers![panic_catcher, ise]);
+    let client = Client::debug(rocket).unwrap();
     let response = client.get("/panic").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");
@@ -53,7 +43,8 @@ fn catches_route_panic() {
 
 #[test]
 fn catches_catcher_panic() {
-    let client = Client::debug(rocket()).unwrap();
+    let rocket = rocket().register("/", catchers![panic_catcher, ise]);
+    let client = Client::debug(rocket).unwrap();
     let response = client.get("/noroute").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");
@@ -61,7 +52,12 @@ fn catches_catcher_panic() {
 
 #[test]
 fn catches_double_panic() {
-    let rocket = rocket().register(catchers![double_panic]);
+    #[catch(500)]
+    fn double_panic() {
+        panic!("so, so sorry...")
+    }
+
+    let rocket = rocket().register("/", catchers![panic_catcher, double_panic]);
     let client = Client::debug(rocket).unwrap();
     let response = client.get("/noroute").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
@@ -70,7 +66,8 @@ fn catches_double_panic() {
 
 #[test]
 fn catches_early_route_panic() {
-    let client = Client::debug(rocket()).unwrap();
+    let rocket = rocket().register("/", catchers![panic_catcher, ise]);
+    let client = Client::debug(rocket).unwrap();
     let response = client.get("/pre").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");
@@ -78,9 +75,15 @@ fn catches_early_route_panic() {
 
 #[test]
 fn catches_early_catcher_panic() {
-    let panic_catcher = Catcher::new(404, pre_future_catcher);
+    fn pre_future_catcher<'r>(_: Status, _: &'r Request) -> ErrorHandlerFuture<'r> {
+        panic!("a panicking pre-future catcher")
+    }
 
-    let client = Client::debug(rocket().register(vec![panic_catcher])).unwrap();
+    let rocket = rocket()
+        .register("/", vec![Catcher::new(404, pre_future_catcher)])
+        .register("/", catchers![ise]);
+
+    let client = Client::debug(rocket).unwrap();
     let response = client.get("/idontexist").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.into_string().unwrap(), "Hey, sorry! :(");

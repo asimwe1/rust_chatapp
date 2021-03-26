@@ -162,7 +162,6 @@ impl Route {
         }
     }
 
-
     /// Maps the `base` of this route using `mapper`, returning a new `Route`
     /// with the returned base.
     ///

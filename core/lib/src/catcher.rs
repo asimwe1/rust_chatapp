@@ -1,5 +1,5 @@
 //! Types and traits for error catchers, error handlers, and their return
-//! values.
+//! types.
 
 use std::fmt;
 use std::io::Cursor;
@@ -7,7 +7,7 @@ use std::io::Cursor;
 use crate::response::Response;
 use crate::codegen::StaticCatcherInfo;
 use crate::request::Request;
-use crate::http::ContentType;
+use crate::http::{Status, ContentType, uri};
 
 use futures::future::BoxFuture;
 use yansi::Paint;
@@ -18,6 +18,12 @@ pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;
 
 /// Type alias for the unwieldy [`ErrorHandler::handle()`] return type.
 pub type ErrorHandlerFuture<'r> = BoxFuture<'r, Result<'r>>;
+
+// A handler to use when one is needed temporarily. Don't use outside of Rocket!
+#[cfg(test)]
+pub(crate) fn dummy<'r>(_: Status, _: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+   Box::pin(async move { Ok(Response::new()) })
+}
 
 /// An error catching route.
 ///
@@ -77,12 +83,12 @@ pub type ErrorHandlerFuture<'r> = BoxFuture<'r, Result<'r>>;
 ///
 /// #[catch(default)]
 /// fn default(status: Status, req: &Request) -> String {
-///     format!("{} - {} ({})", status.code, status.reason, req.uri())
+///     format!("{} ({})", status, req.uri())
 /// }
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().register(catchers![internal_error, not_found, default])
+///     rocket::ignite().register("/", catchers![internal_error, not_found, default])
 /// }
 /// ```
 ///
@@ -104,7 +110,10 @@ pub struct Catcher {
     /// The name of this catcher, if one was given.
     pub name: Option<Cow<'static, str>>,
 
-    /// The HTTP status code to match against if this route is not `default`.
+    /// The mount point.
+    pub base: uri::Origin<'static>,
+
+    /// The HTTP status to match against if this route is not `default`.
     pub code: Option<u16>,
 
     /// The catcher's associated error handler.
@@ -112,8 +121,8 @@ pub struct Catcher {
 }
 
 impl Catcher {
-    /// Creates a catcher for the given status code, or a default catcher if
-    /// `code` is `None`, using the given error handler. This should only be
+    /// Creates a catcher for the given `status`, or a default catcher if
+    /// `status` is `None`, using the given error handler. This should only be
     /// used when routing manually.
     ///
     /// # Examples
@@ -121,11 +130,11 @@ impl Catcher {
     /// ```rust
     /// use rocket::request::Request;
     /// use rocket::catcher::{Catcher, ErrorHandlerFuture};
-    /// use rocket::response::{Result, Responder, status::Custom};
+    /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
     /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
-    ///    let res = Custom(status, format!("404: {}", req.uri()));
+    ///    let res = (status, format!("404: {}", req.uri()));
     ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
@@ -134,7 +143,7 @@ impl Catcher {
     /// }
     ///
     /// fn handle_default<'r>(status: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
-    ///    let res = Custom(status, format!("{}: {}", status, req.uri()));
+    ///    let res = (status, format!("{}: {}", status, req.uri()));
     ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
@@ -142,22 +151,82 @@ impl Catcher {
     /// let internal_server_error_catcher = Catcher::new(500, handle_500);
     /// let default_error_catcher = Catcher::new(None, handle_default);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `code` is not in the HTTP status code error range `[400,
+    /// 600)`.
     #[inline(always)]
-    pub fn new<C, H>(code: C, handler: H) -> Catcher
-        where C: Into<Option<u16>>, H: ErrorHandler
+    pub fn new<S, H>(code: S, handler: H) -> Catcher
+        where S: Into<Option<u16>>, H: ErrorHandler
     {
-        Catcher { name: None, code: code.into(), handler: Box::new(handler) }
+        let code = code.into();
+        if let Some(code) = code {
+            assert!(code >= 400 && code < 600);
+        }
+
+        Catcher {
+            name: None,
+            base: uri::Origin::new("/", None::<&str>),
+            handler: Box::new(handler),
+            code,
+        }
+    }
+
+    /// Maps the `base` of this catcher using `mapper`, returning a new
+    /// `Catcher` with the returned base.
+    ///
+    /// `mapper` is called with the current base. The returned `String` is used
+    /// as the new base if it is a valid URI. If the returned base URI contains
+    /// a query, it is ignored. Returns an error if the base produced by
+    /// `mapper` is not a valid origin URI.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::Request;
+    /// use rocket::catcher::{Catcher, ErrorHandlerFuture};
+    /// use rocket::response::Responder;
+    /// use rocket::http::Status;
+    ///
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+    ///    let res = (status, format!("404: {}", req.uri()));
+    ///    Box::pin(async move { res.respond_to(req) })
+    /// }
+    ///
+    /// let catcher = Catcher::new(404, handle_404);
+    /// assert_eq!(catcher.base.path(), "/");
+    ///
+    /// let catcher = catcher.map_base(|_| format!("/bar")).unwrap();
+    /// assert_eq!(catcher.base.path(), "/bar");
+    ///
+    /// let catcher = catcher.map_base(|base| format!("/foo{}", base)).unwrap();
+    /// assert_eq!(catcher.base.path(), "/foo/bar");
+    ///
+    /// let catcher = catcher.map_base(|base| format!("/foo ? {}", base));
+    /// assert!(catcher.is_err());
+    /// ```
+    pub fn map_base<'a, F>(
+        mut self,
+        mapper: F
+    ) -> std::result::Result<Self, uri::Error<'static>>
+        where F: FnOnce(uri::Origin<'a>) -> String
+    {
+        self.base = uri::Origin::parse_owned(mapper(self.base))?.into_normalized();
+        self.base.clear_query();
+        Ok(self)
     }
 }
 
 impl Default for Catcher {
     fn default() -> Self {
-        fn async_default<'r>(status: Status, request: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
-            Box::pin(async move { Ok(default(status, request)) })
+        fn handler<'r>(s: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+            Box::pin(async move { Ok(default(s, req)) })
         }
 
-        let name = Some("<Rocket Catcher>".into());
-        Catcher { name, code: None, handler: Box::new(async_default) }
+        let mut catcher = Catcher::new(None, handler);
+        catcher.name = Some("<Rocket Catcher>".into());
+        catcher
     }
 }
 
@@ -226,9 +295,9 @@ impl Default for Catcher {
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         // to handle only `404`
-///         .register(CustomHandler::catch(Status::NotFound, Kind::Simple))
+///         .register("/", CustomHandler::catch(Status::NotFound, Kind::Simple))
 ///         // or to register as the default
-///         .register(CustomHandler::default(Kind::Simple))
+///         .register("/", CustomHandler::default(Kind::Simple))
 /// }
 /// ```
 ///
@@ -239,7 +308,7 @@ impl Default for Catcher {
 ///      trait serves no other purpose but to ensure that every `ErrorHandler`
 ///      can be cloned, allowing `Catcher`s to be cloned.
 ///   2. `CustomHandler`'s methods return `Vec<Route>`, allowing for use
-///      directly as the parameter to `rocket.register()`.
+///      directly as the parameter to `rocket.register("/", )`.
 ///   3. Unlike static-function-based handlers, this custom handler can make use
 ///      of internal state.
 #[crate::async_trait]
@@ -288,6 +357,10 @@ impl fmt::Display for Catcher {
             write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
         }
 
+        if self.base.path() != "/" {
+            write!(f, "{} ", Paint::green(self.base.path()))?;
+        }
+
         match self.code {
             Some(code) => write!(f, "{}", Paint::blue(code)),
             None => write!(f, "{}", Paint::blue("default"))
@@ -298,6 +371,8 @@ impl fmt::Display for Catcher {
 impl fmt::Debug for Catcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Catcher")
+            .field("name", &self.name)
+            .field("base", &self.base)
             .field("code", &self.code)
             .finish()
     }
@@ -359,7 +434,6 @@ r#"{{
 macro_rules! default_catcher_fn {
     ($($code:expr, $reason:expr, $description:expr),+) => (
         use std::borrow::Cow;
-        use crate::http::Status;
 
         pub(crate) fn default<'r>(status: Status, req: &'r Request<'_>) -> Response<'r> {
             let preferred = req.accept().map(|a| a.preferred());
