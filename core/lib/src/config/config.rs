@@ -384,7 +384,7 @@ impl<'r> FromRequest<'r> for &'r Config {
     type Error = std::convert::Infallible;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        request::Outcome::Success(req.config())
+        request::Outcome::Success(req.rocket().config())
     }
 }
 

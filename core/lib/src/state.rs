@@ -54,8 +54,8 @@ use crate::http::Status;
 ///
 /// Because `State` is itself a request guard, managed state can be retrieved
 /// from another request guard's implementation using either
-/// [`Request::guard()`] or [`Request::managed_state()`]. In the following code
-/// example, the `Item` request guard retrieves `MyConfig` from managed state:
+/// [`Request::guard()`] or [`Rocket::state()`]. In the following code example,
+/// the `Item` request guard retrieves `MyConfig` from managed state:
 ///
 /// ```rust
 /// use rocket::State;
@@ -75,7 +75,7 @@ use crate::http::Status;
 ///             .map(|my_config| Item(&my_config.inner().user_val));
 ///
 ///         // Or alternatively, using `Request::managed_state()`:
-///         let outcome = request.managed_state::<MyConfig>()
+///         let outcome = request.rocket().state::<MyConfig>()
 ///             .map(|my_config| Item(&my_config.user_val))
 ///             .or_forward(());
 ///
@@ -174,7 +174,7 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for State<'r, T> {
 
     #[inline(always)]
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        match req.managed_state::<T>() {
+        match req.rocket().state::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
                 error_!("Attempted to retrieve unmanaged state `{}`!", std::any::type_name::<T>());

@@ -468,21 +468,39 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Returns the Rocket server configuration.
+    /// Returns the [`Rocket`] instance that is handling this request.
     ///
     /// # Example
     ///
     /// ```rust
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
-    /// let config = request.config();
+    /// # type Pool = usize;
+    /// // Retrieve the application config via `Rocket::config()`.
+    /// let config = request.rocket().config();
+    ///
+    /// // Retrieve managed state via `Rocket::state()`.
+    /// let state = request.rocket().state::<Pool>();
+    ///
+    /// // Get a list of all of the registered routes and catchers.
+    /// let routes = request.rocket().routes();
+    /// let catchers = request.rocket().catchers();
     /// ```
     #[inline(always)]
-    pub fn config(&self) -> &'r Config {
-        &self.state.rocket.config
+    pub fn rocket(&self) -> &'r Rocket {
+        &self.state.rocket
     }
 
     /// Returns the configured application data limits.
+    ///
+    /// This is convenience function equivalent to:
+    ///
+    /// ```rust
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let request = c.get("/");
+    /// &request.rocket().config().limits
+    /// # ;
+    /// ```
     ///
     /// # Example
     ///
@@ -499,7 +517,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn limits(&self) -> &'r Limits {
-        &self.config().limits
+        &self.rocket().config().limits
     }
 
     /// Get the presently matched route, if any.
@@ -539,23 +557,6 @@ impl<'r> Request<'r> {
         where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
     {
         T::from_request(self)
-    }
-
-    /// Retrieve managed state.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
-    /// # let request = c.get("/");
-    /// # type Pool = usize;
-    /// let pool = request.managed_state::<Pool>();
-    /// ```
-    #[inline(always)]
-    pub fn managed_state<T>(&self) -> Option<&'r T>
-        where T: Send + Sync + 'static
-    {
-        self.state.rocket.state::<T>()
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached

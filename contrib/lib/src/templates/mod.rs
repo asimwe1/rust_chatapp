@@ -420,7 +420,7 @@ impl Template {
 impl<'r> Responder<'r, 'static> for Template {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let (render, content_type) = {
-            let ctxt = req.managed_state::<ContextManager>().ok_or_else(|| {
+            let ctxt = req.rocket().state::<ContextManager>().ok_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");
                 info_!("See the `Template` documentation for more information.");

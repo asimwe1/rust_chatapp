@@ -88,7 +88,7 @@ impl<'c> LocalResponse<'c> {
 
         async move {
             let response: Response<'c> = f(request).await;
-            let mut cookies = CookieJar::new(request.config());
+            let mut cookies = CookieJar::new(request.rocket().config());
             for cookie in response.cookies() {
                 cookies.add_original(cookie.into_owned());
             }

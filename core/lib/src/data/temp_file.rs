@@ -305,7 +305,7 @@ impl<'v> TempFile<'v> {
             .or_else(|| req.limits().get("file"))
             .unwrap_or(Limits::FILE);
 
-        let temp_dir = req.config().temp_dir.clone();
+        let temp_dir = req.rocket().config().temp_dir.clone();
         let file = tokio::task::spawn_blocking(move || {
             NamedTempFile::new_in(temp_dir)
         }).await.map_err(|_| {
