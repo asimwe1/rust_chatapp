@@ -780,7 +780,7 @@ lenient. `Form` is lenient by default, so a `Form<Lenient<T>>` is redundant, but
 
 A form guard may specify a default value to use when a field is missing. The
 default value is used only when parsing is _lenient_. When _strict_, all errors,
-including, missing fields are propagated directly.
+including missing fields, are propagated directly.
 
 Some types with defaults include `bool`, which defaults to `false`, useful for
 checkboxes, `Option<T>`, which defaults to `None`, and [`form::Result`], which
