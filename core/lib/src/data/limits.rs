@@ -210,7 +210,8 @@ impl Limits {
     ///
     /// let limits = Limits::default()
     ///     .limit("json", 1.mebibytes())
-    ///     .limit("file/jpeg", 4.mebibytes());
+    ///     .limit("file/jpeg", 4.mebibytes())
+    ///     .limit("file/jpeg/special", 8.mebibytes());
     ///
     /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
     /// assert_eq!(limits.get("json"), Some(1.mebibytes()));
@@ -220,6 +221,7 @@ impl Limits {
     /// assert_eq!(limits.get("file/png"), Some(1.mebibytes()));
     /// assert_eq!(limits.get("file/jpeg"), Some(4.mebibytes()));
     /// assert_eq!(limits.get("file/jpeg/inner"), Some(4.mebibytes()));
+    /// assert_eq!(limits.get("file/jpeg/special"), Some(8.mebibytes()));
     ///
     /// assert!(limits.get("msgpack").is_none());
     /// ```
@@ -256,7 +258,8 @@ impl Limits {
     ///
     /// let limits = Limits::default()
     ///     .limit("json", 2.mebibytes())
-    ///     .limit("file/jpeg", 4.mebibytes());
+    ///     .limit("file/jpeg", 4.mebibytes())
+    ///     .limit("file/jpeg/special", 8.mebibytes());
     ///
     /// assert_eq!(limits.find(["json"]), Some(2.mebibytes()));
     /// assert_eq!(limits.find(["json", "person"]), Some(2.mebibytes()));
@@ -265,6 +268,7 @@ impl Limits {
     /// assert_eq!(limits.find(["file", "png"]), Some(1.mebibytes()));
     /// assert_eq!(limits.find(["file", "jpeg"]), Some(4.mebibytes()));
     /// assert_eq!(limits.find(["file", "jpeg", "inner"]), Some(4.mebibytes()));
+    /// assert_eq!(limits.find(["file", "jpeg", "special"]), Some(8.mebibytes()));
     ///
     /// # let s: &[&str] = &[]; assert_eq!(limits.find(s), None);
     /// ```
