@@ -164,6 +164,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.uri().query().unwrap(), "type=greeting");
     /// # });
     /// ```
+    #[inline(always)]
     pub fn set_uri(&mut self, uri: Origin<'r>) {
         self.uri = uri;
     }
@@ -300,6 +301,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(req.cookies().get_pending("key").unwrap().value(), "val");
     /// assert_eq!(req.cookies().get_pending("ans").unwrap().value(), "life: 42");
     /// ```
+    #[inline(always)]
     pub fn cookies(&self) -> &CookieJar<'r> {
         &self.state.cookies
     }
@@ -340,7 +342,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.headers().len(), 1);
     /// # });
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn add_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         let header = header.into();
         self.bust_header_cache(header.name(), false);
@@ -368,7 +370,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.content_type(), Some(&ContentType::PNG));
     /// # });
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn replace_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         let header = header.into();
         self.bust_header_cache(header.name(), true);
@@ -390,7 +392,7 @@ impl<'r> Request<'r> {
     /// let req = get("/").header(ContentType::JSON);
     /// assert_eq!(req.content_type(), Some(&ContentType::JSON));
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
         self.state.content_type.get_or_set(|| {
             self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
@@ -410,7 +412,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(get("/").accept(), None);
     /// assert_eq!(get("/").header(Accept::JSON).accept(), Some(&Accept::JSON));
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn accept(&self) -> Option<&Accept> {
         self.state.accept.get_or_set(|| {
             self.headers().get_one("Accept").and_then(|v| v.parse().ok())
@@ -475,6 +477,7 @@ impl<'r> Request<'r> {
     /// # let request = c.get("/");
     /// let config = request.config();
     /// ```
+    #[inline(always)]
     pub fn config(&self) -> &'r Config {
         &self.state.rocket.config
     }
@@ -494,6 +497,7 @@ impl<'r> Request<'r> {
     /// // Retrieve the limit for files with extension `.pdf`; etails to 1MiB.
     /// assert_eq!(request.limits().get("file/pdf"), Some(1.mebibytes()));
     /// ```
+    #[inline(always)]
     pub fn limits(&self) -> &'r Limits {
         &self.config().limits
     }
@@ -511,6 +515,7 @@ impl<'r> Request<'r> {
     /// # let request = c.get("/");
     /// let route = request.route();
     /// ```
+    #[inline(always)]
     pub fn route(&self) -> Option<&'r Route> {
         self.state.route.load(Ordering::Acquire)
     }
@@ -529,6 +534,7 @@ impl<'r> Request<'r> {
     /// let outcome = request.guard::<User>().await;
     /// # })
     /// ```
+    #[inline(always)]
     pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
         where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
     {
@@ -575,6 +581,7 @@ impl<'r> Request<'r> {
     /// // The following return the cached, previously stored value for the type.
     /// assert_eq!(*request.local_cache(|| "goodbye"), "hello");
     /// ```
+    #[inline]
     pub fn local_cache<T, F>(&self, f: F) -> &T
         where F: FnOnce() -> T,
               T: Send + Sync + 'static
@@ -607,6 +614,7 @@ impl<'r> Request<'r> {
     ///     current_user(&request).await
     /// }).await;
     /// # })
+    #[inline]
     pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
         where F: Future<Output = T>,
               T: Send + Sync + 'static
