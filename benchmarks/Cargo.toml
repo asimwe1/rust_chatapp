@@ -1,0 +1,12 @@
+[package]
+name = "rocket-benchmarks"
+version = "0.0.0"
+edition = "2018"
+publish = false
+
+[workspace]
+
+[dependencies]
+rocket = { path = "../core/lib/" }
+criterion = "0.3"
+criterion-macro = "0.3"

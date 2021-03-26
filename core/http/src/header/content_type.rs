@@ -356,6 +356,12 @@ impl FromStr for ContentType {
     }
 }
 
+impl From<MediaType> for ContentType {
+    fn from(media_type: MediaType) -> Self {
+        ContentType(media_type)
+    }
+}
+
 impl fmt::Display for ContentType {
     /// Formats the ContentType as an HTTP Content-Type value.
     ///
