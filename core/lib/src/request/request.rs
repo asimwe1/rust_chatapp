@@ -139,7 +139,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(get("/hello").uri().query(), None);
     /// ```
     #[inline(always)]
-    pub fn uri(&self) -> &Origin<'_> {
+    pub fn uri(&self) -> &Origin<'r> {
         &self.uri
     }
 
@@ -157,9 +157,14 @@ impl<'r> Request<'r> {
     /// request.set_uri(uri);
     /// assert_eq!(request.uri().path(), "/hello/Sergio");
     /// assert_eq!(request.uri().query().unwrap(), "type=greeting");
+    ///
+    /// let new_uri = request.uri().map_path(|p| format!("/foo{}", p)).unwrap();
+    /// request.set_uri(new_uri);
+    /// assert_eq!(request.uri().path(), "/foo/hello/Sergio");
+    /// assert_eq!(request.uri().query().unwrap(), "type=greeting");
     /// # });
     /// ```
-    pub fn set_uri<'u: 'r>(&mut self, uri: Origin<'u>) {
+    pub fn set_uri(&mut self, uri: Origin<'r>) {
         self.uri = uri;
     }
 
