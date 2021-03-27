@@ -454,7 +454,7 @@ For example, given the following route:
 # fn main() {}
 
 #[get("/<id>/<name>?<age>")]
-fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
+fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 ```
 
 URIs to `person` can be created as follows:
@@ -463,7 +463,7 @@ URIs to `person` can be created as follows:
 # #[macro_use] extern crate rocket;
 
 # #[get("/<id>/<name>?<age>")]
-# fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
+# fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 
 // with unnamed parameters, in route path declaration order
 let mike = uri!(person: 101, "Mike Smith", Some(28));
@@ -495,7 +495,7 @@ error: `person` route uri expects 3 parameters but 1 was supplied
 7 |     let x = uri!(person: "Mike Smith");
   |                          ^^^^^^^^^^^^
   |
-  = note: expected parameters: id: Option <usize>, name: String, age: Option <u8>
+  = note: expected parameters: id: Option <usize>, name: &str, age: Option <u8>
 ```
 
 Rocket also informs you of any type errors at compile-time:
@@ -593,7 +593,7 @@ generated.
 # #[macro_use] extern crate rocket;
 
 # #[get("/<id>/<name>?<age>")]
-# fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
+# fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 
 /// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
 /// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`

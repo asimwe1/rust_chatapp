@@ -50,7 +50,7 @@ code = '''
   #[macro_use] extern crate rocket;
 
   #[get("/hello/<name>/<age>")]
-  fn hello(name: String, age: u8) -> String {
+  fn hello(name: &str, age: u8) -> String {
       format!("Hello, {} year old named {}!", age, name)
   }
 
@@ -75,17 +75,17 @@ text = '''
 title = "Forms? Check!"
 code = '''
   #[derive(FromForm)]
-  struct Task {
-     description: String,
+  struct Task<'r> {
+     description: &'r str,
      completed: bool
   }
 
   #[post("/", data = "<task>")]
-  fn new(task: Form<Task>) -> Flash<Redirect> {
+  fn new(task: Form<Task<'_>>) -> Flash<Redirect> {
       if task.description.is_empty() {
-          Flash::error(Redirect::to("/"), "Cannot be empty.")
+          Flash::error(Redirect::to(uri!(home)), "Cannot be empty.")
       } else {
-          Flash::success(Redirect::to("/"), "Task added.")
+          Flash::success(Redirect::to(uri!(home)), "Task added.")
       }
   }
 '''
@@ -103,14 +103,14 @@ text = '''
 title = "JSON, out of the box."
 code = '''
   #[derive(Serialize, Deserialize)]
-  struct Message {
-     contents: String,
+  struct Message<'r> {
+     contents: &'r str,
   }
 
   #[put("/<id>", data = "<msg>")]
-  fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
+  fn update(db: &Db, id: Id, msg: Json<Message<'_>>) -> JsonValue {
       if db.contains_key(&id) {
-          db.insert(id, &msg.contents);
+          db.insert(id, msg.contents);
           json!({ "status": "ok" })
       } else {
           json!({ "status": "error" })

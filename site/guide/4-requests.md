@@ -100,7 +100,7 @@ Here's a more complete route to illustrate varied usage:
 # fn main() {}
 
 #[get("/hello/<name>/<age>/<cool>")]
-fn hello(name: String, age: u8, cool: bool) -> String {
+fn hello(name: &str, age: u8, cool: bool) -> String {
     if cool {
         format!("You're a cool {} year old, {}!", age, name)
     } else {
@@ -173,7 +173,7 @@ previous example:
 # fn main() {}
 
 #[get("/hello/<name>/<age>/<cool>")]
-fn hello(name: String, age: u8, cool: bool) { /* ... */ }
+fn hello(name: &str, age: u8, cool: bool) { /* ... */ }
 ```
 
 What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? When a parameter
@@ -626,13 +626,13 @@ use serde::Deserialize;
 use rocket_contrib::json::Json;
 
 #[derive(Deserialize)]
-struct Task {
-    description: String,
+struct Task<'r> {
+    description: &'r str,
     complete: bool
 }
 
 #[post("/todo", data = "<task>")]
-fn new(task: Json<Task>) { /* .. */ }
+fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
 See the [JSON example] on GitHub for a complete example.
@@ -711,13 +711,13 @@ can easily handle the form request in Rocket as follows:
 use rocket::form::Form;
 
 #[derive(FromForm)]
-struct Task {
+struct Task<'r> {
     complete: bool,
-    r#type: String,
+    r#type: &'r str,
 }
 
 #[post("/todo", data = "<task>")]
-fn new(task: Form<Task>) { /* .. */ }
+fn new(task: Form<Task<'_>>) { /* .. */ }
 ```
 
 The [`Form`] type implements the `FromData` trait as long as its generic
@@ -732,10 +732,10 @@ forward or failure can be caught by using the `Option` and `Result` types:
 
 ```rust
 # use rocket::{post, form::Form};
-# type Task = String;
+# type Task<'r> = &'r str;
 
 #[post("/todo", data = "<task>")]
-fn new(task: Option<Form<Task>>) { /* .. */ }
+fn new(task: Option<Form<Task<'_>>>) { /* .. */ }
 ```
 
 [`Form`]: @api/rocket/form/struct.Form.html
@@ -760,10 +760,10 @@ replace `Form<T>` with `Form<Strict<T>>` above to get strict parsing:
 
 use rocket::form::{Form, Strict};
 
-# #[derive(FromForm)] struct Task { complete: bool, description: String, }
+# #[derive(FromForm)] struct Task<'r> { complete: bool, description: &'r str, }
 
 #[post("/todo", data = "<task>")]
-fn new(task: Form<Strict<Task>>) { /* .. */ }
+fn new(task: Form<Strict<Task<'_>>>) { /* .. */ }
 ```
 
 `Strict` can also be used to make individual fields strict while keeping the
@@ -838,9 +838,9 @@ structure can be written as:
 # use rocket::form::FromForm;
 
 #[derive(FromForm)]
-struct External {
+struct External<'r> {
     #[field(name = "first-Name")]
-    first_name: String
+    first_name: &'r str
 }
 ```
 
@@ -851,10 +851,10 @@ If you want to accept both `firstName` case-insensitively as well as
 # use rocket::form::FromForm;
 
 #[derive(FromForm)]
-struct External {
+struct External<'r> {
     #[field(name = uncased("firstName"))]
     #[field(name = "first_name")]
-    first_name: String
+    first_name: &'r str
 }
 ```
 
@@ -868,11 +868,11 @@ in each instance case-insensitively, you would write:
 # use rocket::form::FromForm;
 
 #[derive(FromForm)]
-struct External {
+struct External<'r> {
     #[field(name = uncased("first-name"))]
     #[field(name = uncased("first_name"))]
     #[field(name = uncased("firstname"))]
-    first_name: String
+    first_name: &'r str
 }
 ```
 
@@ -998,19 +998,19 @@ Form structs can be nested:
 use rocket::form::FromForm;
 
 #[derive(FromForm)]
-struct MyForm {
-    owner: Person,
-    pet: Pet,
+struct MyForm<'r> {
+    owner: Person<'r>,
+    pet: Pet<'r>,
 }
 
 #[derive(FromForm)]
-struct Person {
-    name: String
+struct Person<'r> {
+    name: &'r str
 }
 
 #[derive(FromForm)]
-struct Pet {
-    name: String,
+struct Pet<'r> {
+    name: &'r str,
     #[field(validate = eq(true))]
     good_pet: bool,
 }
