@@ -60,7 +60,7 @@ features = ["serde"]
 
 [dependencies.multer]
 git = "https://github.com/rousan/multer-rs.git"
-rev = "0620e54"
+rev = "7e4f0c5f"
 features = ["tokio-io"]
 
 [dependencies.tokio]
