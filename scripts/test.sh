@@ -119,6 +119,15 @@ function test_default() {
   popd > /dev/null 2>&1
 }
 
+function run_benchmarks() {
+  echo ":: Running benchmarks..."
+
+  pushd "${BENCHMARKS_ROOT}" > /dev/null 2>&1
+    $CARGO bench $@
+  popd > /dev/null 2>&1
+}
+
+
 if [[ $1 == +* ]]; then
     CARGO="$CARGO $1"
     shift
@@ -126,7 +135,7 @@ fi
 
 # The kind of test we'll be running.
 TEST_KIND="default"
-KINDS=("contrib" "core" "examples" "default" "all")
+KINDS=("contrib" "benchmarks" "core" "examples" "default" "all")
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
     TEST_KIND=${1#"--"}
@@ -157,6 +166,7 @@ case $TEST_KIND in
   contrib) test_contrib $@ ;;
   examples) test_examples $@ ;;
   default) test_default $@ ;;
+  benchmarks) run_benchmarks $@ ;;
   all)
     test_default $@ & default=$!
     test_examples $@ & examples=$!

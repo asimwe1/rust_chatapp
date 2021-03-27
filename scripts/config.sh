@@ -40,6 +40,7 @@ PROJECT_ROOT=$(relative "") || exit $?
 CORE_ROOT=$(relative "core") || exit $?
 CONTRIB_ROOT=$(relative "contrib") || exit $?
 SITE_ROOT=$(relative "site") || exit $?
+BENCHMARKS_ROOT=$(relative "benchmarks") || exit $?
 
 # Root of project-like directories.
 CORE_LIB_ROOT=$(relative "core/lib") || exit $?
@@ -93,6 +94,7 @@ function print_environment() {
   echo "  CORE_ROOT: ${CORE_ROOT}"
   echo "  CONTRIB_ROOT: ${CONTRIB_ROOT}"
   echo "  SITE_ROOT: ${SITE_ROOT}"
+  echo "  BENCHMARKS_ROOT: ${BENCHMARKS_ROOT}"
   echo "  CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
   echo "  CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
   echo "  CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
