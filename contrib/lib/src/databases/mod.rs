@@ -117,7 +117,7 @@
 //!
 //! # Option 2:
 //! [global.databases.my_db]
-//! url = "mysql://root:root@localhost/my_db"
+//! url = "postgres://root:root@localhost/my_db"
 //!
 //! # With a `pool_size` key:
 //! [global.databases]
@@ -320,11 +320,10 @@
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | MySQL    | [`rust-mysql-simple`] | `18`      | [`mysql::Conn`]                | `mysql_pool`           |
 //! | Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
 //! | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Sqlite   | [`Rusqlite`]          | `0.24`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
@@ -332,11 +331,9 @@
 //! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 //! [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`mysql::Conn`]: https://docs.rs/mysql/18/mysql/struct.Conn.html
 //! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 //! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
-//! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
@@ -369,9 +366,6 @@ pub extern crate diesel;
 
 #[cfg(feature = "postgres_pool")] pub extern crate postgres;
 #[cfg(feature = "postgres_pool")] pub extern crate r2d2_postgres;
-
-#[cfg(feature = "mysql_pool")] pub extern crate mysql;
-#[cfg(feature = "mysql_pool")] pub extern crate r2d2_mysql;
 
 #[cfg(feature = "sqlite_pool")] pub extern crate rusqlite;
 #[cfg(feature = "sqlite_pool")] pub extern crate r2d2_sqlite;

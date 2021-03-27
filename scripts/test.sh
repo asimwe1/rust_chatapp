@@ -63,7 +63,6 @@ function test_contrib() {
     diesel_sqlite_pool
     diesel_mysql_pool
     postgres_pool
-    mysql_pool
     sqlite_pool
     memcache_pool
     brotli_compression

@@ -12,7 +12,6 @@ use crate::databases::{Config, Error};
 ///   * `diesel::PgConnection`
 ///   * `diesel::SqliteConnection`
 ///   * `postgres::Connection`
-///   * `mysql::Conn`
 ///   * `rusqlite::Connection`
 ///
 /// # Implementation Guide
@@ -151,19 +150,6 @@ impl Poolable for postgres::Client {
         let config = Config::from(db_name, rocket)?;
         let url = config.url.parse().map_err(Error::Custom)?;
         let manager = r2d2_postgres::PostgresConnectionManager::new(url, postgres::tls::NoTls);
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
-    }
-}
-
-#[cfg(feature = "mysql_pool")]
-impl Poolable for mysql::Conn {
-    type Manager = r2d2_mysql::MysqlConnectionManager;
-    type Error = std::convert::Infallible;
-
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
-        let config = Config::from(db_name, rocket)?;
-        let opts = mysql::OptsBuilder::from_opts(&config.url);
-        let manager = r2d2_mysql::MysqlConnectionManager::new(opts);
         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
     }
 }

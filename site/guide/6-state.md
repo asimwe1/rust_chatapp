@@ -229,11 +229,10 @@ Presently, Rocket provides built-in support for the following databases:
 | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 |----------|-----------------------|-----------|--------------------------------|------------------------|
 | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-| MySQL    | [`rust-mysql-simple`] | `18`      | [`mysql::Conn`]                | `mysql_pool`           |
 | Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
 | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
 | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-| Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+| Sqlite   | [`Rusqlite`]          | `0.24`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
 
 [`r2d2`]: https://crates.io/crates/r2d2
@@ -242,11 +241,9 @@ Presently, Rocket provides built-in support for the following databases:
 [`diesel::SqliteConnection`]: https://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
 [`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-[`mysql::Conn`]: https://docs.rs/mysql/18/mysql/struct.Conn.html
 [`diesel::MysqlConnection`]: https://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 [Rust-Postgres]: https://github.com/sfackler/rust-postgres
-[`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 [`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 [`memcache`]: https://github.com/aisk/rust-memcache
 [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
