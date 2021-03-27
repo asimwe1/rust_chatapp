@@ -46,6 +46,19 @@ Now, add Rocket as a dependency in your `Cargo.toml`:
 rocket = "0.5.0-dev"
 ```
 
+! warning: Development versions must be _git_ dependencies.
+
+  Development versions, tagged with `-dev`, are not published. To depend on a
+  development version of Rocket, you'll need to point `Cargo.toml` to a Rocket
+  git repository. For example, with `######` replaced with a git commit hash:
+
+  `
+  [dependencies]
+  `
+  `
+  rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "######" }
+  `
+
 Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
 program, reproduced below:
 

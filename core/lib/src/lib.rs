@@ -43,8 +43,13 @@
 //! rocket = "0.5.0-dev"
 //! ```
 //!
-//! See the [guide](https://rocket.rs/master/guide) for more information on how to
-//! write Rocket applications. Here's a simple example to get you started:
+//! <small>Note that development versions, tagged with `-dev`, are not published
+//! and will will need to be specified as [git dependencies].</small>
+//!
+//! See the [guide](https://rocket.rs/master/guide) for more information on how
+//! to write Rocket applications. Here's a simple example to get you started:
+//!
+//! [git dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
 //!
 //! ```rust,no_run
 //! #[macro_use] extern crate rocket;
