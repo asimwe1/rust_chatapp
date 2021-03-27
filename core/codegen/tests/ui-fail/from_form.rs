@@ -163,4 +163,16 @@ struct Validate3 {
     first: String,
 }
 
+#[derive(FromForm)]
+struct Default0 {
+    #[field(default = "no conversion")]
+    first: i32,
+}
+
+#[derive(FromForm)]
+struct Default1 {
+    #[field(default = 1, default = 2)]
+    double_default: i32,
+}
+
 fn main() { }
