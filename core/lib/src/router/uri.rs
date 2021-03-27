@@ -67,7 +67,17 @@ pub struct RouteUri<'a> {
     pub(crate) metadata: Metadata,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Color {
+    /// Fully static: no dynamic components.
+    Static = 3,
+    /// Partially static/dynamic: some, but not all, dynamic components.
+    Partial = 2,
+    /// Fully dynamic: no static components.
+    Wild = 1,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct Metadata {
     /// Segments in the base.
     pub base_segs: Vec<Segment>,
@@ -77,14 +87,12 @@ pub(crate) struct Metadata {
     pub query_segs: Vec<Segment>,
     /// `(name, value)` of the query segments that are static.
     pub static_query_fields: Vec<(String, String)>,
-    /// Whether the path is completely static.
-    pub static_path: bool,
-    /// Whether the path is completely dynamic.
-    pub wild_path: bool,
+    /// The "color" of the route path.
+    pub path_color: Color,
+    /// The "color" of the route query, if there is query.
+    pub query_color: Option<Color>,
     /// Whether the path has a `<trailing..>` parameter.
     pub trailing_path: bool,
-    /// Whether the query is completely dynamic.
-    pub wild_query: bool,
 }
 
 type Result<T> = std::result::Result<T, uri::Error<'static>>;
@@ -206,17 +214,28 @@ impl<'a> RouteUri<'a> {
     /// The route's default rank is determined based on the presence or absence
     /// of static and dynamic paths and queries. See the documentation for
     /// [`Route::new`][`crate::Route::new`] for a table summarizing the exact default ranks.
+    ///
+    /// | path    | query   | rank |
+    /// |---------|---------|------|
+    /// | static  | static  | -12  |
+    /// | static  | partial | -11  |
+    /// | static  | wild    | -10  |
+    /// | static  | none    | -9   |
+    /// | partial | static  | -8   |
+    /// | partial | partial | -7   |
+    /// | partial | wild    | -6   |
+    /// | partial | none    | -5   |
+    /// | wild    | static  | -4   |
+    /// | wild    | partial | -3   |
+    /// | wild    | wild    | -2   |
+    /// | wild    | none    | -1   |
     pub(crate) fn default_rank(&self) -> isize {
-        let static_path = self.metadata.static_path;
-        let wild_query = self.query().map(|_| self.metadata.wild_query);
-        match (static_path, wild_query) {
-            (true, Some(false)) => -6,   // static path, partly static query
-            (true, Some(true)) => -5,    // static path, fully dynamic query
-            (true, None) => -4,          // static path, no query
-            (false, Some(false)) => -3,  // dynamic path, partly static query
-            (false, Some(true)) => -2,   // dynamic path, fully dynamic query
-            (false, None) => -1,         // dynamic path, no query
-        }
+        let raw_path_weight = self.metadata.path_color as u8;
+        let raw_query_weight = self.metadata.query_color.map_or(0, |c| c as u8);
+        let raw_weight = (raw_path_weight << 2) | raw_query_weight;
+
+        // We subtract `3` because `raw_path` is never `0`: 0b0100 = 4 - 3 = 1.
+        -((raw_weight as isize) - 3)
     }
 }
 
@@ -234,19 +253,34 @@ impl Metadata {
             .map(Segment::from)
             .collect::<Vec<_>>();
 
+        let static_query_fields = query_segs.iter().filter(|s| !s.dynamic)
+            .map(|s| ValueField::parse(&s.value))
+            .map(|f| (f.name.source().to_string(), f.value.to_string()))
+            .collect();
+
+        let static_path = path_segs.iter().all(|s| !s.dynamic);
+        let wild_path = !path_segs.is_empty() && path_segs.iter().all(|s| s.dynamic);
+        let path_color = match (static_path, wild_path) {
+            (true, _) => Color::Static,
+            (_, true) => Color::Wild,
+            (_, _) => Color::Partial
+        };
+
+        let query_color = (!query_segs.is_empty()).then(|| {
+            let static_query = query_segs.iter().all(|s| !s.dynamic);
+            let wild_query = query_segs.iter().all(|s| s.dynamic);
+            match (static_query, wild_query) {
+                (true, _) => Color::Static,
+                (_, true) => Color::Wild,
+                (_, _) => Color::Partial
+            }
+        });
+
+        let trailing_path = path_segs.last().map_or(false, |p| p.trailing);
+
         Metadata {
-            static_path: path_segs.iter().all(|s| !s.dynamic),
-            wild_path: path_segs.iter().all(|s| s.dynamic)
-                && path_segs.last().map_or(false, |p| p.trailing),
-            trailing_path: path_segs.last().map_or(false, |p| p.trailing),
-            wild_query: query_segs.iter().all(|s| s.dynamic),
-            static_query_fields: query_segs.iter().filter(|s| !s.dynamic)
-                .map(|s| ValueField::parse(&s.value))
-                .map(|f| (f.name.source().to_string(), f.value.to_string()))
-                .collect(),
-            path_segs,
-            query_segs,
-            base_segs,
+            static_query_fields, path_color, query_color, trailing_path,
+            path_segs, query_segs, base_segs,
         }
     }
 }
@@ -271,6 +305,7 @@ impl fmt::Debug for RouteUri<'_> {
             .field("base", &self.base)
             .field("unmounted_origin", &self.unmounted_origin)
             .field("origin", &self.origin)
+            .field("metadata", &self.metadata)
             .finish()
     }
 }

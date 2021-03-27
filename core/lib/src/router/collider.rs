@@ -1,4 +1,4 @@
-use super::Route;
+use super::{Route, uri::Color};
 
 use crate::http::MediaType;
 use crate::request::Request;
@@ -45,10 +45,6 @@ impl Route {
 }
 
 fn paths_collide(route: &Route, other: &Route) -> bool {
-    if route.uri.metadata.wild_path || other.uri.metadata.wild_path {
-        return true;
-    }
-
     let a_segments = &route.uri.metadata.path_segs;
     let b_segments = &other.uri.metadata.path_segs;
     for (seg_a, seg_b) in a_segments.iter().zip(b_segments.iter()) {
@@ -56,10 +52,12 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
             return true;
         }
 
-        if !seg_a.dynamic && !seg_b.dynamic {
-            if seg_a.value != seg_b.value {
-                return false;
-            }
+        if seg_a.dynamic || seg_b.dynamic {
+            continue;
+        }
+
+        if seg_a.value != seg_b.value {
+            return false;
         }
     }
 
@@ -71,11 +69,19 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.uri.metadata.path_segs;
     let req_segments = req.uri().path_segments();
-    if route_segments.len() > req_segments.len() + 1 {
+
+    if route.uri.metadata.trailing_path {
+        // The last route segment can be trailing, which is allowed to be empty.
+        // So we can have one more segment in `route` than in `req` and match.
+        // ok if: req_segments.len() >= route_segments.len() - 1
+        if req_segments.len() + 1 < route_segments.len() {
+            return false;
+        }
+    } else if route_segments.len() != req_segments.len() {
         return false;
     }
 
-    if route.uri.metadata.wild_path {
+    if route.uri.metadata.path_color == Color::Wild {
         return true;
     }
 
@@ -89,12 +95,11 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
         }
     }
 
-    route_segments.get(req_segments.len()).map_or(false, |s| s.trailing)
-        || route_segments.len() == req_segments.len()
+    true
 }
 
 fn queries_match(route: &Route, req: &Request<'_>) -> bool {
-    if route.uri.metadata.wild_query {
+    if matches!(route.uri.metadata.query_color, None | Some(Color::Wild)) {
         return true;
     }
 

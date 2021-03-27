@@ -32,53 +32,97 @@ impl Route {
     ///
     /// # Ranking
     ///
-    /// The route's rank is set so that routes with static paths (no dynamic
-    /// parameters) have lower ranks (higher precedence) than routes with
-    /// dynamic paths, routes with query strings with static segments have lower
-    /// ranks than routes with fully dynamic queries, and routes with queries
-    /// have lower ranks than routes without queries. This default ranking is
-    /// summarized by the table below:
+    /// The default rank prefers static components over dynamic components in
+    /// both paths and queries: the _more_ static a route's path and query are,
+    /// the higher its precedence.
     ///
-    /// | static path | query         | rank |
-    /// |-------------|---------------|------|
-    /// | yes         | partly static | -6   |
-    /// | yes         | fully dynamic | -5   |
-    /// | yes         | none          | -4   |
-    /// | no          | partly static | -3   |
-    /// | no          | fully dynamic | -2   |
-    /// | no          | none          | -1   |
+    /// There are three "colors" to paths and queries:
+    ///   1. `static`, meaning all components are static
+    ///   2. `partial`, meaning at least one component is dynamic
+    ///   3. `wild`, meaning all components are dynamic
+    ///
+    /// Static paths carry more weight than static queries. The same is true for
+    /// partial and wild paths. This results in the following default ranking
+    /// table:
+    ///
+    /// | path    | query   | rank |
+    /// |---------|---------|------|
+    /// | static  | static  | -12  |
+    /// | static  | partial | -11  |
+    /// | static  | wild    | -10  |
+    /// | static  | none    | -9   |
+    /// | partial | static  | -8   |
+    /// | partial | partial | -7   |
+    /// | partial | wild    | -6   |
+    /// | partial | none    | -5   |
+    /// | wild    | static  | -4   |
+    /// | wild    | partial | -3   |
+    /// | wild    | wild    | -2   |
+    /// | wild    | none    | -1   |
+    ///
+    /// Note that _lower_ ranks have _higher_ precedence.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::{Request, Data};
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::handler::{dummy as handler};
     ///
-    /// // this is rank -6 (static path, ~static query)
-    /// let route = Route::new(Method::Get, "/foo?bar=baz&<zoo>", handler);
-    /// assert_eq!(route.rank, -6);
+    /// macro_rules! assert_rank {
+    ///     ($($uri:expr => $rank:expr,)*) => {$(
+    ///         let route = Route::new(Method::Get, $uri, handler);
+    ///         assert_eq!(route.rank, $rank);
+    ///     )*}
+    /// }
     ///
-    /// // this is rank -5 (static path, fully dynamic query)
-    /// let route = Route::new(Method::Get, "/foo?<zoo..>", handler);
-    /// assert_eq!(route.rank, -5);
+    /// assert_rank! {
+    ///     "/?foo" => -12,                 // static path, static query
+    ///     "/foo/bar?a=b&bob" => -12,      // static path, static query
+    ///     "/?a=b&bob" => -12,             // static path, static query
     ///
-    /// // this is a rank -4 route (static path, no query)
-    /// let route = Route::new(Method::Get, "/", handler);
-    /// assert_eq!(route.rank, -4);
+    ///     "/?a&<zoo..>" => -11,           // static path, partial query
+    ///     "/foo?a&<zoo..>" => -11,        // static path, partial query
+    ///     "/?a&<zoo>" => -11,             // static path, partial query
     ///
-    /// // this is a rank -3 route (dynamic path, ~static query)
-    /// let route = Route::new(Method::Get, "/foo/<bar>?blue", handler);
-    /// assert_eq!(route.rank, -3);
+    ///     "/?<zoo..>" => -10,             // static path, wild query
+    ///     "/foo?<zoo..>" => -10,          // static path, wild query
+    ///     "/foo?<a>&<b>" => -10,          // static path, wild query
     ///
-    /// // this is a rank -2 route (dynamic path, fully dynamic query)
-    /// let route = Route::new(Method::Get, "/<bar>?<blue>", handler);
-    /// assert_eq!(route.rank, -2);
+    ///     "/" => -9,                      // static path, no query
+    ///     "/foo/bar" => -9,               // static path, no query
     ///
-    /// // this is a rank -1 route (dynamic path, no query)
-    /// let route = Route::new(Method::Get, "/<bar>/foo/<baz..>", handler);
-    /// assert_eq!(route.rank, -1);
+    ///     "/a/<b>?foo" => -8,             // partial path, static query
+    ///     "/a/<b..>?foo" => -8,           // partial path, static query
+    ///     "/<a>/b?foo" => -8,             // partial path, static query
+    ///
+    ///     "/a/<b>?<b>&c" => -7,           // partial path, partial query
+    ///     "/a/<b..>?a&<c..>" => -7,       // partial path, partial query
+    ///
+    ///     "/a/<b>?<c..>" => -6,           // partial path, wild query
+    ///     "/a/<b..>?<c>&<d>" => -6,       // partial path, wild query
+    ///     "/a/<b..>?<c>" => -6,           // partial path, wild query
+    ///
+    ///     "/a/<b>" => -5,                 // partial path, no query
+    ///     "/<a>/b" => -5,                 // partial path, no query
+    ///     "/a/<b..>" => -5,               // partial path, no query
+    ///
+    ///     "/<b>/<c>?foo&bar" => -4,       // wild path, static query
+    ///     "/<a>/<b..>?foo" => -4,         // wild path, static query
+    ///     "/<b..>?cat" => -4,             // wild path, static query
+    ///
+    ///     "/<b>/<c>?<foo>&bar" => -3,     // wild path, partial query
+    ///     "/<a>/<b..>?a&<b..>" => -3,     // wild path, partial query
+    ///     "/<b..>?cat&<dog>" => -3,       // wild path, partial query
+    ///
+    ///     "/<b>/<c>?<foo>" => -2,         // wild path, wild query
+    ///     "/<a>/<b..>?<b..>" => -2,       // wild path, wild query
+    ///     "/<b..>?<c>&<dog>" => -2,       // wild path, wild query
+    ///
+    ///     "/<b>/<c>" => -1,               // wild path, no query
+    ///     "/<a>/<b..>" => -1,             // wild path, no query
+    ///     "/<b..>" => -1,                 // wild path, no query
+    /// }
     /// ```
     ///
     /// # Panics
@@ -96,8 +140,7 @@ impl Route {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::{Request, Data};
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::handler::{dummy as handler};
     ///
     /// // this is a rank 1 route matching requests to `GET /`
     /// let index = Route::ranked(1, Method::Get, "/", handler);

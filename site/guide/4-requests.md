@@ -243,20 +243,35 @@ parameter resolves this collision.
 
 ### Default Ranking
 
-If a rank is not explicitly specified, Rocket assigns a default ranking. By
-default, routes with static paths and query strings have lower ranks (higher
-precedence) while routes with dynamic paths and without query strings have
-higher ranks (lower precedence). The table below describes the default ranking
-of a route given its properties.
+If a rank is not explicitly specified, Rocket assigns a default rank. The
+default rank prefers static segments over dynamic segments in both paths and
+queries: the _more_ static a route's path and query are, the higher its
+precedence.
 
-| static path | query         | rank | example             |
-|-------------|---------------|------|---------------------|
-| yes         | partly static | -6   | `/hello?world=true` |
-| yes         | fully dynamic | -5   | `/hello/?<world>`   |
-| yes         | none          | -4   | `/hello`            |
-| no          | partly static | -3   | `/<hi>?world=true`  |
-| no          | fully dynamic | -2   | `/<hi>?<world>`     |
-| no          | none          | -1   | `/<hi>`             |
+There are three "colors" to paths and queries:
+  1. `static`, meaning all components are static
+  2. `partial`, meaning at least one component is dynamic
+  3. `wild`, meaning all components are dynamic
+
+Static paths carry more weight than static queries. The same is true for partial
+and wild paths. This results in the following default ranking table:
+
+| path color | query color | default rank |
+|------------|-------------|--------------|
+| static     | static      | -12          |
+| static     | partial     | -11          |
+| static     | wild        | -10          |
+| static     | none        | -9           |
+| partial    | static      | -8           |
+| partial    | partial     | -7           |
+| partial    | wild        | -6           |
+| partial    | none        | -5           |
+| wild       | static      | -4           |
+| wild       | partial     | -3           |
+| wild       | wild        | -2           |
+| wild       | none        | -1           |
+
+Recall that _lower_ ranks have _higher_ precedence.
 
 ## Request Guards
 

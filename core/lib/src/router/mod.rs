@@ -79,7 +79,7 @@ mod test {
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            let route = Route::new(Get, route, dummy);
+            let route = dbg!(Route::new(Get, route, dummy));
             router.add(route);
         }
 
@@ -176,6 +176,7 @@ mod test {
         assert!(rankless_route_collisions(&["//<_..>", "/<_>"]));
         assert!(rankless_route_collisions(&["///<a>/", "/a/<a..>"]));
         assert!(rankless_route_collisions(&["///<a..>/", "/a/<a..>"]));
+        assert!(rankless_route_collisions(&["/<a..>", "/hello"]));
     }
 
     #[test]
@@ -215,17 +216,26 @@ mod test {
         assert!(!default_rank_route_collisions(&["/<path..>", "/"]));
         assert!(!default_rank_route_collisions(&["/<_>/<_>", "/foo/bar"]));
         assert!(!default_rank_route_collisions(&["/foo/<_>", "/foo/bar"]));
+
+        assert!(!default_rank_route_collisions(&["/<a>/<b>", "/hello/<b>"]));
+        assert!(!default_rank_route_collisions(&["/<a>/<b..>", "/hello/<b>"]));
+        assert!(!default_rank_route_collisions(&["/<a..>", "/hello/<b>"]));
+        assert!(!default_rank_route_collisions(&["/<a..>", "/hello"]));
+        assert!(!default_rank_route_collisions(&["/<a>", "/a/<path..>"]));
+        assert!(!default_rank_route_collisions(&["/a/<b>/c", "/<d>/<c..>"]));
     }
 
     #[test]
     fn test_collision_when_ranked() {
-        assert!(default_rank_route_collisions(&["/<a>", "/a/<path..>"]));
+        assert!(default_rank_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
+        assert!(default_rank_route_collisions(&["/<a>/b", "/a/<b>"]));
     }
 
     #[test]
     fn test_collision_when_ranked_query() {
         assert!(default_rank_route_collisions(&["/a?a=b", "/a?c=d"]));
-        assert!(default_rank_route_collisions(&["/<foo>?a=b", "/<foo>?c=d&<d>"]));
+        assert!(default_rank_route_collisions(&["/a?a=b&<b>", "/a?<c>&c=d"]));
+        assert!(default_rank_route_collisions(&["/a?a=b&<b..>", "/a?<c>&c=d"]));
     }
 
     #[test]
@@ -234,6 +244,7 @@ mod test {
         assert!(!default_rank_route_collisions(&["/hi", "/hi?<c>"]));
         assert!(!default_rank_route_collisions(&["/hi", "/hi?c"]));
         assert!(!default_rank_route_collisions(&["/hi?<c>", "/hi?c"]));
+        assert!(!default_rank_route_collisions(&["/<foo>?a=b", "/<foo>?c=d&<d>"]));
     }
 
     fn route<'a>(router: &'a Router, method: Method, uri: &'a str) -> Option<&'a Route> {
