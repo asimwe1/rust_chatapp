@@ -159,6 +159,7 @@ mod cookies;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
 #[doc(inline)] pub use crate::router::Route;
+#[doc(hidden)] pub use either::Either;
 pub use crate::request::Request;
 pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
