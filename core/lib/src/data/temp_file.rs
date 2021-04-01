@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, mem};
 use std::path::{PathBuf, Path};
 
 use crate::http::{ContentType, Status};
@@ -8,6 +8,7 @@ use crate::outcome::IntoOutcome;
 use crate::request::Request;
 
 use tokio::fs::{self, File};
+use tokio::io::AsyncWriteExt;
 use tempfile::{NamedTempFile, TempPath};
 use either::Either;
 
@@ -112,7 +113,8 @@ pub enum TempFile<'v> {
 }
 
 impl<'v> TempFile<'v> {
-    /// Persists the temporary file, moving it to `path`.
+    /// Persists the temporary file, atomically linking it at `path`. The
+    /// `self.path()` is updated to `path`.
     ///
     /// This method _does not_ create a copy of `self`, nor a new link to the
     /// contents of `self`: it renames the temporary file to `path` and marks it
@@ -120,6 +122,25 @@ impl<'v> TempFile<'v> {
     /// multiple copies of `self`. To create multiple links, use
     /// [`std::fs::hard_link()`] with `path` as the `src` _after_ calling this
     /// method.
+    ///
+    /// # Cross-Device Persistence
+    ///
+    /// Attemping to persist a temporary file across logical devices (or mount
+    /// points) will result in an error. This is a limitation of the underlying
+    /// OS. Your options are thus:
+    ///
+    ///   1. Store temporary file in the same logical device.
+    ///
+    ///      Change the `temp_dir` configuration parameter to be in the same
+    ///      logical device as the permanent location. This is the preferred
+    ///      solution.
+    ///
+    ///   2. Copy the temporary file using [`TempFile::copy_to()`] or
+    ///      [`TempFile::move_copy_to()`] instead.
+    ///
+    ///      This is a _full copy_ of the file, creating a duplicate version of
+    ///      the file at the destination. This should be avoided for performance
+    ///      reasons.
     ///
     /// # Example
     ///
@@ -142,21 +163,15 @@ impl<'v> TempFile<'v> {
     pub async fn persist_to<P>(&mut self, path: P) -> io::Result<()>
         where P: AsRef<Path>
     {
-        use std::mem::replace;
-        use tokio::io::AsyncWriteExt;
-
-        let new_path = path.as_ref();
+        let new_path = path.as_ref().to_path_buf();
         match self {
             TempFile::File { path: either, .. } => {
-                let path = replace(either, Either::Right(new_path.to_path_buf()));
+                let path = mem::replace(either, Either::Right(new_path.clone()));
                 match path {
-                    Either::Left(temp_path) => {
-                        let new_path = new_path.to_path_buf();
-                        let result = tokio::task::spawn_blocking(move || {
-                            temp_path.persist(new_path)
-                        }).await.map_err(|_| {
-                            io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block")
-                        })?;
+                    Either::Left(temp) => {
+                        let result = tokio::task::spawn_blocking(move || temp.persist(new_path))
+                            .await
+                            .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block"))?;
 
                         if let Err(e) = result {
                             *either = Either::Left(e.path);
@@ -172,15 +187,126 @@ impl<'v> TempFile<'v> {
                 }
             }
             TempFile::Buffered { content } => {
-                let mut file = File::create(new_path).await?;
+                let mut file = File::create(&new_path).await?;
                 file.write_all(content.as_bytes()).await?;
                 *self = TempFile::File {
                     file_name: None,
                     content_type: None,
-                    path: Either::Right(new_path.to_path_buf()),
+                    path: Either::Right(new_path),
                     len: content.len() as u64
                 };
             }
+        }
+
+        Ok(())
+    }
+
+    /// Persists the temporary file at its temporary path and creates a full
+    /// copy at `path`. The `self.path()` is _not_ updated, unless no temporary
+    /// file existed prior, and the temporary file is _not_ removed. Thus, there
+    /// will be _two_ files with the same contents.
+    ///
+    /// Unlike [`TempFile::persist_to()`], this method does not incur
+    /// cross-device limitations, at the performance cost of a full copy. Prefer
+    /// to use `persist_to()` with a valid `temp_dir` configuration parameter if
+    /// no more than one copy of a file is required.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::data::TempFile;
+    ///
+    /// #[post("/", data = "<file>")]
+    /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
+    ///     # assert!(file.path().is_none());
+    ///     # let some_path = std::env::temp_dir().join("some-file.txt");
+    ///     file.copy_to(&some_path).await?;
+    ///     # assert_eq!(file.path(), Some(&*some_path));
+    ///     # let some_other_path = std::env::temp_dir().join("some-other.txt");
+    ///     file.copy_to(&some_other_path).await?;
+    ///     assert_eq!(file.path(), Some(&*some_path));
+    ///
+    ///     Ok(())
+    /// }
+    /// # let file = TempFile::Buffered { content: "hi".into() };
+    /// # rocket::async_test(handle(file)).unwrap();
+    /// ```
+    pub async fn copy_to<P>(&mut self, path: P) -> io::Result<()>
+        where P: AsRef<Path>
+    {
+        match self {
+            TempFile::File { path: either, .. } => {
+                let old_path = mem::replace(either, Either::Right(either.to_path_buf()));
+                match old_path {
+                    Either::Left(temp) => {
+                        let result = tokio::task::spawn_blocking(move || temp.keep())
+                            .await
+                            .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block"))?;
+
+                        if let Err(e) = result {
+                            *either = Either::Left(e.path);
+                            return Err(e.error);
+                        }
+                    },
+                    Either::Right(_) => { /* do nada */ }
+                };
+
+                tokio::fs::copy(&either, path).await?;
+            }
+            TempFile::Buffered { content } => {
+                let path = path.as_ref();
+                let mut file = File::create(path).await?;
+                file.write_all(content.as_bytes()).await?;
+                *self = TempFile::File {
+                    file_name: None,
+                    content_type: None,
+                    path: Either::Right(path.to_path_buf()),
+                    len: content.len() as u64
+                };
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Persists the temporary file at its temporary path, creates a full copy
+    /// at `path`, and then deletes the temporary file. `self.path()` is updated
+    /// to `path`.
+    ///
+    /// Like [`TempFile::copy_to()`] and unlike [`TempFile::persist_to()`], this
+    /// method does not incur cross-device limitations, at the performance cost
+    /// of a full copy and file deletion. Prefer to use `persist_to()` with a
+    /// valid `temp_dir` configuration parameter if no more than one copy of a
+    /// file is required.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::data::TempFile;
+    ///
+    /// #[post("/", data = "<file>")]
+    /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
+    ///     # assert!(file.path().is_none());
+    ///     # let some_path = std::env::temp_dir().join("some-file.txt");
+    ///     file.move_copy_to(&some_path).await?;
+    ///     # assert_eq!(file.path(), Some(&*some_path));
+    ///
+    ///     Ok(())
+    /// }
+    /// # let file = TempFile::Buffered { content: "hi".into() };
+    /// # rocket::async_test(handle(file)).unwrap();
+    /// ```
+    pub async fn move_copy_to<P>(&mut self, path: P) -> io::Result<()>
+        where P: AsRef<Path>
+    {
+        let dest = path.as_ref();
+        self.copy_to(dest).await?;
+
+        if let TempFile::File { path, .. } = self {
+            fs::remove_file(&path).await?;
+            *path = Either::Right(dest.to_path_buf());
         }
 
         Ok(())
