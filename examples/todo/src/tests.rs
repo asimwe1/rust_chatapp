@@ -16,8 +16,7 @@ macro_rules! run_test {
         let _lock = DB_LOCK.lock();
 
         rocket::async_test(async move {
-            let rocket = super::rocket();
-            let $client = Client::tracked(rocket).await.expect("Rocket client");
+            let $client = Client::tracked(super::rocket()).await.expect("Rocket client");
             let db = super::DbConn::get_one($client.rocket()).await;
             let $conn = db.expect("failed to get database connection for testing");
             Task::delete_all(&$conn).await.expect("failed to delete all tasks for testing");
@@ -25,6 +24,16 @@ macro_rules! run_test {
             $block
         })
     })
+}
+
+#[test]
+fn test_index() {
+    use rocket::local::blocking::Client;
+
+    let _lock = DB_LOCK.lock();
+    let client = Client::tracked(super::rocket()).unwrap();
+    let response = client.get("/").dispatch();
+    assert_eq!(response.status(), Status::Ok);
 }
 
 #[test]

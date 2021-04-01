@@ -129,8 +129,8 @@ pub struct TemplateFairing {
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         // on_request only applies in debug mode, so only enable it in debug.
-        #[cfg(debug_assertions)] let kind = Kind::Attach | Kind::Request;
-        #[cfg(not(debug_assertions))] let kind = Kind::Attach;
+        #[cfg(debug_assertions)] let kind = Kind::Launch | Kind::Request;
+        #[cfg(not(debug_assertions))] let kind = Kind::Launch;
 
         Info { kind, name: "Templates" }
     }
@@ -140,7 +140,7 @@ impl Fairing for TemplateFairing {
     /// The user's callback, if any was supplied, is called to customize the
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
-    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         use rocket::figment::{Source, value::magic::RelativePathBuf};
 
         let configured_dir = rocket.figment()
@@ -186,7 +186,7 @@ impl Fairing for TemplateFairing {
     #[cfg(debug_assertions)]
     async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
         let cm = req.rocket().state::<ContextManager>()
-            .expect("Template ContextManager registered in on_attach");
+            .expect("Template ContextManager registered in on_launch");
 
         cm.reload_if_needed(&self.callback);
     }

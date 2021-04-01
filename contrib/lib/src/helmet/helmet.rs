@@ -193,15 +193,11 @@ impl Fairing for SpaceHelmet {
     fn info(&self) -> Info {
         Info {
             name: "Space Helmet",
-            kind: Kind::Response | Kind::Launch,
+            kind: Kind::Liftoff | Kind::Response,
         }
     }
 
-    async fn on_response<'r>(&self, _: &'r Request<'_>, res: &mut Response<'r>) {
-        self.apply(res);
-    }
-
-    fn on_launch(&self, rocket: &Rocket) {
+    async fn on_liftoff(&self, rocket: &Rocket) {
         if rocket.config().tls_enabled()
             && rocket.figment().profile() != rocket::Config::DEBUG_PROFILE
             && !self.is_enabled::<Hsts>()
@@ -211,5 +207,9 @@ impl Fairing for SpaceHelmet {
             info_!("To disable this warning, configure an HSTS policy.");
             self.force_hsts.store(true, Ordering::Relaxed);
         }
+    }
+
+    async fn on_response<'r>(&self, _: &'r Request<'_>, res: &mut Response<'r>) {
+        self.apply(res);
     }
 }

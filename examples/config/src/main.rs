@@ -7,9 +7,8 @@ use rocket::fairing::AdHoc;
 #[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .attach(AdHoc::on_attach("Config Reader", |rocket| async {
+        .attach(AdHoc::on_liftoff("Config Reader", |rocket| Box::pin(async move {
             let value = rocket.figment().find_value("").unwrap();
             println!("{:#?}", value);
-            Ok(rocket)
-        }))
+        })))
 }

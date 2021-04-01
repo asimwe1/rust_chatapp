@@ -5,7 +5,6 @@ use yansi::Paint;
 use state::Container;
 use figment::Figment;
 use tokio::sync::mpsc;
-use futures::future::FutureExt;
 
 use crate::logger;
 use crate::config::Config;
@@ -127,6 +126,7 @@ impl Rocket {
     /// let mut new_config = rocket.config().clone();
     /// new_config.port = 8888;
     ///
+    /// // Note that this tosses away any non-`Config` parameters in `Figment`.
     /// let rocket = rocket.reconfigure(new_config);
     /// assert_eq!(rocket.config().port, 8888);
     /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
@@ -339,9 +339,8 @@ impl Rocket {
         self
     }
 
-    /// Attaches a fairing to this instance of Rocket. If the fairing is an
-    /// _attach_ fairing, it is run immediately. All other kinds of fairings
-    /// will be executed at their appropriate time.
+    /// Attaches a fairing to this instance of Rocket. No fairings are excuted.
+    /// Fairings will be executed at their appropriate time.
     ///
     /// # Example
     ///
@@ -353,39 +352,13 @@ impl Rocket {
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Launch Message", |_| {
-    ///             println!("Rocket is launching!");
-    ///         }))
+    ///         .attach(AdHoc::on_liftoff("Liftoff Message", |_| Box::pin(async {
+    ///             println!("We have liftoff!");
+    ///         })))
     /// }
     /// ```
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        let future = async move {
-            let fairing = Box::new(fairing);
-            let mut fairings = std::mem::replace(&mut self.fairings, Fairings::new());
-            let rocket = fairings.attach(fairing, self).await;
-            (rocket, fairings)
-        };
-
-        // TODO: Reuse a single thread to run all attach fairings.
-        let (rocket, mut fairings) = match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                std::thread::spawn(move || {
-                    let _e = handle.enter();
-                    futures::executor::block_on(future)
-                }).join().unwrap()
-            }
-            Err(_) => {
-                std::thread::spawn(|| {
-                    futures::executor::block_on(future)
-                }).join().unwrap()
-            }
-        };
-
-        self = rocket;
-
-        // Note that `self.fairings` may now be non-empty! Move them to the end.
-        fairings.append(self.fairings);
-        self.fairings = fairings;
+        self.fairings.add(Box::new(fairing));
         self
     }
 
@@ -401,9 +374,9 @@ impl Rocket {
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
+    ///         .attach(AdHoc::on_liftoff("Print Config", |rocket| Box::pin(async move {
     ///             println!("Rocket launch config: {:?}", rocket.config());
-    ///         }))
+    ///         })))
     /// }
     /// ```
     #[inline(always)]
@@ -535,19 +508,17 @@ impl Rocket {
         self.shutdown_handle.clone()
     }
 
-    /// Perform "pre-launch" checks: verify:
-    ///     * there are no routing colisionns
-    ///     * there were no fairing failures
-    ///     * a secret key, if needed, is securely configured
-    pub(crate) async fn prelaunch_check(&mut self) -> Result<(), Error> {
+    // Perform "pre-launch" checks: verify:
+    //     * there are no routing colisionns
+    //     * there were no fairing failures
+    //     * a secret key, if needed, is securely configured
+    pub async fn _ignite(mut self) -> Result<Rocket, Error> {
+        // Check for routing collisions.
         if let Err(collisions) = self.router.finalize() {
             return Err(Error::new(ErrorKind::Collisions(collisions)));
         }
 
-        if let Some(failures) = self.fairings.failures() {
-            return Err(Error::new(ErrorKind::FailedFairings(failures.to_vec())))
-        }
-
+        // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
         if !self.config.secret_key.is_provided() {
             let profile = self.figment.profile();
@@ -567,7 +538,19 @@ impl Rocket {
             }
         };
 
-        Ok(())
+        // Run launch fairings. Check for failed fairings.
+        self = Fairings::handle_launch(self).await;
+        if let Some(failures) = self.fairings.failures() {
+            return Err(Error::new(ErrorKind::FailedFairings(failures.to_vec())))
+        }
+
+        // Freeze managed state for synchronization-free accesses later.
+        self.managed_state.freeze();
+
+        // Show all of the fairings.
+        self.fairings.pretty_print_counts();
+
+        Ok(self)
     }
 
     /// Returns a `Future` that drives the server, listening for and dispatching
@@ -593,60 +576,18 @@ impl Rocket {
     /// # }
     /// }
     /// ```
-    pub async fn launch(mut self) -> Result<(), Error> {
-        use std::net::ToSocketAddrs;
-        use futures::future::Either;
-        use crate::http::private::bind_tcp;
+    pub async fn launch(self) -> Result<(), Error> {
+        let rocket = self._ignite().await?;
 
-        self.prelaunch_check().await?;
+        rocket.default_tcp_http_server(|rocket| Box::pin(async move {
+            let proto = rocket.config.tls_enabled().then(|| "https").unwrap_or("http");
+            let addr = format!("{}://{}:{}", proto, rocket.config.address, rocket.config.port);
+            launch_info!("{}{} {}",
+                Paint::emoji("🚀 "),
+                Paint::default("Rocket has launched from").bold(),
+                Paint::default(addr).bold().underline());
 
-        let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        let addr = full_addr.to_socket_addrs()
-            .map(|mut addrs| addrs.next().expect(">= 1 socket addr"))
-            .map_err(|e| Error::new(ErrorKind::Io(e)))?;
-
-        // If `ctrl-c` shutdown is enabled, we `select` on `the ctrl-c` signal
-        // and server. Otherwise, we only wait on the `server`, hence `pending`.
-        let shutdown_handle = self.shutdown_handle.clone();
-        let shutdown_signal = match self.config.ctrlc {
-            true => tokio::signal::ctrl_c().boxed(),
-            false => futures::future::pending().boxed(),
-        };
-
-        #[cfg(feature = "tls")]
-        let server = {
-            use crate::http::private::tls::bind_tls;
-
-            if let Some(tls_config) = &self.config.tls {
-                let (certs, key) = tls_config.to_readers().map_err(ErrorKind::Io)?;
-                let l = bind_tls(addr, certs, key).await.map_err(ErrorKind::Bind)?;
-                self.listen_on(l).boxed()
-            } else {
-                let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
-                self.listen_on(l).boxed()
-            }
-        };
-
-        #[cfg(not(feature = "tls"))]
-        let server = {
-            let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
-            self.listen_on(l).boxed()
-        };
-
-        match futures::future::select(shutdown_signal, server).await {
-            Either::Left((Ok(()), server)) => {
-                // Ctrl-was pressed. Signal shutdown, wait for the server.
-                shutdown_handle.shutdown();
-                server.await
-            }
-            Either::Left((Err(err), server)) => {
-                // Error setting up ctrl-c signal. Let the user know.
-                warn!("Failed to enable `ctrl-c` graceful signal shutdown.");
-                info_!("Error: {}", err);
-                server.await
-            }
-            // Server shut down before Ctrl-C; return the result.
-            Either::Right((result, _)) => result,
-        }
+            rocket.fairings.handle_liftoff(&rocket).await;
+        })).await
     }
 }

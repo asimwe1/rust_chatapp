@@ -2,7 +2,7 @@ use std::io;
 use std::sync::Arc;
 
 use futures::stream::StreamExt;
-use futures::future::{FutureExt, Future};
+use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
@@ -11,15 +11,15 @@ use crate::form::Form;
 use crate::response::{Response, Body};
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
-use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
 
 use crate::http::{Method, Status, Header, hyper};
 use crate::http::private::{Listener, Connection, Incoming};
 use crate::http::uri::Origin;
+use crate::http::private::bind_tcp;
 
 // A token returned to force the execution of one method before another.
-pub(crate) struct Token;
+pub(crate) struct RequestToken;
 
 async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
     where F: FnOnce() -> Fut, Fut: Future<Output = T>,
@@ -186,7 +186,7 @@ impl Rocket {
         &self,
         req: &mut Request<'_>,
         data: &mut Data
-    ) -> Token {
+    ) -> RequestToken {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
@@ -207,13 +207,13 @@ impl Rocket {
         // Run request fairings.
         self.fairings.handle_request(req, data).await;
 
-        Token
+        RequestToken
     }
 
     #[inline]
     pub(crate) async fn dispatch<'s, 'r: 's>(
         &'s self,
-        _token: Token,
+        _token: RequestToken,
         request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
@@ -370,38 +370,55 @@ impl Rocket {
         crate::catcher::default(Status::InternalServerError, req)
     }
 
-    // TODO.async: Solidify the Listener APIs and make this function public
-    pub(crate) async fn listen_on<L>(mut self, listener: L) -> Result<(), Error>
-        where L: Listener + Send + Unpin + 'static,
-              <L as Listener>::Connection: Send + Unpin + 'static,
+    pub async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>
+        where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
     {
-        // We do this twice if `listen_on` was called through `launch()` but
-        // only once if `listen_on()` gets called directly.
-        self.prelaunch_check().await?;
+        use std::net::ToSocketAddrs;
 
-        // Freeze managed state for synchronization-free accesses later.
-        self.managed_state.freeze();
+        // Determine the address we're going to serve on.
+        let addr = format!("{}:{}", self.config.address, self.config.port);
+        let mut addr = addr.to_socket_addrs()
+            .map(|mut addrs| addrs.next().expect(">= 1 socket addr"))
+            .map_err(|e| Error::new(ErrorKind::Io(e)))?;
 
-        // Determine the address and port we actually bound to.
-        self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
-        let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
-        let full_addr = format!("{}:{}", self.config.address, self.config.port);
+        #[cfg(feature = "tls")]
+        if let Some(ref config) = self.config.tls {
+            use crate::http::private::tls::bind_tls;
 
-        // Run the launch fairings.
-        self.fairings.pretty_print_counts();
-        self.fairings.handle_launch(&self);
+            let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
+            let l = bind_tls(addr, certs, key).await.map_err(ErrorKind::Bind)?;
+            addr = l.local_addr().unwrap_or(addr);
+            self.config.address = addr.ip();
+            self.config.port = addr.port();
+            ready(&mut self).await;
+            return self.http_server(l).await;
+        }
 
-        launch_info!("{}{} {}{}",
-                     Paint::emoji("🚀 "),
-                     Paint::default("Rocket has launched from").bold(),
-                     Paint::default(proto).bold().underline(),
-                     Paint::default(&full_addr).bold().underline());
+        let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
+        addr = l.local_addr().unwrap_or(addr);
+        self.config.address = addr.ip();
+        self.config.port = addr.port();
+        ready(&mut self).await;
+        self.http_server(l).await
+    }
 
+    // TODO.async: Solidify the Listener APIs and make this function public
+    pub async fn http_server<L>(mut self, listener: L) -> Result<(), Error>
+        where L: Listener + Send + Unpin + 'static,
+              <L as Listener>::Connection: Send + Unpin + 'static
+    {
         // Determine keep-alives.
         let http1_keepalive = self.config.keep_alive != 0;
         let http2_keep_alive = match self.config.keep_alive {
             0 => None,
             n => Some(std::time::Duration::from_secs(n as u64))
+        };
+
+        // Get the shutdown handle (to initiate) and signal (when initiated).
+        let shutdown_handle = self.shutdown_handle.clone();
+        let shutdown_signal = match self.config.ctrlc {
+            true => tokio::signal::ctrl_c().boxed(),
+            false => future::pending().boxed(),
         };
 
         // We need to get this before moving `self` into an `Arc`.
@@ -420,12 +437,30 @@ impl Rocket {
         });
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
-        hyper::Server::builder(Incoming::from_listener(listener))
+        let server = hyper::Server::builder(Incoming::from_listener(listener))
             .http1_keepalive(http1_keepalive)
             .http2_keep_alive_interval(http2_keep_alive)
             .serve(service)
             .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
-            .await
-            .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))))
+            .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
+
+        tokio::pin!(server);
+
+        let selecter = future::select(shutdown_signal, server);
+        match selecter.await {
+            future::Either::Left((Ok(()), server)) => {
+                // Ctrl-was pressed. Signal shutdown, wait for the server.
+                shutdown_handle.shutdown();
+                server.await
+            }
+            future::Either::Left((Err(err), server)) => {
+                // Error setting up ctrl-c signal. Let the user know.
+                warn!("Failed to enable `ctrl-c` graceful signal shutdown.");
+                info_!("Error: {}", err);
+                server.await
+            }
+            // Server shut down before Ctrl-C; return the result.
+            future::Either::Right((result, _)) => result,
+        }
     }
 }

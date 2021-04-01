@@ -10,7 +10,7 @@ use std::ops::BitOr;
 /// # Example
 ///
 /// A simple `Info` structure that can be used for a `Fairing` that implements
-/// all four callbacks:
+/// all callbacks:
 ///
 /// ```
 /// use rocket::fairing::{Info, Kind};
@@ -18,7 +18,7 @@ use std::ops::BitOr;
 /// # let _unused_info =
 /// Info {
 ///     name: "Example Fairing",
-///     kind: Kind::Attach | Kind::Launch | Kind::Request | Kind::Response
+///     kind: Kind::Launch | Kind::Liftoff | Kind::Request | Kind::Response
 /// }
 /// # ;
 /// ```
@@ -36,28 +36,31 @@ pub struct Info {
 /// A fairing can request any combination of any of the following kinds of
 /// callbacks:
 ///
-///   * Attach
 ///   * Launch
+///   * Liftoff
 ///   * Request
 ///   * Response
 ///
 /// Two `Kind` structures can be `or`d together to represent a combination. For
 /// instance, to represent a fairing that is both a launch and request fairing,
 /// use `Kind::Launch | Kind::Request`. Similarly, to represent a fairing that
-/// is only an attach fairing, use `Kind::Attach`.
+/// is only a launch fairing, use `Kind::Launch`.
 #[derive(Debug, Clone, Copy)]
 pub struct Kind(usize);
 
 #[allow(non_upper_case_globals)]
 impl Kind {
-    /// `Kind` flag representing a request for an 'attach' callback.
-    pub const Attach: Kind = Kind(0b0001);
     /// `Kind` flag representing a request for a 'launch' callback.
-    pub const Launch: Kind = Kind(0b0010);
+    pub const Launch: Kind = Kind(1 << 0);
+
+    /// `Kind` flag representing a request for a 'liftoff' callback.
+    pub const Liftoff: Kind = Kind(1 << 1);
+
     /// `Kind` flag representing a request for a 'request' callback.
-    pub const Request: Kind = Kind(0b0100);
+    pub const Request: Kind = Kind(1 << 2);
+
     /// `Kind` flag representing a request for a 'response' callback.
-    pub const Response: Kind = Kind(0b1000);
+    pub const Response: Kind = Kind(1 << 3);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the kinds in `other` are also in `self`.
@@ -73,6 +76,7 @@ impl Kind {
     /// assert!(launch_and_req.is(Kind::Launch));
     /// assert!(launch_and_req.is(Kind::Request));
     ///
+    /// assert!(!launch_and_req.is(Kind::Liftoff));
     /// assert!(!launch_and_req.is(Kind::Response));
     /// assert!(!launch_and_req.is(Kind::Launch | Kind::Response));
     /// assert!(!launch_and_req.is(Kind::Launch | Kind::Request | Kind::Response));

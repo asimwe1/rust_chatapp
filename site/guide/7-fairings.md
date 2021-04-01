@@ -74,20 +74,19 @@ be significant.
 There are four events for which Rocket issues fairing callbacks. Each of these
 events is described below:
 
-  * **Attach (`on_attach`)**
-
-    An attach callback is called when a fairing is first attached via the
-    [`attach`](@api/rocket/struct.Rocket.html#method.attach) method. An attach
-    callback can arbitrarily modify the `Rocket` instance being constructed and
-    optionally abort launch. Attach fairings are commonly used to parse and
-    validate configuration values, aborting on bad configurations, and inserting
-    the parsed value into managed state for later retrieval.
-
   * **Launch (`on_launch`)**
 
-    A launch callback is called immediately before the Rocket application has
-    launched. A launch callback can inspect the `Rocket` instance being
-    launched. A launch callback can be a convenient hook for launching services
+    A launch callback is called just prior to liftoff while launching the
+    application. A launch callback can arbitrarily modify the `Rocket` instance
+    being constructed. They are are commonly used to parse and validate
+    configuration values, aborting on bad configurations, and inserting the
+    parsed value into managed state for later retrieval.
+
+  * **liftoff (`on_liftoff`)**
+
+    A liftoff callback is called immediately after a Rocket application has
+    launched. A liftoff callback can inspect the `Rocket` instance being
+    launched. A liftoff callback can be a convenient hook for launching services
     related to the Rocket application being launched.
 
   * **Request (`on_request`)**
@@ -112,14 +111,14 @@ Recall that a fairing is any type that implements the [`Fairing`] trait. A
 `Fairing` implementation has one required method: [`info`], which returns an
 [`Info`] structure. This structure is used by Rocket to assign a name to the
 fairing and determine the set of callbacks the fairing is registering for. A
-`Fairing` can implement any of the available callbacks: [`on_attach`],
-[`on_launch`], [`on_request`], and [`on_response`]. Each callback has a default
+`Fairing` can implement any of the available callbacks: [`on_launch`],
+[`on_liftoff`], [`on_request`], and [`on_response`]. Each callback has a default
 implementation that does absolutely nothing.
 
 [`Info`]: @api/rocket/fairing/struct.Info.html
 [`info`]: @api/rocket/fairing/trait.Fairing.html#tymethod.info
-[`on_attach`]: @api/rocket/fairing/trait.Fairing.html#method.on_attach
 [`on_launch`]: @api/rocket/fairing/trait.Fairing.html#method.on_launch
+[`on_liftoff`]: @api/rocket/fairing/trait.Fairing.html#method.on_liftoff
 [`on_request`]: @api/rocket/fairing/trait.Fairing.html#method.on_request
 [`on_response`]: @api/rocket/fairing/trait.Fairing.html#method.on_response
 
@@ -133,10 +132,10 @@ need simply be thread-safe and statically available or heap allocated.
 
 ### Example
 
-Imagine that we want to record the number of `GET` and `POST` requests that our
-application has received. While we could do this with request guards and managed
-state, it would require us to annotate every `GET` and `POST` request with
-custom types, polluting handler signatures. Instead, we can create a simple
+As an example, we want to record the number of `GET` and `POST` requests that
+our application has received. While we could do this with request guards and
+managed state, it would require us to annotate every `GET` and `POST` request
+with custom types, polluting handler signatures. Instead, we can create a simple
 fairing that acts globally.
 
 The code for a `Counter` fairing below implements exactly this. The fairing
@@ -205,23 +204,23 @@ documentation](@api/rocket/fairing/trait.Fairing.html#example).
 For simple occasions, implementing the `Fairing` trait can be cumbersome. This
 is why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
 function or closure. Using the `AdHoc` type is easy: simply call the
-`on_attach`, `on_launch`, `on_request`, or `on_response` constructors on `AdHoc`
-to create an `AdHoc` structure from a function or closure.
+`on_launch`, `on_liftoff`, `on_request`, or `on_response` constructors on
+`AdHoc` to create an `AdHoc` structure from a function or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached
-ad-hoc fairings. The first, a launch fairing named "Launch Printer", simply
-prints a message indicating that the application is about to launch. The
-second named "Put Rewriter", a request fairing, rewrites the method of all
-requests to be `PUT`.
+ad-hoc fairings. The first, a liftoff fairing named "Liftoff Printer", simply
+prints a message indicating that the application has launched. The second named
+"Put Rewriter", a request fairing, rewrites the method of all requests to be
+`PUT`.
 
 ```rust
 use rocket::fairing::AdHoc;
 use rocket::http::Method;
 
 rocket::ignite()
-    .attach(AdHoc::on_launch("Launch Printer", |_| {
-        println!("Rocket is about to launch! Exciting! Here we go...");
-    }))
+    .attach(AdHoc::on_liftoff("Liftoff Printer", |_| Box::pin(async move {
+        println!("...annnddd we have liftoff!");
+    })))
     .attach(AdHoc::on_request("Put Rewriter", |req, _| Box::pin(async move {
         req.set_method(Method::Put);
     })));

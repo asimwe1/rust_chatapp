@@ -69,7 +69,7 @@ macro_rules! dberr {
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub fn fairing(fairing_name: &'static str, db: &'static str) -> impl Fairing {
-        AdHoc::on_attach(fairing_name, move |rocket| async move {
+        AdHoc::on_launch(fairing_name, move |rocket| async move {
             let config = match Config::from(db, &rocket) {
                 Ok(config) => config,
                 Err(e) => dberr!("config", db, "{}", e, rocket),

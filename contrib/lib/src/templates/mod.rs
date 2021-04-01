@@ -395,8 +395,8 @@ impl Template {
         let info = ctxt.templates.get(name).ok_or_else(|| {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
-            info_!("Known templates: {}", ts.join(","));
-            info_!("Searched in '{:?}'.", ctxt.root);
+            info_!("Known templates: {}", ts.join(", "));
+            info_!("Searched in {:?}.", ctxt.root);
             Status::InternalServerError
         })?;
 

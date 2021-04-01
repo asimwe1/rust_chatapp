@@ -113,8 +113,9 @@ pub enum TempFile<'v> {
 }
 
 impl<'v> TempFile<'v> {
-    /// Persists the temporary file, atomically linking it at `path`. The
-    /// `self.path()` is updated to `path`.
+    /// Persists the temporary file, moving it to `path`. If a file exists at
+    /// the target path, `self` will atomically replace it. `self.path()` is
+    /// updated to `path`.
     ///
     /// This method _does not_ create a copy of `self`, nor a new link to the
     /// contents of `self`: it renames the temporary file to `path` and marks it

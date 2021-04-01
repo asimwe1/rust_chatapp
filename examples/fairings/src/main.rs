@@ -23,19 +23,11 @@ impl Fairing for Counter {
     fn info(&self) -> Info {
         Info {
             name: "GET/POST Counter",
-            kind: Kind::Attach | Kind::Request
+            kind: Kind::Launch | Kind::Request
         }
     }
 
-    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
-        if request.method() == Method::Get {
-            self.get.fetch_add(1, Ordering::Relaxed);
-        } else if request.method() == Method::Post {
-            self.post.fetch_add(1, Ordering::Relaxed);
-        }
-    }
-
-    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         #[get("/counts")]
         fn counts(counts: State<'_, Counter>) -> String {
             let get_count = counts.get.load(Ordering::Relaxed);
@@ -44,6 +36,14 @@ impl Fairing for Counter {
         }
 
         Ok(rocket.manage(self.clone()).mount("/", routes![counts]))
+    }
+
+    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
+        if request.method() == Method::Get {
+            self.get.fetch_add(1, Ordering::Relaxed);
+        } else if request.method() == Method::Post {
+            self.post.fetch_add(1, Ordering::Relaxed);
+        }
     }
 }
 
@@ -62,16 +62,16 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::on_attach("Token State", |rocket| async {
+        .attach(AdHoc::on_launch("Token State", |rocket| async {
             println!("Adding token managed state...");
             match rocket.figment().extract_inner("token") {
                 Ok(value) => Ok(rocket.manage(Token(value))),
                 Err(_) => Err(rocket)
             }
         }))
-        .attach(AdHoc::on_launch("Launch Message", |_| {
-            println!("Rocket is about to launch!");
-        }))
+        .attach(AdHoc::on_liftoff("Liftoff Message", |_| Box::pin(async move {
+            println!("We have liftoff!");
+        })))
         .attach(AdHoc::on_request("PUT Rewriter", |req, _| {
             Box::pin(async move {
                 println!("    => Incoming request: {}", req);

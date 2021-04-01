@@ -56,8 +56,10 @@ use crate::config::SecretKey;
 pub struct Config {
     /// The selected profile. **(default: _debug_ `debug` / _release_ `release`)**
     ///
-    /// **Note:** This field is never serialized nor deserialized. It is set to
-    /// the value of the selected `Profile` during extraction.
+    /// **Note:** This field is never serialized nor deserialized. When part of
+    /// a `Config` `Provider`, it is emitted as the profile to select on the
+    /// merged-into Figment. When a `Config` is extracted, this field is set to
+    /// the extracting Figment's selected `Profile`.
     #[serde(skip)]
     pub profile: Profile,
     /// IP address to serve on. **(default: `127.0.0.1`)**

@@ -1,4 +1,4 @@
-//! Fairings: callbacks at attach, launch, request, and response time.
+//! Fairings: callbacks at launch, liftoff, request, and response time.
 //!
 //! Fairings allow for structured interposition at various points in the
 //! application lifetime. Fairings can be seen as a restricted form of
@@ -94,35 +94,39 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// ## Fairing Callbacks
 ///
-/// There are four kinds of fairing callbacks: attach, launch, request, and
+/// There are four kinds of fairing callbacks: launch, liftoff, request, and
 /// response. A fairing can request any combination of these callbacks through
 /// the `kind` field of the `Info` structure returned from the `info` method.
 /// Rocket will only invoke the callbacks set in the `kind` field.
 ///
 /// The four callback kinds are as follows:
 ///
-///   * **Attach (`on_attach`)**
-///
-///     An attach callback, represented by the [`Fairing::on_attach()`] method,
-///     is called when a fairing is first attached via [`Rocket::attach()`]
-///     method. The state of the `Rocket` instance is, at this point, not
-///     finalized, as the user may still add additional information to the
-///     `Rocket` instance. As a result, it is unwise to depend on the state of
-///     the `Rocket` instance.
-///
-///     An attach callback can arbitrarily modify the `Rocket` instance being
-///     constructed. It returns `Ok` if it would like launching to proceed
-///     nominally and `Err` otherwise. If an attach callback returns `Err`,
-///     launch will be aborted. All attach callbacks are executed on `attach`,
-///     even if one or more signal a failure.
-///
 ///   * **Launch (`on_launch`)**
 ///
 ///     A launch callback, represented by the [`Fairing::on_launch()`] method,
-///     is called immediately before the Rocket application has launched. At
-///     this point, Rocket has opened a socket for listening but has not yet
-///     begun accepting connections. A launch callback can inspect the `Rocket`
-///     instance being launched.
+///     is called just prior to liftoff, while launching the application. The
+///     state of the `Rocket` instance is, at this point, not finalized, as it
+///     may be modified at will by other launch fairings. As a result, it is
+///     unwise to depend on the state of the `Rocket` instance.
+///
+///     All launch callbacks are executed in breadth-first `attach()` order. A
+///     callback `B` executing after a callback `A` can view changes made by `A`
+///     but not vice-versa.
+///
+///     A launch callback can arbitrarily modify the `Rocket` instance being
+///     constructed. It should take care not to introduce infinite recursion by
+///     recursively attaching launch fairings. It returns `Ok` if it would like
+///     launching to proceed nominally and `Err` otherwise. If a launch fairing
+///     returns `Err`, launch will be aborted. All launch fairings are executed
+///     even if one or more signal a failure.
+///
+///   * **Liftoff (`on_liftoff`)**
+///
+///     A liftoff callback, represented by the [`Fairing::on_liftoff()`] method,
+///     is called immediately after a Rocket application has launched. At this
+///     point, Rocket has opened a socket for listening but has not yet begun
+///     accepting connections. A liftoff callback can inspect the `Rocket`
+///     instance that has launched but not otherwise gracefully abort launch.
 ///
 ///   * **Request (`on_request`)**
 ///
@@ -155,7 +159,7 @@ pub use self::info_kind::{Info, Kind};
 /// # Implementing
 ///
 /// A `Fairing` implementation has one required method: [`info`]. A `Fairing`
-/// can also implement any of the available callbacks: `on_attach`, `on_launch`,
+/// can also implement any of the available callbacks: `on_launch`, `on_liftoff`,
 /// `on_request`, and `on_response`. A `Fairing` _must_ set the appropriate
 /// callback kind in the `kind` field of the returned `Info` structure from
 /// [`info`] for a callback to actually be called by Rocket.
@@ -169,7 +173,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///      This is the `name` field, which can be any arbitrary string. Name your
 ///      fairing something illustrative. The name will be logged during the
-///      application's launch procedures.
+///      application's ignition procedures.
 ///
 ///   2. Determine which callbacks to actually issue on the `Fairing`.
 ///
@@ -177,8 +181,8 @@ pub use self::info_kind::{Info, Kind};
 ///      represents the kinds of callbacks the fairing wishes to receive. Rocket
 ///      will only invoke the callbacks that are flagged in this set. `Kind`
 ///      structures can be `or`d together to represent any combination of kinds
-///      of callbacks. For instance, to request launch and response callbacks,
-///      return a `kind` field with the value `Kind::Launch | Kind::Response`.
+///      of callbacks. For instance, to request liftoff and response callbacks,
+///      return a `kind` field with the value `Kind::Liftoff | Kind::Response`.
 ///
 /// [`info`]: Fairing::info()
 ///
@@ -207,12 +211,12 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+///     async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
 ///
-///     fn on_launch(&self, rocket: &Rocket) {
+///     async fn on_liftoff(&self, rocket: &Rocket) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -231,11 +235,11 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// ## Example
 ///
-/// Imagine that we want to record the number of `GET` and `POST` requests that
-/// our application has received. While we could do this with [request guards]
-/// and [managed state](crate::State), it would require us to annotate every
-/// `GET` and `POST` request with custom types, polluting handler signatures.
-/// Instead, we can create a simple fairing that acts globally.
+/// As an example, we want to record the number of `GET` and `POST` requests
+/// that our application has received. While we could do this with [request
+/// guards] and [managed state](crate::State), it would require us to annotate
+/// every `GET` and `POST` request with custom types, polluting handler
+/// signatures. Instead, we can create a simple fairing that acts globally.
 ///
 /// The `Counter` fairing below records the number of all `GET` and `POST`
 /// requests received. It makes these counts available at a special `'/counts'`
@@ -403,31 +407,29 @@ pub trait Fairing: Send + Sync + 'static {
     /// ```
     fn info(&self) -> Info;
 
-    /// The attach callback. Returns `Ok` if launch should proceed and `Err` if
+    /// The launch callback. Returns `Ok` if launch should proceed and `Err` if
     /// launch should be aborted.
     ///
-    /// This method is called when a fairing is attached if `Kind::Attach` is in
-    /// the `kind` field of the `Info` structure for this fairing. The `rocket`
-    /// parameter is the `Rocket` instance that is currently being built for
-    /// this application.
+    /// This method is called when the application is being launched if
+    /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
+    /// fairing. The `rocket` parameter is the `Rocket` instance that is
+    /// currently being built for this application.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
 
-    /// The launch callback.
+    /// The liftoff callback.
     ///
-    /// This method is called just prior to launching the application if
-    /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `Rocket` parameter corresponds to the application that
-    /// will be launched.
+    /// This method is called just after launching the application if
+    /// `Kind::Liftoff` is in the `kind` field of the `Info` structure for this
+    /// fairing. The `Rocket` parameter corresponds to the lauched application.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    #[allow(unused_variables)]
-    fn on_launch(&self, rocket: &Rocket) {}
+    async fn on_liftoff(&self, _rocket: &Rocket) { }
 
     /// The request callback.
     ///
@@ -439,8 +441,7 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    #[allow(unused_variables)]
-    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {}
+    async fn on_request(&self, _req: &mut Request<'_>, _data: &mut Data) {}
 
     /// The response callback.
     ///
@@ -452,8 +453,7 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    #[allow(unused_variables)]
-    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {}
+    async fn on_response<'r>(&self, _req: &'r Request<'_>, _res: &mut Response<'r>) {}
 }
 
 #[crate::async_trait]
@@ -464,22 +464,22 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        (self as &T).on_attach(rocket).await
+    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        (self as &T).on_launch(rocket).await
     }
 
     #[inline]
-    fn on_launch(&self, rocket: &Rocket) {
-        (self as &T).on_launch(rocket)
+    async fn on_liftoff(&self, rocket: &Rocket) {
+        (self as &T).on_liftoff(rocket).await
     }
 
     #[inline]
     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
-        (self as &T).on_request(req, data).await;
+        (self as &T).on_request(req, data).await
     }
 
     #[inline]
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
-        (self as &T).on_response(req, res).await;
+        (self as &T).on_response(req, res).await
     }
 }

@@ -22,7 +22,7 @@ fn index(counter: State<'_, Counter>) -> String {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index])
-        .attach(AdHoc::on_attach("Outer", |rocket| async {
+        .attach(AdHoc::on_launch("Outer", |rocket| async {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)

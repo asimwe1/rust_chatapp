@@ -1,31 +1,25 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
-#[macro_use] extern crate log;
 #[macro_use] extern crate rocket_contrib;
 
+#[cfg(test)]
+mod tests;
 mod task;
-#[cfg(test)] mod tests;
-
-use std::fmt::Display;
 
 use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::FlashMessage;
-use rocket::form::Form;
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{templates::Template, serve::{StaticFiles, crate_relative}};
-use diesel::SqliteConnection;
+use rocket::form::Form;
+
+use rocket_contrib::templates::Template;
+use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 use crate::task::{Task, Todo};
 
-// This macro from `diesel_migrations` defines an `embedded_migrations` module
-// containing a function named `run`. This allows the example to be run and
-// tested without any outside setup of the database.
-embed_migrations!();
-
 #[database("sqlite_database")]
-pub struct DbConn(SqliteConnection);
+pub struct DbConn(diesel::SqliteConnection);
 
 #[derive(Debug, serde::Serialize)]
 struct Context {
@@ -34,7 +28,7 @@ struct Context {
 }
 
 impl Context {
-    pub async fn err<M: Display>(conn: &DbConn, msg: M) -> Context {
+    pub async fn err<M: std::fmt::Display>(conn: &DbConn, msg: M) -> Context {
         Context {
             msg: Some(("error".into(), msg.to_string())),
             tasks: Task::all(conn).await.unwrap_or_default()
@@ -97,23 +91,27 @@ async fn index(msg: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 }
 
 async fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
-    DbConn::get_one(&rocket).await
-        .expect("database connection")
-        .run(|c| match embedded_migrations::run(c) {
-            Ok(()) => Ok(rocket),
-            Err(e) => {
-                error!("Failed to run database migrations: {:?}", e);
-                Err(rocket)
-            }
-        }).await
+    // This macro from `diesel_migrations` defines an `embedded_migrations`
+    // module containing a function named `run`. This allows the example to be
+    // run and tested without any outside setup of the database.
+    embed_migrations!();
+
+    let conn = DbConn::get_one(&rocket).await.expect("database connection");
+    match conn.run(|c| embedded_migrations::run(c)).await {
+        Ok(()) => Ok(rocket),
+        Err(e) => {
+            error!("Failed to run database migrations: {:?}", e);
+            Err(rocket)
+        }
+    }
 }
 
 #[launch]
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
-        .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
         .attach(Template::fairing())
+        .attach(AdHoc::on_launch("Database Migrations", run_db_migrations))
         .mount("/", StaticFiles::from(crate_relative!("/static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])

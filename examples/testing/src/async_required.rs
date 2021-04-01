@@ -12,7 +12,7 @@ async fn rendezvous(barrier: State<'_, Barrier>) -> &'static str {
 pub fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![rendezvous])
-        .attach(AdHoc::on_attach("Add Channel", |rocket| async {
+        .attach(AdHoc::on_launch("Add Channel", |rocket| async {
             Ok(rocket.manage(Barrier::new(2)))
         }))
 }

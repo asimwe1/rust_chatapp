@@ -55,10 +55,10 @@ pub struct Client {
 
 impl Client {
     pub(crate) async fn _new(
-        mut rocket: Rocket,
+        rocket: Rocket,
         tracked: bool
     ) -> Result<Client, Error> {
-        rocket.prelaunch_check().await?;
+        let rocket = rocket._ignite().await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
         Ok(Client { rocket, tracked, cookies })
     }

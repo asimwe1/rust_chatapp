@@ -35,7 +35,10 @@ mod rusqlite_integration_test {
 
         let rocket = rocket::custom(config)
             .attach(SqliteDb::fairing())
-            .attach(SqliteDb2::fairing());
+            .attach(SqliteDb2::fairing())
+            ._ignite()
+            .await
+            .unwrap();
 
         let conn = SqliteDb::get_one(&rocket).await
             .expect("unable to get connection");
