@@ -102,7 +102,8 @@ impl FileName {
     /// assert_eq!(name.as_str(), Some("foo"));
     ///
     /// let name = FileName::new("b:c");
-    /// assert_eq!(name.as_str(), Some("b"));
+    /// #[cfg(unix)] assert_eq!(name.as_str(), Some("b"));
+    /// #[cfg(not(unix))] assert_eq!(name.as_str(), Some("c"));
     ///
     /// let name = FileName::new("//./.<>");
     /// assert_eq!(name.as_str(), None);
