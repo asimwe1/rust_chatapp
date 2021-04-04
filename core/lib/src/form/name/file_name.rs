@@ -122,14 +122,14 @@ impl FileName {
             ];
 
             // Microsoft says these are reserved.
-            static BAD_NAMES: &[str] = &[
+            static BAD_NAMES: &[&str] = &[
                 "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
                 "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
                 "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
             ];
 
             let bad_char = |c| BAD_CHARS.contains(&c) || c.is_control();
-            let bad_name = |n| BAD_NAMES.contains(n);
+            let bad_name = |n| BAD_NAMES.contains(&n);
             (bad_char, bad_name)
         };
 
