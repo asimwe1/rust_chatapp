@@ -126,7 +126,6 @@ function run_benchmarks() {
   popd > /dev/null 2>&1
 }
 
-
 if [[ $1 == +* ]]; then
     CARGO="$CARGO $1"
     shift

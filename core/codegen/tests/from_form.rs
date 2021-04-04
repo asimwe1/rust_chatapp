@@ -579,7 +579,7 @@ fn test_multipart() {
     #[rocket::post("/", data = "<form>")]
     fn form(form: Form<MyForm>) {
         assert_eq!(form.names, &["abcd", "123"]);
-        assert_eq!(form.file.file_name(), Some("foo"));
+        assert_eq!(form.file.name(), Some("foo"));
     }
 
     let client = Client::debug_with(rocket::routes![form]).unwrap();

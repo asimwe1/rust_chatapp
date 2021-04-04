@@ -3,7 +3,7 @@ use std::path::{PathBuf, Path};
 
 use crate::http::{ContentType, Status};
 use crate::data::{FromData, Data, Capped, N, Limits};
-use crate::form::{FromFormField, ValueField, DataField, error::Errors};
+use crate::form::{FromFormField, ValueField, DataField, error::Errors, name::FileName};
 use crate::outcome::IntoOutcome;
 use crate::request::Request;
 
@@ -101,7 +101,7 @@ use either::Either;
 pub enum TempFile<'v> {
     #[doc(hidden)]
     File {
-        file_name: Option<&'v str>,
+        file_name: Option<&'v FileName>,
         content_type: Option<ContentType>,
         path: Either<TempPath, PathBuf>,
         len: u64,
@@ -363,17 +363,20 @@ impl<'v> TempFile<'v> {
         }
     }
 
-    /// Returns the name of the file as specified in the form field.
+    /// Returns the sanitized file name as specified in the form field.
     ///
-    /// A multipart data form field can optionally specify the name of a file.
-    /// A browser will typically send the actual name of a user's selected file
-    /// in this field. This method returns that value, if it was specified,
-    /// without a file extension.
+    /// A multipart data form field can optionally specify the name of a file. A
+    /// browser will typically send the actual name of a user's selected file in
+    /// this field, but clients are also able to specify _any_ name, including
+    /// invalid or dangerous file names. This method returns a sanitized version
+    /// of that value, if it was specified, suitable and safe for use as a
+    /// permanent file name.
     ///
-    /// The name is guaranteed to be a _true_ filename minus the extension. It
-    /// has been sanitized so as to not to contain path components, start with
-    /// `.` or `*`, or end with `:`, `>`, or `<`, making it safe for direct use
-    /// as the name of a file.
+    /// Note that you will likely want to prepend or append random or
+    /// user-specific components to the name to avoid collisions; UUIDs make for
+    /// a good "random" data.
+    ///
+    /// See [`FileName::as_str()`] for specifics on sanitization.
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
@@ -382,15 +385,30 @@ impl<'v> TempFile<'v> {
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
     ///     # let some_dir = std::env::temp_dir();
-    ///     if let Some(name) = file.file_name() {
-    ///         // Due to Rocket's sanitization, this is safe.
+    ///     if let Some(name) = file.name() {
+    ///         // Because of Rocket's sanitization, this is safe.
     ///         file.persist_to(&some_dir.join(name)).await?;
     ///     }
     ///
     ///     Ok(())
     /// }
     /// ```
-    pub fn file_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
+        self.raw_name().and_then(|f| f.as_str())
+    }
+
+    /// Returns the raw name of the file as specified in the form field.
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::data::TempFile;
+    ///
+    /// #[post("/", data = "<file>")]
+    /// async fn handle(mut file: TempFile<'_>) {
+    ///     let raw_name = file.raw_name();
+    /// }
+    /// ```
+    pub fn raw_name(&self) -> Option<&FileName> {
         match *self {
             TempFile::File { file_name, .. } => file_name,
             TempFile::Buffered { .. } => None
@@ -422,7 +440,7 @@ impl<'v> TempFile<'v> {
     async fn from<'a>(
         req: &Request<'_>,
         data: Data,
-        file_name: Option<&'a str>,
+        file_name: Option<&'a FileName>,
         content_type: Option<ContentType>,
     ) -> io::Result<Capped<TempFile<'a>>> {
         let limit = content_type.as_ref()
@@ -461,7 +479,7 @@ impl<'v> FromFormField<'v> for Capped<TempFile<'v>> {
     async fn from_data(
         f: DataField<'v, '_>
     ) -> Result<Self, Errors<'v>> {
-        Ok(TempFile::from(f.request, f.data, f.file_name.and_then(|f| f.name()), Some(f.content_type)).await?)
+        Ok(TempFile::from(f.request, f.data, f.file_name, Some(f.content_type)).await?)
     }
 }
 

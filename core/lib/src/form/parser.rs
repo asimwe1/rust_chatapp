@@ -182,7 +182,7 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
                 content_type,
                 request: self.request,
                 name: NameView::new(name),
-                file_name: file_name.and_then(|name| Some(FileName::new(name))),
+                file_name: file_name.map(FileName::new),
                 data: Data::from(field),
             })
         } else {
