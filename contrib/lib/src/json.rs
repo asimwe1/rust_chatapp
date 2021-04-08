@@ -181,7 +181,11 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
             Err(JsonError::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
                 Outcome::Failure((Status::PayloadTooLarge, JsonError::Io(e)))
             },
+            Err(JsonError::Parse(s, e)) if e.classify() == serde_json::error::Category::Data => {
+                Outcome::Failure((Status::UnprocessableEntity, JsonError::Parse(s, e)))
+            },
             Err(e) => Outcome::Failure((Status::BadRequest, e)),
+
         }
     }
 }

@@ -167,6 +167,12 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
             Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
                 Outcome::Failure((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
             },
+            | Err(e@Error::TypeMismatch(_))
+            | Err(e@Error::OutOfRange)
+            | Err(e@Error::LengthMismatch(_))
+            => {
+                Outcome::Failure((Status::UnprocessableEntity, e))
+            },
             Err(e) => Outcome::Failure((Status::BadRequest, e)),
         }
     }
