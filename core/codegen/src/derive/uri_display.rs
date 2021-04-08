@@ -3,34 +3,14 @@ use devise::{*, ext::SpanDiagnosticExt};
 use rocket_http::uri;
 
 use crate::exports::*;
-use crate::derive::form_field::FieldExt;
+use crate::derive::form_field::{FieldExt, VariantExt};
 use crate::proc_macro2::TokenStream;
 
-const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
+const NO_EMPTY_FIELDS: &str = "fieldless structs are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
 const NO_EMPTY_ENUMS: &str = "empty enums are not supported";
 const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one field";
 const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
-
-fn validate_fields(fields: Fields<'_>) -> Result<()> {
-    if fields.count() == 0 {
-        return Err(fields.parent.span().error(NO_EMPTY_FIELDS))
-    } else if fields.are_unnamed() && fields.count() > 1 {
-        return Err(fields.span().error(ONLY_ONE_UNNAMED));
-    } else if fields.are_unit() {
-        return Err(fields.span().error(NO_NULLARY));
-    }
-
-    Ok(())
-}
-
-fn validate_enum(data: Enum<'_>) -> Result<()> {
-    if data.variants().count() == 0 {
-        return Err(data.brace_token.span.error(NO_EMPTY_ENUMS));
-    }
-
-    Ok(())
-}
 
 pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
     use crate::http::uri::Query;
@@ -41,8 +21,30 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
     let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #URI_DISPLAY))
         .support(Support::Struct | Support::Enum | Support::Type | Support::Lifetime)
         .validator(ValidatorBuild::new()
-            .enum_validate(|_, v| validate_enum(v))
-            .fields_validate(|_, v| validate_fields(v))
+            .enum_validate(|_, data| {
+                if data.variants().count() == 0 {
+                    return Err(data.brace_token.span.error(NO_EMPTY_ENUMS));
+                } else {
+                    Ok(())
+                }
+            })
+            .struct_validate(|_, data| {
+                let fields = data.fields();
+                if fields.is_empty() {
+                    Err(data.span().error(NO_EMPTY_FIELDS))
+                } else if fields.are_unit() {
+                    Err(data.span().error(NO_NULLARY))
+                } else {
+                    Ok(())
+                }
+            })
+            .fields_validate(|_, fields| {
+                if fields.are_unnamed() && fields.count() > 1 {
+                    Err(fields.span().error(ONLY_ONE_UNNAMED))
+                } else {
+                    Ok(())
+                }
+            })
         )
         .type_bound(URI_DISPLAY)
         .inner_mapper(MapperBuild::new()
@@ -52,11 +54,21 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
                     Ok(())
                 }
             })
+            .try_variant_map(|mapper, variant| {
+                if !variant.fields().is_empty() {
+                    return mapper::variant_default(mapper, variant);
+                }
+
+                let value = variant.first_form_field_value()?;
+                Ok(quote_spanned! { variant.span() =>
+                    f.write_value(#value)?;
+                })
+            })
             .try_field_map(|_, field| {
                 let span = field.span().into();
                 let accessor = field.accessor();
                 let tokens = if field.ident.is_some() {
-                    let name = field.one_field_name()?;
+                    let name = field.first_field_name()?;
                     quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
                 } else {
                     quote_spanned!(span => f.write_value(&#accessor)?;)

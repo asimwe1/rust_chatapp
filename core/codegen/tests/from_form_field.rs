@@ -62,12 +62,13 @@ fn from_form_value_renames() {
     #[derive(Debug, FromFormField)]
     enum Foo {
         #[field(value = "foo")]
+        #[field(value = "bark")]
         Bar,
         #[field(value = ":book")]
         Book
     }
 
-    assert_parse!("foo", "FOO", "FoO" => Foo::Bar);
+    assert_parse!("foo", "FOO", "FoO", "bark", "BARK", "BaRk" => Foo::Bar);
     assert_parse!(":book", ":BOOK", ":bOOk", ":booK" => Foo::Book);
     assert_no_parse!("book", "bar" => Foo);
 }

@@ -89,17 +89,17 @@ error: field name conflicts with previous name
 33 |     foo: usize,
    |     ^^^
 
+error: [help] declared in this field
+  --> $DIR/from_form.rs:33:5
+   |
+33 |     foo: usize,
+   |     ^^^
+
 error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:31:5
    |
 31 |     #[field(name = "foo")]
    |     ^
-
-error: [help] field name is part of this field
-  --> $DIR/from_form.rs:33:5
-   |
-33 |     foo: usize,
-   |     ^^^
 
 error: [note] error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:29:10
@@ -115,16 +115,16 @@ error: field name conflicts with previous name
 40 |     #[field(name = "hello")]
    |                    ^^^^^^^
 
+error: [help] declared in this field
+  --> $DIR/from_form.rs:40:5
+   |
+40 |     #[field(name = "hello")]
+   |     ^
+
 error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:38:5
    |
 38 |     #[field(name = "hello")]
-   |     ^
-
-error: [help] field name is part of this field
-  --> $DIR/from_form.rs:40:5
-   |
-40 |     #[field(name = "hello")]
    |     ^
 
 error: [note] error occurred while deriving `FromForm`
@@ -141,17 +141,17 @@ error: field name conflicts with previous name
 47 |     #[field(name = "first")]
    |                    ^^^^^^^
 
+error: [help] declared in this field
+  --> $DIR/from_form.rs:47:5
+   |
+47 |     #[field(name = "first")]
+   |     ^
+
 error: [note] previous field with conflicting name
   --> $DIR/from_form.rs:46:5
    |
 46 |     first: String,
    |     ^^^^^
-
-error: [help] field name is part of this field
-  --> $DIR/from_form.rs:47:5
-   |
-47 |     #[field(name = "first")]
-   |     ^
 
 error: [note] error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:44:10
@@ -243,7 +243,7 @@ error: [note] this field name...
 83 |     #[field(name = "blah")]
    |                    ^^^^^^
 
-error: [note] ...conflicts with this name
+error: [note] ...conflicts with this field name
   --> $DIR/from_form.rs:84:20
    |
 84 |     #[field(name = "blah")]

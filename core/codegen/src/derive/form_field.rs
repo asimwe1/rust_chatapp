@@ -3,7 +3,7 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 use syn::visit_mut::VisitMut;
 use syn::visit::Visit;
 
-use crate::proc_macro2::{TokenStream, TokenTree};
+use crate::proc_macro2::{TokenStream, TokenTree, Span};
 use crate::syn_ext::IdentExt;
 use crate::name::Name;
 
@@ -26,9 +26,48 @@ impl FieldAttr {
 pub(crate) trait FieldExt {
     fn ident(&self) -> &syn::Ident;
     fn field_names(&self) -> Result<Vec<FieldName>>;
-    fn one_field_name(&self) -> Result<FieldName>;
+    fn first_field_name(&self) -> Result<FieldName>;
     fn stripped_ty(&self) -> syn::Type;
     fn name_view(&self) -> Result<syn::Expr>;
+}
+
+#[derive(FromMeta)]
+pub struct VariantAttr {
+    pub value: Name,
+}
+
+impl VariantAttr {
+    const NAME: &'static str = "field";
+}
+
+pub(crate) trait VariantExt {
+    fn first_form_field_value(&self) -> Result<FieldName>;
+    fn form_field_values(&self) -> Result<Vec<FieldName>>;
+}
+
+impl VariantExt for Variant<'_> {
+    fn first_form_field_value(&self) -> Result<FieldName> {
+        let first = VariantAttr::from_attrs(VariantAttr::NAME, &self.attrs)?
+            .into_iter()
+            .next();
+
+        Ok(first.map_or_else(
+                || FieldName::Uncased(Name::from(&self.ident)),
+                |attr| FieldName::Uncased(attr.value)))
+    }
+
+    fn form_field_values(&self) -> Result<Vec<FieldName>> {
+        let attr_values = VariantAttr::from_attrs(VariantAttr::NAME, &self.attrs)?
+            .into_iter()
+            .map(|attr| FieldName::Uncased(attr.value))
+            .collect::<Vec<_>>();
+
+        if attr_values.is_empty() {
+            return Ok(vec![FieldName::Uncased(Name::from(&self.ident))]);
+        }
+
+        Ok(attr_values)
+    }
 }
 
 impl FromMeta for FieldName {
@@ -124,17 +163,9 @@ impl FieldExt for Field<'_> {
         Ok(attr_names)
     }
 
-    fn one_field_name(&self) -> Result<FieldName> {
+    fn first_field_name(&self) -> Result<FieldName> {
         let mut names = self.field_names()?.into_iter();
-        let first = names.next().expect("always have >= 1 name");
-
-        if let Some(name) = names.next() {
-            return Err(name.span()
-                .error("unexpected second field name")
-                .note("only one field rename is allowed in this context"));
-        }
-
-        Ok(first)
+        Ok(names.next().expect("always have >= 1 name"))
     }
 
     fn stripped_ty(&self) -> syn::Type {
@@ -292,4 +323,32 @@ pub fn validators<'v>(
         });
 
         Ok(exprs)
+}
+
+pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
+    keys: impl Iterator<Item = K> + Clone,
+    values: impl Fn(&K) -> Result<Vec<V>>,
+) -> Result<Option<((usize, Span, Span), (usize, Span, Span))>> {
+    let (mut all_values, mut key_map) = (vec![], vec![]);
+    for key in keys {
+        all_values.append(&mut values(&key)?);
+        key_map.push((all_values.len(), key));
+    }
+
+    // get the key corresponding to all_value index `k`.
+    let key = |k| key_map.iter().find(|(i, _)| k < *i).expect("k < *i");
+
+    for (i, a) in all_values.iter().enumerate() {
+        let rest = all_values.iter().enumerate().skip(i + 1);
+        if let Some((j, b)) = rest.filter(|(_, b)| *b == a).next() {
+            let (a_i, key_a) = key(i);
+            let (b_i, key_b) = key(j);
+
+            let a = (*a_i, key_a.span(), a.span());
+            let b = (*b_i, key_b.span(), b.span());
+            return Ok(Some((a, b)));
+        }
+    }
+
+    Ok(None)
 }

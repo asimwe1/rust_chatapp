@@ -394,8 +394,8 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// As an example, for the `enum` above, the form values `"first"`, `"FIRST"`,
 /// `"fiRSt"`, and so on would parse as `MyValue::First`, while `"second"` and
-/// `"third"` would parse as `MyValue::Second` and `MyValue::Third`,
-/// respectively.
+/// `"third"` (in any casing) would parse as `MyValue::Second` and
+/// `MyValue::Third`, respectively.
 ///
 /// The `field` field attribute can be used to change the string value that is
 /// compared against for a given variant:
@@ -408,9 +408,15 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 ///     First,
 ///     Second,
 ///     #[field(value = "fourth")]
+///     #[field(value = "fifth")]
 ///     Third,
 /// }
 /// ```
+///
+/// When more than one `value` is specified, matching _any_ value will result in
+/// parsing the decorated variant. Declaring any two values that are
+/// case-insensitively equal to any other value or variant name is a
+/// compile-time error.
 ///
 /// The `#[field]` attribute's grammar is:
 ///
@@ -422,8 +428,8 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// The attribute accepts a single string parameter of name `value`
 /// corresponding to the string to use to match against for the decorated
-/// variant. In the example above, the the strings `"fourth"`, `"FOUrth"` and so
-/// on would parse as `MyValue::Third`.
+/// variant. In the example above, the the strings `"fourth"`, `"FOUrth"`,
+/// `"fiFTH"` and so on would parse as `MyValue::Third`.
 ///
 /// [`FromFormField`]: rocket::form::FromFormField
 /// [`FromFormField::Error`]: rocket::form::FromFormField::Error
@@ -648,8 +654,8 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// Derive for the [`UriDisplay<Query>`] trait.
 ///
 /// The [`UriDisplay<Query>`] derive can be applied to enums and structs. When
-/// applied to enums, variants must have at least one field. When applied to
-/// structs, the struct must have at least one field.
+/// applied to an enum, the enum must have at least one variant. When applied to
+/// a struct, the struct must have at least one field.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -678,12 +684,15 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
-/// field := 'name' '=' '"' IDENT '"'
+/// field := 'name' '=' '"' FIELD_NAME '"'
+///        | 'value' '=' '"' FIELD_VALUE '"'
 ///
-/// IDENT := valid identifier, as defined by Rust
+/// FIELD_NAME := valid HTTP field name
+/// FIELD_VALUE := valid HTTP field value
 /// ```
 ///
-/// When applied, the attribute looks as follows:
+/// When applied to a struct, the attribute can only contain `name` and looks
+/// as follows:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -694,15 +703,39 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 ///     name: String,
 ///     id: usize,
 ///     #[field(name = "type")]
+///     #[field(name = "kind")]
 ///     kind: Kind,
 /// }
 /// ```
 ///
 /// The field attribute directs that a different field name be used when calling
 /// [`Formatter::write_named_value()`] for the given field. The value of the
-/// `name` attribute is used instead of the structure's actual field name. In
-/// the example above, the field `MyStruct::kind` is rendered with a name of
-/// `type`.
+/// `name` attribute is used instead of the structure's actual field name. If
+/// more than one `field` attribute is applied to a field, the _first_ name is
+/// used. In the example above, the field `MyStruct::kind` is rendered with a
+/// name of `type`.
+///
+/// The attribute can slso be applied to variants of C-like enums; it may only
+/// contain `value` and looks as follows:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(UriDisplayQuery)]
+/// enum Kind {
+///     File,
+///     #[field(value = "str")]
+///     #[field(value = "string")]
+///     String,
+///     Other
+/// }
+/// ```
+///
+/// The field attribute directs that a different value be used when calling
+/// [`Formatter::write_named_value()`] for the given variant. The value of the
+/// `value` attribute is used instead of the variant's actual name. If more than
+/// one `field` attribute is applied to a variant, the _first_ value is used. In
+/// the example above, the variant `Kind::String` will render with a value of
+/// `str`.
 ///
 /// [`UriDisplay<Query>`]: ../rocket/http/uri/trait.UriDisplay.html
 /// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value

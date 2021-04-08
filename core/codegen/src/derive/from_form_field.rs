@@ -2,12 +2,7 @@ use devise::{*, ext::SpanDiagnosticExt};
 
 use crate::exports::*;
 use crate::proc_macro2::TokenStream;
-use crate::name::Name;
-
-#[derive(FromMeta)]
-pub struct FieldAttr {
-    value: Name,
-}
+use crate::derive::form_field::{VariantExt, first_duplicate};
 
 pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__v> #_form::FromFormField<'__v>))
@@ -26,47 +21,68 @@ pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
                     return Err(data.span().error("enum must have at least one variant"));
                 }
 
+                if let Some(d) = first_duplicate(data.variants(), |v| v.form_field_values())? {
+                    let (variant_a_i, variant_a, value_a) = d.0;
+                    let (variant_b_i, variant_b, value_b) = d.1;
+
+                    if variant_a_i == variant_b_i {
+                        return Err(variant_a.error("variant has conflicting values")
+                            .span_note(value_a, "this value...")
+                            .span_note(value_b, "...conflicts with this value"));
+                    }
+
+                    return Err(value_b.error("field value conflicts with previous value")
+                        .span_help(variant_b, "...declared in this variant")
+                        .span_note(variant_a, "previous field with conflicting name"));
+                }
+
                 Ok(())
             })
         )
-        // TODO: Devise should have a try_variant_map.
+        .outer_mapper(quote! {
+            #[allow(unused_imports)]
+            use #_http::uncased::AsUncased;
+        })
         .inner_mapper(MapperBuild::new()
-            .try_enum_map(|_, data| {
-                let variant_name_sources = data.variants()
-                    .map(|v| FieldAttr::one_from_attrs("field", &v.attrs).map(|o| {
-                        o.map(|f| f.value).unwrap_or_else(|| Name::from(&v.ident))
-                    }))
-                    .collect::<Result<Vec<Name>>>()?;
+            .with_output(|_, output| quote! {
+                fn from_value(
+                    __f: #_form::ValueField<'__v>
+                ) -> Result<Self, #_form::Errors<'__v>> {
 
-                let variant_name = variant_name_sources.iter()
-                    .map(|n| n.as_str())
-                    .collect::<Vec<_>>();
+                    #output
+                }
+            })
+            .try_enum_map(|mapper, data| {
+                let mut variant_value = vec![];
+                for v in data.variants().map(|v| v.form_field_values()) {
+                    variant_value.append(&mut v?);
+                }
 
-                let builder = data.variants()
-                    .map(|v| v.builder(|_| unreachable!("fieldless")));
+                let variant_condition = data.variants()
+                    .map(|v| mapper.map_variant(v))
+                    .collect::<Result<Vec<_>>>()?;
 
                 let (_ok, _cow) = (std::iter::repeat(_Ok), std::iter::repeat(_Cow));
                 Ok(quote! {
-                    fn from_value(
-                        __f: #_form::ValueField<'__v>
-                    ) -> Result<Self, #_form::Errors<'__v>> {
-                        #[allow(unused_imports)]
-                        use #_http::uncased::AsUncased;
+                    #(#variant_condition)*
 
-                        #(
-                            if __f.value.as_uncased() == #variant_name {
-                                return #_ok(#builder);
-                            }
-                        )*
+                    const OPTS: &'static [#_Cow<'static, str>] =
+                        &[#(#_cow::Borrowed(#variant_value)),*];
 
-                        const OPTS: &'static [#_Cow<'static, str>] =
-                            &[#(#_cow::Borrowed(#variant_name)),*];
+                    let _error = #_form::Error::from(OPTS)
+                        .with_name(__f.name)
+                        .with_value(__f.value);
 
-                        let _error = #_form::Error::from(OPTS)
-                            .with_name(__f.name)
-                            .with_value(__f.value);
+                    #_Err(_error)?
+                })
+            })
+            .try_variant_map(|_, variant| {
+                let builder = variant.builder(|_| unreachable!("fieldless"));
+                let value = variant.form_field_values()?;
 
-                        #_Err(_error)?
+                Ok(quote_spanned! { variant.span() =>
+                    if #(__f.value.as_uncased() == #value)||* {
+                        return #_Ok(#builder);
                     }
                 })
             })

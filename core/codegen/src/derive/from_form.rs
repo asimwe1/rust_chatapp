@@ -70,33 +70,19 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     return Err(fields.span().error("at least one field is required"));
                 }
 
-                let mut names = vec![];
-                let mut field_map = vec![];
-                for field in fields.iter() {
-                    names.append(&mut field.field_names()?);
-                    field_map.push((names.len(), field));
-                }
+                if let Some(d) = first_duplicate(fields.iter(), |f| f.field_names())? {
+                    let (field_a_i, field_a, name_a) = d.0;
+                    let (field_b_i, field_b, name_b) = d.1;
 
-                // get the field corresponding to name index `k`.
-                let field = |k| field_map.iter().find(|(i, _)| k < *i).expect("k < *i");
-
-                for (i, a) in names.iter().enumerate() {
-                    let rest = names.iter().enumerate().skip(i + 1);
-                    if let Some((j, b)) = rest.filter(|(_, b)| b == &a).next() {
-                        let ((fa_i, field_a), (fb_i, field_b)) = (field(i), field(j));
-
-                        if fa_i == fb_i {
-                            return Err(field_a.span()
-                                .error("field has conflicting names")
-                                .span_note(a.span(), "this field name...")
-                                .span_note(b.span(), "...conflicts with this name"));
-                        } else {
-                            return Err(b.span()
-                                .error("field name conflicts with previous name")
-                                .span_note(field_a.span(), "previous field with conflicting name")
-                                .span_help(field_b.span(), "field name is part of this field"));
-                        }
+                    if field_a_i == field_b_i {
+                        return Err(field_a.error("field has conflicting names")
+                            .span_note(name_a, "this field name...")
+                            .span_note(name_b, "...conflicts with this field name"));
                     }
+
+                    return Err(name_b.error("field name conflicts with previous name")
+                        .span_help(field_b, "declared in this field")
+                        .span_note(field_a, "previous field with conflicting name"));
                 }
 
                 Ok(())

@@ -104,100 +104,199 @@ note: error occurred while deriving `FromFormField`
    |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: field has conflicting names
+error: variant has conflicting values
   --> $DIR/from_form_field.rs:41:5
    |
-41 | /     #[field(name = "foo")]
-42 | |     #[field(name = uncased("FOO"))]
-43 | |     single: usize,
-   | |_________________^
+41 | /     #[field(value = "bar")]
+42 | |     #[field(value = "bar")]
+43 | |     A,
+   | |_____^
    |
-note: this field name...
-  --> $DIR/from_form_field.rs:41:20
+note: this value...
+  --> $DIR/from_form_field.rs:41:21
    |
-41 |     #[field(name = "foo")]
-   |                    ^^^^^
-note: ...conflicts with this name
-  --> $DIR/from_form_field.rs:42:28
+41 |     #[field(value = "bar")]
+   |                     ^^^^^
+note: ...conflicts with this value
+  --> $DIR/from_form_field.rs:42:21
    |
-42 |     #[field(name = uncased("FOO"))]
-   |                            ^^^^^
-note: error occurred while deriving `FromForm`
+42 |     #[field(value = "bar")]
+   |                     ^^^^^
+note: error occurred while deriving `FromFormField`
   --> $DIR/from_form_field.rs:39:10
    |
-39 | #[derive(FromForm)]
-   |          ^^^^^^^^
+39 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: field name conflicts with previous name
-  --> $DIR/from_form_field.rs:50:20
+error: field value conflicts with previous value
+  --> $DIR/from_form_field.rs:50:21
    |
-50 |     #[field(name = "foo")]
-   |                    ^^^^^
+50 |     #[field(value = "BAr")]
+   |                     ^^^^^
    |
+help: ...declared in this variant
+  --> $DIR/from_form_field.rs:50:5
+   |
+50 | /     #[field(value = "BAr")]
+51 | |     B,
+   | |_____^
 note: previous field with conflicting name
   --> $DIR/from_form_field.rs:48:5
    |
-48 | /     #[field(name = "foo")]
-49 | |     single: usize,
-   | |_________________^
-help: field name is part of this field
-  --> $DIR/from_form_field.rs:50:5
-   |
-50 | /     #[field(name = "foo")]
-51 | |     other: usize,
-   | |________________^
-note: error occurred while deriving `FromForm`
+48 | /     #[field(value = "bar")]
+49 | |     A,
+   | |_____^
+note: error occurred while deriving `FromFormField`
   --> $DIR/from_form_field.rs:46:10
    |
-46 | #[derive(FromForm)]
-   |          ^^^^^^^^
+46 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: field name conflicts with previous name
-  --> $DIR/from_form_field.rs:58:5
+error: field value conflicts with previous value
+  --> $DIR/from_form_field.rs:57:21
    |
-58 |     hello_there: usize,
-   |     ^^^^^^^^^^^
+57 |     #[field(value = "a")]
+   |                     ^^^
    |
+help: ...declared in this variant
+  --> $DIR/from_form_field.rs:57:5
+   |
+57 | /     #[field(value = "a")]
+58 | |     B,
+   | |_____^
 note: previous field with conflicting name
   --> $DIR/from_form_field.rs:56:5
    |
-56 | /     #[field(name = uncased("HELLO_THERE"))]
-57 | |     single: usize,
-   | |_________________^
-help: field name is part of this field
-  --> $DIR/from_form_field.rs:58:5
-   |
-58 |     hello_there: usize,
-   |     ^^^^^^^^^^^^^^^^^^
-note: error occurred while deriving `FromForm`
+56 |     A,
+   |     ^
+note: error occurred while deriving `FromFormField`
   --> $DIR/from_form_field.rs:54:10
    |
-54 | #[derive(FromForm)]
+54 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: variant has conflicting values
+  --> $DIR/from_form_field.rs:80:5
+   |
+80 | /     #[field(value = "FoO")]
+81 | |     #[field(value = "foo")]
+82 | |     A,
+   | |_____^
+   |
+note: this value...
+  --> $DIR/from_form_field.rs:80:21
+   |
+80 |     #[field(value = "FoO")]
+   |                     ^^^^^
+note: ...conflicts with this value
+  --> $DIR/from_form_field.rs:81:21
+   |
+81 |     #[field(value = "foo")]
+   |                     ^^^^^
+note: error occurred while deriving `FromFormField`
+  --> $DIR/from_form_field.rs:78:10
+   |
+78 | #[derive(FromFormField)]
+   |          ^^^^^^^^^^^^^
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: field has conflicting names
+  --> $DIR/from_form_field.rs:87:5
+   |
+87 | /     #[field(name = "foo")]
+88 | |     #[field(name = uncased("FOO"))]
+89 | |     single: usize,
+   | |_________________^
+   |
+note: this field name...
+  --> $DIR/from_form_field.rs:87:20
+   |
+87 |     #[field(name = "foo")]
+   |                    ^^^^^
+note: ...conflicts with this field name
+  --> $DIR/from_form_field.rs:88:28
+   |
+88 |     #[field(name = uncased("FOO"))]
+   |                            ^^^^^
+note: error occurred while deriving `FromForm`
+  --> $DIR/from_form_field.rs:85:10
+   |
+85 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
-  --> $DIR/from_form_field.rs:65:5
+  --> $DIR/from_form_field.rs:96:20
    |
-65 |     hello_there: usize,
-   |     ^^^^^^^^^^^
+96 |     #[field(name = "foo")]
+   |                    ^^^^^
    |
+help: declared in this field
+  --> $DIR/from_form_field.rs:96:5
+   |
+96 | /     #[field(name = "foo")]
+97 | |     other: usize,
+   | |________________^
 note: previous field with conflicting name
-  --> $DIR/from_form_field.rs:63:5
+  --> $DIR/from_form_field.rs:94:5
    |
-63 | /     #[field(name = "hello_there")]
-64 | |     single: usize,
+94 | /     #[field(name = "foo")]
+95 | |     single: usize,
    | |_________________^
-help: field name is part of this field
-  --> $DIR/from_form_field.rs:65:5
-   |
-65 |     hello_there: usize,
-   |     ^^^^^^^^^^^^^^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form_field.rs:61:10
+  --> $DIR/from_form_field.rs:92:10
    |
-61 | #[derive(FromForm)]
+92 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: field name conflicts with previous name
+   --> $DIR/from_form_field.rs:104:5
+    |
+104 |     hello_there: usize,
+    |     ^^^^^^^^^^^
+    |
+help: declared in this field
+   --> $DIR/from_form_field.rs:104:5
+    |
+104 |     hello_there: usize,
+    |     ^^^^^^^^^^^^^^^^^^
+note: previous field with conflicting name
+   --> $DIR/from_form_field.rs:102:5
+    |
+102 | /     #[field(name = uncased("HELLO_THERE"))]
+103 | |     single: usize,
+    | |_________________^
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form_field.rs:100:10
+    |
+100 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: field name conflicts with previous name
+   --> $DIR/from_form_field.rs:111:5
+    |
+111 |     hello_there: usize,
+    |     ^^^^^^^^^^^
+    |
+help: declared in this field
+   --> $DIR/from_form_field.rs:111:5
+    |
+111 |     hello_there: usize,
+    |     ^^^^^^^^^^^^^^^^^^
+note: previous field with conflicting name
+   --> $DIR/from_form_field.rs:109:5
+    |
+109 | /     #[field(name = "hello_there")]
+110 | |     single: usize,
+    | |_________________^
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form_field.rs:107:10
+    |
+107 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

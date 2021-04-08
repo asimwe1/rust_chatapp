@@ -36,6 +36,52 @@ enum Bar2 {
     A,
 }
 
+#[derive(FromFormField)]
+enum Dup1 {
+    #[field(value = "bar")]
+    #[field(value = "bar")]
+    A,
+}
+
+#[derive(FromFormField)]
+enum Dup2 {
+    #[field(value = "bar")]
+    A,
+    #[field(value = "BAr")]
+    B,
+}
+
+#[derive(FromFormField)]
+enum Dup3 {
+    A,
+    #[field(value = "a")]
+    B,
+}
+
+#[derive(FromFormField)]
+enum Dup4 {
+    A,
+    #[field(value = "c")] // this shouldn't error
+    B,
+    #[field(value = "b")] // this shouldn't error
+    C,
+}
+
+#[derive(FromFormField)]
+enum Dup5 {
+    #[field(value = "a")] // this shouldn't error
+    A,
+    B,
+    C,
+}
+
+#[derive(FromFormField)]
+enum Dup6 {
+    #[field(value = "FoO")]
+    #[field(value = "foo")]
+    A,
+}
+
 #[derive(FromForm)]
 struct Renamed0 {
     #[field(name = "foo")]

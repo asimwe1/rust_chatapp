@@ -83,17 +83,17 @@ error: field name conflicts with previous name
 33 |     foo: usize,
    |     ^^^
    |
+help: declared in this field
+  --> $DIR/from_form.rs:33:5
+   |
+33 |     foo: usize,
+   |     ^^^^^^^^^^
 note: previous field with conflicting name
   --> $DIR/from_form.rs:31:5
    |
 31 | /     #[field(name = "foo")]
 32 | |     field: String,
    | |_________________^
-help: field name is part of this field
-  --> $DIR/from_form.rs:33:5
-   |
-33 |     foo: usize,
-   |     ^^^^^^^^^^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:29:10
    |
@@ -107,17 +107,17 @@ error: field name conflicts with previous name
 40 |     #[field(name = "hello")]
    |                    ^^^^^^^
    |
+help: declared in this field
+  --> $DIR/from_form.rs:40:5
+   |
+40 | /     #[field(name = "hello")]
+41 | |     other: String,
+   | |_________________^
 note: previous field with conflicting name
   --> $DIR/from_form.rs:38:5
    |
 38 | /     #[field(name = "hello")]
 39 | |     first: String,
-   | |_________________^
-help: field name is part of this field
-  --> $DIR/from_form.rs:40:5
-   |
-40 | /     #[field(name = "hello")]
-41 | |     other: String,
    | |_________________^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:36:10
@@ -132,17 +132,17 @@ error: field name conflicts with previous name
 47 |     #[field(name = "first")]
    |                    ^^^^^^^
    |
-note: previous field with conflicting name
-  --> $DIR/from_form.rs:46:5
-   |
-46 |     first: String,
-   |     ^^^^^^^^^^^^^
-help: field name is part of this field
+help: declared in this field
   --> $DIR/from_form.rs:47:5
    |
 47 | /     #[field(name = "first")]
 48 | |     other: String,
    | |_________________^
+note: previous field with conflicting name
+  --> $DIR/from_form.rs:46:5
+   |
+46 |     first: String,
+   |     ^^^^^^^^^^^^^
 note: error occurred while deriving `FromForm`
   --> $DIR/from_form.rs:44:10
    |
@@ -228,7 +228,7 @@ note: this field name...
    |
 83 |     #[field(name = "blah")]
    |                    ^^^^^^
-note: ...conflicts with this name
+note: ...conflicts with this field name
   --> $DIR/from_form.rs:84:20
    |
 84 |     #[field(name = "blah")]

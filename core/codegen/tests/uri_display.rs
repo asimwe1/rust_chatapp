@@ -112,6 +112,55 @@ fn uri_display_bam() {
     assert_uri_display_query!(bam, "foo=hi%20hi&baz=tony");
 }
 
+#[test]
+fn uri_display_c_like() {
+    #[derive(UriDisplayQuery)]
+    enum CLike { A, B, C }
+
+    assert_uri_display_query!(CLike::A, "A");
+    assert_uri_display_query!(CLike::B, "B");
+    assert_uri_display_query!(CLike::C, "C");
+
+    #[derive(UriDisplayQuery)]
+    enum CLikeV {
+        #[field(value = "a")]
+        A,
+        #[field(value = "tomato")]
+        #[field(value = "juice")]
+        B,
+        #[field(value = "carrot")]
+        C
+    }
+
+    assert_uri_display_query!(CLikeV::A, "a");
+    assert_uri_display_query!(CLikeV::B, "tomato");
+    assert_uri_display_query!(CLikeV::C, "carrot");
+
+    #[derive(UriDisplayQuery)]
+    #[allow(non_camel_case_types)]
+    enum CLikeR { r#for, r#type, r#async, #[field(value = "stop")] r#yield }
+
+    assert_uri_display_query!(CLikeR::r#for, "for");
+    assert_uri_display_query!(CLikeR::r#type, "type");
+    assert_uri_display_query!(CLikeR::r#async, "async");
+    assert_uri_display_query!(CLikeR::r#yield, "stop");
+
+    #[derive(UriDisplayQuery)]
+    struct Nested {
+        foo: CLike,
+        bar: CLikeV,
+        last: CLikeR
+    }
+
+    let nested = Nested {
+        foo: CLike::B,
+        bar: CLikeV::B,
+        last: CLikeR::r#type,
+    };
+
+    assert_uri_display_query!(nested, "foo=B&bar=tomato&last=type");
+}
+
 macro_rules! assert_uri_display_path {
     ($v:expr, $s:expr) => (
         let uri_string = format!("{}", &$v as &dyn UriDisplay<Path>);
