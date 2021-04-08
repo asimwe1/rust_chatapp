@@ -17,7 +17,7 @@ fn unused(flash: Option<FlashMessage<'_>>) -> Option<()> {
 
 #[get("/use")]
 fn used(flash: Option<FlashMessage<'_>>) -> Option<String> {
-    flash.map(|flash| flash.msg().into())
+    flash.map(|f| f.message().into())
 }
 
 mod flash_lazy_remove_tests {
