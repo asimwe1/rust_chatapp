@@ -61,19 +61,25 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             Ok((path_exprs, query_exprs, types))
         }
         Validation::NamedIgnored(_) => {
+            let mut route_name = quote!(#route_name).to_string();
+            route_name.retain(|c| !c.is_whitespace());
+
             let diag = internal.uri_params.args_span()
                 .error("expected unnamed arguments due to ignored parameters")
                 .note(format!("uri for route `{}` ignores path parameters: \"{}\"",
-                        quote!(#route_name), internal.route_uri));
+                        route_name, internal.route_uri));
 
             Err(diag)
         }
         Validation::Unnamed(expected, actual) => {
+            let mut route_name = quote!(#route_name).to_string();
+            route_name.retain(|c| !c.is_whitespace());
+
             let diag = internal.uri_params.args_span()
                 .error(format!("expected {} but {} supplied",
                          p!(expected, "parameter"), p!(actual, "was")))
                 .note(format!("route `{}` has uri \"{}\"",
-                        quote!(#route_name), internal.route_uri));
+                        route_name, internal.route_uri));
 
             Err(diag)
         }
