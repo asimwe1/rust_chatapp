@@ -53,5 +53,5 @@ pub mod private {
 
 pub use crate::method::Method;
 pub use crate::status::{Status, StatusClass};
-pub use crate::raw_str::RawStr;
+pub use crate::raw_str::{RawStr, RawStrBuf};
 pub use crate::header::*;

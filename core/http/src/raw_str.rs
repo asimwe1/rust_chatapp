@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::convert::AsRef;
 use std::cmp::Ordering;
 use std::str::Utf8Error;
@@ -50,6 +50,26 @@ use crate::uncased::UncasedStr;
 #[derive(RefCast, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
 
+impl ToOwned for RawStr {
+    type Owned = RawStrBuf;
+
+    fn to_owned(&self) -> Self::Owned {
+        RawStrBuf(self.to_string())
+    }
+}
+
+/// An owned version of [`RawStr`].
+#[repr(transparent)]
+#[derive(RefCast, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RawStrBuf(String);
+
+impl RawStrBuf {
+    /// Cost-free conversion from `self` into a `String`.
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+
 impl RawStr {
     /// Constructs an `&RawStr` from a string-like type at no cost.
     ///
@@ -66,6 +86,46 @@ impl RawStr {
     /// ```
     pub fn new<S: AsRef<str> + ?Sized>(string: &S) -> &RawStr {
         RawStr::ref_cast(string.as_ref())
+    }
+
+    /// Constructs an `&RawStr` from a string-like type at no cost.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("Hello, world!");
+    ///
+    /// // `into` can also be used; note that the type must be specified
+    /// let raw_str: &RawStr = "Hello, world!".into();
+    /// ```
+    pub fn from_cow_str<'a>(cow: Cow<'a, str>) -> Cow<'a, RawStr> {
+        match cow {
+            Cow::Borrowed(b) => Cow::Borrowed(b.into()),
+            Cow::Owned(b) => Cow::Owned(b.into()),
+        }
+    }
+
+    /// Constructs an `&RawStr` from a string-like type at no cost.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("Hello, world!");
+    ///
+    /// // `into` can also be used; note that the type must be specified
+    /// let raw_str: &RawStr = "Hello, world!".into();
+    /// ```
+    pub fn into_cow_str<'a>(cow: Cow<'a, RawStr>) -> Cow<'a, str> {
+        match cow {
+            Cow::Borrowed(b) => Cow::Borrowed(b.as_str()),
+            Cow::Owned(b) => Cow::Owned(b.into_string()),
+        }
     }
 
     /// Performs percent decoding.
@@ -819,6 +879,64 @@ impl fmt::Display for RawStr {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl AsRef<RawStr> for RawStrBuf {
+    #[inline(always)]
+    fn as_ref(&self) -> &RawStr {
+        RawStr::new(self.0.as_str())
+    }
+}
+
+impl Borrow<RawStr> for RawStrBuf {
+    #[inline(always)]
+    fn borrow(&self) -> &RawStr {
+        self.as_ref()
+    }
+}
+
+impl std::ops::Deref for RawStrBuf {
+    type Target = RawStr;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl fmt::Display for RawStrBuf {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl fmt::Debug for RawStrBuf {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<String> for RawStrBuf {
+    #[inline(always)]
+    fn from(string: String) -> Self {
+        RawStrBuf(string)
+    }
+}
+
+impl From<&str> for RawStrBuf {
+    #[inline(always)]
+    fn from(string: &str) -> Self {
+        string.to_string().into()
+    }
+}
+
+impl From<&RawStr> for RawStrBuf {
+    #[inline(always)]
+    fn from(raw: &RawStr) -> Self {
+        raw.to_string().into()
     }
 }
 

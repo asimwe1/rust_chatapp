@@ -3,10 +3,10 @@ use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
 use crate::ext::IntoOwned;
-use crate::parse::{Indexed, Extent, IndexedStr};
+use crate::parse::{Indexed, Extent, IndexedStr, uri::tables::is_pchar};
 use crate::uri::{self, UriPart, Query, Path};
 use crate::uri::{Error, Segments, QuerySegments, as_utf8_unchecked};
-use crate::RawStr;
+use crate::{RawStr, RawStrBuf};
 
 use state::Storage;
 
@@ -101,6 +101,19 @@ pub struct Origin<'a> {
 impl<'a, 'b> PartialEq<Origin<'b>> for Origin<'a> {
     fn eq(&self, other: &Origin<'b>) -> bool {
         self.path() == other.path() && self.query() == other.query()
+    }
+}
+
+impl PartialEq<str> for Origin<'_> {
+    fn eq(&self, other: &str) -> bool {
+        let (path, query) = RawStr::new(other).split_at_byte(b'?');
+        self.path() == path && self.query().unwrap_or("".into()) == query
+    }
+}
+
+impl PartialEq<Origin<'_>> for str {
+    fn eq(&self, other: &Origin<'_>) -> bool {
+        other.eq(self)
     }
 }
 
@@ -407,20 +420,27 @@ impl<'a> Origin<'a> {
     /// assert_eq!(old_uri.map_path(|p| format!("{}/", p)), Some(expected_uri));
     ///
     /// let old_uri = Origin::parse("/a/b/c/").unwrap();
+    /// let expected = Origin::parse("/b/c/").unwrap();
+    /// assert_eq!(old_uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p)), Some(expected));
+    ///
+    /// let old_uri = Origin::parse("/a").unwrap();
+    /// assert_eq!(old_uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p)), None);
+    ///
+    /// let old_uri = Origin::parse("/a/b/c/").unwrap();
     /// assert_eq!(old_uri.map_path(|p| format!("hi/{}", p)), None);
     /// ```
     #[inline]
-    pub fn map_path<F: FnOnce(&RawStr) -> String>(&self, f: F) -> Option<Self> {
-        let path = f(self.path());
-        if !path.starts_with('/')
-            || !path.bytes().all(|b| crate::parse::uri::tables::is_pchar(&b))
-        {
+    pub fn map_path<'s, F, P>(&'s self, f: F) -> Option<Self>
+        where F: FnOnce(&'s RawStr) -> P, P: Into<RawStrBuf> + 's
+    {
+        let path = f(self.path()).into();
+        if !path.starts_with('/') || !path.as_bytes().iter().all(|b| is_pchar(&b)) {
             return None;
         }
 
         Some(Origin {
             source: self.source.clone(),
-            path: Cow::from(path).into(),
+            path: Cow::from(path.into_string()).into(),
             query: self.query.clone(),
             decoded_path_segs: Storage::new(),
             decoded_query_segs: Storage::new(),
@@ -614,6 +634,15 @@ impl TryFrom<String> for Origin<'static> {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Origin::parse_owned(value)
+    }
+}
+
+// Because inference doesn't take `&String` to `&str`.
+impl<'a> TryFrom<&'a String> for Origin<'a> {
+    type Error = Error<'a>;
+
+    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
+        Origin::parse(value.as_str())
     }
 }
 
