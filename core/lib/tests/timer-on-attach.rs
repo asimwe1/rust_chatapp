@@ -10,6 +10,6 @@ async fn test_await_timer_inside_attach() {
     rocket::ignite()
         .attach(rocket::fairing::AdHoc::on_launch("1", |rocket| async {
             do_async_setup().await;
-            Ok(rocket)
+            rocket
         }));
 }

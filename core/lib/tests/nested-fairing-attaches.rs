@@ -36,7 +36,7 @@ fn rocket() -> rocket::Rocket {
                     })
                 }));
 
-            Ok(rocket)
+            rocket
         }))
 }
 
