@@ -114,11 +114,12 @@ impl log::Log for RocketLogger {
             return;
         }
 
-        // Don't print Hyper or Rustls messages unless debug is enabled.
+        // Don't print Hyper or Rustls or r2d2 messages unless debug is enabled.
         let configged_level = self.0;
-        let from_hyper = record.module_path().map_or(false, |m| m.starts_with("hyper::"));
-        let from_rustls = record.module_path().map_or(false, |m| m.starts_with("rustls::"));
-        if configged_level != LogLevel::Debug && (from_hyper || from_rustls) {
+
+        let from = |path| record.module_path().map_or(false, |m| m.starts_with(path));
+        let debug_only = from("hyper") || from("rustls") || from("r2d2");
+        if configged_level != LogLevel::Debug && debug_only {
             return;
         }
 
