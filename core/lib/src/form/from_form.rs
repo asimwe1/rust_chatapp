@@ -171,6 +171,12 @@ use crate::http::uncased::AsUncased;
 ///     Errors are collected as they occur. Finalization finalizes all pairs and
 ///     returns errors, if any, or the map.
 ///
+///   * **`bool`**
+///
+///     Parses as `false` for missing values (when lenient) and case-insensitive
+///     values of `off`, `false`, and `no`. Parses as `true` for values of `on`,
+///     `true`, `yes`, and the empty value. Failed to parse otherwise.
+///
 ///   * **[`time::DateTime`]**
 ///
 ///     Parses a date in `%FT%R` or `%FT%T` format, that is, `YYYY-MM-DDTHH:MM`

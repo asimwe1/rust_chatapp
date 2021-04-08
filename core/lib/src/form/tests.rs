@@ -36,7 +36,7 @@ macro_rules! assert_value_parse_eq {
         match parse::<$T>($v) {
             Ok(actual) if actual == expected => { /* ok */ },
             Ok(actual) => {
-                panic!("unexpected parse of {:?}\n {:?} instead of {:?}",
+                panic!("unexpected parse of {:?} ({:?} instead of {:?})",
                     $v, actual, expected)
             }
             Err(e) => panic!("parse `{:?} {}` failed: {:?}", $v, stringify!(=> $T = $expected), e)
@@ -54,7 +54,7 @@ macro_rules! assert_parses_fail {
 
 macro_rules! assert_parse_fails {
     ($v:expr => $T:ty) => (
-        let diag = format!("{:?} {}", $v, stringify!(=> $T = $expected));
+        let diag = format!("{:?} {}", $v, stringify!(=> $T));
         match parse::<$T>($v) {
             Ok(actual) => panic!("unexpectedly parsed {} as {:?}", diag, actual),
             Err(_) => { /* ok */ }
@@ -79,7 +79,7 @@ fn time() {
 #[test]
 fn bool() {
     assert_values_parse_eq! {
-        &["=true", "=yes", "=on"] => Vec<bool> = vec![true, true, true],
+        &["=true", "=yes", "=on", ""] => Vec<bool> = vec![true, true, true, true],
         &["=false", "=no", "=off"] => Vec<bool> = vec![false, false, false],
         &["=tRuE", "=YES", "=On"] => Vec<bool> = vec![true, true, true],
         &["=fAlSE", "=NO", "=OFF"] => Vec<bool> = vec![false, false, false],
