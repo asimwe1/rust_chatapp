@@ -33,7 +33,9 @@ pub struct Client {
 
 impl Client {
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, Error> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .thread_name("rocket-local-client-worker-thread")
+            .worker_threads(1)
             .enable_all()
             .build()
             .expect("create tokio runtime");
