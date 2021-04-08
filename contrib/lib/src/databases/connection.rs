@@ -119,8 +119,17 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     #[inline]
     pub async fn get_one(rocket: &rocket::Rocket) -> Option<Connection<K, C>> {
         match rocket.state::<Self>() {
-            Some(pool) => pool.get().await.ok(),
-            None => None
+            Some(pool) => match pool.get().await.ok() {
+                Some(conn) => Some(conn),
+                None => {
+                    error_!("no connections available for `{}`", std::any::type_name::<K>());
+                    None
+                }
+            },
+            None => {
+                error_!("missing database fairing for `{}`", std::any::type_name::<K>());
+                None
+            }
         }
     }
 
