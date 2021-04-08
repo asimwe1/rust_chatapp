@@ -103,10 +103,11 @@ macro_rules! pub_client_impl {
 
     #[doc(hidden)]
     pub $($prefix)? fn debug(rocket: Rocket) -> Result<Self, Error> {
-        let config = rocket.figment().clone()
-            .merge(("log_level", crate::config::LogLevel::Debug))
-            .merge(("profile", crate::Config::DEBUG_PROFILE));
+        let mut config = rocket.config.clone();
+        config.log_level = crate::config::LogLevel::Debug;
+        config.profile = crate::Config::DEBUG_PROFILE;
 
+        let config = rocket.figment().clone().merge(config);
         Self::tracked(rocket.reconfigure(config)) $(.$suffix)?
     }
 
