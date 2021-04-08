@@ -78,12 +78,29 @@ impl Config {
     /// # }
     /// ```
     pub fn from(db_name: &str, rocket: &rocket::Rocket) -> Result<Config, figment::Error> {
+        Config::figment(db_name, rocket).extract::<Self>()
+    }
+
+    /// Returns a `Figment` focused on the configuration for the database with
+    /// name `db_name`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Rocket;
+    /// use rocket_contrib::databases::Config;
+    ///
+    /// fn pool(rocket: &Rocket) {
+    ///     let my_db_figment = Config::figment("my_db", rocket);
+    ///     let mysql_prod_figment = Config::figment("mysql_prod", rocket);
+    /// }
+    /// ```
+    pub fn figment(db_name: &str, rocket: &rocket::Rocket) -> Figment {
         let db_key = format!("databases.{}", db_name);
         let key = |name: &str| format!("{}.{}", db_key, name);
         Figment::from(rocket.figment())
-            .merge(Serialized::default(&key("pool_size"), rocket.config().workers * 2))
-            .merge(Serialized::default(&key("timeout"), 5))
-            .extract_inner::<Self>(&db_key)
+            .join(Serialized::default(&key("pool_size"), rocket.config().workers * 2))
+            .join(Serialized::default(&key("timeout"), 5))
+            .focus(&db_key)
     }
 }
-

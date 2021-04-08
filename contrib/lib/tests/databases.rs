@@ -29,7 +29,7 @@ mod rusqlite_integration_test {
         use rocket::figment::{Figment, util::map};
 
         let options = map!["url" => ":memory:"];
-        let config = Figment::from(rocket::Config::default())
+        let config = Figment::from(rocket::Config::debug_default())
             .merge(("databases", map!["test_db" => &options]))
             .merge(("databases", map!["test_db_2" => &options]));
 
@@ -100,7 +100,7 @@ mod drop_runtime_test {
     async fn test_drop_runtime() {
         use rocket::figment::{Figment, util::map};
 
-        let config = Figment::from(rocket::Config::default())
+        let config = Figment::from(rocket::Config::debug_default())
             .merge(("databases", map!["test_db" => map!["url" => ""]]));
 
         let rocket = rocket::custom(config).attach(TestDb::fairing());
