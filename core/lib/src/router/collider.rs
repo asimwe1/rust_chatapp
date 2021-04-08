@@ -46,7 +46,7 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 fn formats_collide(route: &Route, other: &Route) -> bool {
     // When matching against the `Accept` header, the client can always
     // provide a media type that will cause a collision through
-    // non-specificity.
+    // non-specificity, i.e, `*/*` matches everything.
     if !route.method.supports_payload() {
         return true;
     }
