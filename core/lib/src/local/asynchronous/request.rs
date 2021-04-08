@@ -1,7 +1,9 @@
-use std::borrow::Cow;
+use std::fmt;
+use std::convert::TryInto;
 
 use crate::{Request, Data};
-use crate::http::{Status, Method, uri::Origin, ext::IntoOwned};
+use crate::http::{Status, Method, ext::IntoOwned};
+use crate::http::uri::Origin;
 
 use super::{Client, LocalResponse};
 
@@ -33,18 +35,18 @@ pub struct LocalRequest<'c> {
     pub(in super) client: &'c Client,
     pub(in super) request: Request<'c>,
     data: Vec<u8>,
-    uri: Cow<'c, str>,
+    uri: Result<Origin<'c>, String>,
 }
 
 impl<'c> LocalRequest<'c> {
-    pub(crate) fn new(
-        client: &'c Client,
-        method: Method,
-        uri: Cow<'c, str>
-    ) -> LocalRequest<'c> {
+    pub(crate) fn new<'u: 'c, U>(client: &'c Client, method: Method, uri: U) -> Self
+        where U: TryInto<Origin<'u>> + fmt::Display
+    {
         // We try to validate the URI now so that the inner `Request` contains a
         // valid URI. If it doesn't, we set a dummy one.
-        let origin = Origin::parse(&uri).unwrap_or_else(|_| Origin::dummy());
+        let uri_string = uri.to_string();
+        let uri = uri.try_into().map_err(move |_| uri_string);
+        let origin = uri.clone().unwrap_or_else(|_| Origin::dummy());
         let mut request = Request::new(client.rocket(), method, origin.into_owned());
 
         // Add any cookies we know about.
@@ -77,8 +79,8 @@ impl<'c> LocalRequest<'c> {
         // from an error catcher) immediately if it's invalid. If it's valid,
         // then `request` already contains the correct URI.
         let rocket = self.client.rocket();
-        if let Err(_) = Origin::parse(&self.uri) {
-            error!("Malformed request URI: {}", self.uri);
+        if let Err(malformed) = self.uri {
+            error!("Malformed request URI: {}", malformed);
             return LocalResponse::new(self.request, move |req| {
                 rocket.handle_error(Status::BadRequest, req)
             }).await

@@ -1,6 +1,8 @@
-use std::borrow::Cow;
+use std::fmt;
+use std::convert::TryInto;
 
 use crate::{Request, http::Method, local::asynchronous};
+use crate::http::uri::Origin;
 
 use super::{Client, LocalResponse};
 
@@ -34,11 +36,9 @@ pub struct LocalRequest<'c> {
 
 impl<'c> LocalRequest<'c> {
     #[inline]
-    pub(crate) fn new(
-        client: &'c Client,
-        method: Method,
-        uri: Cow<'c, str>
-    ) -> LocalRequest<'c> {
+    pub(crate) fn new<'u: 'c, U>(client: &'c Client, method: Method, uri: U) -> Self
+        where U: TryInto<Origin<'u>> + fmt::Display
+    {
         let inner = asynchronous::LocalRequest::new(client.inner(), method, uri);
         Self { inner, client }
     }

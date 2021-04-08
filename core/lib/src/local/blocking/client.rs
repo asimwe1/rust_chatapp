@@ -1,10 +1,11 @@
-use std::borrow::Cow;
+use std::fmt;
 use std::cell::RefCell;
+use std::convert::TryInto;
 
+use crate::Rocket;
 use crate::error::Error;
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
-use crate::rocket::Rocket;
-use crate::http::Method;
+use crate::http::{Method, uri::Origin};
 
 /// A `blocking` client to construct and dispatch local requests.
 ///
@@ -78,14 +79,10 @@ impl Client {
     }
 
     #[inline(always)]
-    pub(crate) fn _req<'c, 'u: 'c, U>(
-        &'c self,
-        method: Method,
-        uri: U
-    ) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    fn _req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
+        where U: TryInto<Origin<'u>> + fmt::Display
     {
-        LocalRequest::new(self, method, uri.into())
+        LocalRequest::new(self, method, uri)
     }
 
     // Generates the public API methods, which call the private methods above.

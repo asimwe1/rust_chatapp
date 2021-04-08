@@ -31,7 +31,7 @@ macro_rules! req_method {
         /// ```
         #[inline(always)]
         pub fn $f<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-            where U: Into<Cow<'u, str>>
+            where U: TryInto<Origin<'u>> + fmt::Display
         {
             self.req($method, uri)
         }
@@ -193,7 +193,7 @@ macro_rules! pub_client_impl {
         method: Method,
         uri: U
     ) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+        where U: TryInto<Origin<'u>> + fmt::Display
     {
         self._req(method, uri)
     }
