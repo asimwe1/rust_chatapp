@@ -348,12 +348,12 @@ The `Json` type serializes the structure into JSON, sets the Content-Type to
 JSON, and emits the serialized data in a fixed-sized body. If serialization
 fails, a **500 - Internal Server Error** is returned.
 
-The [JSON example on GitHub] provides further illustration.
+The [serialization example] provides further illustration.
 
 [`Json`]: @api/rocket_contrib/json/struct.Json.html
 [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
 [`serde`]: https://docs.serde.rs/serde/
-[JSON example on GitHub]: @example/json
+[serialization example]: @example/serialization
 
 ## Templates
 
@@ -423,9 +423,8 @@ reloading is disabled.
 
 The [`Template`] API documentation contains more information about templates,
 including how to customize a template engine to add custom helpers and filters.
-The [Handlebars templates example](@example/handlebars_templates) is a
-fully composed application that makes use of Handlebars templates, while the
-[Tera templates example](@example/tera_templates) does the same for Tera.
+The [templating example](@example/templating) uses both Tera and Handlebars
+templating to implement the same application.
 
 [`Template`]: @api/rocket_contrib/templates/struct.Template.html
 [configurable]: ../configuration/#extras

@@ -1,6 +1,5 @@
 use super::task::Task;
 
-use parking_lot::Mutex;
 use rand::{Rng, thread_rng, distributions::Alphanumeric};
 
 use rocket::local::asynchronous::Client;
@@ -9,7 +8,7 @@ use rocket::http::{Status, ContentType};
 // We use a lock to synchronize between tests so DB operations don't collide.
 // For now. In the future, we'll have a nice way to run each test in a DB
 // transaction so we can regain concurrency.
-static DB_LOCK: Mutex<()> = parking_lot::const_mutex(());
+static DB_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
 
 macro_rules! run_test {
     (|$client:ident, $conn:ident| $block:expr) => ({
@@ -104,7 +103,12 @@ fn test_many_insertions() {
 
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
-            let desc: String = thread_rng().sample_iter(&Alphanumeric).take(12).map(char::from).collect();
+            let desc: String = thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(12)
+                .map(char::from)
+                .collect();
+
             client.post("/todo")
                 .header(ContentType::Form)
                 .body(format!("description={}", desc))

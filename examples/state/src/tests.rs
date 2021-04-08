@@ -1,39 +1,20 @@
 use rocket::local::blocking::Client;
 use rocket::http::Status;
 
-fn register_hit(client: &Client) {
-    let response = client.get("/").dispatch();
-    assert_eq!(response.status(), Status::Ok);
-}
-
-fn get_count(client: &Client) -> usize {
-    let response = client.get("/count").dispatch();
-    response.into_string().and_then(|s| s.parse().ok()).unwrap()
-}
-
 #[test]
 fn test_count() {
     let client = Client::tracked(super::rocket()).unwrap();
 
-    // Count should start at 0.
-    assert_eq!(get_count(&client), 0);
+    fn get_count(client: &Client) -> usize {
+        let response = client.get("/count").dispatch().into_string().unwrap();
+        let count = response.split(" ").last().unwrap();
+        count.parse().unwrap()
+    }
 
-    for _ in 0..99 { register_hit(&client); }
-    assert_eq!(get_count(&client), 99);
-
-    register_hit(&client);
-    assert_eq!(get_count(&client), 100);
-}
-
-#[test]
-fn test_raw_state_count() {
-    use rocket::State;
-    use super::{count, index};
-
-    let rocket = super::rocket();
-    assert_eq!(count(State::from(&rocket).unwrap()), "0");
-    assert!(index(State::from(&rocket).unwrap()).0.contains("Visits: 1"));
-    assert_eq!(count(State::from(&rocket).unwrap()), "1");
+    // Count starts at 0; our hit is the first.
+    for i in 1..128 {
+        assert_eq!(get_count(&client), i);
+    }
 }
 
 // Cargo runs each test in parallel on different threads. We use all of these
@@ -47,3 +28,43 @@ fn test_raw_state_count() {
 #[test] fn test_count_parallel_7() { test_count() }
 #[test] fn test_count_parallel_8() { test_count() }
 #[test] fn test_count_parallel_9() { test_count() }
+
+#[test]
+fn test_queue_push_pop() {
+    let client = Client::tracked(super::rocket()).unwrap();
+
+    let response = client.put("/queue/push?event=test1").dispatch();
+    assert_eq!(response.status(), Status::Ok);
+
+    let response = client.get("/queue/pop").dispatch();
+    assert_eq!(response.into_string().unwrap(), "test1");
+
+    client.put("/queue/push?event=POP!%20...goes+").dispatch();
+    client.put("/queue/push?event=the+weasel").dispatch();
+    let r1 = client.get("/queue/pop").dispatch().into_string().unwrap();
+    let r2 = client.get("/queue/pop").dispatch().into_string().unwrap();
+    assert_eq!(r1 + &r2, "POP! ...goes the weasel");
+}
+
+#[test]
+fn test_request_local_state() {
+    use super::request_local::Atomics;
+    use std::sync::atomic::Ordering;
+
+    let client = Client::tracked(super::rocket()).unwrap();
+
+    client.get("/req-local/1-2").dispatch();
+    let atomics = client.rocket().state::<Atomics>().unwrap();
+    assert_eq!(atomics.uncached.load(Ordering::Relaxed), 2);
+    assert_eq!(atomics.cached.load(Ordering::Relaxed), 1);
+
+    client.get("/req-local/1-2").dispatch();
+    let atomics = client.rocket().state::<Atomics>().unwrap();
+    assert_eq!(atomics.uncached.load(Ordering::Relaxed), 4);
+    assert_eq!(atomics.cached.load(Ordering::Relaxed), 2);
+
+    client.get("/req-local/1-2-3-4").dispatch();
+    let atomics = client.rocket().state::<Atomics>().unwrap();
+    assert_eq!(atomics.uncached.load(Ordering::Relaxed), 8);
+    assert_eq!(atomics.cached.load(Ordering::Relaxed), 3);
+}

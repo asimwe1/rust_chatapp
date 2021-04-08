@@ -8,7 +8,7 @@ fn hello() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     async_required::rocket().mount("/", routes![hello])
 }
 

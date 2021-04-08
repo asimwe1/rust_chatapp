@@ -1860,8 +1860,8 @@ Rocket provides a built-in default catcher. It produces HTML or JSON, depending
 on the value of the `Accept` header. As such, custom catchers only need to be
 registered for custom error handling.
 
-The [error catcher example](@example/errors) illustrates catcher use in full,
-while the [`Catcher`] API documentation provides further details.
+The [error handling example](@example/error-handling) illustrates catcher use in
+full, while the [`Catcher`] API documentation provides further details.
 
 [`catch`]: @api/rocket/attr.catch.html
 [`register()`]: @api/rocket/struct.Rocket.html#method.register

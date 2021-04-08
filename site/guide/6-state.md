@@ -325,7 +325,9 @@ async fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
   syntax. Rocket does not provide an ORM. It is up to you to decide how to model
   your application's data.
 
-! note
+<!---->
+
+! note: Rocket wraps synchronous databases in an `async` API.
 
   The database engines supported by `#[database]` are *synchronous*. Normally,
   using such a database would block the thread of execution. To prevent this,
@@ -344,6 +346,10 @@ postgres = { version = "0.15", features = ["with-chrono"] }
 ```
 
 For more on Rocket's built-in database support, see the
-[`rocket_contrib::databases`] module documentation.
+[`rocket_contrib::databases`] module documentation. For examples of CRUD-like
+"blog" JSON APIs backed by a SQLite database driven by each of `sqlx`, `diesel`,
+and `rusqlite` with migrations run automatically for the former two drivers and
+`contrib` database support use for the latter two drivers, see the [databases
+example](@example/databases).
 
 [`rocket_contrib::databases`]: @api/rocket_contrib/databases/index.html

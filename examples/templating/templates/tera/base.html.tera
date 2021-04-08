@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tera Demo - {{ title }}</title>
+  </head>
+  <body>
+    {% block content %}{% endblock content %}
+  </body>
+  <footer>
+    <a href="/">Home</a>
+  </footer>
+</html>

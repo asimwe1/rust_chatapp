@@ -9,7 +9,7 @@ use rocket::State;
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::uri::Absolute;
 use rocket::response::content::Plain;
-use rocket::tokio::fs::File;
+use rocket::tokio::fs::{self, File};
 
 use crate::paste_id::PasteId;
 
@@ -31,6 +31,11 @@ async fn retrieve(id: PasteId<'_>) -> Option<Plain<File>> {
     File::open(id.file_path()).await.map(Plain).ok()
 }
 
+#[delete("/<id>")]
+async fn delete(id: PasteId<'_>) -> Option<()> {
+    fs::remove_file(id.file_path()).await.ok()
+}
+
 #[get("/")]
 fn index() -> &'static str {
     "
@@ -50,8 +55,8 @@ fn index() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::ignite()
         .manage(Absolute::parse(HOST).expect("valid host"))
-        .mount("/", routes![index, upload, retrieve])
+        .mount("/", routes![index, upload, delete, retrieve])
 }

@@ -13,7 +13,7 @@ pub fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![rendezvous])
         .attach(AdHoc::on_launch("Add Channel", |rocket| async {
-            Ok(rocket.manage(Barrier::new(2)))
+            rocket.manage(Barrier::new(2))
         }))
 }
 

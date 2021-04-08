@@ -87,8 +87,7 @@ routing and error handling.
   anywhere in your application without importing them explicitly.
 
   You may instead prefer to import macros explicitly or refer to them with
-  absolute paths: `use rocket::get;` or `#[rocket::get]`. The [`hello_2018`
-  example](@example/hello_2018) showcases this alternative.
+  absolute paths: `use rocket::get;` or `#[rocket::get]`.
 
 ## Mounting
 
@@ -194,9 +193,9 @@ as we expected.
 
 ! note: This and other examples are on GitHub.
 
-  A version of this example's complete crate, ready to `cargo run`, can be found
-  on [GitHub](@example/hello_world). You can find dozens of other complete
-  examples, spanning all of Rocket's features, in the [GitHub examples
+  An expanded version of this example's complete crate, ready to `cargo run`,
+  can be found on [GitHub](@example/hello). You can find dozens of other
+  complete examples, spanning all of Rocket's features, in the [GitHub examples
   directory](@example/).
 
 The second approach uses the `#[rocket::main]` route attribute.
@@ -222,10 +221,10 @@ async fn main() {
 
 `#[rocket::main]` is useful when a handle to the `Future` returned by `launch()`
 is desired, or when the return value of [`launch()`] is to be inspected. The
-[errors example] for instance, inspects the return value.
+[error handling example] for instance, inspects the return value.
 
 [`launch()`]: @api/rocket/struct.Rocket.html#method.launch
-[errors example]: @example/errors
+[error handling example]: @example/error-handling
 
 ## Futures and Async
 

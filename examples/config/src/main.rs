@@ -1,14 +1,29 @@
+#[macro_use] extern crate rocket;
+
 #[cfg(test)] mod tests;
 
+use rocket::{State, Config};
 use rocket::fairing::AdHoc;
 
-// This example's illustration is the Rocket.toml file. Running this server will
-// print the config, however.
-#[rocket::launch]
-fn rocket() -> rocket::Rocket {
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct AppConfig {
+    key: String,
+    port: u16
+}
+
+#[get("/")]
+fn read_config(rocket_config: &Config, app_config: State<'_, AppConfig>) -> String {
+    format!("{:#?}\n{:#?}", app_config, rocket_config)
+}
+
+// See Rocket.toml file. Running this server will print the config. Try running
+// with `ROCKET_PROFILE=release` manually by setting the environment variable
+// and automatically by compiling with `--release`.
+#[launch]
+fn rocket() -> _ {
     rocket::ignite()
-        .attach(AdHoc::on_liftoff("Config Reader", |rocket| Box::pin(async move {
-            let value = rocket.figment().find_value("").unwrap();
-            println!("{:#?}", value);
-        })))
+        .mount("/", routes![read_config])
+        .attach(AdHoc::config::<AppConfig>())
 }

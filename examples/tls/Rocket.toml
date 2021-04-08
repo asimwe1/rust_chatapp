@@ -1,9 +1,10 @@
-# The certificate/private key pairs used here where generated via openssl using
-# the 'gen_certs.sh' script located in the `private/` subdirectory.
+# The certificate key pairs used here were generated with openssl via the
+# 'private/gen_certs.sh' script.
 #
-# The certificates are self-signed. As such, you will need to trust them directly
-# for your browser to refer to the connection as secure. You should NEVER use
+# These certificates are self-signed. As such, you will need to trust them
+# directly for your browser to show connections as secure. You should NEVER use
 # these certificate/key pairs. They are here for DEMONSTRATION PURPOSES ONLY.
+
 [default.tls]
 certs = "private/rsa_sha256_cert.pem"
 key = "private/rsa_sha256_key.pem"

@@ -23,25 +23,25 @@ pub struct DbConn(diesel::SqliteConnection);
 
 #[derive(Debug, serde::Serialize)]
 struct Context {
-    msg: Option<(String, String)>,
+    flash: Option<(String, String)>,
     tasks: Vec<Task>
 }
 
 impl Context {
     pub async fn err<M: std::fmt::Display>(conn: &DbConn, msg: M) -> Context {
         Context {
-            msg: Some(("error".into(), msg.to_string())),
+            flash: Some(("error".into(), msg.to_string())),
             tasks: Task::all(conn).await.unwrap_or_default()
         }
     }
 
-    pub async fn raw(conn: &DbConn, msg: Option<(String, String)>) -> Context {
+    pub async fn raw(conn: &DbConn, flash: Option<(String, String)>) -> Context {
         match Task::all(conn).await {
-            Ok(tasks) => Context { msg, tasks },
+            Ok(tasks) => Context { flash, tasks },
             Err(e) => {
                 error_!("DB Task::all() error: {}", e);
                 Context {
-                    msg: Some(("error".into(), "Fail to access database.".into())),
+                    flash: Some(("error".into(), "Fail to access database.".into())),
                     tasks: vec![]
                 }
             }
@@ -85,25 +85,21 @@ async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-async fn index(msg: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
-    let msg = msg.map(|m| (m.name().to_string(), m.msg().to_string()));
-    Template::render("index", Context::raw(&conn, msg).await)
+async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render("index", Context::raw(&conn, flash).await)
 }
 
-async fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
+async fn run_migrations(rocket: Rocket) -> Rocket {
     // This macro from `diesel_migrations` defines an `embedded_migrations`
     // module containing a function named `run`. This allows the example to be
     // run and tested without any outside setup of the database.
     embed_migrations!();
 
     let conn = DbConn::get_one(&rocket).await.expect("database connection");
-    match conn.run(|c| embedded_migrations::run(c)).await {
-        Ok(()) => Ok(rocket),
-        Err(e) => {
-            error!("Failed to run database migrations: {:?}", e);
-            Err(rocket)
-        }
-    }
+    conn.run(|c| embedded_migrations::run(c)).await.expect("can run migrations");
+
+    rocket
 }
 
 #[launch]
@@ -111,8 +107,8 @@ fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .attach(AdHoc::on_launch("Database Migrations", run_db_migrations))
-        .mount("/", StaticFiles::from(crate_relative!("/static")))
+        .attach(AdHoc::on_launch("Run Migrations", run_migrations))
+        .mount("/", StaticFiles::from(crate_relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
 }

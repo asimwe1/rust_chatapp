@@ -7,3 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["secrets"] }
+serde = { version = "1", features = ["derive"] }
