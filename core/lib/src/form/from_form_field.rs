@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::num::{
     NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
@@ -312,13 +313,28 @@ impl<'v> FromFormField<'v> for bool {
 
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
         match field.value.as_uncased() {
-            v if v == "on" || v == "yes" || v == "true" => Ok(true),
             v if v == "off" || v == "no" || v == "false" => Ok(false),
+            v if v.is_empty() || v == "on" || v == "yes" || v == "true" => Ok(true),
             // force a `ParseBoolError`
             _ => Ok("".parse()?),
         }
     }
 }
+
+#[crate::async_trait]
+impl<'v> FromFormField<'v> for Capped<Cow<'v, str>> {
+    fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
+        let capped = <Capped<&'v str>>::from_value(field)?;
+        Ok(capped.map(|s| s.into()))
+    }
+
+    async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
+        let capped = <Capped<&'v str>>::from_data(field).await?;
+        Ok(capped.map(|s| s.into()))
+    }
+}
+
+impl_strict_from_form_field_from_capped!(Cow<'v, str>);
 
 macro_rules! impl_with_parse {
     ($($T:ident),+ $(,)?) => ($(
