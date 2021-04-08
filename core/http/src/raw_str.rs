@@ -6,6 +6,7 @@ use std::fmt;
 
 use ref_cast::RefCast;
 use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
+use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 use crate::uncased::UncasedStr;
 
@@ -217,6 +218,37 @@ impl RawStr {
             true => Cow::Borrowed(string),
             false => Cow::Owned(allocated)
         }
+    }
+
+    /// Returns a percent-encoded version of the string.
+    ///
+    /// # Example
+    ///
+    /// With a valid string:
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let raw_str = RawStr::new("Hello%21");
+    /// let decoded = raw_str.percent_decode();
+    /// assert_eq!(decoded, Ok("Hello!".into()));
+    /// ```
+    ///
+    /// With an invalid string:
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
+    /// let bad_raw_str = RawStr::new(bad_str);
+    /// assert!(bad_raw_str.percent_decode().is_err());
+    /// ```
+    #[inline(always)]
+    pub fn percent_encode(&self) -> Cow<'_, RawStr> {
+        Self::from_cow_str(percent_encode::<DEFAULT_ENCODE_SET>(self))
     }
 
     /// Returns a URL-decoded version of the string. This is identical to
@@ -720,6 +752,61 @@ impl RawStr {
         }
     }
 
+
+    /// Returns a string slice with the prefix removed.
+    ///
+    /// If the string starts with the pattern `prefix`, returns substring after
+    /// the prefix, wrapped in `Some`. This method removes the prefix exactly
+    /// once.
+    ///
+    /// If the string does not start with `prefix`, returns `None`.
+    ///
+    /// The pattern can be a `&str`, `char`, a slice of `char`s, or a function
+    /// or closure that determines if a character matches.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// assert_eq!(RawStr::new("foo:bar").strip_prefix("foo:").unwrap(), "bar");
+    /// assert_eq!(RawStr::new("foofoo").strip_prefix("foo").unwrap(), "foo");
+    /// assert!(RawStr::new("foo:bar").strip_prefix("bar").is_none());
+    /// ```
+    #[inline]
+    pub fn strip_prefix<'a, P: Pattern<'a>>(&'a self, prefix: P) -> Option<&'a RawStr> {
+        prefix.strip_prefix_of(self.as_str()).map(RawStr::new)
+    }
+
+    /// Returns a string slice with the suffix removed.
+    ///
+    /// If the string ends with the pattern `suffix`, returns the substring
+    /// before the suffix, wrapped in `Some`.  Unlike `trim_end_matches`, this
+    /// method removes the suffix exactly once.
+    ///
+    /// If the string does not end with `suffix`, returns `None`.
+    ///
+    /// The pattern can be a `&str`, `char`, a slice of `char`s, or a function
+    /// or closure that determines if a character matches.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// assert_eq!(RawStr::new("bar:foo").strip_suffix(":foo").unwrap(), "bar");
+    /// assert_eq!(RawStr::new("foofoo").strip_suffix("foo").unwrap(), "foo");
+    /// assert!(RawStr::new("bar:foo").strip_suffix("bar").is_none());
+    /// ```
+    #[inline]
+    pub fn strip_suffix<'a, P>(&'a self, suffix: P) -> Option<&'a RawStr>
+        where P: Pattern<'a>,<P as Pattern<'a>>::Searcher: ReverseSearcher<'a>,
+    {
+        suffix.strip_suffix_of(self.as_str()).map(RawStr::new)
+    }
+
     /// Parses this string slice into another type.
     ///
     /// Because `parse` is so general, it can cause problems with type
@@ -780,6 +867,7 @@ mod serde {
 }
 
 impl fmt::Debug for RawStr {
+    #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
