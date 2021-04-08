@@ -37,7 +37,7 @@ impl Rocket {
     /// for more information on defaults.
     ///
     /// This method is typically called through the
-    /// [`rocket::ignite()`](crate::ignite) alias.
+    /// [`rocket::build()`](crate::build) alias.
     ///
     /// # Panics
     ///
@@ -48,12 +48,12 @@ impl Rocket {
     ///
     /// ```rust
     /// # {
-    /// rocket::ignite()
+    /// rocket::build()
     /// # };
     /// ```
     #[track_caller]
     #[inline(always)]
-    pub fn ignite() -> Rocket {
+    pub fn build() -> Rocket {
         Rocket::custom(Config::figment())
     }
 
@@ -178,7 +178,7 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite().mount("/hello", routes![hi])
+    ///     rocket::build().mount("/hello", routes![hi])
     /// }
     /// ```
     ///
@@ -196,7 +196,7 @@ impl Rocket {
     /// }
     ///
     /// # let _ = async { // We don't actually want to launch the server in an example.
-    /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
+    /// rocket::build().mount("/hello", vec![Route::new(Get, "/world", hi)])
     /// #     .launch().await;
     /// # };
     /// ```
@@ -264,7 +264,7 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite().register("/", catchers![internal_error, not_found])
+    ///     rocket::build().register("/", catchers![internal_error, not_found])
     /// }
     /// ```
     pub fn register<'a, B, C>(mut self, base: B, catchers: C) -> Self
@@ -323,7 +323,7 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
     /// }
@@ -351,7 +351,7 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         .attach(AdHoc::on_liftoff("Liftoff Message", |_| Box::pin(async {
     ///             println!("We have liftoff!");
     ///         })))
@@ -373,7 +373,7 @@ impl Rocket {
     ///
     /// #[launch]
     /// fn rocket() -> rocket::Rocket {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         .attach(AdHoc::on_liftoff("Print Config", |rocket| Box::pin(async move {
     ///             println!("Rocket launch config: {:?}", rocket.config());
     ///         })))
@@ -389,7 +389,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// let rocket = rocket::ignite();
+    /// let rocket = rocket::build();
     /// let figment = rocket.figment();
     ///
     /// let port: u16 = figment.extract_inner("port").unwrap();
@@ -416,7 +416,7 @@ impl Rocket {
     /// }
     ///
     /// fn main() {
-    ///     let mut rocket = rocket::ignite()
+    ///     let mut rocket = rocket::build()
     ///         .mount("/", routes![hello])
     ///         .mount("/hi", routes![hello]);
     ///
@@ -451,7 +451,7 @@ impl Rocket {
     /// #[catch(default)] fn some_default() -> &'static str { "Everything else." }
     ///
     /// fn main() {
-    ///     let mut rocket = rocket::ignite()
+    ///     let mut rocket = rocket::build()
     ///         .register("/", catchers![not_found, just_500, some_default]);
     ///
     ///     let mut codes: Vec<_> = rocket.catchers().map(|c| c.code).collect();
@@ -474,7 +474,7 @@ impl Rocket {
     /// #[derive(PartialEq, Debug)]
     /// struct MyState(&'static str);
     ///
-    /// let rocket = rocket::ignite().manage(MyState("hello!"));
+    /// let rocket = rocket::build().manage(MyState("hello!"));
     /// assert_eq!(rocket.state::<MyState>(), Some(&MyState("hello!")));
     /// ```
     #[inline(always)]
@@ -490,7 +490,7 @@ impl Rocket {
     /// ```rust,no_run
     /// # use std::{thread, time::Duration};
     /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
+    /// let mut rocket = rocket::build();
     /// let handle = rocket.shutdown();
     ///
     /// thread::spawn(move || {
@@ -571,7 +571,7 @@ impl Rocket {
     /// #[rocket::main]
     /// async fn main() {
     /// # if false {
-    ///     let result = rocket::ignite().launch().await;
+    ///     let result = rocket::build().launch().await;
     ///     assert!(result.is_ok());
     /// # }
     /// }

@@ -82,7 +82,7 @@ fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>) -> (Status, Template) {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![index, submit])
         .attach(Template::fairing())
         .mount("/", StaticFiles::from(crate_relative!("/static")))

@@ -20,7 +20,7 @@ mod route_guard_tests {
 
     #[test]
     fn check_mount_path() {
-        let rocket = rocket::ignite()
+        let rocket = rocket::build()
             .mount("/first", routes![files])
             .mount("/second", routes![files]);
 

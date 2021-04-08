@@ -10,5 +10,5 @@ impl Drop for SpawnBlockingOnDrop {
 
 #[test]
 fn test_access_runtime_in_state_drop() {
-    Client::debug(rocket::ignite().manage(SpawnBlockingOnDrop)).unwrap();
+    Client::debug(rocket::build().manage(SpawnBlockingOnDrop)).unwrap();
 }

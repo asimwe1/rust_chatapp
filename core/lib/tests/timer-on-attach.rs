@@ -7,7 +7,7 @@ async fn test_await_timer_inside_attach() {
         rocket::tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
-    rocket::ignite()
+    rocket::build()
         .attach(rocket::fairing::AdHoc::on_launch("1", |rocket| async {
             do_async_setup().await;
             rocket

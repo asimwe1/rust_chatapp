@@ -36,7 +36,7 @@ mod templates_tests {
     fn test_callback_error() {
         use rocket::{local::blocking::Client, error::ErrorKind::FailedFairings};
 
-        let rocket = rocket::ignite().attach(Template::try_custom(|_| {
+        let rocket = rocket::build().attach(Template::try_custom(|_| {
             Err("error reloading templates!".into())
         }));
 

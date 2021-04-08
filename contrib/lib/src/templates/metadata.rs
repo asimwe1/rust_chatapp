@@ -30,7 +30,7 @@ use crate::templates::ContextManager;
 ///
 ///
 /// fn main() {
-///     rocket::ignite()
+///     rocket::build()
 ///         .attach(Template::fairing())
 ///         // ...
 ///     # ;

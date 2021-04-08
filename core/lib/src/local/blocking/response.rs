@@ -26,7 +26,7 @@ use super::Client;
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().mount("/", routes![hello_world])
+///     rocket::build().mount("/", routes![hello_world])
 ///     #    .reconfigure(rocket::Config::debug_default())
 /// }
 ///

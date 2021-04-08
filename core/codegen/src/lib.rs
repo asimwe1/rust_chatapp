@@ -30,7 +30,7 @@
 //! ```rust
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
-//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
+//! # fn main() { rocket::build().mount("/", routes![hello]); }
 //! ```
 //!
 //! Or, alternatively, selectively import from the top-level scope:
@@ -40,7 +40,7 @@
 //!
 //! use rocket::{get, routes};
 //! # #[get("/")] fn hello() { }
-//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
+//! # fn main() { rocket::build().mount("/", routes![hello]); }
 //! ```
 //!
 //! # Debugging Codegen

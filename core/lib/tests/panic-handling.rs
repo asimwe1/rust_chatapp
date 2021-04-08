@@ -27,7 +27,7 @@ fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> HandlerFuture<'r> {
 }
 
 fn rocket() -> Rocket {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![panic_route])
         .mount("/", vec![Route::new(Method::Get, "/pre", pre_future_route)])
 }

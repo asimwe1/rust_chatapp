@@ -45,7 +45,7 @@
 //! #[launch]
 //! # */
 //! fn rocket() -> rocket::Rocket {
-//!     rocket::ignite().mount("/", routes![hello])
+//!     rocket::build().mount("/", routes![hello])
 //! }
 //!
 //! #[cfg(test)]

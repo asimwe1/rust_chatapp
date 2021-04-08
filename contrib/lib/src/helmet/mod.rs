@@ -65,7 +65,7 @@
 //! # extern crate rocket_contrib;
 //! use rocket_contrib::helmet::SpaceHelmet;
 //!
-//! let rocket = rocket::ignite().attach(SpaceHelmet::default());
+//! let rocket = rocket::build().attach(SpaceHelmet::default());
 //! ```
 //!
 //! Each header can be configured individually. To enable a particular header,

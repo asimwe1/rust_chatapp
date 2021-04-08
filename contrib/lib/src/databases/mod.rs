@@ -64,7 +64,7 @@
 //!
 //! #[launch]
 //! fn rocket() -> rocket::Rocket {
-//!     rocket::ignite().attach(LogsDbConn::fairing())
+//!     rocket::build().attach(LogsDbConn::fairing())
 //! }
 //! # } fn main() {}
 //! ```

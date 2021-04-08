@@ -83,7 +83,7 @@ fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data
 
 #[test]
 fn test_full_route() {
-    let rocket = rocket::ignite()
+    let rocket = rocket::build()
         .mount("/1", routes![post1])
         .mount("/2", routes![post2]);
 
@@ -145,7 +145,7 @@ mod scopes {
     use other::world;
 
     fn _rocket() -> rocket::Rocket {
-        rocket::ignite().mount("/", rocket::routes![hello, world])
+        rocket::build().mount("/", rocket::routes![hello, world])
     }
 }
 
@@ -170,7 +170,7 @@ fn filtered_raw_query(bird: usize, color: &str, rest: Contextual<'_, Filtered<'_
 
 #[test]
 fn test_filtered_raw_query() {
-    let rocket = rocket::ignite().mount("/", routes![filtered_raw_query]);
+    let rocket = rocket::build().mount("/", routes![filtered_raw_query]);
     let client = Client::debug(rocket).unwrap();
 
     #[track_caller]
@@ -290,10 +290,10 @@ fn test_query_collection() {
         assert_eq!(run(&client, colors, dog).1, "blue&green&blue - Max Fido - 10");
     }
 
-    let rocket = rocket::ignite().mount("/", routes![query_collection]);
+    let rocket = rocket::build().mount("/", routes![query_collection]);
     run_tests(rocket);
 
-    let rocket = rocket::ignite().mount("/", routes![query_collection_2]);
+    let rocket = rocket::build().mount("/", routes![query_collection_2]);
     run_tests(rocket);
 }
 
@@ -323,7 +323,7 @@ fn segments_empty(path: PathString) -> String {
 
 #[test]
 fn test_inclusive_segments() {
-    let rocket = rocket::ignite()
+    let rocket = rocket::build()
         .mount("/", routes![segments])
         .mount("/", routes![segments_empty]);
 

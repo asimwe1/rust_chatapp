@@ -23,7 +23,7 @@ use figment::Profile;
 ///
 /// ```rust
 /// # let _ = async {
-/// if let Err(error) = rocket::ignite().launch().await {
+/// if let Err(error) = rocket::build().launch().await {
 ///     // This println "inspects" the error.
 ///     println!("Launch failed! Error: {}", error);
 ///
@@ -38,7 +38,7 @@ use figment::Profile;
 ///
 /// ```rust
 /// # let _ = async {
-/// let error = rocket::ignite().launch().await;
+/// let error = rocket::build().launch().await;
 ///
 /// // This call to drop (explicit here for demonstration) will result in
 /// // `error` being pretty-printed to the console along with a `panic!`.
@@ -115,7 +115,7 @@ impl Error {
     /// use rocket::error::ErrorKind;
     ///
     /// # let _ = async {
-    /// if let Err(error) = rocket::ignite().launch().await {
+    /// if let Err(error) = rocket::build().launch().await {
     ///     match error.kind() {
     ///         ErrorKind::Io(e) => println!("found an i/o launch error: {}", e),
     ///         e => println!("something else happened: {}", e)

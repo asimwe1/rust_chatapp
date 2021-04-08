@@ -201,7 +201,7 @@ fn user_str(id: &str) { /* ... */ }
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![user, user_int, user_str])
+    rocket::build().mount("/", routes![user, user_int, user_str])
 }
 ```
 
@@ -1771,7 +1771,7 @@ looks like:
 # #[catch(404)] fn not_found(req: &Request) { /* .. */ }
 
 fn main() {
-    rocket::ignite().register("/", catchers![not_found]);
+    rocket::build().register("/", catchers![not_found]);
 }
 ```
 
@@ -1800,7 +1800,7 @@ fn foo_not_found() -> &'static str {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .register("/", catchers![general_not_found])
         .register("/foo", catchers![foo_not_found])
 }
@@ -1846,7 +1846,7 @@ fn default_catcher(status: Status, request: &Request) { /* .. */ }
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite().register("/", catchers![default_catcher])
+    rocket::build().register("/", catchers![default_catcher])
 }
 ```
 

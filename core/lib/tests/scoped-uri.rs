@@ -16,7 +16,7 @@ fn hello_name(name: String) -> String {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![hello_name])
         .mount("/", rocket::routes![inner::hello])
 }

@@ -45,7 +45,7 @@ use crate::helmet::*;
 /// # extern crate rocket_contrib;
 /// # use rocket_contrib::helmet::SpaceHelmet;
 /// # let helmet = SpaceHelmet::default();
-/// rocket::ignite()
+/// rocket::build()
 ///     // ...
 ///     .attach(helmet)
 /// # ;

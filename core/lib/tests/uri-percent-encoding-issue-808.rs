@@ -21,7 +21,7 @@ fn uri_redirect() -> Redirect {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![hello, uri_redirect, raw_redirect])
+    rocket::build().mount("/", routes![hello, uri_redirect, raw_redirect])
 }
 
 

@@ -14,7 +14,7 @@ mod static_tests {
 
     fn rocket() -> Rocket {
         let root = static_root();
-        rocket::ignite()
+        rocket::build()
             .mount("/default", StaticFiles::from(&root))
             .mount("/no_index", StaticFiles::new(&root, Options::None))
             .mount("/dots", StaticFiles::new(&root, Options::DotFiles))

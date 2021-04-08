@@ -32,7 +32,7 @@ fn simple<'r>(simple: Simple<'r>) -> &'r str { simple.0 }
 
 #[test]
 fn test_data() {
-    let rocket = rocket::ignite().mount("/", routes![form, simple]);
+    let rocket = rocket::build().mount("/", routes![form, simple]);
     let client = Client::debug(rocket).unwrap();
 
     let response = client.post("/f")

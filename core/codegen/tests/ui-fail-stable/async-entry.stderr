@@ -104,14 +104,14 @@ error[E0728]: `await` is only allowed inside `async` functions and blocks
    |
 74 |     fn rocket() -> rocket::Rocket {
    |        ------ this is not `async`
-75 |         let _ = rocket::ignite().launch().await;
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks
+75 |         let _ = rocket::build().launch().await;
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks
 
 error[E0308]: mismatched types
   --> $DIR/async-entry.rs:37:9
    |
-37 |         rocket::ignite()
-   |         ^^^^^^^^^^^^^^^^ expected struct `std::string::String`, found struct `Rocket`
+37 |         rocket::build()
+   |         ^^^^^^^^^^^^^^^ expected struct `std::string::String`, found struct `Rocket`
 
 error[E0308]: mismatched types
   --> $DIR/async-entry.rs:46:9
@@ -126,7 +126,7 @@ error[E0308]: mismatched types
    |                       ^ expected `()` because of default return type
    |  _____________________|
    | |
-27 | |         rocket::ignite()
+27 | |         rocket::build()
 28 | |     }
    | |     ^- help: try adding a semicolon: `;`
    | |_____|

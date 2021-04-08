@@ -40,7 +40,7 @@ use crate::error::Error;
 /// use rocket::local::asynchronous::Client;
 ///
 /// # rocket::async_test(async {
-/// let rocket = rocket::ignite();
+/// let rocket = rocket::build();
 /// let client = Client::tracked(rocket).await.expect("valid rocket");
 /// let response = client.post("/")
 ///     .body("Hello, world!")
@@ -70,7 +70,7 @@ impl Client {
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
         crate::async_test(async {
-            let client = Client::debug(crate::ignite()).await.unwrap();
+            let client = Client::debug(crate::build()).await.unwrap();
             let request = client.get("/");
             let response = request.clone().dispatch().await;
             f(&client, request, response)

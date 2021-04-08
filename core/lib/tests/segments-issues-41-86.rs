@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn segments_works() {
-        let rocket = rocket::ignite()
+        let rocket = rocket::build()
             .mount("/", routes![test, two, one_two, none, dual])
             .mount("/point", routes![test, two, one_two, dual]);
         let client = Client::debug(rocket).unwrap();

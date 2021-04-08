@@ -22,7 +22,7 @@ mod tests {
 
     #[test]
     fn error_catcher_sets_cookies() {
-        let rocket = rocket::ignite()
+        let rocket = rocket::build()
             .mount("/", routes![index])
             .register("/", catchers![not_found])
             .attach(AdHoc::on_request("Add Cookie", |req, _| Box::pin(async move {

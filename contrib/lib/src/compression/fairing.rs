@@ -60,7 +60,7 @@ impl Default for Context {
 /// use rocket_contrib::compression::Compression;
 ///
 /// fn main() {
-///     rocket::ignite()
+///     rocket::build()
 ///         // ...
 ///         .attach(Compression::fairing())
 ///         // ...
@@ -83,7 +83,7 @@ impl Compression {
     /// use rocket_contrib::compression::Compression;
     ///
     /// fn main() {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         // ...
     ///         .attach(Compression::fairing())
     ///         // ...

@@ -20,7 +20,7 @@ use crate::http::{Method, uri::Origin};
 /// ```rust,no_run
 /// use rocket::local::blocking::Client;
 ///
-/// let rocket = rocket::ignite();
+/// let rocket = rocket::build();
 /// let client = Client::tracked(rocket).expect("valid rocket");
 /// let response = client.post("/")
 ///     .body("Hello, world!")
@@ -50,7 +50,7 @@ impl Client {
     pub fn _test<T, F>(f: F) -> T
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
-        let client = Client::debug(crate::ignite()).unwrap();
+        let client = Client::debug(crate::build()).unwrap();
         let request = client.get("/");
         let response = request.clone().dispatch();
         f(&client, request, response)

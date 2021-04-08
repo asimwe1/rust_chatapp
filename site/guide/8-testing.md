@@ -15,7 +15,7 @@ instance. Usage is straightforward:
   1. Construct a `Rocket` instance that represents the application.
 
      ```rust,no_run
-     let rocket = rocket::ignite();
+     let rocket = rocket::build();
      # let _ = rocket;
      ```
 
@@ -23,7 +23,7 @@ instance. Usage is straightforward:
 
      ```rust,no_run
      # use rocket::local::blocking::Client;
-     # let rocket = rocket::ignite();
+     # let rocket = rocket::build();
      let client = Client::tracked(rocket).unwrap();
      # let _ = client;
      ```
@@ -32,7 +32,7 @@ instance. Usage is straightforward:
 
      ```rust,no_run
      # use rocket::local::blocking::Client;
-     # let rocket = rocket::ignite();
+     # let rocket = rocket::build();
      # let client = Client::tracked(rocket).unwrap();
      let req = client.get("/");
      # let _ = req;
@@ -42,7 +42,7 @@ instance. Usage is straightforward:
 
      ```rust,no_run
      # use rocket::local::blocking::Client;
-     # let rocket = rocket::ignite();
+     # let rocket = rocket::build();
      # let client = Client::tracked(rocket).unwrap();
      # let req = client.get("/");
      let response = req.dispatch();
@@ -99,7 +99,7 @@ These methods are typically used in combination with the `assert_eq!` or
 # use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
-# let rocket = rocket::ignite().mount("/", routes![hello]);
+# let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
 
@@ -124,7 +124,7 @@ fn hello() -> &'static str {
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![hello])
+    rocket::build().mount("/", routes![hello])
 }
 ```
 
@@ -165,7 +165,7 @@ testing: we _want_ our tests to panic when something goes wrong.
 
 ```rust
 # fn rocket() -> rocket::Rocket {
-#     rocket::ignite().reconfigure(rocket::Config::debug_default())
+#     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
 
@@ -177,7 +177,7 @@ application's response:
 
 ```rust
 # fn rocket() -> rocket::Rocket {
-#     rocket::ignite().reconfigure(rocket::Config::debug_default())
+#     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
 # let client = Client::tracked(rocket()).expect("valid rocket instance");
@@ -201,7 +201,7 @@ We do this by checking the `Response` object directly:
 # use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 #
-# let rocket = rocket::ignite().mount("/", routes![hello]);
+# let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
 # let mut response = client.get("/").dispatch();
 
@@ -220,7 +220,7 @@ fn hello() -> &'static str {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![hello])
+    rocket::build().mount("/", routes![hello])
 }
 
 # /*

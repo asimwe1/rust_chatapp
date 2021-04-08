@@ -56,7 +56,7 @@ fn index() -> &'static str {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .manage(Absolute::parse(HOST).expect("valid host"))
         .mount("/", routes![index, upload, delete, retrieve])
 }

@@ -124,7 +124,7 @@ values are ignored.
 ## Default Provider
 
 Rocket's default configuration provider is [`Config::figment()`]; this is the
-provider that's used when calling [`rocket::ignite()`].
+provider that's used when calling [`rocket::build()`].
 
 The default figment merges, at a per-key level, and reads from the following
 sources, in ascending priority order:
@@ -212,7 +212,7 @@ use serde::Deserialize;
 
 #[launch]
 fn rocket() -> _ {
-    let rocket = rocket::ignite();
+    let rocket = rocket::build();
     let figment = rocket.figment();
 
     #[derive(Deserialize)]
@@ -259,7 +259,7 @@ fn custom(config: State<'_, Config>) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![custom])
         .attach(AdHoc::config::<Config>())
 }
@@ -270,7 +270,7 @@ fn rocket() -> _ {
 ## Custom Providers
 
 A custom provider can be set via [`rocket::custom()`], which replaces calls to
-[`rocket::ignite()`]. The configured provider can be built on top of
+[`rocket::build()`]. The configured provider can be built on top of
 [`Config::figment()`], [`Config::default()`], both, or neither. The
 [Figment](@figment) documentation has full details on instantiating existing
 providers like [`Toml`] and [`Json`] as well as creating custom providers for
@@ -356,4 +356,4 @@ or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.
 
 [`rocket::custom()`]: @api/rocket/fn.custom.html
-[`rocket::ignite()`]: @api/rocket/fn.custom.html
+[`rocket::build()`]: @api/rocket/fn.custom.html

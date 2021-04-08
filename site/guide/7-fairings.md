@@ -55,7 +55,7 @@ fn rocket() -> rocket::Rocket {
     # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
     # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
 
-    rocket::ignite()
+    rocket::build()
         .attach(req_fairing)
         .attach(res_fairing)
 }
@@ -217,7 +217,7 @@ prints a message indicating that the application has launched. The second named
 use rocket::fairing::AdHoc;
 use rocket::http::Method;
 
-rocket::ignite()
+rocket::build()
     .attach(AdHoc::on_liftoff("Liftoff Printer", |_| Box::pin(async move {
         println!("...annnddd we have liftoff!");
     })))

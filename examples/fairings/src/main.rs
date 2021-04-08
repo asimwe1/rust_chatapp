@@ -59,7 +59,7 @@ fn token(token: State<'_, Token>) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
         .attach(AdHoc::try_on_launch("Token State", |rocket| async {

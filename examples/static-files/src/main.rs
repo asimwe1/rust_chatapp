@@ -21,7 +21,7 @@ mod manual {
 
 #[rocket::launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", rocket::routes![manual::second])
         .mount("/", StaticFiles::from(crate_relative!("static")))
 }

@@ -192,7 +192,7 @@ impl Config {
         }
     }
 
-    /// Returns the default provider figment used by [`rocket::ignite()`].
+    /// Returns the default provider figment used by [`rocket::build()`].
     ///
     /// The default figment reads from the following sources, in ascending
     /// priority order:
@@ -205,7 +205,7 @@ impl Config {
     /// environment variable. If it is not set, it defaults to `debug` when
     /// compiled in debug mode and `release` when compiled in release mode.
     ///
-    /// [`rocket::ignite()`]: crate::ignite()
+    /// [`rocket::build()`]: crate::build()
     ///
     /// # Example
     ///

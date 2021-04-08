@@ -19,7 +19,7 @@ fn hello(name: &str, age: u8) -> String {
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/hello", routes![hello])
+    rocket::build().mount("/hello", routes![hello])
 }
 ```
 

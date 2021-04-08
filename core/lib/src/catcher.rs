@@ -88,7 +88,7 @@ pub(crate) fn dummy<'r>(_: Status, _: &'r Request<'_>) -> ErrorHandlerFuture<'r>
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().register("/", catchers![internal_error, not_found, default])
+///     rocket::build().register("/", catchers![internal_error, not_found, default])
 /// }
 /// ```
 ///
@@ -293,7 +293,7 @@ impl Default for Catcher {
 ///
 /// #[rocket::launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite()
+///     rocket::build()
 ///         // to handle only `404`
 ///         .register("/", CustomHandler::catch(Status::NotFound, Kind::Simple))
 ///         // or to register as the default

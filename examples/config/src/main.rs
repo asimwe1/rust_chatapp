@@ -23,7 +23,7 @@ fn read_config(rocket_config: &Config, app_config: State<'_, AppConfig>) -> Stri
 // and automatically by compiling with `--release`.
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![read_config])
         .attach(AdHoc::config::<AppConfig>())
 }

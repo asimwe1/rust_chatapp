@@ -28,7 +28,7 @@ mod tests {
     use rocket::http::{Status, ContentType};
 
     fn rocket() -> Rocket {
-        rocket::ignite()
+        rocket::build()
             .mount("/first", routes![specified, unspecified])
             .mount("/second", routes![specified_json, specified_html])
     }

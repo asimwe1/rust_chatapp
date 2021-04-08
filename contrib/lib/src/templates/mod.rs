@@ -26,7 +26,7 @@
 //!      use rocket_contrib::templates::Template;
 //!
 //!      fn main() {
-//!          rocket::ignite()
+//!          rocket::build()
 //!              .attach(Template::fairing())
 //!              // ...
 //!          # ;
@@ -169,7 +169,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// use rocket_contrib::templates::Template;
 ///
 /// fn main() {
-///     rocket::ignite()
+///     rocket::build()
 ///         .attach(Template::fairing())
 ///         // ...
 ///     # ;
@@ -237,7 +237,7 @@ impl Template {
     /// use rocket_contrib::templates::Template;
     ///
     /// fn main() {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         // ...
     ///         .attach(Template::fairing())
     ///         // ...
@@ -266,7 +266,7 @@ impl Template {
     /// use rocket_contrib::templates::Template;
     ///
     /// fn main() {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         // ...
     ///         .attach(Template::custom(|engines| {
     ///             // engines.handlebars.register_helper ...
@@ -297,7 +297,7 @@ impl Template {
     /// use rocket_contrib::templates::Template;
     ///
     /// fn main() {
-    ///     rocket::ignite()
+    ///     rocket::build()
     ///         // ...
     ///         .attach(Template::try_custom(|engines| {
     ///             // engines.handlebars.register_helper ...
@@ -361,7 +361,7 @@ impl Template {
     /// use rocket::local::blocking::Client;
     ///
     /// fn main() {
-    ///     let rocket = rocket::ignite().attach(Template::fairing());
+    ///     let rocket = rocket::build().attach(Template::fairing());
     ///     let client = Client::untracked(rocket).expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.

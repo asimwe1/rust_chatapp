@@ -153,7 +153,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![many_as, file, upload, delete])
         .mount("/", routes![redir_root, redir_login, maybe_redir])
         .mount("/", routes![xml, json, json_or_msgpack])

@@ -101,7 +101,7 @@ Before Rocket can dispatch requests to a route, the route needs to be _mounted_:
 #     "hello, world!"
 # }
 
-rocket::ignite().mount("/hello", routes![world]);
+rocket::build().mount("/hello", routes![world]);
 ```
 
 The `mount` method takes as input:
@@ -110,7 +110,7 @@ The `mount` method takes as input:
    2. A list of routes via the `routes!` macro: here, `routes![world]`, with
       multiple routes: `routes![a, b, c]`.
 
-This creates a new `Rocket` instance via the `ignite` function and mounts the
+This creates a new `Rocket` instance via the `build` function and mounts the
 `world` route to the `/hello` base path, making Rocket aware of the route.
 `GET` requests to `/hello/world` will be directed to the `world` function.
 
@@ -125,7 +125,7 @@ any number of times, and routes can be reused by mount points:
 #     "hello, world!"
 # }
 
-rocket::ignite()
+rocket::build()
     .mount("/hello", routes![world])
     .mount("/hi", routes![world]);
 ```
@@ -156,7 +156,7 @@ fn world() -> &'static str {
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/hello", routes![world])
+    rocket::build().mount("/hello", routes![world])
 }
 ```
 
@@ -212,7 +212,7 @@ runtime but unlike `#[launch]`, allows _you_ to start the server:
 
 #[rocket::main]
 async fn main() {
-    rocket::ignite()
+    rocket::build()
         .mount("/hello", routes![world])
         .launch()
         .await;

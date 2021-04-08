@@ -23,7 +23,7 @@
 //! # use rocket::fairing::AdHoc;
 //! # let req_fairing = AdHoc::on_request("Request", |_, _| Box::pin(async move {}));
 //! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
-//! let rocket = rocket::ignite()
+//! let rocket = rocket::build()
 //!     .attach(req_fairing)
 //!     .attach(res_fairing);
 //! ```

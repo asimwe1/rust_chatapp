@@ -8,7 +8,7 @@ mod managed_queue;
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .attach(request_local::stage())
         .attach(managed_hit_count::stage())
         .attach(managed_queue::stage())

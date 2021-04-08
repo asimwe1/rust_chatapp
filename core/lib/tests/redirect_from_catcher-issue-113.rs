@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn error_catcher_redirect() {
-        let client = Client::debug(rocket::ignite().register("/", catchers![not_found])).unwrap();
+        let client = Client::debug(rocket::build().register("/", catchers![not_found])).unwrap();
         let response = client.get("/unknown").dispatch();
 
         let location: Vec<_> = response.headers().get("location").collect();

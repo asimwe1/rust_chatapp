@@ -143,7 +143,7 @@ function, look like:
 ```rust
 #[launch]
 fn rocket() -> Rocket {
-    rocket::ignite().mount("/base", routes![index, another])
+    rocket::build().mount("/base", routes![index, another])
 }
 ```
 

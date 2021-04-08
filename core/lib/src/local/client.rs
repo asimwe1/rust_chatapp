@@ -63,7 +63,7 @@ macro_rules! pub_client_impl {
     /// ```rust,no_run
     #[doc = $import]
     ///
-    /// let rocket = rocket::ignite();
+    /// let rocket = rocket::build();
     /// let client = Client::tracked(rocket);
     /// ```
     #[inline(always)]
@@ -88,7 +88,7 @@ macro_rules! pub_client_impl {
     /// ```rust,no_run
     #[doc = $import]
     ///
-    /// let rocket = rocket::ignite();
+    /// let rocket = rocket::build();
     /// let client = Client::untracked(rocket);
     /// ```
     pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, Error> {

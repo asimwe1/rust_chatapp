@@ -63,7 +63,7 @@ mod compression_fairing_tests {
     }
 
     fn rocket() -> rocket::Rocket {
-        rocket::ignite()
+        rocket::build()
             .mount(
                 "/",
                 routes![index, font, image, tar, already_encoded, identity],

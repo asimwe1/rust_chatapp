@@ -61,7 +61,7 @@ mod compress_responder_tests {
     }
 
     fn rocket() -> rocket::Rocket {
-        rocket::ignite().mount("/", routes![index, font, image, already_encoded, identity])
+        rocket::build().mount("/", routes![index, font, image, already_encoded, identity])
     }
 
     #[test]

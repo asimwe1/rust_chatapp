@@ -11,7 +11,7 @@ mod rusqlite;
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .attach(sqlx::stage())
         .attach(rusqlite::stage())
         .attach(diesel_sqlite::stage())

@@ -73,7 +73,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///
 /// #[rocket::launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().mount("/", CustomHandler(Kind::Simple))
+///     rocket::build().mount("/", CustomHandler(Kind::Simple))
 /// }
 /// ```
 ///
@@ -116,7 +116,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite()
+///     rocket::build()
 ///         .mount("/", routes![custom_handler])
 ///         .manage(Kind::Simple)
 /// }

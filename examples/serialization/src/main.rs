@@ -7,7 +7,7 @@ mod msgpack;
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .attach(json::stage())
         .attach(msgpack::stage())
 }

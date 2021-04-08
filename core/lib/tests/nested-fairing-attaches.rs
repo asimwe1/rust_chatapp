@@ -20,7 +20,7 @@ fn index(counter: State<'_, Counter>) -> String {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![index])
         .attach(AdHoc::on_launch("Outer", |rocket| async {
             let counter = Counter::default();

@@ -44,7 +44,7 @@ use crate::http::Status;
 ///
 /// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite()
+///     rocket::build()
 ///         .mount("/", routes![index, raw_config_value])
 ///         .manage(MyConfig { user_val: "user input".to_string() })
 /// }
@@ -101,7 +101,7 @@ use crate::http::Status;
 ///     state.0.to_string()
 /// }
 ///
-/// let mut rocket = rocket::ignite().manage(MyManagedState(127));
+/// let mut rocket = rocket::build().manage(MyManagedState(127));
 /// let state = State::from(&rocket).expect("managed `MyManagedState`");
 /// assert_eq!(handler(state), "127");
 /// ```
@@ -154,7 +154,7 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// #[derive(Debug, PartialEq)]
     /// struct Unmanaged(usize);
     ///
-    /// let rocket = rocket::ignite().manage(Managed(7));
+    /// let rocket = rocket::build().manage(Managed(7));
     ///
     /// let state: Option<State<Managed>> = State::from(&rocket);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));

@@ -30,7 +30,7 @@ fn rocket() -> _ {
     map.insert("4da34121-bc7d-4fc1-aee6-bf8de0795333".parse().unwrap(), "Bob");
     map.insert("ad962969-4e3d-4de7-ac4a-2d86d6d10839".parse().unwrap(), "George");
 
-    rocket::ignite()
+    rocket::build()
         .manage(People(map))
         .mount("/", routes![people])
 }

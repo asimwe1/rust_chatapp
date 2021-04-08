@@ -395,7 +395,7 @@ fairings. To attach the template fairing, simply call
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![/* .. */])
         .attach(Template::fairing())
 }

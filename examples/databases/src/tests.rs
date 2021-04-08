@@ -37,7 +37,7 @@ fn test(base: &str, stage: AdHoc) {
 
     // NOTE: If we had more than one test running concurently that dispatches
     // DB-accessing requests, we'd need transactions or to serialize all tests.
-    let client = Client::tracked(rocket::ignite().attach(stage)).unwrap();
+    let client = Client::tracked(rocket::build().attach(stage)).unwrap();
 
     // Clear everything from the database.
     assert_eq!(client.delete(base).dispatch().status(), Status::Ok);

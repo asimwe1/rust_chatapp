@@ -37,7 +37,7 @@ pub(crate) trait Engine: Send + Sync + 'static {
 /// }
 ///
 /// fn main() {
-///     rocket::ignite()
+///     rocket::build()
 ///         // ...
 ///         .attach(Template::custom(|engines: &mut Engines| {
 ///             engines.tera.register_filter("my_filter", my_filter);

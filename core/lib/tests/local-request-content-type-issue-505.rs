@@ -49,7 +49,7 @@ mod local_request_content_type_tests {
     use rocket::http::ContentType;
 
     fn rocket() -> Rocket {
-        rocket::ignite().mount("/", routes![rg_ct, data_has_ct, data_no_ct])
+        rocket::build().mount("/", routes![rg_ct, data_has_ct, data_no_ct])
     }
 
     #[test]

@@ -23,7 +23,7 @@ mod many_cookie_jars_tests {
     use rocket::local::blocking::Client;
 
     fn rocket() -> rocket::Rocket {
-        rocket::ignite().mount("/", routes![multi_add, multi_get])
+        rocket::build().mount("/", routes![multi_add, multi_get])
     }
 
     #[test]

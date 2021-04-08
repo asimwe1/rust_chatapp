@@ -42,7 +42,7 @@ struct HitCount {
     count: AtomicUsize
 }
 
-rocket::ignite().manage(HitCount { count: AtomicUsize::new(0) });
+rocket::build().manage(HitCount { count: AtomicUsize::new(0) });
 ```
 
 The `manage` method can be called any number of times as long as each call
@@ -55,7 +55,7 @@ a `HitCount` value and a `Config` value, we can write:
 # type Config = &'static str;
 # let user_input = "input";
 
-rocket::ignite()
+rocket::build()
     .manage(HitCount { count: AtomicUsize::new(0) })
     .manage(Config::from(user_input));
 ```
@@ -292,7 +292,7 @@ struct LogsDbConn(diesel::SqliteConnection);
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().attach(LogsDbConn::fairing())
+    rocket::build().attach(LogsDbConn::fairing())
 }
 ```
 

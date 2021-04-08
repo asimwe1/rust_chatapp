@@ -10,5 +10,5 @@ fn hello() -> &'static str {
 #[launch]
 fn rocket() -> _ {
     // See `Rocket.toml` and `Cargo.toml` for TLS configuration.
-    rocket::ignite().mount("/", routes![hello])
+    rocket::build().mount("/", routes![hello])
 }

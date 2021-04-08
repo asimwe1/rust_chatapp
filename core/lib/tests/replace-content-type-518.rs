@@ -7,7 +7,7 @@ fn index(_data: rocket::Data) -> &'static str { "json" }
 fn other_index(_data: rocket::Data) -> &'static str { "other" }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+    rocket::build()
         .mount("/", rocket::routes![index, other_index])
         .attach(AdHoc::on_request("Change CT", |req, _| Box::pin(async move {
             let need_ct = req.content_type().is_none();

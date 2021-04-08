@@ -104,7 +104,7 @@ async fn run_migrations(rocket: Rocket) -> Rocket {
 
 #[launch]
 fn rocket() -> Rocket {
-    rocket::ignite()
+    rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
         .attach(AdHoc::on_launch("Run Migrations", run_migrations))

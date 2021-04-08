@@ -26,7 +26,7 @@ use crate::router::segment::Segment;
 ///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
 ///     assert_eq!(route.uri.base(), "/");
 ///
-///     let rocket = rocket::ignite().mount("/base", vec![route]);
+///     let rocket = rocket::build().mount("/base", vec![route]);
 ///     let routes: Vec<_> = rocket.routes().collect();
 ///     assert_eq!(routes[0].uri.base(), "/base");
 ///     ```
@@ -46,7 +46,7 @@ use crate::router::segment::Segment;
 ///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
 ///     assert_eq!(route.uri, "/foo/<bar>");
 ///
-///     let rocket = rocket::ignite().mount("/base", vec![route]);
+///     let rocket = rocket::build().mount("/base", vec![route]);
 ///     let routes: Vec<_> = rocket.routes().collect();
 ///     assert_eq!(routes[0].uri, "/base/foo/<bar>");
 ///     ```

@@ -21,7 +21,7 @@ mod a {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", a::routes()).mount("/foo", a::routes())
+    rocket::build().mount("/", a::routes()).mount("/foo", a::routes())
 }
 
 mod mapped_base_tests {

@@ -61,7 +61,7 @@
 //!
 //! #[launch]
 //! fn rocket() -> _ {
-//!     rocket::ignite().mount("/", routes![hello])
+//!     rocket::build().mount("/", routes![hello])
 //! }
 //! ```
 //!
@@ -165,9 +165,9 @@ pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
 pub use crate::state::State;
 
-/// Creates a new instance of `Rocket`: aliases [`Rocket::ignite()`].
-pub fn ignite() -> Rocket {
-    Rocket::ignite()
+/// Creates a new instance of `Rocket`: aliases [`Rocket::build()`].
+pub fn build() -> Rocket {
+    Rocket::build()
 }
 
 /// Creates a new instance of `Rocket` with a custom configuration provider:

@@ -44,7 +44,7 @@ fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> 
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+    rocket::build()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello, forced_error])
         .register("/", catchers![general_not_found, default_catcher])

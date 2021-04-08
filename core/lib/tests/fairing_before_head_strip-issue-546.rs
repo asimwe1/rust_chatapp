@@ -26,7 +26,7 @@ mod fairing_before_head_strip {
 
     #[test]
     fn not_auto_handled() {
-        let rocket = rocket::ignite()
+        let rocket = rocket::build()
             .mount("/", routes![head])
             .attach(AdHoc::on_request("Check HEAD", |req, _| {
                 Box::pin(async move {
@@ -52,7 +52,7 @@ mod fairing_before_head_strip {
         struct Counter(AtomicUsize);
 
         let counter = Counter::default();
-        let rocket = rocket::ignite()
+        let rocket = rocket::build()
             .mount("/", routes![auto])
             .manage(counter)
             .attach(AdHoc::on_request("Check HEAD + Count", |req, _| {

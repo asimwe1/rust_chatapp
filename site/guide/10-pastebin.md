@@ -54,7 +54,7 @@ And finally, create a skeleton Rocket application to work off of in
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+    rocket::build()
 }
 ```
 
@@ -111,7 +111,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index])
+    rocket::build().mount("/", routes![index])
 }
 ```
 
@@ -277,7 +277,7 @@ extension trait. Ensure that the route is mounted at the root path:
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index, upload])
+    rocket::build().mount("/", routes![index, upload])
 }
 ```
 
@@ -341,7 +341,7 @@ Make sure that the route is mounted at the root path:
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index, upload, retrieve])
+    rocket::build().mount("/", routes![index, upload, retrieve])
 }
 ```
 

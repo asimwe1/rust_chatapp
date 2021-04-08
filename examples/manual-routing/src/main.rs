@@ -104,7 +104,7 @@ fn rocket() -> _ {
 
     let not_found_catcher = Catcher::new(404, not_found_handler);
 
-    rocket::ignite()
+    rocket::build()
         .mount("/", vec![always_forward, hello, echo])
         .mount("/upload", vec![get_upload, post_upload])
         .mount("/hello", vec![name.clone()])

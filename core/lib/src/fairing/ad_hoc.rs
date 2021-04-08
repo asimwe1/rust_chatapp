@@ -27,7 +27,7 @@ use crate::fairing::{Fairing, Kind, Info};
 /// use rocket::fairing::AdHoc;
 /// use rocket::http::Method;
 ///
-/// rocket::ignite()
+/// rocket::build()
 ///     .attach(AdHoc::on_liftoff("Liftoff Printer", |_| Box::pin(async move {
 ///         println!("...annnddd we have liftoff!");
 ///     })))

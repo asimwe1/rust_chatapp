@@ -33,7 +33,7 @@ fn other() -> &'static str { "other" }
 
 #[test]
 fn test_formats() {
-    let rocket = rocket::ignite()
+    let rocket = rocket::build()
         .mount("/", routes![json, xml, json_long, msgpack_long, msgpack,
                plain, binary, other]);
 
@@ -84,7 +84,7 @@ fn put_bar_baz() -> &'static str { "put_bar_baz" }
 
 #[test]
 fn test_custom_formats() {
-    let rocket = rocket::ignite()
+    let rocket = rocket::build()
         .mount("/", routes![get_foo, post_foo, get_bar_baz, put_bar_baz]);
 
     let client = Client::debug(rocket).unwrap();

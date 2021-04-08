@@ -24,7 +24,7 @@ use tokio::sync::mpsc;
 ///
 /// #[rocket::main]
 /// async fn main() {
-///     let result = rocket::ignite()
+///     let result = rocket::build()
 ///         .mount("/", routes![shutdown])
 ///         .launch()
 ///         .await;

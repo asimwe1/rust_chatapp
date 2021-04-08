@@ -57,7 +57,7 @@ fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![hello])
         .mount("/hello", routes![world, mir])
         .mount("/wave", routes![wave])

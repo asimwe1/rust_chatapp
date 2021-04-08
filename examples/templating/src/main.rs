@@ -15,7 +15,7 @@ fn index() -> Html<&'static str> {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![index])
         .mount("/tera", routes![tera::index, tera::hello])
         .mount("/hbs", routes![hbs::index, hbs::hello, hbs::about])

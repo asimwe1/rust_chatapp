@@ -15,7 +15,7 @@ fn index() -> Html<&'static str> {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::ignite()
+    rocket::build()
         .attach(Template::fairing())
         .mount("/", routes![index])
         .mount("/message", message::routes())

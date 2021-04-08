@@ -21,7 +21,7 @@ use super::{Client, LocalResponse};
 /// use rocket::http::{ContentType, Cookie};
 ///
 /// # rocket::async_test(async {
-/// let client = Client::tracked(rocket::ignite()).await.expect("valid rocket");
+/// let client = Client::tracked(rocket::build()).await.expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())
