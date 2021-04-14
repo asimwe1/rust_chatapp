@@ -114,22 +114,9 @@ impl Default for Config {
 }
 
 impl Config {
-    /// The default debug profile: `debug`.
-    pub const DEBUG_PROFILE: Profile = Profile::const_new("debug");
-
-    /// The default release profile: `release`.
-    pub const RELEASE_PROFILE: Profile = Profile::const_new("release");
-
-    /// The default profile: "debug" on `debug`, "release" on `release`.
-    #[cfg(debug_assertions)]
-    pub const DEFAULT_PROFILE: Profile = Self::DEBUG_PROFILE;
-
-    /// The default profile: "debug" on `debug`, "release" on `release`.
-    #[cfg(not(debug_assertions))]
-    pub const DEFAULT_PROFILE: Profile = Self::RELEASE_PROFILE;
 
     const DEPRECATED_KEYS: &'static [(&'static str, Option<&'static str>)] = &[
-        ("env", Some("profile")), ("log", Some("log_level")),
+        ("env", Some(Self::PROFILE)), ("log", Some(Self::LOG_LEVEL)),
     ];
 
     const DEPRECATED_PROFILES: &'static [(&'static str, Option<&'static str>)] = &[
@@ -197,7 +184,7 @@ impl Config {
     /// The default figment reads from the following sources, in ascending
     /// priority order:
     ///
-    ///   1. [`Config::default()`] (see [Defaults](#Defaults))
+    ///   1. [`Config::default()`] (see [defaults](#defaults))
     ///   2. `Rocket.toml` _or_ filename in `ROCKET_CONFIG` environment variable
     ///   3. `ROCKET_` prefixed environment variables
     ///
@@ -346,13 +333,67 @@ impl Config {
                 warn!("found set deprecated profile `{}`", Paint::white(profile));
 
                 if let Some(new_profile) = replacement {
-                    info_!("profile has been by replaced by `{}`", Paint::white(new_profile));
+                    launch_info_!("profile has been by replaced by `{}`", Paint::white(new_profile));
                 } else {
-                    info_!("profile `{}` has no special meaning", profile);
+                    launch_info_!("profile `{}` has no special meaning", profile);
                 }
             }
         }
     }
+}
+
+impl Config {
+    /// The default debug profile: `debug`.
+    pub const DEBUG_PROFILE: Profile = Profile::const_new("debug");
+
+    /// The default release profile: `release`.
+    pub const RELEASE_PROFILE: Profile = Profile::const_new("release");
+
+    /// The default profile: "debug" on `debug`, "release" on `release`.
+    #[cfg(debug_assertions)]
+    pub const DEFAULT_PROFILE: Profile = Self::DEBUG_PROFILE;
+
+    /// The default profile: "debug" on `debug`, "release" on `release`.
+    #[cfg(not(debug_assertions))]
+    pub const DEFAULT_PROFILE: Profile = Self::RELEASE_PROFILE;
+
+}
+
+impl Config {
+    /// The stringy parameter name for setting/extracting [`Config::profile`].
+    ///
+    /// This isn't `pub` because setting it directly does nothing.
+    const PROFILE: &'static str = "profile";
+
+    /// The stringy parameter name for setting/extracting [`Config::address`].
+    pub const ADDRESS: &'static str = "address";
+
+    /// The stringy parameter name for setting/extracting [`Config::port`].
+    pub const PORT: &'static str = "port";
+
+    /// The stringy parameter name for setting/extracting [`Config::workers`].
+    pub const WORKERS: &'static str = "workers";
+
+    /// The stringy parameter name for setting/extracting [`Config::keep_alive`].
+    pub const KEEP_ALIVE: &'static str = "keep_alive";
+
+    /// The stringy parameter name for setting/extracting [`Config::limits`].
+    pub const LIMITS: &'static str = "limits";
+
+    /// The stringy parameter name for setting/extracting [`Config::tls`].
+    pub const TLS: &'static str = "tls";
+
+    /// The stringy parameter name for setting/extracting [`Config::secret_key`].
+    pub const SECRET_KEY: &'static str = "secret_key";
+
+    /// The stringy parameter name for setting/extracting [`Config::temp_dir`].
+    pub const TEMP_DIR: &'static str = "temp_dir";
+
+    /// The stringy parameter name for setting/extracting [`Config::log_level`].
+    pub const LOG_LEVEL: &'static str = "log_level";
+
+    /// The stringy parameter name for setting/extracting [`Config::ctrlc`].
+    pub const CTRLC: &'static str = "ctrlc";
 }
 
 impl Provider for Config {
