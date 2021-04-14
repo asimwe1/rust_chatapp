@@ -20,22 +20,21 @@ pub use crate::response::flash::FlashMessage;
 /// # Example
 ///
 /// ```rust
-/// use rocket::request;
+/// use rocket::request::local_cache;
+/// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+/// # let request = c.get("/");
 ///
-/// # rocket::Request::example(rocket::http::Method::Get, "/uri", |request| {
 /// // The first store into local cache for a given type wins.
-/// let value = request.local_cache(|| "hello");
-/// assert_eq!(*request.local_cache(|| "hello"), "hello");
+/// assert_eq!(request.local_cache(|| String::from("hello")), "hello");
 ///
-/// // The following return the cached, previously stored value for the type.
-/// assert_eq!(*request.local_cache(|| "goodbye"), "hello");
+/// // The following returns the cached, previously stored value for the type.
+/// assert_eq!(request.local_cache(|| String::from("goodbye")), "hello");
 ///
-/// // We cannot cache different values of the same type; we _must_ use a proxy
-/// // type. To avoid the need to write these manually, use `local_cache!`,
-/// // which generates one of the fly.
-/// assert_eq!(*request::local_cache!(request, "hello"), "hello");
-/// assert_eq!(*request::local_cache!(request, "goodbye"), "goodbye");
-/// # });
+/// // This shows that we cannot cache different values of the same type; we
+/// // _must_ use a proxy type. To avoid the need to write these manually, use
+/// // `local_cache!`, which generates one of the fly.
+/// assert_eq!(local_cache!(request, String::from("hello")), "hello");
+/// assert_eq!(local_cache!(request, String::from("goodbye")), "goodbye");
 /// ```
 #[macro_export]
 macro_rules! local_cache {
