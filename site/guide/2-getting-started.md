@@ -84,17 +84,17 @@ run`. You should see the following:
 ```sh
 > cargo run
 🔧 Configured for debug.
-    => address: 127.0.0.1
-    => port: 8000
-    => workers: 64
-    => log level: normal
-    => secret key: [zero]
-    => limits: forms = 32KiB
-    => cli colors: true
-    => keep-alive: 5s
-    => tls: disabled
-🛰  Mounting /:
-    => GET / (index)
+   >> address: 127.0.0.1
+   >> port: 8000
+   >> workers: [..]
+   >> keep-alive: 5s
+   >> limits: [..]
+   >> tls: disabled
+   >> temp dir: /tmp
+   >> log level: normal
+   >> cli colors: true
+🛰  Routes:
+   >> (index) GET /
 🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 
