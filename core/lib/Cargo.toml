@@ -47,7 +47,7 @@ async-trait = "0.1.43"
 
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
-rev = "504ef71a"
+rev = "8f94dc"
 
 [dependencies.rocket_codegen]
 version = "0.5.0-dev"
@@ -66,6 +66,14 @@ features = ["tokio-io"]
 [dependencies.tokio]
 version = "1.0"
 features = ["fs", "io-std", "io-util", "rt-multi-thread", "sync", "signal", "macros"]
+
+[dependencies.tokio-util]
+version = "0.6"
+default-features = false
+features = ["io"]
+
+[dependencies.bytes]
+version = "1.0"
 
 [build-dependencies]
 yansi = "0.5"
