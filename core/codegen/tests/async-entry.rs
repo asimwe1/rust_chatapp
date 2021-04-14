@@ -37,7 +37,7 @@ mod b_inferred {
 mod c {
     // non-async launch.
     #[rocket::launch]
-    fn rocket() -> rocket::Rocket {
+    fn rocket() -> _ {
         rocket::build()
     }
 

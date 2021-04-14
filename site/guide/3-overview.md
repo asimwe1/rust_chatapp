@@ -155,7 +155,7 @@ fn world() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/hello", routes![world])
 }
 ```
@@ -181,12 +181,10 @@ Running the application, the console shows:
 
 ! tip: You can also return `_` from a `#[launch]` function!
 
-  If you find it more pleasing, `#[launch]` can infer the return type of
-  `Rocket` for you by using `_` as the return type:
-
-  `
-  #[launch] fn rocket() -> _ { /* ... */ }
-  `
+  Special to Rocket's `#[launch]` attribute, the return type of a function
+  decorated with `#[launch]` is automatically inferred when the return type is
+  set to `_`. If you prefer, you can also set the return type explicitly to
+  `Rocket<Build>`.
 
 If we visit `http://127.0.0.1:8000/hello/world`, we see `Hello, world!`, exactly
 as we expected.

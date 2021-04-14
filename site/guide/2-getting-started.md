@@ -71,7 +71,7 @@ fn index() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![index])
 }
 ```

@@ -203,7 +203,7 @@ impl std::ops::BitOr for Options {
 /// use rocket_contrib::serve::StaticFiles;
 ///
 /// #[launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build().mount("/public", StaticFiles::from("/static"))
 /// }
 /// ```
@@ -227,7 +227,7 @@ impl std::ops::BitOr for Options {
 /// use rocket_contrib::serve::{StaticFiles, crate_relative};
 ///
 /// #[launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build().mount("/", StaticFiles::from(crate_relative!("static")))
 /// }
 /// ```
@@ -263,7 +263,7 @@ impl StaticFiles {
     /// use rocket_contrib::serve::StaticFiles;
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build().mount("/static", StaticFiles::from("/www/public"))
     /// }
     /// ```
@@ -276,7 +276,7 @@ impl StaticFiles {
     /// use rocket_contrib::serve::StaticFiles;
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build().mount("/static", StaticFiles::from("/www/public").rank(30))
     /// }
     /// ```
@@ -305,7 +305,7 @@ impl StaticFiles {
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::build()
     ///         .mount("/static", StaticFiles::from("/www/public"))

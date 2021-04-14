@@ -41,7 +41,7 @@ mod launch_a {
 
 mod launch_b {
     #[rocket::launch]
-    async fn rocket() -> rocket::Rocket {
+    async fn rocket() -> _ {
         let _ = rocket::build().launch().await;
         "hi".to_string()
     }
@@ -71,7 +71,7 @@ mod launch_e {
 
 mod launch_f {
     #[rocket::launch]
-    fn rocket() -> rocket::Rocket {
+    fn rocket() -> _ {
         let _ = rocket::build().launch().await;
         rocket::build()
     }

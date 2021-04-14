@@ -43,7 +43,7 @@ use crate::http::Status;
 /// }
 ///
 /// #[launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build()
 ///         .mount("/", routes![index, raw_config_value])
 ///         .manage(MyConfig { user_val: "user input".to_string() })

@@ -28,7 +28,7 @@ use crate::{Request, Response};
 /// }
 ///
 /// #[launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build().mount("/", routes![hello_world])
 ///     #    .reconfigure(rocket::Config::debug_default())
 /// }

@@ -200,7 +200,10 @@ impl AdHoc {
     ///     /* and so on.. */
     /// }
     ///
-    /// let fairing = AdHoc::config::<Config>();
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build().attach(AdHoc::config::<Config>())
+    /// }
     /// ```
     pub fn config<'de, T>() -> AdHoc
         where T: serde::Deserialize<'de> + Send + Sync + 'static

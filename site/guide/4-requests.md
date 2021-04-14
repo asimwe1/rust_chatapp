@@ -200,7 +200,7 @@ fn user_int(id: isize) { /* ... */ }
 fn user_str(id: &str) { /* ... */ }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![user, user_int, user_str])
 }
 ```

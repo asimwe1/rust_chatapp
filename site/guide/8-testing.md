@@ -123,7 +123,7 @@ fn hello() -> &'static str {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![hello])
 }
 ```
@@ -164,7 +164,8 @@ To test our "Hello, world!" application, we create a `Client` for our
 testing: we _want_ our tests to panic when something goes wrong.
 
 ```rust
-# fn rocket() -> rocket::Rocket {
+# #[rocket::launch]
+# fn rocket() -> _ {
 #     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
@@ -176,7 +177,8 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
-# fn rocket() -> rocket::Rocket {
+# #[rocket::launch]
+# fn rocket() -> _ {
 #     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;

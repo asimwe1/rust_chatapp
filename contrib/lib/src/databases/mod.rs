@@ -63,7 +63,7 @@
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
 //! #[launch]
-//! fn rocket() -> rocket::Rocket {
+//! fn rocket() -> _ {
 //!     rocket::build().attach(LogsDbConn::fairing())
 //! }
 //! # } fn main() {}

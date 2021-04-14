@@ -53,7 +53,7 @@ And finally, create a skeleton Rocket application to work off of in
 #[macro_use] extern crate rocket;
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build()
 }
 ```
@@ -110,7 +110,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 # #[get("/")] fn index() { }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![index])
 }
 ```
@@ -276,7 +276,7 @@ extension trait. Ensure that the route is mounted at the root path:
 # #[post("/")] fn upload() {}
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![index, upload])
 }
 ```
@@ -340,7 +340,7 @@ Make sure that the route is mounted at the root path:
 # #[get("/<id>")] fn retrieve(id: String) {}
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     rocket::build().mount("/", routes![index, upload, retrieve])
 }
 ```

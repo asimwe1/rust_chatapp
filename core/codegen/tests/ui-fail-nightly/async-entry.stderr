@@ -108,7 +108,7 @@ note: this function cannot be `main`
 error[E0728]: `await` is only allowed inside `async` functions and blocks
   --> $DIR/async-entry.rs:75:17
    |
-74 |     fn rocket() -> rocket::Rocket {
+72 |     fn rocket() -> _ {
    |        ------ this is not `async`
 75 |         let _ = rocket::build().launch().await;
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks

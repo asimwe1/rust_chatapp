@@ -47,9 +47,11 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// # {
-    /// rocket::build()
-    /// # };
+    /// # use rocket::launch;
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    /// }
     /// ```
     #[track_caller]
     #[inline(always)]
@@ -177,7 +179,7 @@ impl Rocket {
     /// }
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build().mount("/hello", routes![hi])
     /// }
     /// ```
@@ -195,10 +197,11 @@ impl Rocket {
     ///     Outcome::from(req, "Hello!").pin()
     /// }
     ///
-    /// # let _ = async { // We don't actually want to launch the server in an example.
-    /// rocket::build().mount("/hello", vec![Route::new(Get, "/world", hi)])
-    /// #     .launch().await;
-    /// # };
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     let hi_route = Route::new(Method::Get, "/world", hi);
+    ///     rocket::build().mount("/hello", vec![hi_route])
+    /// }
     /// ```
     pub fn mount<'a, B, R>(mut self, base: B, routes: R) -> Self
         where B: TryInto<Origin<'a>> + Clone + Display,
@@ -263,7 +266,7 @@ impl Rocket {
     /// }
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build().register("/", catchers![internal_error, not_found])
     /// }
     /// ```
@@ -322,7 +325,7 @@ impl Rocket {
     /// }
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
@@ -350,7 +353,7 @@ impl Rocket {
     /// use rocket::fairing::AdHoc;
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build()
     ///         .attach(AdHoc::on_liftoff("Liftoff Message", |_| Box::pin(async {
     ///             println!("We have liftoff!");
@@ -372,7 +375,7 @@ impl Rocket {
     /// use rocket::fairing::AdHoc;
     ///
     /// #[launch]
-    /// fn rocket() -> rocket::Rocket {
+    /// fn rocket() -> _ {
     ///     rocket::build()
     ///         .attach(AdHoc::on_liftoff("Print Config", |rocket| Box::pin(async move {
     ///             println!("Rocket launch config: {:?}", rocket.config());

@@ -51,7 +51,7 @@ example, the following snippet attached two fairings, `req_fairing` and
 ```rust
 # use rocket::launch;
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn rocket() -> _ {
     # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
     # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
 

@@ -43,8 +43,7 @@
 //!
 //! # /*
 //! #[launch]
-//! # */
-//! fn rocket() -> rocket::Rocket {
+//! fn rocket() -> _ {
 //!     rocket::build().mount("/", routes![hello])
 //! }
 //!

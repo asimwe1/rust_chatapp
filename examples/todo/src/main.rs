@@ -103,7 +103,7 @@ async fn run_migrations(rocket: Rocket) -> Rocket {
 }
 
 #[launch]
-fn rocket() -> Rocket {
+fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
