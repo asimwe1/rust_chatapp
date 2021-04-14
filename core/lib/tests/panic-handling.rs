@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{Request, Rocket, Route, Catcher, route, catcher};
+use rocket::{Request, Rocket, Route, Catcher, Build, route, catcher};
 use rocket::data::Data;
 use rocket::http::{Method, Status};
 use rocket::local::blocking::Client;
@@ -24,7 +24,7 @@ fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> route::BoxFuture<'r> {
     panic!("hey now...");
 }
 
-fn rocket() -> Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![panic_route])
         .mount("/", vec![Route::new(Method::Get, "/pre", pre_future_route)])

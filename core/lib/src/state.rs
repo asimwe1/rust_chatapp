@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::rocket::Rocket;
+use crate::{Rocket, Phase};
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -62,7 +62,7 @@ use crate::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::IntoOutcome;
 ///
-/// # struct MyConfig{ user_val: String };
+/// # struct MyConfig { user_val: String };
 /// struct Item<'r>(&'r str);
 ///
 /// #[rocket::async_trait]
@@ -163,7 +163,7 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// assert_eq!(state, None);
     /// ```
     #[inline(always)]
-    pub fn from(rocket: &'r Rocket) -> Option<Self> {
+    pub fn from<P: Phase>(rocket: &'r Rocket<P>) -> Option<Self> {
         rocket.state().map(State)
     }
 }

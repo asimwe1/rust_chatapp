@@ -2,8 +2,8 @@ use std::sync::Mutex;
 
 use futures::future::{Future, BoxFuture, FutureExt};
 
-use crate::{Rocket, Request, Response, Data};
-use crate::fairing::{Fairing, Kind, Info};
+use crate::{Rocket, Request, Response, Data, Build, Orbit};
+use crate::fairing::{Fairing, Kind, Info, Result};
 
 /// A ad-hoc fairing that can be created from a function or closure.
 ///
@@ -12,7 +12,7 @@ use crate::fairing::{Fairing, Kind, Info};
 ///
 /// # Usage
 ///
-/// Use [`AdHoc::on_launch`], [`AdHoc::on_liftoff`], [`AdHoc::on_request()`], or
+/// Use [`AdHoc::on_ignite`], [`AdHoc::on_liftoff`], [`AdHoc::on_request()`], or
 /// [`AdHoc::on_response()`] to create an `AdHoc` structure from a function or
 /// closure. Then, simply attach the structure to the `Rocket` instance.
 ///
@@ -51,14 +51,12 @@ impl<F: ?Sized> Once<F> {
     }
 }
 
-type Result<T = Rocket, E = Rocket> = std::result::Result<T, E>;
-
 enum AdHocKind {
-    /// An ad-hoc **launch** fairing. Called just before Rocket launches.
-    Launch(Once<dyn FnOnce(Rocket) -> BoxFuture<'static, Result> + Send + 'static>),
+    /// An ad-hoc **ignite** fairing. Called during ignition.
+    Ignite(Once<dyn FnOnce(Rocket<Build>) -> BoxFuture<'static, Result> + Send + 'static>),
 
     /// An ad-hoc **liftoff** fairing. Called just after Rocket launches.
-    Liftoff(Once<dyn for<'a> FnOnce(&'a Rocket) -> BoxFuture<'a, ()> + Send + 'static>),
+    Liftoff(Once<dyn for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()> + Send + 'static>),
 
     /// An ad-hoc **request** fairing. Called when a request is received.
     Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data)
@@ -71,52 +69,52 @@ enum AdHocKind {
 }
 
 impl AdHoc {
-    /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
-    /// be called by Rocket just prior to launch.
+    /// Constructs an `AdHoc` ignite fairing named `name`. The function `f` will
+    /// be called by Rocket during the [`Rocket::ignite()`] phase.
     ///
-    /// This version of an `AdHoc` launch fairing cannot abort launch. For a
-    /// fallible version that can, see [`AdHoc::try_on_launch()`].
+    /// This version of an `AdHoc` ignite fairing cannot abort ignite. For a
+    /// fallible version that can, see [`AdHoc::try_on_ignite()`].
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::fairing::AdHoc;
     ///
-    /// // The no-op launch fairing.
-    /// let fairing = AdHoc::on_launch("Boom!", |rocket| async move {
+    /// // The no-op ignite fairing.
+    /// let fairing = AdHoc::on_ignite("Boom!", |rocket| async move {
     ///     rocket
     /// });
     /// ```
-    pub fn on_launch<F, Fut>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Fut + Send + 'static,
-              Fut: Future<Output = Rocket> + Send + 'static,
+    pub fn on_ignite<F, Fut>(name: &'static str, f: F) -> AdHoc
+        where F: FnOnce(Rocket<Build>) -> Fut + Send + 'static,
+              Fut: Future<Output = Rocket<Build>> + Send + 'static,
     {
-        AdHoc::try_on_launch(name, |rocket| f(rocket).map(Ok))
+        AdHoc::try_on_ignite(name, |rocket| f(rocket).map(Ok))
     }
 
-    /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
-    /// be called by Rocket just prior to launch. Returning an `Err` aborts
-    /// launch.
+    /// Constructs an `AdHoc` ignite fairing named `name`. The function `f` will
+    /// be called by Rocket during the [`Rocket::ignite()`] phase. Returning an
+    /// `Err` aborts ignition and thus launch.
     ///
-    /// For an infallible version, see [`AdHoc::on_launch()`].
+    /// For an infallible version, see [`AdHoc::on_ignite()`].
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::fairing::AdHoc;
     ///
-    /// // The no-op try launch fairing.
-    /// let fairing = AdHoc::try_on_launch("No-Op", |rocket| async { Ok(rocket) });
+    /// // The no-op try ignite fairing.
+    /// let fairing = AdHoc::try_on_ignite("No-Op", |rocket| async { Ok(rocket) });
     /// ```
-    pub fn try_on_launch<F, Fut>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Fut + Send + 'static,
-              Fut: Future<Output = Result<Rocket, Rocket>> + Send + 'static,
+    pub fn try_on_ignite<F, Fut>(name: &'static str, f: F) -> AdHoc
+        where F: FnOnce(Rocket<Build>) -> Fut + Send + 'static,
+              Fut: Future<Output = Result> + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Launch(Once::new(Box::new(|r| f(r).boxed()))) }
+        AdHoc { name, kind: AdHocKind::Ignite(Once::new(Box::new(|r| f(r).boxed()))) }
     }
 
-    /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
-    /// be called by Rocket just after launching.
+    /// Constructs an `AdHoc` liftoff fairing named `name`. The function `f`
+    /// will be called by Rocket just after [`Rocket::launch()`].
     ///
     /// # Example
     ///
@@ -129,7 +127,7 @@ impl AdHoc {
     /// }));
     /// ```
     pub fn on_liftoff<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> FnOnce(&'a Rocket) -> BoxFuture<'a, ()>
+        where F: for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Liftoff(Once::new(Box::new(f))) }
     }
@@ -190,6 +188,7 @@ impl AdHoc {
     /// # Example
     ///
     /// ```rust
+    /// # use rocket::launch;
     /// use serde::Deserialize;
     /// use rocket::fairing::AdHoc;
     ///
@@ -208,7 +207,7 @@ impl AdHoc {
     pub fn config<'de, T>() -> AdHoc
         where T: serde::Deserialize<'de> + Send + Sync + 'static
     {
-        AdHoc::try_on_launch(std::any::type_name::<T>(), |rocket| async {
+        AdHoc::try_on_ignite(std::any::type_name::<T>(), |rocket| async {
             let app_config = match rocket.figment().extract::<T>() {
                 Ok(config) => config,
                 Err(e) => {
@@ -226,7 +225,7 @@ impl AdHoc {
 impl Fairing for AdHoc {
     fn info(&self) -> Info {
         let kind = match self.kind {
-            AdHocKind::Launch(_) => Kind::Launch,
+            AdHocKind::Ignite(_) => Kind::Ignite,
             AdHocKind::Liftoff(_) => Kind::Liftoff,
             AdHocKind::Request(_) => Kind::Request,
             AdHocKind::Response(_) => Kind::Response,
@@ -235,14 +234,14 @@ impl Fairing for AdHoc {
         Info { name: self.name, kind }
     }
 
-    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result {
         match self.kind {
-            AdHocKind::Launch(ref f) => (f.take())(rocket).await,
+            AdHocKind::Ignite(ref f) => (f.take())(rocket).await,
             _ => Ok(rocket)
         }
     }
 
-    async fn on_liftoff(&self, rocket: &Rocket) {
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
         if let AdHocKind::Liftoff(ref f) = self.kind {
             (f.take())(rocket).await
         }

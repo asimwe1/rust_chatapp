@@ -91,7 +91,9 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached.
-            pub async fn get_one(__rocket: &::rocket::Rocket) -> Option<Self> {
+            pub async fn get_one<P>(__rocket: &::rocket::Rocket<P>) -> Option<Self>
+                where P: ::rocket::Phase,
+            {
                 <#pool>::get_one(&__rocket).await.map(Self)
             }
 

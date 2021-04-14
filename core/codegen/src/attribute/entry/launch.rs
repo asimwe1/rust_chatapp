@@ -20,10 +20,10 @@ impl EntryAttr for Launch {
                 .span_note(f.sig.ident.span(), "this function cannot be `main`"));
         }
 
-        // Always infer the type as `::rocket::Rocket`.
+        // Always infer the type as `Rocket<Build>`.
         if let syn::ReturnType::Type(_, ref mut ty) = &mut f.sig.output {
             if let syn::Type::Infer(_) = &mut **ty {
-                let new = quote_spanned!(ty.span() => ::rocket::Rocket);
+                let new = quote_spanned!(ty.span() => ::rocket::Rocket<::rocket::Build>);
                 *ty = syn::parse2(new).expect("path is type");
             }
         }
@@ -38,7 +38,7 @@ impl EntryAttr for Launch {
         let block = &f.block;
         let rocket = quote_spanned!(ty.span().into() => {
             let ___rocket: #ty = #block;
-            let ___rocket: ::rocket::Rocket = ___rocket;
+            let ___rocket: ::rocket::Rocket<::rocket::Build> = ___rocket;
             ___rocket
         });
 

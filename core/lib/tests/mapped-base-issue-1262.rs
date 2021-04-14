@@ -1,5 +1,5 @@
 #[macro_use] extern crate rocket;
-use rocket::Route;
+use rocket::{Rocket, Route, Build};
 
 pub fn prepend(prefix: &str, route: Route) -> Route {
     route.map_base(|base| format!("{}{}", prefix, base)).unwrap()
@@ -20,7 +20,7 @@ mod a {
     }
 }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build().mount("/", a::routes()).mount("/foo", a::routes())
 }
 

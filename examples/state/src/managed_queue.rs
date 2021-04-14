@@ -16,7 +16,7 @@ fn pop(rx: State<'_, Rx>) -> Option<String> {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("Managed Queue", |rocket| async {
+    AdHoc::on_ignite("Managed Queue", |rocket| async {
         let (tx, rx) = flume::bounded(32);
         rocket.mount("/queue", routes![push, pop])
             .manage(Tx(tx))

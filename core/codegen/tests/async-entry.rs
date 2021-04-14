@@ -3,25 +3,25 @@
 mod a {
     // async launch that is async.
     #[rocket::launch]
-    async fn rocket() -> rocket::Rocket {
+    async fn rocket() -> rocket::Rocket<rocket::Build> {
         let _ = rocket::build().launch().await;
         rocket::build()
     }
 
     async fn use_it() {
-        let rocket: rocket::Rocket = rocket().await;
+        let rocket: rocket::Rocket<rocket::Build> = rocket().await;
     }
 }
 
 mod b {
     // async launch that isn't async.
     #[rocket::launch]
-    async fn main2() -> rocket::Rocket {
+    async fn main2() -> _ {
         rocket::build()
     }
 
     async fn use_it() {
-        let rocket: rocket::Rocket = main2().await;
+        let rocket: rocket::Rocket<_> = main2().await;
     }
 }
 
@@ -30,7 +30,7 @@ mod b_inferred {
     async fn main2() -> _ { rocket::build() }
 
     async fn use_it() {
-        let rocket: rocket::Rocket = main2().await;
+        let rocket: rocket::Rocket<_> = main2().await;
     }
 }
 
@@ -42,7 +42,7 @@ mod c {
     }
 
     fn use_it() {
-        let rocket: rocket::Rocket = rocket();
+        let rocket: rocket::Rocket<_> = rocket();
     }
 }
 
@@ -51,7 +51,7 @@ mod c_inferred {
     fn rocket() -> _ { rocket::build() }
 
     fn use_it() {
-        let rocket: rocket::Rocket = rocket();
+        let rocket: rocket::Rocket<_> = rocket();
     }
 }
 

@@ -2,8 +2,7 @@ use std::fmt;
 use std::cell::RefCell;
 use std::convert::TryInto;
 
-use crate::Rocket;
-use crate::error::Error;
+use crate::{Rocket, Phase, Orbit, Error};
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
 use crate::http::{Method, uri::Origin};
 
@@ -32,7 +31,7 @@ pub struct Client {
 }
 
 impl Client {
-    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, Error> {
+    fn _new<P: Phase>(rocket: Rocket<P>, tracked: bool) -> Result<Client, Error> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name("rocket-local-client-worker-thread")
             .worker_threads(1)
@@ -69,7 +68,7 @@ impl Client {
     }
 
     #[inline(always)]
-    fn _rocket(&self) -> &Rocket {
+    fn _rocket(&self) -> &Rocket<Orbit> {
         self.inner()._rocket()
     }
 

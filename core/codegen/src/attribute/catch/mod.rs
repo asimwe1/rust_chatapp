@@ -49,7 +49,7 @@ pub fn _catch(
 
     let catcher_response = quote_spanned!(return_type_span => {
         let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;
-        ::rocket::response::Responder::respond_to(___responder, #__req)?
+        #_response::Responder::respond_to(___responder, #__req)?
     });
 
     // Generate the catcher, keeping the user's input around.

@@ -1,5 +1,6 @@
 use r2d2::ManageConnection;
 
+use rocket::{Rocket, Build};
 use crate::databases::{Config, Error};
 
 /// Trait implemented by `r2d2`-based database adapters.
@@ -61,13 +62,14 @@ use crate::databases::{Config, Error};
 /// #          fn has_broken(&self, _: &mut Connection) -> bool { panic!() }
 /// #     }
 /// # }
+/// use rocket::{Rocket, Build};
 /// use rocket_contrib::databases::{r2d2, Error, Config, Poolable, PoolResult};
 ///
 /// impl Poolable for foo::Connection {
 ///     type Manager = foo::ConnectionManager;
 ///     type Error = foo::Error;
 ///
-///     fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+///     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
 ///         let config = Config::from(db_name, rocket)?;
 ///         let manager = foo::ConnectionManager::new(&config.url).map_err(Error::Custom)?;
 ///         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
@@ -97,7 +99,7 @@ pub trait Poolable: Send + Sized + 'static {
 
     /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
     /// the pool on success.
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self>;
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self>;
 }
 
 /// A type alias for the return type of [`Poolable::pool()`].
@@ -109,7 +111,7 @@ impl Poolable for diesel::SqliteConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::SqliteConnection>;
     type Error = std::convert::Infallible;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         use diesel::{SqliteConnection, connection::SimpleConnection};
         use diesel::r2d2::{CustomizeConnection, ConnectionManager, Error, Pool};
 
@@ -144,7 +146,7 @@ impl Poolable for diesel::PgConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::PgConnection>;
     type Error = std::convert::Infallible;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
@@ -156,7 +158,7 @@ impl Poolable for diesel::MysqlConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::MysqlConnection>;
     type Error = std::convert::Infallible;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
@@ -169,7 +171,7 @@ impl Poolable for postgres::Client {
     type Manager = r2d2_postgres::PostgresConnectionManager<postgres::tls::NoTls>;
     type Error = postgres::Error;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let url = config.url.parse().map_err(Error::Custom)?;
         let manager = r2d2_postgres::PostgresConnectionManager::new(url, postgres::tls::NoTls);
@@ -182,7 +184,7 @@ impl Poolable for rusqlite::Connection {
     type Manager = r2d2_sqlite::SqliteConnectionManager;
     type Error = std::convert::Infallible;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         use rocket::figment::providers::Serialized;
 
         #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -237,7 +239,7 @@ impl Poolable for memcache::Client {
     // Unused, but we might want it in the future without a breaking change.
     type Error = memcache::MemcacheError;
 
-    fn pool(db_name: &str, rocket: &rocket::Rocket) -> PoolResult<Self> {
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = r2d2_memcache::MemcacheConnectionManager::new(&*config.url);
         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)

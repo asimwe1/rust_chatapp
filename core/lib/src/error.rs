@@ -77,6 +77,9 @@ pub enum ErrorKind {
     Io(io::Error),
     /// An I/O error occurred in the runtime.
     Runtime(Box<dyn std::error::Error + Send + Sync>),
+    /// A valid [`Config`](crate::Config) could not be extracted from the
+    /// configured figment.
+    Config(figment::Error),
     /// Route collisions were detected.
     Collisions(crate::router::Collisions),
     /// Launch fairing(s) failed.
@@ -142,6 +145,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::FailedFairings(_) => "a launch fairing failed".fmt(f),
             ErrorKind::Runtime(e) => write!(f, "runtime error: {}", e),
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
+            ErrorKind::Config(_) => "failed to extract configuration".fmt(f),
         }
     }
 }
@@ -213,6 +217,10 @@ impl Drop for Error {
                 info_!("selected profile: {}", Paint::white(profile));
                 info_!("disable `secrets` feature or configure a `secret_key`");
                 panic!("aborting due to insecure configuration")
+            }
+            ErrorKind::Config(error) => {
+                crate::config::pretty_print_error(error.clone());
+                panic!("aborting due to invalid configuration")
             }
         }
     }

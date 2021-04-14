@@ -1,5 +1,5 @@
-use rocket::{Rocket, State, futures};
-use rocket::fairing::AdHoc;
+use rocket::{Rocket, State, Build, futures};
+use rocket::fairing::{self, AdHoc};
 use rocket::response::status::Created;
 use rocket_contrib::json::Json;
 
@@ -66,7 +66,7 @@ async fn destroy(db: State<'_, Db>) -> Result<()> {
     Ok(())
 }
 
-async fn init_db(rocket: Rocket) -> Result<Rocket, Rocket> {
+async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
     use rocket_contrib::databases::Config;
 
     let config = match Config::from("sqlx", &rocket) {
@@ -99,9 +99,9 @@ async fn init_db(rocket: Rocket) -> Result<Rocket, Rocket> {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("SQLx Stage", |rocket| async {
+    AdHoc::on_ignite("SQLx Stage", |rocket| async {
         rocket
-            .attach(AdHoc::try_on_launch("SQLx Database", init_db))
+            .attach(AdHoc::try_on_ignite("SQLx Database", init_db))
             .mount("/sqlx", routes![list, create, read, delete, destroy])
     })
 }

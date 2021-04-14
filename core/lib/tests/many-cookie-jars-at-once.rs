@@ -20,9 +20,10 @@ fn multi_get(jar_a: &CookieJar<'_>, jar_b: &CookieJar<'_>, jar_c: &CookieJar<'_>
 #[cfg(test)]
 mod many_cookie_jars_tests {
     use super::*;
+    use rocket::{Rocket, Build};
     use rocket::local::blocking::Client;
 
-    fn rocket() -> rocket::Rocket {
+    fn rocket() -> Rocket<Build> {
         rocket::build().mount("/", routes![multi_add, multi_get])
     }
 

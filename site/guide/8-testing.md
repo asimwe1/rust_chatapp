@@ -166,7 +166,7 @@ testing: we _want_ our tests to panic when something goes wrong.
 ```rust
 # #[rocket::launch]
 # fn rocket() -> _ {
-#     rocket::build().reconfigure(rocket::Config::debug_default())
+#     rocket::build().configure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
 
@@ -179,7 +179,7 @@ application's response:
 ```rust
 # #[rocket::launch]
 # fn rocket() -> _ {
-#     rocket::build().reconfigure(rocket::Config::debug_default())
+#     rocket::build().configure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
 # let client = Client::tracked(rocket()).expect("valid rocket instance");
@@ -215,13 +215,18 @@ That's it! Altogether, this looks like:
 
 ```rust
 # #[macro_use] extern crate rocket;
+# use rocket::{Rocket, Build};
 
 #[get("/")]
 fn hello() -> &'static str {
     "Hello, world!"
 }
 
-fn rocket() -> rocket::Rocket {
+
+# /*
+#[launch]
+# */
+fn rocket() -> Rocket<Build> {
     rocket::build().mount("/", routes![hello])
 }
 
@@ -243,7 +248,7 @@ mod test {
         # let client = Client::debug(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string(), Some("Hello, world!".into()));
+        assert_eq!(response.into_string().unwrap(), "Hello, world!");
     }
 }
 

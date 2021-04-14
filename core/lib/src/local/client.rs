@@ -67,7 +67,7 @@ macro_rules! pub_client_impl {
     /// let client = Client::tracked(rocket);
     /// ```
     #[inline(always)]
-    pub $($prefix)? fn tracked(rocket: Rocket) -> Result<Self, Error> {
+    pub $($prefix)? fn tracked<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
         Self::_new(rocket, true) $(.$suffix)?
     }
 
@@ -91,7 +91,7 @@ macro_rules! pub_client_impl {
     /// let rocket = rocket::build();
     /// let client = Client::untracked(rocket);
     /// ```
-    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, Error> {
+    pub $($prefix)? fn untracked<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
         Self::_new(rocket, false) $(.$suffix)?
     }
 
@@ -102,13 +102,14 @@ macro_rules! pub_client_impl {
     }
 
     #[doc(hidden)]
-    pub $($prefix)? fn debug(rocket: Rocket) -> Result<Self, Error> {
-        let mut config = rocket.config.clone();
-        config.log_level = crate::config::LogLevel::Debug;
-        config.profile = crate::Config::DEBUG_PROFILE;
+    pub $($prefix)? fn debug(rocket: Rocket<crate::Build>) -> Result<Self, Error> {
+        use crate::config;
 
-        let config = rocket.figment().clone().merge(config);
-        Self::tracked(rocket.reconfigure(config)) $(.$suffix)?
+        let figment = rocket.figment().clone()
+            .merge((config::Config::LOG_LEVEL, config::LogLevel::Debug))
+            .select(config::Config::DEBUG_PROFILE);
+
+        Self::tracked(rocket.configure(figment)) $(.$suffix)?
     }
 
     /// Deprecated alias to [`Client::tracked()`].
@@ -116,7 +117,7 @@ macro_rules! pub_client_impl {
         since = "0.5",
         note = "choose between `Client::untracked()` and `Client::tracked()`"
     )]
-    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, Error> {
+    pub $($prefix)? fn new<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
         Self::tracked(rocket) $(.$suffix)?
     }
 
@@ -134,7 +135,7 @@ macro_rules! pub_client_impl {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn rocket(&self) -> &Rocket {
+    pub fn rocket(&self) -> &Rocket<Orbit> {
         &*self._rocket()
     }
 
@@ -157,7 +158,7 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub fn cookies(&self) -> crate::http::CookieJar<'_> {
-        let config = &self.rocket().config;
+        let config = &self.rocket().config();
         let jar = self._with_raw_cookies(|jar| jar.clone());
         crate::http::CookieJar::from(jar, config)
     }

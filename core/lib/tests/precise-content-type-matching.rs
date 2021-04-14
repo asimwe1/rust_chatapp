@@ -23,11 +23,11 @@ fn specified_html() -> &'static str {
 mod tests {
     use super::*;
 
-    use rocket::Rocket;
+    use rocket::{Rocket, Build};
     use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
-    fn rocket() -> Rocket {
+    fn rocket() -> Rocket<Build> {
         rocket::build()
             .mount("/first", routes![specified, unspecified])
             .mount("/second", routes![specified_json, specified_html])

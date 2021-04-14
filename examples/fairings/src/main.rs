@@ -4,8 +4,8 @@ use std::io::Cursor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use rocket::{Rocket, Request, State, Data};
-use rocket::fairing::{AdHoc, Fairing, Info, Kind};
+use rocket::{Rocket, Request, State, Data, Build};
+use rocket::fairing::{self, AdHoc, Fairing, Info, Kind};
 use rocket::http::Method;
 
 struct Token(i64);
@@ -23,11 +23,11 @@ impl Fairing for Counter {
     fn info(&self) -> Info {
         Info {
             name: "GET/POST Counter",
-            kind: Kind::Launch | Kind::Request
+            kind: Kind::Ignite | Kind::Request
         }
     }
 
-    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
         #[get("/counts")]
         fn counts(counts: State<'_, Counter>) -> String {
             let get_count = counts.get.load(Ordering::Relaxed);
@@ -62,15 +62,15 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::try_on_launch("Token State", |rocket| async {
-            println!("Adding token managed state...");
+        .attach(AdHoc::try_on_ignite("Token State", |rocket| async {
+            info!("Adding token managed state...");
             match rocket.figment().extract_inner("token") {
                 Ok(value) => Ok(rocket.manage(Token(value))),
                 Err(_) => Err(rocket)
             }
         }))
         .attach(AdHoc::on_liftoff("Liftoff Message", |_| Box::pin(async move {
-            println!("We have liftoff!");
+            info!("We have liftoff!");
         })))
         .attach(AdHoc::on_request("PUT Rewriter", |req, _| {
             Box::pin(async move {

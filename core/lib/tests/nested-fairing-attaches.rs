@@ -2,7 +2,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::State;
+use rocket::{Rocket, State, Build};
 use rocket::fairing::AdHoc;
 use rocket::http::Method;
 
@@ -19,10 +19,10 @@ fn index(counter: State<'_, Counter>) -> String {
     format!("{}, {}", attaches, gets)
 }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![index])
-        .attach(AdHoc::on_launch("Outer", |rocket| async {
+        .attach(AdHoc::on_ignite("Outer", |rocket| async {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)

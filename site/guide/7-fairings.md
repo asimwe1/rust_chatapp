@@ -74,15 +74,15 @@ be significant.
 There are four events for which Rocket issues fairing callbacks. Each of these
 events is described below:
 
-  * **Launch (`on_launch`)**
+  * **Ignite (`on_ignite`)**
 
-    A launch callback is called just prior to liftoff while launching the
-    application. A launch callback can arbitrarily modify the `Rocket` instance
-    being constructed. They are are commonly used to parse and validate
-    configuration values, aborting on bad configurations, and inserting the
-    parsed value into managed state for later retrieval.
+    An ignite callback is called during [ignition] An ignite callback can
+    arbitrarily modify the `Rocket` instance being build. They are are commonly
+    used to parse and validate configuration values, aborting on bad
+    configurations, and inserting the parsed value into managed state for later
+    retrieval.
 
-  * **liftoff (`on_liftoff`)**
+  * **Liftoff (`on_liftoff`)**
 
     A liftoff callback is called immediately after a Rocket application has
     launched. A liftoff callback can inspect the `Rocket` instance being
@@ -105,19 +105,21 @@ events is described below:
     example, response fairings can also be used to inject headers into all
     outgoing responses.
 
+[ignition]: @api/rocket/struct.Rocket.html#method.ignite
+
 ## Implementing
 
 Recall that a fairing is any type that implements the [`Fairing`] trait. A
 `Fairing` implementation has one required method: [`info`], which returns an
 [`Info`] structure. This structure is used by Rocket to assign a name to the
 fairing and determine the set of callbacks the fairing is registering for. A
-`Fairing` can implement any of the available callbacks: [`on_launch`],
+`Fairing` can implement any of the available callbacks: [`on_ignite`],
 [`on_liftoff`], [`on_request`], and [`on_response`]. Each callback has a default
 implementation that does absolutely nothing.
 
 [`Info`]: @api/rocket/fairing/struct.Info.html
 [`info`]: @api/rocket/fairing/trait.Fairing.html#tymethod.info
-[`on_launch`]: @api/rocket/fairing/trait.Fairing.html#method.on_launch
+[`on_ignite`]: @api/rocket/fairing/trait.Fairing.html#method.on_ignite
 [`on_liftoff`]: @api/rocket/fairing/trait.Fairing.html#method.on_liftoff
 [`on_request`]: @api/rocket/fairing/trait.Fairing.html#method.on_request
 [`on_response`]: @api/rocket/fairing/trait.Fairing.html#method.on_response
@@ -204,7 +206,7 @@ documentation](@api/rocket/fairing/trait.Fairing.html#example).
 For simple occasions, implementing the `Fairing` trait can be cumbersome. This
 is why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
 function or closure. Using the `AdHoc` type is easy: simply call the
-`on_launch`, `on_liftoff`, `on_request`, or `on_response` constructors on
+`on_ignite`, `on_liftoff`, `on_request`, or `on_response` constructors on
 `AdHoc` to create an `AdHoc` structure from a function or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached

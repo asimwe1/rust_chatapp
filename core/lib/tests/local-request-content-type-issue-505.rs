@@ -44,11 +44,11 @@ fn data_no_ct() -> &'static str {
 mod local_request_content_type_tests {
     use super::*;
 
-    use rocket::Rocket;
+    use rocket::{Rocket, Build};
     use rocket::local::blocking::Client;
     use rocket::http::ContentType;
 
-    fn rocket() -> Rocket {
+    fn rocket() -> Rocket<Build> {
         rocket::build().mount("/", routes![rg_ct, data_has_ct, data_no_ct])
     }
 

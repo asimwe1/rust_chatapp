@@ -1,7 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::collections::HashMap;
 
-use crate::{Rocket, Request, Config};
+use crate::Request;
+use crate::local::blocking::Client;
 use crate::http::hyper;
 
 macro_rules! assert_headers {
@@ -20,8 +21,9 @@ macro_rules! assert_headers {
         $(expected.entry($key).or_insert(vec![]).append(&mut vec![$($value),+]);)+
 
         // Dispatch the request and check that the headers are what we expect.
-        let r = Rocket::custom(Config::default());
-        let req = Request::from_hyp(&r, h_method, h_headers, &h_uri, h_addr).unwrap();
+        let client = Client::debug_with(vec![]).unwrap();
+        let r = client.rocket();
+        let req = Request::from_hyp(r, h_method, h_headers, &h_uri, h_addr).unwrap();
         let actual_headers = req.headers();
         for (key, values) in expected.iter() {
             let actual: Vec<_> = actual_headers.get(key).collect();

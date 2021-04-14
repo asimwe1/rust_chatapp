@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use rocket::{Rocket, Request, Response, Orbit};
 use rocket::http::uncased::UncasedStr;
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::{Rocket, Request, Response};
 
 use crate::helmet::*;
 
@@ -197,7 +197,7 @@ impl Fairing for SpaceHelmet {
         }
     }
 
-    async fn on_liftoff(&self, rocket: &Rocket) {
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
         if rocket.config().tls_enabled()
             && rocket.figment().profile() != rocket::Config::DEBUG_PROFILE
             && !self.is_enabled::<Hsts>()

@@ -1,7 +1,8 @@
 use rocket::config::{Config, LogLevel};
 
-fn test_config(profile: &str) {
-    let rocket = rocket::custom(Config::figment().select(profile));
+async fn test_config(profile: &str) {
+    let provider = Config::figment().select(profile);
+    let rocket = rocket::custom(provider).ignite().await.unwrap();
     let config = rocket.config();
     match &*profile {
         "debug" => {
@@ -25,12 +26,12 @@ fn test_config(profile: &str) {
     }
 }
 
-#[test]
-fn test_debug_config() {
-    test_config("debug")
+#[async_test]
+async fn test_debug_config() {
+    test_config("debug").await;
 }
 
-#[test]
-fn test_release_config() {
-    test_config("release")
+#[async_test]
+async fn test_release_config() {
+    test_config("release").await;
 }

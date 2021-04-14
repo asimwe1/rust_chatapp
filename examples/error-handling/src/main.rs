@@ -2,7 +2,7 @@
 
 #[cfg(test)] mod tests;
 
-use rocket::Request;
+use rocket::{Rocket, Request, Build};
 use rocket::response::{content, status};
 use rocket::http::Status;
 
@@ -43,7 +43,7 @@ fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> 
     status::Custom(status, msg)
 }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello, forced_error])

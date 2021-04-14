@@ -1,4 +1,4 @@
-use rocket::{get, routes};
+use rocket::{Rocket, Build};
 use rocket::local::blocking::Client;
 
 mod inner {
@@ -10,14 +10,14 @@ mod inner {
     }
 }
 
-#[get("/<name>")]
+#[rocket::get("/<name>")]
 fn hello_name(name: String) -> String {
     format!("Hello, {}! This is {}.", name, rocket::uri!(hello_name: &name))
 }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![hello_name])
+        .mount("/", rocket::routes![hello_name])
         .mount("/", rocket::routes![inner::hello])
 }
 

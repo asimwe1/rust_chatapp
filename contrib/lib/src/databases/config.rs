@@ -59,9 +59,10 @@ impl Config {
     /// my_other_db = { url = "mysql://root:root@localhost/database" }
     /// # "#).nested();
     ///
+    /// use rocket::{Rocket, Build};
     /// use rocket_contrib::databases::Config;
     ///
-    /// fn pool(rocket: &rocket::Rocket) {
+    /// fn pool(rocket: &Rocket<Build>) {
     ///     let config = Config::from("my_db", rocket).unwrap();
     ///     assert_eq!(config.url, "db/db.sqlite");
     ///     assert_eq!(config.pool_size, 25);
@@ -81,7 +82,7 @@ impl Config {
     /// # pool(&rocket);
     /// # }
     /// ```
-    pub fn from(db_name: &str, rocket: &rocket::Rocket) -> Result<Config, figment::Error> {
+    pub fn from(db_name: &str, rocket: &Rocket<Build>) -> Result<Config, figment::Error> {
         Config::figment(db_name, rocket).extract::<Self>()
     }
 
@@ -91,15 +92,15 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Rocket;
+    /// use rocket::{Rocket, Build};
     /// use rocket_contrib::databases::Config;
     ///
-    /// fn pool(rocket: &Rocket) {
+    /// fn pool(rocket: &Rocket<Build>) {
     ///     let my_db_figment = Config::figment("my_db", rocket);
     ///     let mysql_prod_figment = Config::figment("mysql_prod", rocket);
     /// }
     /// ```
-    pub fn figment(db_name: &str, rocket: &rocket::Rocket) -> Figment {
+    pub fn figment(db_name: &str, rocket: &Rocket<Build>) -> Figment {
         let db_key = format!("databases.{}", db_name);
         let default_pool_size = rocket.figment()
             .extract_inner::<u32>(rocket::Config::WORKERS)

@@ -18,7 +18,7 @@ use std::ops::BitOr;
 /// # let _unused_info =
 /// Info {
 ///     name: "Example Fairing",
-///     kind: Kind::Launch | Kind::Liftoff | Kind::Request | Kind::Response
+///     kind: Kind::Ignite | Kind::Liftoff | Kind::Request | Kind::Response
 /// }
 /// # ;
 /// ```
@@ -36,22 +36,22 @@ pub struct Info {
 /// A fairing can request any combination of any of the following kinds of
 /// callbacks:
 ///
-///   * Launch
+///   * Ignite
 ///   * Liftoff
 ///   * Request
 ///   * Response
 ///
 /// Two `Kind` structures can be `or`d together to represent a combination. For
-/// instance, to represent a fairing that is both a launch and request fairing,
-/// use `Kind::Launch | Kind::Request`. Similarly, to represent a fairing that
-/// is only a launch fairing, use `Kind::Launch`.
+/// instance, to represent a fairing that is both an ignite and request fairing,
+/// use `Kind::Ignite | Kind::Request`. Similarly, to represent a fairing that
+/// is only an ignite fairing, use `Kind::Ignite`.
 #[derive(Debug, Clone, Copy)]
 pub struct Kind(usize);
 
 #[allow(non_upper_case_globals)]
 impl Kind {
-    /// `Kind` flag representing a request for a 'launch' callback.
-    pub const Launch: Kind = Kind(1 << 0);
+    /// `Kind` flag representing a request for a 'ignite' callback.
+    pub const Ignite: Kind = Kind(1 << 0);
 
     /// `Kind` flag representing a request for a 'liftoff' callback.
     pub const Liftoff: Kind = Kind(1 << 1);
@@ -70,16 +70,16 @@ impl Kind {
     /// ```rust
     /// use rocket::fairing::Kind;
     ///
-    /// let launch_and_req = Kind::Launch | Kind::Request;
-    /// assert!(launch_and_req.is(Kind::Launch | Kind::Request));
+    /// let ignite_and_req = Kind::Ignite | Kind::Request;
+    /// assert!(ignite_and_req.is(Kind::Ignite | Kind::Request));
     ///
-    /// assert!(launch_and_req.is(Kind::Launch));
-    /// assert!(launch_and_req.is(Kind::Request));
+    /// assert!(ignite_and_req.is(Kind::Ignite));
+    /// assert!(ignite_and_req.is(Kind::Request));
     ///
-    /// assert!(!launch_and_req.is(Kind::Liftoff));
-    /// assert!(!launch_and_req.is(Kind::Response));
-    /// assert!(!launch_and_req.is(Kind::Launch | Kind::Response));
-    /// assert!(!launch_and_req.is(Kind::Launch | Kind::Request | Kind::Response));
+    /// assert!(!ignite_and_req.is(Kind::Liftoff));
+    /// assert!(!ignite_and_req.is(Kind::Response));
+    /// assert!(!ignite_and_req.is(Kind::Ignite | Kind::Response));
+    /// assert!(!ignite_and_req.is(Kind::Ignite | Kind::Request | Kind::Response));
     /// ```
     #[inline]
     pub fn is(self, other: Kind) -> bool {
@@ -93,13 +93,13 @@ impl Kind {
     /// ```rust
     /// use rocket::fairing::Kind;
     ///
-    /// let launch_and_req = Kind::Launch | Kind::Request;
-    /// assert!(launch_and_req.is_exactly(Kind::Launch | Kind::Request));
+    /// let ignite_and_req = Kind::Ignite | Kind::Request;
+    /// assert!(ignite_and_req.is_exactly(Kind::Ignite | Kind::Request));
     ///
-    /// assert!(!launch_and_req.is_exactly(Kind::Launch));
-    /// assert!(!launch_and_req.is_exactly(Kind::Request));
-    /// assert!(!launch_and_req.is_exactly(Kind::Response));
-    /// assert!(!launch_and_req.is_exactly(Kind::Launch | Kind::Response));
+    /// assert!(!ignite_and_req.is_exactly(Kind::Ignite));
+    /// assert!(!ignite_and_req.is_exactly(Kind::Request));
+    /// assert!(!ignite_and_req.is_exactly(Kind::Response));
+    /// assert!(!ignite_and_req.is_exactly(Kind::Ignite | Kind::Response));
     /// ```
     #[inline]
     pub fn is_exactly(self, other: Kind) -> bool {
@@ -113,5 +113,25 @@ impl BitOr for Kind {
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
         Kind(self.0 | rhs.0)
+    }
+}
+
+impl std::fmt::Display for Kind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut is_first = true;
+        let mut write = |string, kind| {
+            if self.is(kind) {
+                if !is_first { f.write_str(", ")?; }
+                f.write_str(string)?;
+                is_first = false;
+            }
+
+            Ok(())
+        };
+
+        write("ignite", Kind::Ignite)?;
+        write("liftoff", Kind::Liftoff)?;
+        write("request", Kind::Request)?;
+        write("response", Kind::Response)
     }
 }

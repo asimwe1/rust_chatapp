@@ -36,7 +36,7 @@ mod rusqlite_integration_test {
         let rocket = rocket::custom(config)
             .attach(SqliteDb::fairing())
             .attach(SqliteDb2::fairing())
-            ._ignite()
+            .ignite()
             .await
             .unwrap();
 
@@ -59,6 +59,7 @@ mod rusqlite_integration_test {
 #[cfg(feature = "databases")]
 #[cfg(test)]
 mod drop_runtime_test {
+    use rocket::{Rocket, Build};
     use r2d2::{ManageConnection, Pool};
     use rocket_contrib::databases::{database, Poolable, PoolResult};
     use tokio::runtime::Runtime;
@@ -87,7 +88,7 @@ mod drop_runtime_test {
         type Manager = ContainsRuntime;
         type Error = ();
 
-        fn pool(_db_name: &str, _rocket: &rocket::Rocket) -> PoolResult<Self> {
+        fn pool(_db_name: &str, _rocket: &Rocket<Build>) -> PoolResult<Self> {
             let manager = ContainsRuntime(tokio::runtime::Runtime::new().unwrap());
             Ok(Pool::builder().build(manager)?)
         }

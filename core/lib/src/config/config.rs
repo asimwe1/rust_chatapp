@@ -306,8 +306,14 @@ impl Config {
             false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
         }
 
-        #[cfg(feature = "secrets")]
-        launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
+        #[cfg(feature = "secrets")] {
+            launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
+            if !self.secret_key.is_provided() {
+                warn!("secrets enabled without a stable `secret_key`");
+                launch_info_!("disable `secrets` feature or configure a `secret_key`");
+                launch_info_!("this becomes an {} in non-debug profiles", Paint::red("error"));
+            }
+        }
 
         launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
         launch_info_!("log level: {}", Paint::default(self.log_level).bold());
@@ -318,11 +324,11 @@ impl Config {
             if let Some(md) = figment.find_metadata(key) {
                 warn!("found value for deprecated config key `{}`", Paint::white(key));
                 if let Some(ref source) = md.source {
-                    info_!("in {} {}", Paint::white(source), md.name);
+                    launch_info_!("in {} {}", Paint::white(source), md.name);
                 }
 
                 if let Some(new_key) = replacement {
-                    info_!("key has been by replaced by `{}`", Paint::white(new_key));
+                    launch_info_!("key has been by replaced by `{}`", Paint::white(new_key));
                 }
             }
         }

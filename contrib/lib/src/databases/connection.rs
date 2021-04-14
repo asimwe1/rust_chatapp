@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use rocket::{Rocket, Phase};
 use rocket::fairing::{AdHoc, Fairing};
 use rocket::request::{Request, Outcome, FromRequest};
 use rocket::outcome::IntoOutcome;
@@ -69,7 +70,7 @@ macro_rules! dberr {
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub fn fairing(fairing_name: &'static str, db: &'static str) -> impl Fairing {
-        AdHoc::try_on_launch(fairing_name, move |rocket| async move {
+        AdHoc::try_on_ignite(fairing_name, move |rocket| async move {
             let config = match Config::from(db, &rocket) {
                 Ok(config) => config,
                 Err(e) => dberr!("config", db, "{}", e, rocket),
@@ -117,7 +118,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     #[inline]
-    pub async fn get_one(rocket: &rocket::Rocket) -> Option<Connection<K, C>> {
+    pub async fn get_one<P: Phase>(rocket: &Rocket<P>) -> Option<Connection<K, C>> {
         match rocket.state::<Self>() {
             Some(pool) => match pool.get().await.ok() {
                 Some(conn) => Some(conn),
@@ -134,7 +135,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     #[inline]
-    pub async fn get_pool(rocket: &rocket::Rocket) -> Option<Self> {
+    pub async fn get_pool<P: Phase>(rocket: &Rocket<P>) -> Option<Self> {
         rocket.state::<Self>().map(|pool| pool.clone())
     }
 }

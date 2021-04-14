@@ -8,12 +8,12 @@ fn index(form: Form<String>) -> String {
 }
 
 mod limits_tests {
-    use rocket;
+    use rocket::{Rocket, Build};
     use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
     use rocket::data::Limits;
 
-    fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
+    fn rocket_with_forms_limit(limit: u64) -> Rocket<Build> {
         let mut config = rocket::Config::debug_default();
         config.limits = Limits::default().limit("form", limit.into());
         rocket::custom(config).mount("/", routes![super::index])

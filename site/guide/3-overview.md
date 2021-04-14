@@ -165,21 +165,21 @@ Running the application, the console shows:
 ```sh
 > cargo run
 🔧 Configured for debug.
-    => address: 127.0.0.1
-    => port: 8000
-    => workers: 64
-    => log level: normal
-    => secret key: [zero]
-    => limits: forms = 32KiB
-    => cli colors: true
-    => keep-alive: 5s
-    => tls: disabled
-🛰  Mounting /hello:
-    => GET /hello/world (world)
+   >> address: 127.0.0.1
+   >> port: 8000
+   >> workers: [..]
+   >> keep-alive: 5s
+   >> limits: [..]
+   >> tls: disabled
+   >> temp dir: /tmp
+   >> log level: normal
+   >> cli colors: true
+🛰  Routes:
+   >> (world) GET /hello/world
 🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 
-! tip: You can also return `_` from a `#[launch]` function!
+! tip: `#[launch]` infers the return type!
 
   Special to Rocket's `#[launch]` attribute, the return type of a function
   decorated with `#[launch]` is automatically inferred when the return type is

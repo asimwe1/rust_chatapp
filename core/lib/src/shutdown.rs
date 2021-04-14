@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
+use tokio::sync::Notify;
+
 use crate::request::{FromRequest, Outcome, Request};
-use tokio::sync::mpsc;
 
 /// A request guard to gracefully shutdown a Rocket server.
 ///
-/// A server shutdown is manually requested by calling [`Shutdown::shutdown()`]
+/// A server shutdown is manually requested by calling [`Shutdown::notify()`]
 /// or, if enabled, by pressing `Ctrl-C`. Rocket will finish handling any
 /// pending requests and return `Ok()` to the caller of [`Rocket::launch()`].
 ///
@@ -17,8 +20,8 @@ use tokio::sync::mpsc;
 /// use rocket::Shutdown;
 ///
 /// #[get("/shutdown")]
-/// fn shutdown(handle: Shutdown) -> &'static str {
-///     handle.shutdown();
+/// fn shutdown(shutdown: Shutdown) -> &'static str {
+///     shutdown.notify();
 ///     "Shutting down..."
 /// }
 ///
@@ -33,18 +36,18 @@ use tokio::sync::mpsc;
 ///     result.expect("server failed unexpectedly");
 /// }
 /// ```
+#[must_use = "a shutdown request is only sent on `shutdown.notify()`"]
 #[derive(Debug, Clone)]
-pub struct Shutdown(pub(crate) mpsc::Sender<()>);
+pub struct Shutdown(pub(crate) Arc<Notify>);
 
 impl Shutdown {
-    /// Notify Rocket to shut down gracefully. This function returns
-    /// immediately; pending requests will continue to run until completion
-    /// before the actual shutdown occurs.
+    /// Notify Rocket to shut down gracefully.
+    ///
+    /// This function returns immediately; pending requests will continue to run
+    /// until completion before the actual shutdown occurs.
     #[inline]
-    pub fn shutdown(self) {
-        // Intentionally ignore any error, as the only scenarios this can happen
-        // is sending too many shutdown requests or we're already shut down.
-        let _ = self.0.try_send(());
+    pub fn notify(self) {
+        self.0.notify_one();
         info!("Server shutdown requested, waiting for all pending requests to finish.");
     }
 }
@@ -55,6 +58,7 @@ impl<'r> FromRequest<'r> for Shutdown {
 
     #[inline]
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(request.state.rocket.shutdown())
+        let notifier = request.rocket().shutdown.clone();
+        Outcome::Success(Shutdown(notifier))
     }
 }

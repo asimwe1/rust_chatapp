@@ -8,7 +8,7 @@ use yansi::Paint;
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 
 #[derive(Debug)]
-struct RocketLogger(LogLevel);
+struct RocketLogger;
 
 /// Defines the maximum level of log messages to show.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -102,7 +102,7 @@ macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 impl log::Log for RocketLogger {
     #[inline(always)]
     fn enabled(&self, record: &log::Metadata<'_>) -> bool {
-        match self.0.to_level_filter().to_level() {
+        match log::max_level().to_level() {
             Some(max) => record.level() <= max || record.target().starts_with("launch"),
             None => false
         }
@@ -114,36 +114,35 @@ impl log::Log for RocketLogger {
             return;
         }
 
-        // Don't print Hyper or Rustls or r2d2 messages unless debug is enabled.
-        let configged_level = self.0;
-
+        // Don't print Hyper, Rustls or r2d2 messages unless debug is enabled.
+        let max = log::max_level();
         let from = |path| record.module_path().map_or(false, |m| m.starts_with(path));
         let debug_only = from("hyper") || from("rustls") || from("r2d2");
-        if configged_level != LogLevel::Debug && debug_only {
+        if LogLevel::Debug.to_level_filter() > max && debug_only {
             return;
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
-        let is_launch = record.target().starts_with("launch");
-        if record.target().ends_with('_') {
-            if configged_level != LogLevel::Critical || is_launch {
-                print!("    {} ", Paint::default("=>").bold());
-            }
+        let indented = record.target().ends_with('_');
+        if indented {
+            print!("   {} ", Paint::default(">>").bold());
         }
 
         match record.level() {
-            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
-            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
-            log::Level::Error => {
+            log::Level::Error if !indented => {
                 println!("{} {}",
                          Paint::red("Error:").bold(),
                          Paint::red(record.args()).wrap())
             }
-            log::Level::Warn => {
+            log::Level::Warn if !indented => {
                 println!("{} {}",
                          Paint::yellow("Warning:").bold(),
                          Paint::yellow(record.args()).wrap())
             }
+            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
+            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
+            log::Level::Warn => println!("{}", Paint::yellow(record.args()).wrap()),
+            log::Level::Error => println!("{}", Paint::red(record.args()).wrap()),
             log::Level::Debug => {
                 print!("\n{} ", Paint::blue("-->").bold());
                 if let Some(file) = record.file() {
@@ -154,7 +153,7 @@ impl log::Log for RocketLogger {
                     println!(":{}", Paint::blue(line));
                 }
 
-                println!("{}", record.args());
+                println!("\t{}", record.args());
             }
         }
     }
@@ -165,10 +164,6 @@ impl log::Log for RocketLogger {
 }
 
 pub(crate) fn init(config: &crate::Config) -> bool {
-    if config.log_level == LogLevel::Off {
-        return false;
-    }
-
     if !atty::is(atty::Stream::Stdout)
         || (cfg!(windows) && !Paint::enable_windows_ascii())
         || !config.cli_colors
@@ -176,7 +171,7 @@ pub(crate) fn init(config: &crate::Config) -> bool {
         Paint::disable();
     }
 
-    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(config.log_level))) {
+    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger)) {
         if config.log_level == LogLevel::Debug {
             eprintln!("Logger failed to initialize: {}", e);
         }

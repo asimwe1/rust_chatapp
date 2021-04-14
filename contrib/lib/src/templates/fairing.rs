@@ -2,8 +2,8 @@ use std::error::Error;
 
 use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
-use rocket::Rocket;
-use rocket::fairing::{Fairing, Info, Kind};
+use rocket::{Rocket, Build, Orbit};
+use rocket::fairing::{self, Fairing, Info, Kind};
 
 pub(crate) use self::context::ContextManager;
 
@@ -128,11 +128,10 @@ pub struct TemplateFairing {
 #[rocket::async_trait]
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
-        // on_request only applies in debug mode, so only enable it in debug.
-        #[cfg(debug_assertions)] let kind = Kind::Launch | Kind::Request;
-        #[cfg(not(debug_assertions))] let kind = Kind::Launch;
+        let kind = Kind::Ignite | Kind::Liftoff;
+        #[cfg(debug_assertions)] let kind = kind | Kind::Request;
 
-        Info { kind, name: "Templates" }
+        Info { kind, name: "Templating" }
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -140,8 +139,8 @@ impl Fairing for TemplateFairing {
     /// The user's callback, if any was supplied, is called to customize the
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
-    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        use rocket::figment::{Source, value::magic::RelativePathBuf};
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
+        use rocket::figment::value::magic::RelativePathBuf;
 
         let configured_dir = rocket.figment()
             .extract_inner::<RelativePathBuf>("template_dir")
@@ -158,17 +157,8 @@ impl Fairing for TemplateFairing {
 
         match Context::initialize(&path) {
             Some(mut ctxt) => {
-                use rocket::{logger::PaintExt, yansi::Paint};
-                use crate::templates::Engines;
-
-                info!("{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
-
                 match (self.callback)(&mut ctxt.engines) {
-                    Ok(()) => {
-                        info_!("directory: {}", Paint::white(Source::from(&*path)));
-                        info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
-                        Ok(rocket.manage(ContextManager::new(ctxt)))
-                    }
+                    Ok(()) => Ok(rocket.manage(ContextManager::new(ctxt))),
                     Err(e) => {
                         error_!("The template customization callback returned an error:");
                         error_!("{}", e);
@@ -183,11 +173,23 @@ impl Fairing for TemplateFairing {
         }
     }
 
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
+        use rocket::{figment::Source, logger::PaintExt, yansi::Paint};
+
+        let cm = rocket.state::<ContextManager>()
+            .expect("Template ContextManager registered in on_ignite");
+
+        info!("{}{}:", Paint::emoji("📐 "), Paint::magenta("Templating"));
+        info_!("directory: {}", Paint::white(Source::from(&*cm.context().root)));
+        info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
+    }
+
     #[cfg(debug_assertions)]
     async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
         let cm = req.rocket().state::<ContextManager>()
-            .expect("Template ContextManager registered in on_launch");
+            .expect("Template ContextManager registered in on_ignite");
 
         cm.reload_if_needed(&self.callback);
     }
+
 }

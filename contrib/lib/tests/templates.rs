@@ -5,7 +5,7 @@
 mod templates_tests {
     use std::path::{Path, PathBuf};
 
-    use rocket::Rocket;
+    use rocket::{Rocket, Build};
     use rocket::config::Config;
     use rocket_contrib::templates::{Template, Metadata};
 
@@ -26,7 +26,7 @@ mod templates_tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("templates")
     }
 
-    fn rocket() -> Rocket {
+    fn rocket() -> Rocket<Build> {
         rocket::custom(Config::figment().merge(("template_dir", template_root())))
             .attach(Template::fairing())
             .mount("/", routes![template_check, is_reloading])
@@ -42,7 +42,7 @@ mod templates_tests {
 
         let error = Client::debug(rocket).expect_err("client failure");
         match error.kind() {
-            FailedFairings(failures) => assert_eq!(failures[0].name, "Templates"),
+            FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
             _ => panic!("Wrong kind of launch error"),
         }
     }

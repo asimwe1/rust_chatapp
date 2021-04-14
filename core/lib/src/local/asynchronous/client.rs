@@ -3,10 +3,9 @@ use std::convert::TryInto;
 
 use parking_lot::RwLock;
 
+use crate::{Rocket, Phase, Orbit, Error};
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
-use crate::rocket::Rocket;
 use crate::http::{Method, uri::Origin, private::cookie};
-use crate::error::Error;
 
 /// An `async` client to construct and dispatch local requests.
 ///
@@ -49,17 +48,17 @@ use crate::error::Error;
 /// # });
 /// ```
 pub struct Client {
-    rocket: Rocket,
+    rocket: Rocket<Orbit>,
     cookies: RwLock<cookie::CookieJar>,
     pub(in super) tracked: bool,
 }
 
 impl Client {
-    pub(crate) async fn _new(
-        rocket: Rocket,
+    pub(crate) async fn _new<P: Phase>(
+        rocket: Rocket<P>,
         tracked: bool
     ) -> Result<Client, Error> {
-        let rocket = rocket._ignite().await?;
+        let rocket = rocket.local_launch().await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
         Ok(Client { rocket, tracked, cookies })
     }
@@ -78,7 +77,7 @@ impl Client {
     }
 
     #[inline(always)]
-    pub(crate) fn _rocket(&self) -> &Rocket {
+    pub(crate) fn _rocket(&self) -> &Rocket<Orbit> {
         &self.rocket
     }
 

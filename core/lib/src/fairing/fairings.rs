@@ -1,4 +1,4 @@
-use crate::{Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Info, Kind};
 use crate::logger::PaintExt;
 
@@ -35,7 +35,7 @@ impl Fairings {
         let index = self.all_fairings.len();
         self.all_fairings.push(fairing);
 
-        if kind.is(Kind::Launch) { self.launch.push(index); }
+        if kind.is(Kind::Ignite) { self.launch.push(index); }
         if kind.is(Kind::Liftoff) { self.liftoff.push(index); }
         if kind.is(Kind::Request) { self.request.push(index); }
         if kind.is(Kind::Response) { self.response.push(index); }
@@ -43,19 +43,19 @@ impl Fairings {
         &*self.all_fairings[index]
     }
 
-    pub fn append(&mut self, others: Fairings) {
-        for fairing in others.all_fairings {
+    pub fn append(&mut self, others: &mut Fairings) {
+        for fairing in others.all_fairings.drain(..) {
             self.add(fairing);
         }
     }
 
-    pub async fn handle_launch(mut rocket: Rocket) -> Rocket {
+    pub async fn handle_ignite(mut rocket: Rocket<Build>) -> Rocket<Build> {
         while rocket.fairings.last_launch < rocket.fairings.launch.len() {
             // We're going to move `rocket` while borrowing `fairings`...
             let mut fairings = std::mem::replace(&mut rocket.fairings, Fairings::new());
             for fairing in iter!(fairings.launch).skip(fairings.last_launch) {
                 let info = fairing.info();
-                rocket = match fairing.on_launch(rocket).await {
+                rocket = match fairing.on_ignite(rocket).await {
                     Ok(rocket) => rocket,
                     Err(rocket) => {
                         fairings.failures.push(info);
@@ -68,7 +68,7 @@ impl Fairings {
 
             // Note that `rocket.fairings` may now be non-empty since launch
             // fairings could have added more fairings! Move them to the end.
-            fairings.append(rocket.fairings);
+            fairings.append(&mut rocket.fairings);
             rocket.fairings = fairings;
         }
 
@@ -76,7 +76,7 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub async fn handle_liftoff(&self, rocket: &Rocket) {
+    pub async fn handle_liftoff(&self, rocket: &Rocket<Orbit>) {
         let liftoff_futures = iter!(self.liftoff).map(|f| f.on_liftoff(rocket));
         futures::future::join_all(liftoff_futures).await;
     }
@@ -95,30 +95,21 @@ impl Fairings {
         }
     }
 
-    pub fn failures(&self) -> Option<&[Info]> {
+    pub fn audit(&self) -> Result<(), &[Info]> {
         match self.failures.is_empty() {
-            true => None,
-            false => Some(&self.failures)
+            true => Ok(()),
+            false => Err(&self.failures)
         }
     }
 
-    pub fn pretty_print_counts(&self) {
-        fn pretty_print<'a>(prefix: &str, iter: impl Iterator<Item = &'a dyn Fairing>) {
-            let names: Vec<_> = iter.map(|f| f.info().name).collect();
-            if names.is_empty() {
-                return;
-            }
-
-            let (num, joined) = (names.len(), names.join(", "));
-            info_!("{} {}: {}", Paint::default(num).bold(), prefix, Paint::default(joined).bold());
+    pub fn pretty_print(&self) {
+        if !self.all_fairings.is_empty() {
+            launch_info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
         }
 
-        if !self.all_fairings.is_empty() {
-            info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
-            pretty_print("launch", iter!(self.launch));
-            pretty_print("liftoff", iter!(self.liftoff));
-            pretty_print("request", iter!(self.request));
-            pretty_print("response", iter!(self.response));
+        for fairing in &self.all_fairings {
+            launch_info_!("{} ({})", Paint::default(fairing.info().name).bold(),
+                Paint::blue(fairing.info().kind).bold());
         }
     }
 }

@@ -159,19 +159,22 @@ mod phase;
 #[doc(inline)] pub use crate::catcher::Catcher;
 #[doc(inline)] pub use crate::route::Route;
 #[doc(hidden)] pub use either::Either;
-pub use crate::request::Request;
+#[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
+#[doc(inline)] pub use error::Error;
 pub use crate::rocket::Rocket;
+pub use crate::request::Request;
 pub use crate::shutdown::Shutdown;
 pub use crate::state::State;
 
-/// Creates a new instance of `Rocket`: aliases [`Rocket::build()`].
-pub fn build() -> Rocket {
+/// Creates a [`Rocket`] instance with the default config provider: aliases
+/// [`Rocket::build()`].
+pub fn build() -> Rocket<Build> {
     Rocket::build()
 }
 
-/// Creates a new instance of `Rocket` with a custom configuration provider:
-/// aliases [`Rocket::custom()`].
-pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
+/// Creates a [`Rocket`] instance with a custom config provider: aliases
+/// [`Rocket::custom()`].
+pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
     Rocket::custom(provider)
 }
 

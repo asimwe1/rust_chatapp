@@ -1,5 +1,6 @@
 #[macro_use] extern crate rocket;
 
+use rocket::{Rocket, Build};
 use rocket::response::Redirect;
 use rocket::http::uri::Uri;
 
@@ -20,10 +21,9 @@ fn uri_redirect() -> Redirect {
     Redirect::to(uri!(hello: NAME))
 }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build().mount("/", routes![hello, uri_redirect, raw_redirect])
 }
-
 
 mod tests {
     use super::*;

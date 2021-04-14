@@ -144,7 +144,7 @@ mod scopes {
 
     use other::world;
 
-    fn _rocket() -> rocket::Rocket {
+    fn _rocket() -> rocket::Rocket<rocket::Build> {
         rocket::build().mount("/", rocket::routes![hello, world])
     }
 }
@@ -258,7 +258,7 @@ fn test_query_collection() {
         (response.status(), response.into_string().unwrap())
     }
 
-    fn run_tests(rocket: rocket::Rocket) {
+    fn run_tests(rocket: rocket::Rocket<rocket::Build>) {
         let client = Client::debug(rocket).unwrap();
 
         let colors = &["blue", "green"];

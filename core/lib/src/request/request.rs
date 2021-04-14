@@ -13,7 +13,7 @@ use atomic::{Atomic, Ordering};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 
-use crate::{Rocket, Config, Route};
+use crate::{Rocket, Route, Orbit};
 use crate::http::{hyper, uri::{Origin, Segments}, uncased::UncasedStr};
 use crate::http::{Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
@@ -34,7 +34,7 @@ pub struct Request<'r> {
 }
 
 pub(crate) struct RequestState<'r> {
-    pub rocket: &'r Rocket,
+    pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
     pub cookies: CookieJar<'r>,
     pub accept: Storage<Option<Accept>>,
@@ -71,7 +71,7 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
     pub(crate) fn new<'s: 'r>(
-        rocket: &'r Rocket,
+        rocket: &'r Rocket<Orbit>,
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
@@ -83,7 +83,7 @@ impl<'r> Request<'r> {
             state: RequestState {
                 rocket,
                 route: Atomic::new(None),
-                cookies: CookieJar::new(&rocket.config),
+                cookies: CookieJar::new(rocket.config()),
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(<Container![Send + Sync]>::new()),
@@ -109,19 +109,20 @@ impl<'r> Request<'r> {
         self.method.load(Ordering::Acquire)
     }
 
-    /// Set the method of `self`.
+    /// Set the method of `self` to `method`.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::http::Method;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # rocket::Request::example(Method::Get, "/", |request| {
     /// assert_eq!(request.method(), Method::Get);
     ///
     /// request.set_method(Method::Post);
     /// assert_eq!(request.method(), Method::Post);
-    /// # });
     /// ```
     #[inline(always)]
     pub fn set_method(&mut self, method: Method) {
@@ -149,10 +150,10 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::http::uri::Origin;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # use rocket::Request;
-    /// # use rocket::http::Method;
-    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// let uri = Origin::parse("/hello/Sergio?type=greeting").unwrap();
     /// request.set_uri(uri);
     /// assert_eq!(request.uri().path(), "/hello/Sergio");
@@ -162,7 +163,6 @@ impl<'r> Request<'r> {
     /// request.set_uri(new_uri);
     /// assert_eq!(request.uri().path(), "/foo/hello/Sergio");
     /// assert_eq!(request.uri().query().unwrap(), "type=greeting");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn set_uri(&mut self, uri: Origin<'r>) {
@@ -186,14 +186,15 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use std::net::{SocketAddrV4, Ipv4Addr};
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # rocket::Request::example(rocket::http::Method::Get, "/", |mut request| {
     /// assert_eq!(request.remote(), None);
     ///
     /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000).into();
     /// request.set_remote(localhost);
     /// assert_eq!(request.remote(), Some(localhost));
-    /// # });
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<SocketAddr> {
@@ -208,14 +209,15 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use std::net::{SocketAddrV4, Ipv4Addr};
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # rocket::Request::example(rocket::http::Method::Get, "/", |mut request| {
     /// assert_eq!(request.remote(), None);
     ///
     /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000).into();
     /// request.set_remote(localhost);
     /// assert_eq!(request.remote(), Some(localhost));
-    /// # });
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
@@ -258,11 +260,12 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket::Request;
-    /// # use rocket::http::{Header, Method};
+    /// # use rocket::http::Header;
     /// # use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// // starting without an "X-Real-IP" header or remote addresss
     /// assert!(request.client_ip().is_none());
     ///
@@ -273,7 +276,6 @@ impl<'r> Request<'r> {
     /// // now with an X-Real-IP header
     /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
     /// assert_eq!(request.client_ip(), Some("8.8.8.8".parse().unwrap()));
-    /// # });
     /// ```
     #[inline]
     pub fn client_ip(&self) -> Option<IpAddr> {
@@ -333,14 +335,15 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::http::ContentType;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # rocket::Request::example(rocket::http::Method::Get, "/uri", |mut request| {
     /// assert!(request.headers().is_empty());
     ///
     /// request.add_header(ContentType::HTML);
     /// assert!(request.headers().contains("Content-Type"));
     /// assert_eq!(request.headers().len(), 1);
-    /// # });
     /// ```
     #[inline]
     pub fn add_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
@@ -357,8 +360,10 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::http::ContentType;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
     ///
-    /// # rocket::Request::example(rocket::http::Method::Get, "/uri", |mut request| {
     /// assert!(request.headers().is_empty());
     ///
     /// request.add_header(ContentType::Any);
@@ -368,7 +373,6 @@ impl<'r> Request<'r> {
     /// request.replace_header(ContentType::PNG);
     /// assert_eq!(request.headers().get_one("Content-Type"), Some("image/png"));
     /// assert_eq!(request.content_type(), Some(&ContentType::PNG));
-    /// # });
     /// ```
     #[inline]
     pub fn replace_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
@@ -487,7 +491,7 @@ impl<'r> Request<'r> {
     /// let catchers = request.rocket().catchers();
     /// ```
     #[inline(always)]
-    pub fn rocket(&self) -> &'r Rocket {
+    pub fn rocket(&self) -> &'r Rocket<Orbit> {
         &self.state.rocket
     }
 
@@ -779,14 +783,6 @@ impl<'r> Request<'r> {
         }
     }
 
-    // Only used by doc-tests! Needs to be `pub` because doc-test are external.
-    pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::default());
-        let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(&rocket, method, uri);
-        f(&mut request);
-    }
-
     /// Get the `n`th path segment, 0-indexed, after the mount point for the
     /// currently matched route, as a string, if it exists. Used by codegen.
     #[inline]
@@ -831,7 +827,7 @@ impl<'r> Request<'r> {
 
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
-        rocket: &'r Rocket,
+        rocket: &'r Rocket<Orbit>,
         h_method: hyper::Method,
         h_headers: hyper::HeaderMap<hyper::HeaderValue>,
         h_uri: &'r hyper::Uri,
@@ -839,7 +835,7 @@ impl<'r> Request<'r> {
     ) -> Result<Request<'r>, Error<'r>> {
         // Get a copy of the URI (only supports path-and-query) for later use.
         let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
-            (None, None, Some(paq)) => paq.as_str(),
+            (None, None, Some(path_query)) => path_query.as_str(),
             _ => return Err(Error::InvalidUri(h_uri)),
         };
 

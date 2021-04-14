@@ -6,7 +6,7 @@ use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
-use crate::{Rocket, Request, Data, route};
+use crate::{Rocket, Orbit, Request, Data, route};
 use crate::form::Form;
 use crate::response::{Response, Body};
 use crate::outcome::Outcome;
@@ -62,7 +62,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 // which knows nothing about Hyper. Because responding depends on the
 // `HyperResponse` type, this function does the actual response processing.
 async fn hyper_service_fn(
-    rocket: Arc<Rocket>,
+    rocket: Arc<Rocket<Orbit>>,
     h_addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
@@ -107,7 +107,7 @@ async fn hyper_service_fn(
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
-impl Rocket {
+impl Rocket<Orbit> {
     /// Wrapper around `make_response` to log a success or failure.
     #[inline]
     async fn send_response(
@@ -370,7 +370,7 @@ impl Rocket {
         crate::catcher::default_handler(Status::InternalServerError, req)
     }
 
-    pub async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>
+    pub(crate) async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>
         where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
     {
         use std::net::ToSocketAddrs;
@@ -403,7 +403,7 @@ impl Rocket {
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
-    pub async fn http_server<L>(mut self, listener: L) -> Result<(), Error>
+    pub(crate) async fn http_server<L>(self, listener: L) -> Result<(), Error>
         where L: Listener + Send + Unpin + 'static,
               <L as Listener>::Connection: Send + Unpin + 'static
     {
@@ -415,15 +415,11 @@ impl Rocket {
         };
 
         // Get the shutdown handle (to initiate) and signal (when initiated).
-        let shutdown_handle = self.shutdown_handle.clone();
+        let shutdown_handle = self.shutdown.clone();
         let shutdown_signal = match self.config.ctrlc {
             true => tokio::signal::ctrl_c().boxed(),
             false => future::pending().boxed(),
         };
-
-        // We need to get this before moving `self` into an `Arc`.
-        let mut shutdown_receiver = self.shutdown_receiver.take()
-            .expect("shutdown receiver has already been used");
 
         let rocket = Arc::new(self);
         let service = hyper::make_service_fn(move |conn: &<L as Listener>::Connection| {
@@ -437,11 +433,12 @@ impl Rocket {
         });
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
+        let shutdown_receiver = shutdown_handle.clone();
         let server = hyper::Server::builder(Incoming::from_listener(listener))
             .http1_keepalive(http1_keepalive)
             .http2_keep_alive_interval(http2_keep_alive)
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
+            .with_graceful_shutdown(async move { shutdown_receiver.notified().await; })
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
 
         tokio::pin!(server);
@@ -450,7 +447,7 @@ impl Rocket {
         match selecter.await {
             future::Either::Left((Ok(()), server)) => {
                 // Ctrl-was pressed. Signal shutdown, wait for the server.
-                shutdown_handle.shutdown();
+                shutdown_handle.notify_one();
                 server.await
             }
             future::Either::Left((Err(err), server)) => {

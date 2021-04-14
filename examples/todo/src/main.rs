@@ -7,7 +7,7 @@
 mod tests;
 mod task;
 
-use rocket::Rocket;
+use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
@@ -90,7 +90,7 @@ async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
     Template::render("index", Context::raw(&conn, flash).await)
 }
 
-async fn run_migrations(rocket: Rocket) -> Rocket {
+async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
     // This macro from `diesel_migrations` defines an `embedded_migrations`
     // module containing a function named `run`. This allows the example to be
     // run and tested without any outside setup of the database.
@@ -107,7 +107,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .attach(AdHoc::on_launch("Run Migrations", run_migrations))
+        .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
         .mount("/", StaticFiles::from(crate_relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])

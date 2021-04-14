@@ -198,7 +198,7 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `async fn get_one(&Rocket) -> Option<Self>`
+//!   * `async fn get_one<P: Phase>(&Rocket<P>) -> Option<Self>`
 //!
 //!     Retrieves a connection wrapper from the configured pool. Returns `Some`
 //!     as long as `Self::fairing()` has been attached.

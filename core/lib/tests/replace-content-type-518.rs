@@ -1,3 +1,4 @@
+use rocket::{Rocket, Build};
 use rocket::{fairing::AdHoc, http::ContentType, local::blocking::Client};
 
 #[rocket::post("/", data = "<_data>", format = "json")]
@@ -6,7 +7,7 @@ fn index(_data: rocket::Data) -> &'static str { "json" }
 #[rocket::post("/", data = "<_data>", rank = 2)]
 fn other_index(_data: rocket::Data) -> &'static str { "other" }
 
-fn rocket() -> rocket::Rocket {
+fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount("/", rocket::routes![index, other_index])
         .attach(AdHoc::on_request("Change CT", |req, _| Box::pin(async move {

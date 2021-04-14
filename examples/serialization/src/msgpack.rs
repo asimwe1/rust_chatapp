@@ -19,7 +19,7 @@ fn echo<'r>(data: MsgPack<Message<'r>>) -> &'r str {
 }
 
 pub fn stage() -> rocket::fairing::AdHoc {
-    rocket::fairing::AdHoc::on_launch("MessagePack", |rocket| async {
+    rocket::fairing::AdHoc::on_ignite("MessagePack", |rocket| async {
         rocket.mount("/msgpack", routes![echo, get])
     })
 }

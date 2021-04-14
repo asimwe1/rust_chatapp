@@ -13,7 +13,7 @@ fn index(hit_count: State<'_, HitCount>) -> content::Html<String> {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("Managed Hit Count", |rocket| async {
+    AdHoc::on_ignite("Managed Hit Count", |rocket| async {
         rocket.mount("/count", routes![index])
             .manage(HitCount(AtomicUsize::new(0)))
     })

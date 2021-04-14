@@ -15,10 +15,10 @@ fn get<'a>(jar: &'a CookieJar<'_>) -> Option<&'a str> {
 #[cfg(test)]
 mod many_cookie_jars_tests {
     use super::*;
-    use rocket::local::blocking::Client;
+    use rocket::{Rocket, local::blocking::Client, Build};
     use rocket::http::Status;
 
-    fn rocket() -> rocket::Rocket {
+    fn rocket() -> Rocket<Build> {
         rocket::custom(rocket::Config::debug_default())
             .mount("/", routes![add, get])
     }

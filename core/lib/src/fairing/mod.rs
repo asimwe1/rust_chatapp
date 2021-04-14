@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data, Build, Orbit};
 
 mod fairings;
 mod ad_hoc;
@@ -56,6 +56,9 @@ mod info_kind;
 pub(crate) use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
 pub use self::info_kind::{Info, Kind};
+
+/// A type alias for the return `Result` type of [`Fairing::on_ignite()`].
+pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E>;
 
 // We might imagine that a request fairing returns an `Outcome`. If it returns
 // `Success`, we don't do any routing and use that response directly. Same if it
@@ -101,24 +104,23 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// The four callback kinds are as follows:
 ///
-///   * **Launch (`on_launch`)**
+///   * **Ignite (`on_ignite`)**
 ///
-///     A launch callback, represented by the [`Fairing::on_launch()`] method,
-///     is called just prior to liftoff, while launching the application. The
-///     state of the `Rocket` instance is, at this point, not finalized, as it
-///     may be modified at will by other launch fairings. As a result, it is
-///     unwise to depend on the state of the `Rocket` instance.
+///     An ignite callback, represented by the [`Fairing::on_ignite()`] method,
+///     is called just prior to liftoff, during ignition. The state of the
+///     `Rocket` instance is, at this point, not finalized, as it may be
+///     modified at will by other ignite fairings.
 ///
-///     All launch callbacks are executed in breadth-first `attach()` order. A
+///     All ignite callbacks are executed in breadth-first `attach()` order. A
 ///     callback `B` executing after a callback `A` can view changes made by `A`
 ///     but not vice-versa.
 ///
-///     A launch callback can arbitrarily modify the `Rocket` instance being
+///     An ignite callback can arbitrarily modify the `Rocket` instance being
 ///     constructed. It should take care not to introduce infinite recursion by
-///     recursively attaching launch fairings. It returns `Ok` if it would like
-///     launching to proceed nominally and `Err` otherwise. If a launch fairing
-///     returns `Err`, launch will be aborted. All launch fairings are executed
-///     even if one or more signal a failure.
+///     recursively attaching ignite fairings. It returns `Ok` if it would like
+///     ignition and launch to proceed nominally and `Err` otherwise. If an
+///     ignite fairing returns `Err`, launch will be aborted. All ignite
+///     fairings are executed even if one or more signal a failure.
 ///
 ///   * **Liftoff (`on_liftoff`)**
 ///
@@ -159,7 +161,7 @@ pub use self::info_kind::{Info, Kind};
 /// # Implementing
 ///
 /// A `Fairing` implementation has one required method: [`info`]. A `Fairing`
-/// can also implement any of the available callbacks: `on_launch`, `on_liftoff`,
+/// can also implement any of the available callbacks: `on_ignite`, `on_liftoff`,
 /// `on_request`, and `on_response`. A `Fairing` _must_ set the appropriate
 /// callback kind in the `kind` field of the returned `Info` structure from
 /// [`info`] for a callback to actually be called by Rocket.
@@ -200,8 +202,8 @@ pub use self::info_kind::{Info, Kind};
 /// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
-/// use rocket::{Rocket, Request, Data, Response};
-/// use rocket::fairing::{Fairing, Info, Kind};
+/// use rocket::{Rocket, Request, Data, Response, Build, Orbit};
+/// use rocket::fairing::{self, Fairing, Info, Kind};
 ///
 /// # struct MyType;
 /// #[rocket::async_trait]
@@ -211,12 +213,12 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+///     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_liftoff(&self, rocket: &Rocket) {
+///     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -381,15 +383,15 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// Rocket will only dispatch callbacks to this fairing for the kinds in the
     /// `kind` field of the returned `Info` structure. For instance, if
-    /// `Kind::Launch | Kind::Request` is used, then Rocket will only call the
-    /// `on_launch` and `on_request` methods of the fairing. Similarly, if
+    /// `Kind::Ignite | Kind::Request` is used, then Rocket will only call the
+    /// `on_ignite` and `on_request` methods of the fairing. Similarly, if
     /// `Kind::Response` is used, Rocket will only call the `on_response` method
     /// of this fairing.
     ///
     /// # Example
     ///
     /// An `info` implementation for `MyFairing`: a fairing named "My Custom
-    /// Fairing" that is both a launch and response fairing.
+    /// Fairing" that is both an ignite and response fairing.
     ///
     /// ```rust
     /// use rocket::fairing::{Fairing, Info, Kind};
@@ -400,25 +402,25 @@ pub trait Fairing: Send + Sync + 'static {
     ///     fn info(&self) -> Info {
     ///         Info {
     ///             name: "My Custom Fairing",
-    ///             kind: Kind::Launch | Kind::Response
+    ///             kind: Kind::Ignite | Kind::Response
     ///         }
     ///     }
     /// }
     /// ```
     fn info(&self) -> Info;
 
-    /// The launch callback. Returns `Ok` if launch should proceed and `Err` if
-    /// launch should be aborted.
+    /// The ignite callback. Returns `Ok` if ignition should proceed and `Err`
+    /// if ignition and launch should be aborted.
     ///
-    /// This method is called when the application is being launched if
-    /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `rocket` parameter is the `Rocket` instance that is
-    /// currently being built for this application.
+    /// This method is called during ignition and if `Kind::Ignite` is in the
+    /// `kind` field of the `Info` structure for this fairing. The `rocket`
+    /// parameter is the `Rocket` instance that is currently being built for
+    /// this application.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result { Ok(rocket) }
 
     /// The liftoff callback.
     ///
@@ -429,7 +431,7 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_liftoff(&self, _rocket: &Rocket) { }
+    async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) { }
 
     /// The request callback.
     ///
@@ -464,12 +466,12 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_launch(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        (self as &T).on_launch(rocket).await
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result {
+        (self as &T).on_ignite(rocket).await
     }
 
     #[inline]
-    async fn on_liftoff(&self, rocket: &Rocket) {
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
         (self as &T).on_liftoff(rocket).await
     }
 

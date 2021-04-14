@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-// rocket::main
-
 mod main_a {
     #[rocket::main]
     fn foo() { }
@@ -49,7 +47,7 @@ mod launch_b {
 
 mod launch_c {
     #[rocket::launch]
-    fn main() -> rocket::Rocket {
+    fn main() -> rocekt::Rocket<rocket::Build> {
         rocket::build()
     }
 }
@@ -87,12 +85,12 @@ mod launch_g {
 
 mod launch_h {
     #[rocket::launch]
-    async fn main() -> rocket::Rocket {
+    async fn main() -> _ {
         rocket::build()
     }
 }
 
 #[rocket::main]
-async fn main() -> rocket::Rocket {
+async fn main() -> rocket::Rocket<rocket::Build> {
     rocket::build()
 }

@@ -3,16 +3,17 @@ mod static_tests {
     use std::{io::Read, fs::File};
     use std::path::Path;
 
-    use rocket::{self, Rocket, Route};
-    use rocket_contrib::serve::{StaticFiles, Options, crate_relative};
+    use rocket::{Rocket, Route, Build};
     use rocket::http::Status;
     use rocket::local::blocking::Client;
+
+    use rocket_contrib::serve::{StaticFiles, Options, crate_relative};
 
     fn static_root() -> &'static Path {
         Path::new(crate_relative!("/tests/static"))
     }
 
-    fn rocket() -> Rocket {
+    fn rocket() -> Rocket<Build> {
         let root = static_root();
         rocket::build()
             .mount("/default", StaticFiles::from(&root))

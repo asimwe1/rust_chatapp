@@ -98,7 +98,7 @@ fn all(
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("Request Local State", |rocket| async {
+    AdHoc::on_ignite("Request Local State", |rocket| async {
         rocket.manage(Atomics::default())
             .mount("/req-local", routes![one_two, three_four, all])
     })

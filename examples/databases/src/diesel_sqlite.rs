@@ -1,4 +1,4 @@
-use rocket::Rocket;
+use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket::response::{Debug, status::Created};
 
@@ -83,7 +83,7 @@ async fn destroy(db: Db) -> Result<()> {
     Ok(())
 }
 
-async fn run_migrations(rocket: Rocket) -> Rocket {
+async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
     // This macro from `diesel_migrations` defines an `embedded_migrations`
     // module containing a function named `run` that runs the migrations in the
     // specified directory, initializing the database.
@@ -96,9 +96,9 @@ async fn run_migrations(rocket: Rocket) -> Rocket {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("Diesel SQLite Stage", |rocket| async {
+    AdHoc::on_ignite("Diesel SQLite Stage", |rocket| async {
         rocket.attach(Db::fairing())
-            .attach(AdHoc::on_launch("Diesel Migrations", run_migrations))
+            .attach(AdHoc::on_ignite("Diesel Migrations", run_migrations))
             .mount("/diesel", routes![list, read, create, delete, destroy])
     })
 }

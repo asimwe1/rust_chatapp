@@ -1,4 +1,4 @@
-use rocket::Rocket;
+use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket_contrib::databases::rusqlite;
 use rocket::response::{Debug, status::Created};
@@ -68,7 +68,7 @@ async fn destroy(db: Db) -> Result<()> {
     Ok(())
 }
 
-async fn init_db(rocket: Rocket) -> Rocket {
+async fn init_db(rocket: Rocket<Build>) -> Rocket<Build> {
     Db::get_one(&rocket).await
         .expect("database mounted")
         .run(|conn| {
@@ -86,9 +86,9 @@ async fn init_db(rocket: Rocket) -> Rocket {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_launch("Rusqlite Stage", |rocket| async {
+    AdHoc::on_ignite("Rusqlite Stage", |rocket| async {
         rocket.attach(Db::fairing())
-            .attach(AdHoc::on_launch("Rusqlite Init", init_db))
+            .attach(AdHoc::on_ignite("Rusqlite Init", init_db))
             .mount("/rusqlite", routes![list, create, read, delete, destroy])
     })
 }
