@@ -1,10 +1,11 @@
 macro_rules! pub_request_impl {
     ($import:literal $($prefix:tt $suffix:tt)?) =>
 {
-    /// Retrieves the inner `Request` as seen by Rocket.
+    /// Borrows the inner `Request` as seen by Rocket.
     ///
     /// Note that no routing has occurred and that there is no remote
-    /// connection.
+    /// address unless one has been explicitly set with
+    /// [`set_remote()`](Request::set_remote()).
     ///
     /// # Example
     ///
@@ -19,6 +20,27 @@ macro_rules! pub_request_impl {
     #[inline(always)]
     pub fn inner(&self) -> &Request<'c> {
         self._request()
+    }
+
+    /// Mutably borrows the inner `Request` as seen by Rocket.
+    ///
+    /// Note that no routing has occurred and that there is no remote
+    /// address unless one has been explicitly set with
+    /// [`set_remote()`](Request::set_remote()).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $import]
+    ///
+    /// # Client::_test(|_, request, _| {
+    /// let mut request: LocalRequest = request;
+    /// let inner: &mut rocket::Request = request.inner_mut();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn inner_mut(&mut self) -> &mut Request<'c> {
+        self._request_mut()
     }
 
     /// Add a header to this request.
@@ -92,7 +114,7 @@ macro_rules! pub_request_impl {
     /// ```
     #[inline]
     pub fn remote(mut self, address: std::net::SocketAddr) -> Self {
-        self._request_mut().set_remote(address);
+        self.set_remote(address);
         self
     }
 
@@ -246,5 +268,8 @@ macro_rules! pub_request_impl {
 
         fn is_deref_req<'a, T: std::ops::Deref<Target = Request<'a>>>() {}
         is_deref_req::<Self>();
+
+        fn is_deref_mut_req<'a, T: std::ops::DerefMut<Target = Request<'a>>>() {}
+        is_deref_mut_req::<Self>();
     }
 }}

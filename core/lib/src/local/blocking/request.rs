@@ -79,3 +79,9 @@ impl<'c> std::ops::Deref for LocalRequest<'c> {
         self.inner()
     }
 }
+
+impl<'c> std::ops::DerefMut for LocalRequest<'c> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner_mut()
+    }
+}

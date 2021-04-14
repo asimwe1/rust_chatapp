@@ -2,7 +2,7 @@ use std::fmt;
 use std::convert::TryInto;
 
 use crate::{Request, Data};
-use crate::http::{Status, Method, ext::IntoOwned};
+use crate::http::{Status, Method};
 use crate::http::uri::Origin;
 
 use super::{Client, LocalResponse};
@@ -35,19 +35,22 @@ pub struct LocalRequest<'c> {
     pub(in super) client: &'c Client,
     pub(in super) request: Request<'c>,
     data: Vec<u8>,
-    uri: Result<Origin<'c>, String>,
+    // The `Origin` on the right is INVALID! It should _not_ be used!
+    uri: Result<Origin<'c>, Origin<'static>>,
 }
 
 impl<'c> LocalRequest<'c> {
     pub(crate) fn new<'u: 'c, U>(client: &'c Client, method: Method, uri: U) -> Self
         where U: TryInto<Origin<'u>> + fmt::Display
     {
-        // We try to validate the URI now so that the inner `Request` contains a
-        // valid URI. If it doesn't, we set a dummy one.
-        let uri_string = uri.to_string();
-        let uri = uri.try_into().map_err(move |_| uri_string);
-        let origin = uri.clone().unwrap_or_else(|_| Origin::dummy());
-        let mut request = Request::new(client.rocket(), method, origin.into_owned());
+        // Try to parse `uri` into an `Origin`, storing whether it's good.
+        let uri_str = uri.to_string();
+        let try_origin = uri.try_into()
+            .map_err(|_| Origin::new::<_, &'static str>(uri_str, None));
+
+        // Create a request. We'll handle bad URIs later, in `_dispatch`.
+        let origin = try_origin.clone().unwrap_or_else(|bad| bad);
+        let mut request = Request::new(client.rocket(), method, origin);
 
         // Add any cookies we know about.
         if client.tracked {
@@ -58,7 +61,7 @@ impl<'c> LocalRequest<'c> {
             })
         }
 
-        LocalRequest { client, request, uri, data: vec![] }
+        LocalRequest { client, request, uri: try_origin, data: vec![] }
     }
 
     pub(crate) fn _request(&self) -> &Request<'c> {
@@ -77,13 +80,17 @@ impl<'c> LocalRequest<'c> {
     async fn _dispatch(mut self) -> LocalResponse<'c> {
         // First, revalidate the URI, returning an error response (generated
         // from an error catcher) immediately if it's invalid. If it's valid,
-        // then `request` already contains the correct URI.
+        // then `request` already contains a correct URI.
         let rocket = self.client.rocket();
-        if let Err(malformed) = self.uri {
-            error!("Malformed request URI: {}", malformed);
-            return LocalResponse::new(self.request, move |req| {
-                rocket.handle_error(Status::BadRequest, req)
-            }).await
+        if let Err(ref invalid) = self.uri {
+            // The user may have changed the URI in the request in which case we
+            // _shouldn't_ error. Check that now and error only if not.
+            if self.inner().uri() == invalid {
+                error!("invalid request URI: {:?}", invalid.path());
+                return LocalResponse::new(self.request, move |req| {
+                    rocket.handle_error(Status::BadRequest, req)
+                }).await
+            }
         }
 
         // Actually dispatch the request.
@@ -140,5 +147,11 @@ impl<'c> std::ops::Deref for LocalRequest<'c> {
 
     fn deref(&self) -> &Self::Target {
         self.inner()
+    }
+}
+
+impl<'c> std::ops::DerefMut for LocalRequest<'c> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner_mut()
     }
 }
