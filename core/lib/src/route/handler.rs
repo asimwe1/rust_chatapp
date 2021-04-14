@@ -53,7 +53,7 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 ///
 /// #[rocket::async_trait]
 /// impl Handler for CustomHandler {
-///     async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+///     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
@@ -145,7 +145,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// generate a response. Otherwise, if the return value is `Forward(Data)`,
     /// the next matching route is attempted. If there are no other matching
     /// routes, the `404` error catcher is invoked.
-    async fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
+    async fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
 }
 
 // We write this manually to avoid double-boxing.
@@ -153,14 +153,14 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
     where for<'x> F: Fn(&'x Request<'_>, Data) -> BoxFuture<'x>,
 {
     #[inline(always)]
-    fn handle<'r, 's: 'r, 'life0, 'async_trait>(
-        &'s self,
-        req: &'r Request<'life0>,
+    fn handle<'r, 'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        req: &'r Request<'life1>,
         data: Data,
     ) -> BoxFuture<'r>
         where 'r: 'async_trait,
-              's: 'async_trait,
               'life0: 'async_trait,
+              'life1: 'async_trait,
               Self: 'async_trait,
     {
         self(req, data)

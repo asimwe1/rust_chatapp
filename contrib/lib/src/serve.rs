@@ -356,7 +356,7 @@ impl Into<Vec<Route>> for StaticFiles {
 
 #[rocket::async_trait]
 impl Handler for StaticFiles {
-    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         // Get the segments as a `PathBuf`, allowing dotfiles requested.
         let options = self.options;
         let allow_dotfiles = options.contains(Options::DotFiles);

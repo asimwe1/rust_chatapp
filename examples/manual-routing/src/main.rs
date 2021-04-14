@@ -80,7 +80,7 @@ impl CustomHandler {
 
 #[rocket::async_trait]
 impl route::Handler for CustomHandler {
-    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> route::Outcome<'r> {
+    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> route::Outcome<'r> {
         let self_data = self.data;
         let id = req.param::<&str>(0)
             .and_then(|res| res.ok())

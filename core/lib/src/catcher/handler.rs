@@ -45,11 +45,7 @@ pub type BoxFuture<'r, T = Result<'r>> = futures::future::BoxFuture<'r, T>;
 ///
 /// #[rocket::async_trait]
 /// impl catcher::Handler for CustomHandler {
-///     async fn handle<'r, 's: 'r>(
-///         &'s self,
-///         status: Status,
-///         req: &'r Request<'_>
-/// ) -> catcher::Result<'r> {
+///     async fn handle<'r>(&self, status: Status, req: &'r Request<'_>) -> catcher::Result<'r> {
 ///         let inner = match self.0 {
 ///             Kind::Simple => "simple".respond_to(req)?,
 ///             Kind::Intermediate => "intermediate".respond_to(req)?,
@@ -101,21 +97,21 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Nevertheless, failure is allowed, both for convenience and necessity. If
     /// an error handler fails, Rocket's default `500` catcher is invoked. If it
     /// succeeds, the returned `Response` is used to respond to the client.
-    async fn handle<'r, 's: 'r>(&'s self, status: Status, req: &'r Request<'_>) -> Result<'r>;
+    async fn handle<'r>(&self, status: Status, req: &'r Request<'_>) -> Result<'r>;
 }
 
 // We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
     where for<'x> F: Fn(Status, &'x Request<'_>) -> BoxFuture<'x>,
 {
-    fn handle<'r, 's: 'r, 'life0, 'async_trait>(
-        &'s self,
+    fn handle<'r, 'life0, 'life1, 'async_trait>(
+        &'life0 self,
         status: Status,
-        req: &'r Request<'life0>,
+        req: &'r Request<'life1>,
     ) -> BoxFuture<'r>
         where 'r: 'async_trait,
-              's: 'async_trait,
               'life0: 'async_trait,
+              'life1: 'async_trait,
               Self: 'async_trait,
     {
         self(status, req)
