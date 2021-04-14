@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
+use std::hash::Hash;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Indexed, Extent, IndexedStr, uri::tables::is_pchar};
@@ -98,16 +99,31 @@ pub struct Origin<'a> {
     pub(crate) decoded_query_segs: Storage<Vec<(IndexedStr<'static>, IndexedStr<'static>)>>,
 }
 
+impl Hash for Origin<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.path().hash(state);
+        self.query().hash(state);
+    }
+}
+
 impl<'a, 'b> PartialEq<Origin<'b>> for Origin<'a> {
     fn eq(&self, other: &Origin<'b>) -> bool {
         self.path() == other.path() && self.query() == other.query()
     }
 }
 
+impl Eq for Origin<'_> { }
+
 impl PartialEq<str> for Origin<'_> {
     fn eq(&self, other: &str) -> bool {
         let (path, query) = RawStr::new(other).split_at_byte(b'?');
         self.path() == path && self.query().unwrap_or("".into()) == query
+    }
+}
+
+impl PartialEq<&str> for Origin<'_> {
+    fn eq(&self, other: &&str) -> bool {
+        self.eq(*other)
     }
 }
 
@@ -186,7 +202,7 @@ impl<'a> Origin<'a> {
 
     // Used to fabricate URIs in several places. Equivalent to `Origin::new("/",
     // None)` or `Origin::parse("/").unwrap()`. Should not be used outside of
-    // Rocket, though doing so would be less harmful.
+    // Rocket, though doing so would be harmless.
     #[doc(hidden)]
     pub fn dummy() -> Origin<'static> {
         Origin::new::<&'static str, &'static str>("/", None)
