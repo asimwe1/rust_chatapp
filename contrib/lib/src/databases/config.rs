@@ -1,3 +1,8 @@
+use rocket::{Rocket, Build};
+use rocket::figment::{self, Figment, providers::Serialized};
+
+use serde::{Serialize, Deserialize};
+
 /// A base `Config` for any `Poolable` type.
 ///
 /// For the following configuration:
@@ -28,16 +33,13 @@
 pub struct Config {
     /// Connection URL specified in the Rocket configuration.
     pub url: String,
-    /// Initial pool size. Defaults to the number of Rocket workers * 2.
+    /// Initial pool size. Defaults to the number of Rocket workers * 4.
     pub pool_size: u32,
     /// How long to wait, in seconds, for a new connection before timing out.
     /// Defaults to `5`.
     // FIXME: Use `time`.
     pub timeout: u8,
 }
-
-use serde::{Serialize, Deserialize};
-use rocket::figment::{self, Figment, providers::Serialized};
 
 impl Config {
     /// Retrieves the database configuration for the database named `name`.
@@ -66,7 +68,9 @@ impl Config {
     ///
     ///     let config = Config::from("my_other_db", rocket).unwrap();
     ///     assert_eq!(config.url, "mysql://root:root@localhost/database");
-    ///     assert_eq!(config.pool_size, (rocket.config().workers * 2) as u32);
+    ///
+    ///     let workers = rocket.figment().extract_inner::<u32>(rocket::Config::WORKERS);
+    ///     assert_eq!(config.pool_size, (workers.unwrap() * 4));
     ///
     ///     let config = Config::from("unknown_db", rocket);
     ///     assert!(config.is_err())
@@ -97,10 +101,18 @@ impl Config {
     /// ```
     pub fn figment(db_name: &str, rocket: &rocket::Rocket) -> Figment {
         let db_key = format!("databases.{}", db_name);
-        let key = |name: &str| format!("{}.{}", db_key, name);
-        Figment::from(rocket.figment())
-            .join(Serialized::default(&key("pool_size"), rocket.config().workers * 2))
-            .join(Serialized::default(&key("timeout"), 5))
+        let default_pool_size = rocket.figment()
+            .extract_inner::<u32>(rocket::Config::WORKERS)
+            .map(|workers| workers * 4)
+            .ok();
+
+        let figment = Figment::from(rocket.figment())
             .focus(&db_key)
+            .join(Serialized::default("timeout", 5));
+
+        match default_pool_size {
+            Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
+            None => figment
+        }
     }
 }

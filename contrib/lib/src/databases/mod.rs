@@ -131,7 +131,7 @@
 //! Additionally, all configurations accept the following _optional_ keys:
 //!
 //!   * `pool_size` - the size of the pool, i.e., the number of connections to
-//!     pool (defaults to the configured number of workers * 2)
+//!     pool (defaults to the configured number of workers * 4)
 //!
 //! Additional options may be required or supported by other adapters.
 //!
