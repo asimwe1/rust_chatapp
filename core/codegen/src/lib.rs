@@ -262,7 +262,7 @@ macro_rules! route_attribute {
         ///   3. A macro used by [`uri!`] to type-check and generate an
         ///      [`Origin`].
         ///
-        /// [`Handler`]: rocket::handler::Handler
+        /// [`Handler`]: rocket::route::Handler
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
         /// [`Origin`]: rocket::http::uri::Origin
@@ -330,7 +330,7 @@ route_attribute!(options => Method::Options);
 ///
 /// The attribute generates two items:
 ///
-///   1. An [`ErrorHandler`].
+///   1. An error [`Handler`].
 ///
 ///      The generated handler calls the decorated function, passing in the
 ///      [`Status`] and [`&Request`] values if requested. The returned value is
@@ -345,7 +345,7 @@ route_attribute!(options => Method::Options);
 ///
 /// [`&Request`]: rocket::Request
 /// [`Status`]: rocket::http::Status
-/// [`ErrorHandler`]: rocket::catcher::ErrorHandler
+/// [`Handler`]: rocket::catcher::Handler
 /// [`catchers!`]: macro.catchers.html
 /// [`Catcher`]: rocket::Catcher
 /// [`Response`]: rocket::Response

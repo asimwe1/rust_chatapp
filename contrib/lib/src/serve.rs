@@ -16,10 +16,10 @@
 
 use std::path::{PathBuf, Path};
 
-use rocket::{Request, Data, Route};
+use rocket::{Request, Data};
 use rocket::http::{Method, uri::Segments, ext::IntoOwned};
-use rocket::handler::{Handler, Outcome};
 use rocket::response::{NamedFile, Redirect};
+use rocket::route::{Route, Handler, Outcome};
 
 /// Generates a crate-relative version of `$path`.
 ///

@@ -1,8 +1,7 @@
 use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
-use crate::router::Route;
-use crate::request::Request;
+use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 

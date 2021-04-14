@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use crate::request::Request;
 use crate::http::{Method, Status};
 
-pub use crate::router::{Route, RouteUri};
-pub use crate::router::collider::Collide;
-pub use crate::catcher::Catcher;
+use crate::{Route, Catcher};
+use crate::router::Collide;
 
 #[derive(Debug, Default)]
 pub(crate) struct Router {
@@ -106,12 +105,9 @@ impl Router {
 mod test {
     use super::*;
 
-    use crate::rocket::Rocket;
-    use crate::config::Config;
-    use crate::http::{Method, Method::*};
-    use crate::http::uri::Origin;
-    use crate::request::Request;
-    use crate::handler::dummy;
+    use crate::route::dummy_handler;
+    use crate::local::blocking::Client;
+    use crate::http::{Method, Method::*, uri::Origin};
 
     impl Router {
         fn has_collisions(&self) -> bool {
@@ -122,7 +118,7 @@ mod test {
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            let route = Route::new(Get, route, dummy);
+            let route = Route::new(Get, route, dummy_handler);
             router.add_route(route);
         }
 
@@ -132,7 +128,7 @@ mod test {
     fn router_with_ranked_routes(routes: &[(isize, &'static str)]) -> Router {
         let mut router = Router::new();
         for &(rank, route) in routes {
-            let route = Route::ranked(rank, Get, route, dummy);
+            let route = Route::ranked(rank, Get, route, dummy_handler);
             router.add_route(route);
         }
 
@@ -142,7 +138,7 @@ mod test {
     fn router_with_rankless_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            let route = Route::ranked(0, Get, route, dummy);
+            let route = Route::ranked(0, Get, route, dummy_handler);
             router.add_route(route);
         }
 
@@ -290,17 +286,14 @@ mod test {
         assert!(!default_rank_route_collisions(&["/<foo>?a=b", "/<foo>?c=d&<d>"]));
     }
 
-    fn route<'a>(router: &'a Router, method: Method, uri: &'a str) -> Option<&'a Route> {
-        let rocket = Rocket::custom(Config::default());
-        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        let route = router.route(&request).next();
-        route
+    fn matches<'a>(router: &'a Router, method: Method, uri: &'a str) -> Vec<&'a Route> {
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.req(method, Origin::parse(uri).unwrap());
+        router.route(&request).collect()
     }
 
-    fn matches<'a>(router: &'a Router, method: Method, uri: &'a str) -> Vec<&'a Route> {
-        let rocket = Rocket::custom(Config::default());
-        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        router.route(&request).collect()
+    fn route<'a>(router: &'a Router, method: Method, uri: &'a str) -> Option<&'a Route> {
+        matches(router, method, uri).into_iter().next()
     }
 
     #[test]
@@ -321,9 +314,9 @@ mod test {
         assert!(route(&router, Get, "/jdlk/asdij").is_some());
 
         let mut router = Router::new();
-        router.add_route(Route::new(Put, "/hello", dummy));
-        router.add_route(Route::new(Post, "/hello", dummy));
-        router.add_route(Route::new(Delete, "/hello", dummy));
+        router.add_route(Route::new(Put, "/hello", dummy_handler));
+        router.add_route(Route::new(Post, "/hello", dummy_handler));
+        router.add_route(Route::new(Delete, "/hello", dummy_handler));
         assert!(route(&router, Put, "/hello").is_some());
         assert!(route(&router, Post, "/hello").is_some());
         assert!(route(&router, Delete, "/hello").is_some());
@@ -558,7 +551,7 @@ mod test {
     fn router_with_catchers(catchers: &[(Option<u16>, &str)]) -> Router {
         let mut router = Router::new();
         for (code, base) in catchers {
-            let catcher = Catcher::new(*code, crate::catcher::dummy);
+            let catcher = Catcher::new(*code, crate::catcher::dummy_handler);
             router.add_catcher(catcher.map_base(|_| base.to_string()).unwrap());
         }
 
@@ -566,8 +559,8 @@ mod test {
     }
 
     fn catcher<'a>(router: &'a Router, status: Status, uri: &str) -> Option<&'a Catcher> {
-        let rocket = Rocket::custom(Config::default());
-        let request = Request::new(&rocket, Method::Get, Origin::parse(uri).unwrap());
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.get(Origin::parse(uri).unwrap());
         router.catch(status, &request)
     }
 

@@ -6,7 +6,7 @@ use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
-use crate::{Rocket, Request, Data, handler};
+use crate::{Rocket, Request, Data, route};
 use crate::form::Form;
 use crate::response::{Response, Body};
 use crate::outcome::Outcome;
@@ -284,7 +284,7 @@ impl Rocket {
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
-    ) -> handler::Outcome<'r> {
+    ) -> route::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
@@ -338,7 +338,7 @@ impl Rocket {
         } else {
             let code = Paint::blue(status.code).bold();
             warn_!("No {} catcher registered. Using Rocket default.", code);
-            Ok(crate::catcher::default(status, req))
+            Ok(crate::catcher::default_handler(status, req))
         }
     }
 
@@ -367,7 +367,7 @@ impl Rocket {
 
         // If it failed again or if it was already a 500, use Rocket's default.
         error_!("{} catcher failed. Using Rocket default 500.", status.code);
-        crate::catcher::default(Status::InternalServerError, req)
+        crate::catcher::default_handler(Status::InternalServerError, req)
     }
 
     pub async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>

@@ -4,9 +4,9 @@ use std::borrow::Cow;
 use crate::http::uri::{self, Origin};
 use crate::http::ext::IntoOwned;
 use crate::form::ValueField;
-use crate::router::segment::Segment;
+use crate::route::Segment;
 
-/// A URI or a route, used to match against requests.
+/// A route URI which is matched against requests.
 ///
 /// A route URI is composed of two components:
 ///
@@ -21,7 +21,7 @@ use crate::router::segment::Segment;
 ///     ```rust
 ///     use rocket::Route;
 ///     use rocket::http::Method;
-///     # use rocket::handler::dummy as handler;
+///     # use rocket::route::dummy_handler as handler;
 ///
 ///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
 ///     assert_eq!(route.uri.base(), "/");
@@ -41,7 +41,7 @@ use crate::router::segment::Segment;
 ///     ```rust
 ///     use rocket::Route;
 ///     use rocket::http::Method;
-///     # use rocket::handler::dummy as handler;
+///     # use rocket::route::dummy_handler as handler;
 ///
 ///     let route = Route::new(Method::Get, "/foo/<bar>", handler);
 ///     assert_eq!(route.uri, "/foo/<bar>");
@@ -95,7 +95,7 @@ pub(crate) struct Metadata {
     pub trailing_path: bool,
 }
 
-type Result<T> = std::result::Result<T, uri::Error<'static>>;
+type Result<T, E = uri::Error<'static>> = std::result::Result<T, E>;
 
 impl<'a> RouteUri<'a> {
     /// Create a new `RouteUri`.
@@ -140,7 +140,7 @@ impl<'a> RouteUri<'a> {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::route::dummy_handler as handler;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(index.uri.base(), "/");
@@ -159,7 +159,7 @@ impl<'a> RouteUri<'a> {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::route::dummy_handler as handler;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(index.uri.path(), "/foo/bar");
@@ -178,7 +178,7 @@ impl<'a> RouteUri<'a> {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::route::dummy_handler as handler;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(index.uri.query(), Some("a=1"));
@@ -197,7 +197,7 @@ impl<'a> RouteUri<'a> {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    /// # use rocket::route::dummy_handler as handler;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(index.uri.as_str(), "/foo/bar?a=1");

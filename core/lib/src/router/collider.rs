@@ -1,5 +1,5 @@
-use super::{Route, uri::Color};
 use crate::catcher::Catcher;
+use crate::route::{Route, Color};
 
 use crate::http::{MediaType, Status};
 use crate::request::Request;
@@ -44,18 +44,17 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 }
 
 fn formats_collide(route: &Route, other: &Route) -> bool {
-    // When matching against the `Accept` header, the client can always
-    // provide a media type that will cause a collision through
-    // non-specificity, i.e, `*/*` matches everything.
+    // When matching against the `Accept` header, the client can always provide
+    // a media type that will cause a collision through non-specificity, i.e,
+    // `*/*` matches everything.
     if !route.method.supports_payload() {
         return true;
     }
 
-    // When matching against the `Content-Type` header, we'll only
-    // consider requests as having a `Content-Type` if they're fully
-    // specified. If a route doesn't have a `format`, it accepts all
-    // `Content-Type`s. If a request doesn't have a format, it only
-    // matches routes without a format.
+    // When matching against the `Content-Type` header, we'll only consider
+    // requests as having a `Content-Type` if they're fully specified. If a
+    // route doesn't have a `format`, it accepts all `Content-Type`s. If a
+    // request doesn't have a format, it only matches routes without a format.
     match (route.format.as_ref(), other.format.as_ref()) {
         (Some(a), Some(b)) => a.collides_with(b),
         _ => true
@@ -203,31 +202,28 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::rocket::Rocket;
-    use crate::config::Config;
-    use crate::request::Request;
-    use crate::router::route::Route;
+    use crate::route::{Route, dummy_handler};
+    use crate::local::blocking::Client;
     use crate::http::{Method, Method::*, MediaType, ContentType, Accept};
     use crate::http::uri::Origin;
-    use crate::handler::dummy;
 
     type SimpleRoute = (Method, &'static str);
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
-        let route_a = Route::new(a.0, a.1, dummy);
-        route_a.collides_with(&Route::new(b.0, b.1, dummy))
+        let route_a = Route::new(a.0, a.1, dummy_handler);
+        route_a.collides_with(&Route::new(b.0, b.1, dummy_handler))
     }
 
     fn unranked_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::ranked(0, Get, a, dummy);
-        let route_b = Route::ranked(0, Get, b, dummy);
+        let route_a = Route::ranked(0, Get, a, dummy_handler);
+        let route_b = Route::ranked(0, Get, b, dummy_handler);
         eprintln!("Checking {} against {}.", route_a, route_b);
         route_a.collides_with(&route_b)
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        let a = Route::new(Get, a, dummy);
-        let b = Route::new(Get, b, dummy);
+        let a = Route::new(Get, a, dummy_handler);
+        let b = Route::new(Get, b, dummy_handler);
         paths_collide(&a, &b)
     }
 
@@ -402,12 +398,12 @@ mod tests {
     fn r_mt_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let mut route_a = Route::new(m, "/", dummy);
+        let mut route_a = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt1.into() {
             route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
-        let mut route_b = Route::new(m, "/", dummy);
+        let mut route_b = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt2.into() {
             route_b.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
@@ -460,8 +456,8 @@ mod tests {
     fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let rocket = Rocket::custom(Config::default());
-        let mut req = Request::new(&rocket, m, Origin::dummy());
+        let client = Client::debug_with(vec![]).expect("client");
+        let mut req = client.req(m, "/");
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
@@ -470,7 +466,7 @@ mod tests {
             }
         }
 
-        let mut route = Route::new(m, "/", dummy);
+        let mut route = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt2.into() {
             route.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
@@ -527,9 +523,9 @@ mod tests {
     }
 
     fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
-        let rocket = Rocket::custom(Config::default());
-        let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
-        let route = Route::ranked(0, Get, b, dummy);
+        let client = Client::debug_with(vec![]).expect("client");
+        let req = client.get(Origin::parse(a).expect("valid URI"));
+        let route = Route::ranked(0, Get, b, dummy_handler);
         route.matches(&req)
     }
 
@@ -573,8 +569,10 @@ mod tests {
     fn catchers_collide<A, B>(a: A, ap: &str, b: B, bp: &str) -> bool
         where A: Into<Option<u16>>, B: Into<Option<u16>>
     {
-        let a = Catcher::new(a, crate::catcher::dummy).map_base(|_| ap.into()).unwrap();
-        let b = Catcher::new(b, crate::catcher::dummy).map_base(|_| bp.into()).unwrap();
+        use crate::catcher::dummy_handler as handler;
+
+        let a = Catcher::new(a, handler).map_base(|_| ap.into()).unwrap();
+        let b = Catcher::new(b, handler).map_base(|_| bp.into()).unwrap();
         a.collides_with(&b)
     }
 

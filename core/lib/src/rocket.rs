@@ -2,14 +2,10 @@ use std::fmt::Display;
 use std::convert::TryInto;
 
 use yansi::Paint;
-use state::Container;
-use figment::Figment;
-use tokio::sync::mpsc;
+use tokio::sync::Notify;
 
-use crate::logger;
-use crate::config::Config;
-use crate::catcher::Catcher;
-use crate::router::{Router, Route};
+use crate::{Route, Catcher, Config, Shutdown};
+use crate::router::Router;
 use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::shutdown::Shutdown;
@@ -189,12 +185,12 @@ impl Rocket {
     /// `hi` route.
     ///
     /// ```rust
-    /// use rocket::{Request, Route, Data};
-    /// use rocket::handler::{HandlerFuture, Outcome};
-    /// use rocket::http::Method::*;
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::{Request, Route, Data, route};
+    /// use rocket::http::Method;
     ///
-    /// fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    ///     Outcome::from(req, "Hello!").pin()
+    /// fn hi<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+    ///     route::Outcome::from(req, "Hello!").pin()
     /// }
     ///
     /// #[launch]

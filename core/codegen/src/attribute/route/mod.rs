@@ -222,10 +222,10 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
     let _await = route.handler.sig.asyncness
         .map(|a| quote_spanned!(a.span().into() => .await));
 
-    define_spanned_export!(ret_span => __req, _handler);
+    define_spanned_export!(ret_span => __req, _route);
     quote_spanned! { ret_span =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
-        #_handler::Outcome::from(#__req, ___responder)
+        #_route::Outcome::from(#__req, ___responder)
     }
 }
 
@@ -258,13 +258,13 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementation.
-        impl From<#handler_fn_name> for #StaticRouteInfo {
+        impl From<#handler_fn_name> for #_route::StaticInfo {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-            fn from(_: #handler_fn_name) -> #StaticRouteInfo {
+            fn from(_: #handler_fn_name) -> #_route::StaticInfo {
                 fn monomorphized_function<'_b>(
                     #__req: &'_b #Request<'_>,
                     #__data: #Data
-                ) -> #HandlerFuture<'_b> {
+                ) -> #_route::BoxFuture<'_b> {
                     #_Box::pin(async move {
                         #(#request_guards)*
                         #(#param_guards)*
@@ -275,7 +275,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     })
                 }
 
-                #StaticRouteInfo {
+                #_route::StaticInfo {
                     name: stringify!(#handler_fn_name),
                     method: #method,
                     path: #path,
@@ -290,7 +290,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         impl From<#handler_fn_name> for #Route {
             #[inline]
             fn from(_: #handler_fn_name) -> #Route {
-                #StaticRouteInfo::from(#handler_fn_name {}).into()
+                #_route::StaticInfo::from(#handler_fn_name {}).into()
             }
         }
 

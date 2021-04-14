@@ -124,11 +124,10 @@ pub mod request;
 pub mod response;
 pub mod config;
 pub mod form;
-pub mod handler;
 pub mod fairing;
 pub mod error;
 pub mod catcher;
-pub mod router;
+pub mod route;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -145,20 +144,20 @@ pub mod http {
 }
 
 mod shutdown;
-mod rocket;
 mod server;
-mod codegen;
 mod ext;
 mod state;
 mod cookies;
+mod rocket;
+mod router;
+mod phase;
 
 #[doc(hidden)] pub use log::{info, warn, error, debug};
 #[doc(inline)] pub use crate::response::Response;
-#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatcherInfo};
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
-#[doc(inline)] pub use crate::router::Route;
+#[doc(inline)] pub use crate::route::Route;
 #[doc(hidden)] pub use either::Either;
 pub use crate::request::Request;
 pub use crate::rocket::Rocket;

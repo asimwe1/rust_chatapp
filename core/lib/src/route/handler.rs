@@ -1,20 +1,16 @@
-//! Types and traits for request handlers and their return values.
-
-use futures::future::BoxFuture;
-
-use crate::data::Data;
-use crate::request::Request;
+use crate::{Request, Data};
 use crate::response::{Response, Responder};
 use crate::http::Status;
-use crate::outcome;
 
-/// Type alias for the `Outcome` of a `Handler`.
-pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
+/// Type alias for the return type of a [`Route`](crate::Route)'s
+/// [`Handler::handle()`].
+pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, Data>;
 
-/// Type alias for the unwieldy `Handler` return type
-pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
+/// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
+/// [`Handler`].
+pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 
-/// Trait implemented by types that can handle requests.
+/// Trait implemented by [`Route`](crate::Route) request handlers.
 ///
 /// In general, you will never need to implement `Handler` manually or be
 /// concerned about the `Handler` trait; Rocket's code generation handles
@@ -27,8 +23,8 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///
 /// ## Async Trait
 ///
-/// [`Handler`] is an _async_ trait. Implementations of `Handler` must be
-/// decorated with an attribute of `#[rocket::async_trait]`.
+/// This is an _async_ trait. Implementations must be decorated
+/// [`#[rocket::async_trait]`](crate::async_trait).
 ///
 /// # Example
 ///
@@ -48,8 +44,9 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///
 /// ```rust,no_run
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
-/// use rocket::{Request, Data, Route, http::Method};
-/// use rocket::handler::{self, Handler, Outcome};
+/// use rocket::{Request, Data};
+/// use rocket::route::{Handler, Route, Outcome};
+/// use rocket::http::Method;
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
@@ -72,7 +69,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// }
 ///
 /// #[rocket::launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build().mount("/", CustomHandler(Kind::Simple))
 /// }
 /// ```
@@ -115,7 +112,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// }
 ///
 /// #[launch]
-/// fn rocket() -> rocket::Rocket {
+/// fn rocket() -> _ {
 ///     rocket::build()
 ///         .mount("/", routes![custom_handler])
 ///         .manage(Kind::Simple)
@@ -153,14 +150,14 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 
 // We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'x> F: Fn(&'x Request<'_>, Data) -> HandlerFuture<'x>,
+    where for<'x> F: Fn(&'x Request<'_>, Data) -> BoxFuture<'x>,
 {
     #[inline(always)]
     fn handle<'r, 's: 'r, 'life0, 'async_trait>(
         &'s self,
         req: &'r Request<'life0>,
         data: Data,
-    ) -> HandlerFuture<'r>
+    ) -> BoxFuture<'r>
         where 'r: 'async_trait,
               's: 'async_trait,
               'life0: 'async_trait,
@@ -170,51 +167,43 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
     }
 }
 
-// A handler to use when one is needed temporarily. Don't use outside of Rocket!
-#[doc(hidden)]
-pub fn dummy<'r>(r: &'r Request<'_>, _: Data) -> HandlerFuture<'r> {
-    Outcome::from(r, ()).pin()
-}
-
 impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
-    /// If the responder returns `Ok`, an outcome of `Success` is
-    /// returned with the response. If the responder returns `Err`, an
-    /// outcome of `Failure` is returned with the status code.
+    /// If the responder returns `Ok`, an outcome of `Success` is returned with
+    /// the response. If the responder returns `Err`, an outcome of `Failure` is
+    /// returned with the status code.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    ///     Outcome::from(req, "Hello, world!")
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> route::Outcome<'r> {
+    ///     route::Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'o> {
         match responder.respond_to(req) {
-            Ok(response) => outcome::Outcome::Success(response),
-            Err(status) => outcome::Outcome::Failure(status)
+            Ok(response) => Outcome::Success(response),
+            Err(status) => Outcome::Failure(status)
         }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
-    /// If the responder returns `Ok`, an outcome of `Success` is
-    /// returned with the response. If the responder returns `Err`, an
-    /// outcome of `Failure` is returned with the status code.
+    /// If the responder returns `Ok`, an outcome of `Success` is returned with
+    /// the response. If the responder returns `Err`, an outcome of `Failure` is
+    /// returned with the status code.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    ///     Outcome::from(req, "Hello, world!")
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> route::Outcome<'r> {
+    ///     route::Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
@@ -223,25 +212,24 @@ impl<'r, 'o: 'r> Outcome<'o> {
     {
         let responder = result.map_err(crate::response::Debug);
         match responder.respond_to(req) {
-            Ok(response) => outcome::Outcome::Success(response),
-            Err(status) => outcome::Outcome::Failure(status)
+            Ok(response) => Outcome::Success(response),
+            Err(status) => Outcome::Failure(status)
         }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
-    /// If the responder returns `Ok`, an outcome of `Success` is
-    /// returned with the response. If the responder returns `Err`, an
-    /// outcome of `Forward` is returned.
+    /// If the responder returns `Ok`, an outcome of `Success` is returned with
+    /// the response. If the responder returns `Err`, an outcome of `Forward` is
+    /// returned.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
-    ///     Outcome::from_or_forward(req, data, "Hello, world!")
+    /// fn str_responder<'r>(req: &'r Request, data: Data) -> route::Outcome<'r> {
+    ///     route::Outcome::from_or_forward(req, data, "Hello, world!")
     /// }
     /// ```
     #[inline]
@@ -249,53 +237,55 @@ impl<'r, 'o: 'r> Outcome<'o> {
         where R: Responder<'r, 'o>
     {
         match responder.respond_to(req) {
-            Ok(response) => outcome::Outcome::Success(response),
-            Err(_) => outcome::Outcome::Forward(data)
+            Ok(response) => Outcome::Success(response),
+            Err(_) => Outcome::Forward(data)
         }
     }
 
     /// Return an `Outcome` of `Failure` with the status code `code`. This is
     /// equivalent to `Outcome::Failure(code)`.
     ///
-    /// This method exists to be used during manual routing where
-    /// `rocket::handler::Outcome` is imported instead of `rocket::Outcome`.
+    /// This method exists to be used during manual routing.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::{Request, Data, route};
     /// use rocket::http::Status;
     ///
-    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> Outcome<'r> {
-    ///     Outcome::failure(Status::BadRequest)
+    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> route::Outcome<'r> {
+    ///     route::Outcome::failure(Status::BadRequest)
     /// }
     /// ```
     #[inline(always)]
     pub fn failure(code: Status) -> Outcome<'static> {
-        outcome::Outcome::Failure(code)
+        Outcome::Failure(code)
     }
 
     /// Return an `Outcome` of `Forward` with the data `data`. This is
     /// equivalent to `Outcome::Forward(data)`.
     ///
-    /// This method exists to be used during manual routing where
-    /// `rocket::handler::Outcome` is imported instead of `rocket::Outcome`.
+    /// This method exists to be used during manual routing.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::{Request, Data, route};
     ///
-    /// fn always_forward<'r>(_: &'r Request, data: Data) -> Outcome<'r> {
-    ///     Outcome::forward(data)
+    /// fn always_forward<'r>(_: &'r Request, data: Data) -> route::Outcome<'r> {
+    ///     route::Outcome::forward(data)
     /// }
     /// ```
     #[inline(always)]
     pub fn forward(data: Data) -> Outcome<'static> {
-        outcome::Outcome::Forward(data)
+        Outcome::Forward(data)
     }
+}
+
+// INTERNAL: A handler to use when one is needed temporarily.
+#[doc(hidden)]
+pub fn dummy_handler<'r>(r: &'r Request<'_>, _: Data) -> BoxFuture<'r> {
+    Outcome::from(r, ()).pin()
 }
 
 mod private {
@@ -303,10 +293,12 @@ mod private {
     impl<T: super::Handler + Clone> Sealed for T {}
 }
 
-/// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
+/// Helper trait to make a [`Route`](crate::Route)'s `Box<dyn Handler>`
+/// `Clone`.
 ///
-/// This trait cannot be implemented by any type. Instead, all types that
-/// implement `Clone` and `Handler` automatically implement `Cloneable`.
+/// This trait cannot be implemented directly. Instead, implement `Clone` and
+/// [`Handler`]; all types that implement `Clone` and `Handler` automatically
+/// implement `Cloneable`.
 pub trait Cloneable: private::Sealed {
     #[doc(hidden)]
     fn clone_handler(&self) -> Box<dyn Handler>;

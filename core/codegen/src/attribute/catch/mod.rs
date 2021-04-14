@@ -62,12 +62,12 @@ pub fn _catch(
         #vis struct #user_catcher_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementation.
-        impl From<#user_catcher_fn_name> for #StaticCatcherInfo {
-            fn from(_: #user_catcher_fn_name) -> #StaticCatcherInfo {
+        impl From<#user_catcher_fn_name> for #_catcher::StaticInfo {
+            fn from(_: #user_catcher_fn_name) -> #_catcher::StaticInfo {
                 fn monomorphized_function<'_b>(
                     #__status: #Status,
                     #__req: &'_b #Request<'_>
-                ) -> #ErrorHandlerFuture<'_b> {
+                ) -> #_catcher::BoxFuture<'_b> {
                     #_Box::pin(async move {
                         let __response = #catcher_response;
                         #Response::build()
@@ -77,7 +77,7 @@ pub fn _catch(
                     })
                 }
 
-                #StaticCatcherInfo {
+                #_catcher::StaticInfo {
                     name: stringify!(#user_catcher_fn_name),
                     code: #status_code,
                     handler: monomorphized_function,
@@ -89,7 +89,7 @@ pub fn _catch(
         impl From<#user_catcher_fn_name> for #Catcher {
             #[inline]
             fn from(_: #user_catcher_fn_name) -> #Catcher {
-                #StaticCatcherInfo::from(#user_catcher_fn_name {}).into()
+                #_catcher::StaticInfo::from(#user_catcher_fn_name {}).into()
             }
         }
     })

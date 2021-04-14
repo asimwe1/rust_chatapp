@@ -1,11 +1,9 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{Rocket, Route, Request};
+use rocket::{Request, Rocket, Route, Catcher, route, catcher};
 use rocket::data::Data;
 use rocket::http::{Method, Status};
 use rocket::local::blocking::Client;
-use rocket::catcher::{Catcher, ErrorHandlerFuture};
-use rocket::handler::HandlerFuture;
 
 #[get("/panic")]
 fn panic_route() -> &'static str {
@@ -22,7 +20,7 @@ fn ise() -> &'static str {
     "Hey, sorry! :("
 }
 
-fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> HandlerFuture<'r> {
+fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> route::BoxFuture<'r> {
     panic!("hey now...");
 }
 
@@ -75,7 +73,7 @@ fn catches_early_route_panic() {
 
 #[test]
 fn catches_early_catcher_panic() {
-    fn pre_future_catcher<'r>(_: Status, _: &'r Request) -> ErrorHandlerFuture<'r> {
+    fn pre_future_catcher<'r>(_: Status, _: &'r Request) -> catcher::BoxFuture<'r> {
         panic!("a panicking pre-future catcher")
     }
 
