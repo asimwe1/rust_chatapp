@@ -52,7 +52,7 @@ impl<L: Listener> Incoming<L> {
     pub fn from_listener(listener: L) -> Self {
         Self {
             listener,
-            sleep_on_errors: Some(Duration::from_secs(1)),
+            sleep_on_errors: Some(Duration::from_millis(250)),
             pending_error_delay: None,
         }
     }
@@ -78,14 +78,22 @@ impl<L: Listener> Incoming<L> {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
         let mut me = self.project();
+        let mut optimistic_retry = true;
         loop {
             // Check if a previous sleep timer is active that was set by IO errors.
             if let Some(delay) = me.pending_error_delay.as_mut().as_pin_mut() {
-                match delay.poll(cx) {
-                    Poll::Ready(()) => {}
-                    Poll::Pending => return Poll::Pending,
+                if optimistic_retry {
+                    error!("optimistically retrying now");
+                    optimistic_retry = false;
+                } else {
+                    error!("retrying in {:?}", me.sleep_on_errors);
+                    match delay.poll(cx) {
+                        Poll::Ready(()) => {}
+                        Poll::Pending => return Poll::Pending,
+                    }
                 }
             }
+
             me.pending_error_delay.set(None);
 
             match me.listener.poll_accept(cx) {
@@ -102,7 +110,7 @@ impl<L: Listener> Incoming<L> {
                     }
 
                     if let Some(duration) = me.sleep_on_errors {
-                        error!("accept error: {}", e);
+                        error!("connection accept error: {}", e);
 
                         // Sleep for the specified duration
                         me.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
