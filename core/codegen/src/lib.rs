@@ -545,6 +545,8 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
+/// # Semantics
+///
 /// The derive generates an implementation of the [`Responder`] trait for the
 /// decorated enum or structure. The derive uses the _first_ field of a variant
 /// or structure to generate a [`Response`]. As such, the type of the first
@@ -579,6 +581,8 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Decorating the first field with `#[response(ignore)]` has no effect.
+///
+/// # Field Attribute
 ///
 /// Additionally, the `response` attribute can be used on named structures and
 /// enum variants to override the status and/or content-type of the [`Response`]
@@ -646,6 +650,39 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// [`Response`]: ../rocket/struct.Response.html
 /// [`Response::set_header()`]: ../rocket/response/struct.Response.html#method.set_header
 /// [`ContentType::parse_flexible()`]: ../rocket/http/struct.ContentType.html#method.parse_flexible
+///
+/// # Generics
+///
+/// The derive accepts at most one type generic and at most one lifetime
+/// generic. If a type generic is present, the generated implementation will
+/// require a bound of `Responder` for the generic. As such, the generic should
+/// be used as a `Responder`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(Responder)]
+/// #[response(status = 404, content_type = "html")]
+/// struct NotFoundHtml<T>(T);
+/// ```
+///
+/// If a lifetime generic is present, it will be used as the second lifetime
+/// paramter `'o` parameter in `impl Responder<'r, 'o>`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(Responder)]
+/// #[response(status = 404, content_type = "html")]
+/// struct NotFoundHtmlString<'o>(&'o str);
+/// ```
+///
+/// Both a type generic and lifetime generic may be used:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # use rocket::response::Responder;
+/// #[derive(Responder)]
+/// struct SomeResult<'o, T>(Result<T, &'o str>);
+/// ```
 #[proc_macro_derive(Responder, attributes(response))]
 pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))

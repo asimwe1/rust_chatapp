@@ -18,11 +18,16 @@ struct FieldAttr {
 
 pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>))
-        .support(Support::Struct | Support::Enum | Support::Lifetime)
+        .support(Support::Struct | Support::Enum | Support::Lifetime | Support::Type)
         .replace_generic(1, 0)
+        .type_bound(quote!(::rocket::response::Responder<'__r, '__o>))
         .validator(ValidatorBuild::new()
             .input_validate(|_, i| match i.generics().lifetimes().count() > 1 {
                 true => Err(i.generics().span().error("only one lifetime is supported")),
+                false => Ok(())
+            })
+            .input_validate(|_, i| match i.generics().type_params().count() > 1 {
+                true => Err(i.generics().span().error("only one type generic is supported")),
                 false => Ok(())
             })
             .fields_validate(|_, fields| match fields.is_empty() {
