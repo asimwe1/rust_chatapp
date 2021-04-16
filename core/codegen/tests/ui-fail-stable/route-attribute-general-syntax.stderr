@@ -64,8 +64,8 @@ error: expected key/value `key = value`
 33 | #[get("/", ...)]
    |            ^^^
 
-error: handler arguments cannot be ignored
-  --- note: handler arguments must be of the form: `ident: Type`
+error: handler arguments must be named
+  --- help: to name an ignored handler argument, use `_name`
   --> $DIR/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}

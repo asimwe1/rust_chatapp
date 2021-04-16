@@ -43,9 +43,13 @@ fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> 
     status::Custom(status, msg)
 }
 
+#[get("/unmanaged")]
+fn unmanaged(_u8: rocket::State<'_, u8>, _string: rocket::State<'_, String>) { }
+
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        // .mount("/", routes![hello, hello]) // uncoment this to get an error
+        // .mount("/", routes![hello, hello]) // uncomment this to get an error
+        // .mount("/", routes![unmanaged]) // uncomment this to get a sentinel error
         .mount("/", routes![hello, forced_error])
         .register("/", catchers![general_not_found, default_catcher])
         .register("/hello", catchers![hello_not_found])
@@ -56,6 +60,7 @@ fn rocket() -> Rocket<Build> {
 async fn main() {
     if let Err(e) = rocket().launch().await {
         println!("Whoops! Rocket didn't launch!");
-        println!("Error: {:?}", e);
+        // We drop the error to get a Rocket-formatted panic.
+        drop(e);
     };
 }

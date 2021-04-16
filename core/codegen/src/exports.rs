@@ -71,6 +71,7 @@ define_exported_paths! {
     _response => ::rocket::response,
     _route => ::rocket::route,
     _catcher => ::rocket::catcher,
+    _sentinel => ::rocket::sentinel,
     _log => ::rocket::logger,
     _form => ::rocket::form::prelude,
     _http => ::rocket::http,

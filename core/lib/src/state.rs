@@ -1,6 +1,7 @@
 use std::ops::Deref;
+use std::any::type_name;
 
-use crate::{Rocket, Phase};
+use crate::{Phase, Rocket, Ignite, Sentinel};
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -177,10 +178,23 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for State<'r, T> {
         match req.rocket().state::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
-                error_!("Attempted to retrieve unmanaged state `{}`!", std::any::type_name::<T>());
+                error_!("Attempted to retrieve unmanaged state `{}`!", type_name::<T>());
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }
+    }
+}
+
+impl<T: Send + Sync + 'static> Sentinel for State<'_, T> {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        if rocket.state::<T>().is_none() {
+            let type_name = yansi::Paint::default(type_name::<T>()).bold();
+            error!("launching with unmanaged `{}` state.", type_name);
+            info_!("Using `State` requires managing it with `.manage()`.");
+            return true;
+        }
+
+        false
     }
 }
 

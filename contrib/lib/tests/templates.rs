@@ -47,6 +47,60 @@ mod templates_tests {
         }
     }
 
+    #[test]
+    fn test_sentinel() {
+        use rocket::{local::blocking::Client, error::ErrorKind::SentinelAborts};
+
+        let err = Client::debug_with(routes![is_reloading]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+        let err = Client::debug_with(routes![is_reloading, template_check]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
+
+        #[get("/")]
+        fn return_template() -> Template {
+            Template::render("foo", ())
+        }
+
+        let err = Client::debug_with(routes![return_template]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+        #[get("/")]
+        fn return_opt_template() -> Option<Template> {
+            Some(Template::render("foo", ()))
+        }
+
+        let err = Client::debug_with(routes![return_opt_template]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+        #[derive(rocket::Responder)]
+        struct MyThing<T>(T);
+
+        #[get("/")]
+        fn return_custom_template() -> MyThing<Template> {
+            MyThing(Template::render("foo", ()))
+        }
+
+        let err = Client::debug_with(routes![return_custom_template]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+        #[derive(rocket::Responder)]
+        struct MyOkayThing<T>(Option<T>);
+
+        impl<T> rocket::Sentinel for MyOkayThing<T> {
+            fn abort(_: &Rocket<rocket::Ignite>) -> bool {
+                false
+            }
+        }
+
+        #[get("/")]
+        fn always_ok_sentinel() -> MyOkayThing<Template> {
+            MyOkayThing(None)
+        }
+
+        Client::debug_with(routes![always_ok_sentinel]).expect("no sentinel abort");
+    }
+
     #[cfg(feature = "tera_templates")]
     mod tera_tests {
         use super::*;

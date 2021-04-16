@@ -56,9 +56,9 @@ mod rusqlite_integration_test {
     }
 }
 
-#[cfg(feature = "databases")]
 #[cfg(test)]
-mod drop_runtime_test {
+#[cfg(feature = "databases")]
+mod sentinel_and_runtime_test {
     use rocket::{Rocket, Build};
     use r2d2::{ManageConnection, Pool};
     use rocket_contrib::databases::{database, Poolable, PoolResult};
@@ -106,5 +106,16 @@ mod drop_runtime_test {
 
         let rocket = rocket::custom(config).attach(TestDb::fairing());
         drop(rocket);
+    }
+
+    #[test]
+    fn test_sentinel() {
+        use rocket::{*, local::blocking::Client, error::ErrorKind::SentinelAborts};
+
+        #[get("/")]
+        fn use_db(_db: TestDb) {}
+
+        let err = Client::debug_with(routes![use_db]).unwrap_err();
+        assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
     }
 }

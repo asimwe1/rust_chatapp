@@ -77,8 +77,8 @@ impl Router {
         }
     }
 
-    fn collisions<'a, I: 'a, T: 'a>(&self, items: I) -> impl Iterator<Item = (T, T)> + 'a
-        where I: Iterator<Item = &'a T> + Clone, T: Collide + Clone,
+    fn collisions<'a, I, T>(&self, items: I) -> impl Iterator<Item = (T, T)> + 'a
+        where I: Iterator<Item = &'a T> + Clone + 'a, T: Collide + Clone + 'a,
     {
         items.clone().enumerate()
             .flat_map(move |(i, a)| {

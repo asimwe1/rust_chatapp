@@ -1,4 +1,4 @@
-use rocket::{Request, State};
+use rocket::{Request, State, Rocket, Ignite, Sentinel};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
@@ -27,7 +27,6 @@ use crate::templates::ContextManager;
 ///         Template::render("fallback", &context)
 ///     }
 /// }
-///
 ///
 /// fn main() {
 ///     rocket::build()
@@ -78,6 +77,21 @@ impl Metadata<'_> {
     /// ```
     pub fn reloading(&self) -> bool {
         self.0.is_reloading()
+    }
+}
+
+impl Sentinel for Metadata<'_> {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        if rocket.state::<ContextManager>().is_none() {
+            let md = rocket::yansi::Paint::default("Metadata").bold();
+            let fairing = rocket::yansi::Paint::default("Template::fairing()").bold();
+            error!("requested `{}` guard without attaching `{}`.", md, fairing);
+            info_!("To use or query templates, you must attach `{}`.", fairing);
+            info_!("See the `Template` documentation for more information.");
+            return true;
+        }
+
+        false
     }
 }
 

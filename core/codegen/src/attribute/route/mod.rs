@@ -2,16 +2,23 @@ mod parse;
 
 use proc_macro2::{TokenStream, Span};
 use devise::{Spanned, SpanWrapped, Result, FromMeta, Diagnostic};
+use devise::ext::TypeExt as _;
 
 use crate::{proc_macro2, syn};
 use crate::proc_macro_ext::StringLit;
-use crate::syn_ext::IdentExt;
+use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};
 
 use crate::attribute::param::Guard;
 use parse::{Route, Attribute, MethodAttribute};
 
 impl Route {
+    pub fn guards(&self) -> impl Iterator<Item = &Guard> {
+        self.param_guards()
+            .chain(self.query_guards())
+            .chain(self.request_guards.iter())
+    }
+
     pub fn param_guards(&self) -> impl Iterator<Item = &Guard> {
         self.path_params.iter().filter_map(|p| p.guard())
     }
@@ -229,6 +236,56 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
     }
 }
 
+fn sentinels_expr(route: &Route) -> TokenStream {
+    let ret_ty = match route.handler.sig.output {
+        syn::ReturnType::Default => None,
+        syn::ReturnType::Type(_, ref ty) => Some(ty.with_stripped_lifetimes())
+    };
+
+    let generic_idents: Vec<_> = route.handler.sig.generics
+        .type_params()
+        .map(|p| &p.ident)
+        .collect();
+
+    // Note: for a given route, we need to emit a valid graph of eligble
+    // sentinels. This means that we don't have broken links, where a child
+    // points to a parent that doesn't exist. The concern is that the
+    // `is_concrete()` filter will cause a break in the graph.
+    //
+    // Here's a proof by cases for why this can't happen:
+    //    1. if `is_concrete()` returns `false` for a (valid) type, it returns
+    //       false for all of its parents. we consider this an axiom; this is
+    //       the point of `is_concrete()`. the type is filtered out, so the
+    //       theorem vacously holds
+    //    2. if `is_concrete()` returns `true`, for a type `T`, it either:
+    //      * returns `false` for the parent. by 1) it will return false for
+    //        _all_ parents of the type, so no node in the graph can consider,
+    //        directly or indirectly, `T` to be a child, and thus there are no
+    //        broken links; the thereom holds
+    //      * returns `true` for the parent, and so the type has a parent, and
+    //      the theorem holds.
+    //    3. these are all the cases. QED.
+    let eligible_types = route.guards()
+        .map(|guard| &guard.ty)
+        .chain(ret_ty.as_ref().into_iter())
+        .flat_map(|ty| ty.unfold())
+        .filter(|ty| ty.is_concrete(&generic_idents))
+        .map(|child| (child.parent, child.ty));
+
+    let sentinel = eligible_types.map(|(parent, ty)| {
+        define_spanned_export!(ty.span() => _sentinel);
+
+        match parent {
+            Some(p) if p.is_concrete(&generic_idents) => {
+                quote_spanned!(ty.span() => #_sentinel::resolve!(#ty, #p))
+            }
+            Some(_) | None => quote_spanned!(ty.span() => #_sentinel::resolve!(#ty)),
+        }
+    });
+
+    quote!(::std::vec![#(#sentinel),*])
+}
+
 fn codegen_route(route: Route) -> Result<TokenStream> {
     use crate::exports::*;
 
@@ -238,6 +295,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let query_guards = query_decls(&route);
     let data_guard = route.data_guard.as_ref().map(data_guard_decl);
 
+    // Extract the sentinels from the route.
+    let sentinels = sentinels_expr(&route);
+
     // Gather info about the function.
     let (vis, handler_fn) = (&route.handler.vis, &route.handler);
     let handler_fn_name = &handler_fn.sig.ident;
@@ -245,7 +305,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let responder_outcome = responder_outcome_expr(&route);
 
     let method = route.attr.method;
-    let path = route.attr.uri.to_string();
+    let uri = route.attr.uri.to_string();
     let rank = Optional(route.attr.rank);
     let format = Optional(route.attr.format.as_ref());
 
@@ -278,10 +338,11 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 #_route::StaticInfo {
                     name: stringify!(#handler_fn_name),
                     method: #method,
-                    path: #path,
+                    uri: #uri,
                     handler: monomorphized_function,
                     format: #format,
                     rank: #rank,
+                    sentinels: #sentinels,
                 }
             }
         }

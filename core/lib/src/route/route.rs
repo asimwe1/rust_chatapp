@@ -6,6 +6,7 @@ use yansi::Paint;
 
 use crate::http::{uri, Method, MediaType};
 use crate::route::{Handler, RouteUri, BoxFuture};
+use crate::sentinel::Sentry;
 
 /// A request handling route.
 ///
@@ -187,6 +188,8 @@ pub struct Route {
     pub rank: isize,
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
+    /// The discovered sentinels.
+    pub(crate) sentinels: Vec<Sentry>,
 }
 
 impl Route {
@@ -247,6 +250,7 @@ impl Route {
         Route {
             name: None,
             format: None,
+            sentinels: Vec::new(),
             handler: Box::new(handler),
             rank, uri, method,
         }
@@ -330,27 +334,33 @@ pub struct StaticInfo {
     pub name: &'static str,
     /// The route's method.
     pub method: Method,
-    /// The route's path, without the base mount point.
-    pub path: &'static str,
+    /// The route's URi, without the base mount point.
+    pub uri: &'static str,
     /// The route's format, if any.
     pub format: Option<MediaType>,
     /// The route's handler, i.e, the annotated function.
     pub handler: for<'r> fn(&'r crate::Request<'_>, crate::Data) -> BoxFuture<'r>,
     /// The route's rank, if any.
     pub rank: Option<isize>,
+    /// Route-derived sentinels, if any.
+    /// This isn't `&'static [SentryInfo]` because `type_name()` isn't `const`.
+    pub sentinels: Vec<Sentry>,
 }
 
 #[doc(hidden)]
 impl From<StaticInfo> for Route {
     fn from(info: StaticInfo) -> Route {
         // This should never panic since `info.path` is statically checked.
-        let mut route = Route::new(info.method, info.path, info.handler);
-        route.format = info.format;
-        route.name = Some(info.name.into());
-        if let Some(rank) = info.rank {
-            route.rank = rank;
-        }
+        let uri = RouteUri::new("/", info.uri);
 
-        route
+        Route {
+            name: Some(info.name.into()),
+            method: info.method,
+            handler: Box::new(info.handler),
+            rank: info.rank.unwrap_or_else(|| uri.default_rank()),
+            format: info.format,
+            sentinels: info.sentinels.into_iter().collect(),
+            uri,
+        }
     }
 }

@@ -1,6 +1,8 @@
 //! Extensions to `syn` types.
 
-use crate::syn::{self, Ident, ext::IdentExt as _};
+use std::ops::Deref;
+
+use crate::syn::{self, Ident, ext::IdentExt as _, visit::Visit};
 use crate::proc_macro2::Span;
 
 pub trait IdentExt {
@@ -21,6 +23,25 @@ pub trait TokenStreamExt {
 pub trait FnArgExt {
     fn typed(&self) -> Option<(&syn::Ident, &syn::Type)>;
     fn wild(&self) -> Option<&syn::PatWild>;
+}
+
+#[derive(Debug)]
+pub struct Child<'a> {
+    pub parent: Option<&'a syn::Type>,
+    pub ty: &'a syn::Type,
+}
+
+impl Deref for Child<'_> {
+    type Target = syn::Type;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ty
+    }
+}
+
+pub trait TypeExt {
+    fn unfold(&self) -> Vec<Child<'_>>;
+    fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
 }
 
 impl IdentExt for syn::Ident {
@@ -79,5 +100,74 @@ impl FnArgExt for syn::FnArg {
             }
             _ => None,
         }
+    }
+}
+
+impl TypeExt for syn::Type {
+    fn unfold(&self) -> Vec<Child<'_>> {
+        #[derive(Default)]
+        struct Visitor<'a> {
+            parents: Vec<&'a syn::Type>,
+            children: Vec<Child<'a>>,
+        }
+
+        impl<'a> Visit<'a> for Visitor<'a> {
+            fn visit_type(&mut self, ty: &'a syn::Type) {
+                self.children.push(Child { parent: self.parents.last().cloned(), ty });
+                self.parents.push(ty);
+                syn::visit::visit_type(self, ty);
+                self.parents.pop();
+            }
+        }
+
+        let mut visitor = Visitor::default();
+        visitor.visit_type(self);
+        visitor.children
+    }
+
+    fn is_concrete(&self, generics: &[&Ident]) -> bool {
+        struct ConcreteVisitor<'i>(bool, &'i [&'i Ident]);
+
+        impl<'a, 'i> Visit<'a> for ConcreteVisitor<'i> {
+            fn visit_type(&mut self, ty: &'a syn::Type) {
+                use syn::Type::*;
+
+                match ty {
+                    Path(t) if self.1.iter().any(|i| t.path.is_ident(*i)) => {
+                        self.0 = false;
+                        return;
+                    }
+                    ImplTrait(_) | Infer(_) => {
+                        self.0 = false;
+                        return;
+                    }
+                    BareFn(_) | Never(_) => {
+                        self.0 = true;
+                        return;
+                    },
+                    _ => syn::visit::visit_type(self, ty),
+                }
+            }
+        }
+
+        let mut visitor = ConcreteVisitor(true, generics);
+        visitor.visit_type(self);
+        visitor.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_type_unfold_is_generic() {
+        use super::{TypeExt, syn};
+
+        let ty: syn::Type = syn::parse_quote!(A<B, C<impl Foo>, Box<dyn Foo>, Option<T>>);
+        let children = ty.unfold();
+        assert_eq!(children.len(), 8);
+
+        let gen_ident = format_ident!("T");
+        let gen = &[&gen_ident];
+        assert_eq!(children.iter().filter(|c| c.ty.is_concrete(gen)).count(), 3);
     }
 }

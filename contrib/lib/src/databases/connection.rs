@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use rocket::{Rocket, Phase};
+use rocket::{Phase, Rocket, Ignite, Sentinel};
 use rocket::fairing::{AdHoc, Fairing};
 use rocket::request::{Request, Outcome, FromRequest};
 use rocket::outcome::IntoOutcome;
@@ -194,5 +194,22 @@ impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }
+    }
+}
+
+impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        use rocket::yansi::Paint;
+
+        if rocket.state::<ConnectionPool<K, C>>().is_none() {
+            let conn = Paint::default(std::any::type_name::<K>()).bold();
+            let fairing = Paint::default(format!("{}::fairing()", conn)).wrap().bold();
+            error!("requesting `{}` DB connection without attaching `{}`.", conn, fairing);
+            info_!("Attach `{}` to use database connection pooling.", fairing);
+            info_!("See the `contrib::database` documentation for more information.");
+            return true;
+        }
+
+        false
     }
 }

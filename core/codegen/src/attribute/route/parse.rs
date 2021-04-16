@@ -145,14 +145,13 @@ impl Route {
                 let value = (ident.clone(), ty.with_stripped_lifetimes());
                 arguments.map.insert(Name::from(ident), value);
             } else {
-                let error = match arg.wild() {
-                    Some(_) => "handler arguments cannot be ignored",
-                    None => "handler arguments must be of the form `ident: Type`"
+                let span = arg.span();
+                let diag = if arg.wild().is_some() {
+                    span.error("handler arguments must be named")
+                        .help("to name an ignored handler argument, use `_name`")
+                } else {
+                    span.error("handler arguments must be of the form `ident: Type`")
                 };
-
-                let diag = arg.span()
-                    .error(error)
-                    .note("handler arguments must be of the form: `ident: Type`");
 
                 diags.push(diag);
             }

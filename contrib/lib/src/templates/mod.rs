@@ -137,7 +137,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 use std::error::Error;
 
-use rocket::{Rocket, Orbit};
+use rocket::{Rocket, Orbit, Ignite, Sentinel};
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
@@ -431,5 +431,20 @@ impl<'r> Responder<'r, 'static> for Template {
         };
 
         Content(content_type, render).respond_to(req)
+    }
+}
+
+impl Sentinel for Template {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        if rocket.state::<ContextManager>().is_none() {
+            let template = rocket::yansi::Paint::default("Template").bold();
+            let fairing = rocket::yansi::Paint::default("Template::fairing()").bold();
+            error!("returning `{}` responder without attaching `{}`.", template, fairing);
+            info_!("To use or query templates, you must attach `{}`.", fairing);
+            info_!("See the `Template` documentation for more information.");
+            return true;
+        }
+
+        false
     }
 }

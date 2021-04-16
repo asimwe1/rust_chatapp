@@ -3,12 +3,12 @@ use std::ops::{Deref, DerefMut};
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use figment::{Figment, Provider};
-use either::Either;
 use yansi::Paint;
+use either::Either;
 use tokio::sync::Notify;
+use figment::{Figment, Provider};
 
-use crate::{Route, Catcher, Config, Shutdown};
+use crate::{Route, Catcher, Config, Shutdown, sentinel};
 use crate::router::Router;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
@@ -431,6 +431,7 @@ impl Rocket<Build> {
     ///     secret key.
     ///   * There are no [`Route#collisions`] or [`Catcher#collisions`]
     ///     collisions.
+    ///   * No [`Sentinel`](crate::Sentinel) triggered an abort.
     ///
     /// If any of these conditions fail to be met, a respective [`Error`] is
     /// returned.
@@ -502,13 +503,19 @@ impl Rocket<Build> {
         self.fairings.pretty_print();
 
         // Ignite the rocket.
-        Ok(Rocket(Igniting {
+        let rocket: Rocket<Ignite> = Rocket(Igniting {
             router, config,
             shutdown: Arc::new(Notify::new()),
             figment: self.0.figment,
             fairings: self.0.fairings,
             state: self.0.state,
-        }))
+        });
+
+        // Query the sentinels, abort if requested.
+        let sentinels = rocket.routes().flat_map(|r| r.sentinels.iter());
+        sentinel::query(sentinels, &rocket).map_err(ErrorKind::SentinelAborts)?;
+
+        Ok(rocket)
     }
 }
 

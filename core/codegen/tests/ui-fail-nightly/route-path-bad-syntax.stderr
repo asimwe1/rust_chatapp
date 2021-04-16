@@ -203,13 +203,13 @@ error: invalid identifier: `test `
    = help: dynamic parameters must be valid identifiers
    = help: did you mean `<test>`?
 
-error: handler arguments cannot be ignored
+error: handler arguments must be named
   --> $DIR/route-path-bad-syntax.rs:89:7
    |
 89 | fn k0(_: usize) {}
    |       ^^^^^^^^
    |
-   = note: handler arguments must be of the form: `ident: Type`
+   = help: to name an ignored handler argument, use `_name`
 
 error: parameters cannot be empty
   --> $DIR/route-path-bad-syntax.rs:93:9

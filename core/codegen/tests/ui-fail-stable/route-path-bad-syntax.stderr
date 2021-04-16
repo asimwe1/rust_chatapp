@@ -168,8 +168,8 @@ error: invalid identifier: `test `
 83 | #[get("/", data = "<test >")]
    |                   ^^^^^^^^^
 
-error: handler arguments cannot be ignored
-  --- note: handler arguments must be of the form: `ident: Type`
+error: handler arguments must be named
+  --- help: to name an ignored handler argument, use `_name`
   --> $DIR/route-path-bad-syntax.rs:89:7
    |
 89 | fn k0(_: usize) {}

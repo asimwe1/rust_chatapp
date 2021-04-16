@@ -118,5 +118,11 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 <#conn>::from_request(__r).await.map(Self)
             }
         }
+
+        impl ::rocket::Sentinel for #guard_type {
+            fn abort(__r: &::rocket::Rocket<::rocket::Ignite>) -> bool {
+                <#conn>::abort(__r)
+            }
+        }
     }.into())
 }
