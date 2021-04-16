@@ -24,8 +24,7 @@ use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 use rocket::form::prelude as form;
 
-use serde::Serialize;
-use serde::de::{Deserialize, DeserializeOwned};
+use serde::{Serialize, Deserialize};
 
 pub use rmp_serde::decode::Error;
 
@@ -194,7 +193,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
 }
 
 #[rocket::async_trait]
-impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for MsgPack<T> {
+impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
         Self::from_data(f.request, f.data).await.map_err(|e| {
             match e {

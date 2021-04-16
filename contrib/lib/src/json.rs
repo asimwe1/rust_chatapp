@@ -24,8 +24,7 @@ use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 use rocket::form::prelude as form;
 
-use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 #[doc(hidden)]
 pub use serde_json::{json_internal, json_internal_vec};
@@ -237,7 +236,7 @@ impl From<JsonError<'_>> for form::Error<'_> {
 }
 
 #[rocket::async_trait]
-impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for Json<T> {
+impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Json<T> {
     fn from_value(field: form::ValueField<'v>) -> Result<Self, form::Errors<'v>> {
         Ok(Self::from_str(field.value)?)
     }
