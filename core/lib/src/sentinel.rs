@@ -243,9 +243,15 @@ impl<T: Sentinel> Sentinel for Option<T> {
     }
 }
 
+// In the next impls, we want to run _both_ sentinels _without_ short
+// circuiting, for the logs. Ideally we could check if these are the same type
+// or not, but `TypeId` only works with `'static`, and adding those bounds to
+// `T` and `E` would reduce the types for which the implementations work, which
+// would mean more types that we miss in type applies. When the type _isn't_ an
+// alias, however, the existence of these implementations is strictly worse.
+
 impl<T: Sentinel, E: Sentinel> Sentinel for Result<T, E> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
-        // We want to run _both_, _without_ short-circuiting, for the logs.
         let left = T::abort(rocket);
         let right = E::abort(rocket);
         left || right
@@ -254,14 +260,14 @@ impl<T: Sentinel, E: Sentinel> Sentinel for Result<T, E> {
 
 impl<T: Sentinel, E: Sentinel> Sentinel for either::Either<T, E> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
-        // We want to run _both_, _without_ short-circuiting, for the logs.
         let left = T::abort(rocket);
         let right = E::abort(rocket);
         left || right
     }
 }
 
-/// A sentinel that never aborts.
+/// A sentinel that never aborts. The `Responder` impl for `Debug` will never be
+/// called, so it's okay to not abort for failing `T: Sentinel`.
 impl<T> Sentinel for crate::response::Debug<T> {
     fn abort(_: &Rocket<Ignite>) -> bool {
         false
