@@ -492,6 +492,16 @@ impl<'r> FromData<'r> for Capped<TempFile<'_>> {
         req: &'r crate::Request<'_>,
         data: crate::Data
     ) -> crate::data::Outcome<Self, Self::Error> {
+        use yansi::Paint;
+
+        let has_form = |ty: &ContentType| ty.is_form_data() || ty.is_form();
+        if req.content_type().map_or(false, has_form) {
+            let (tf, form) = (Paint::white("TempFile<'_>"), Paint::white("Form<TempFile<'_>>"));
+            warn!("Request contains a form that will not be processed.");
+            info_!("Bare `{}` data guard writes raw, unprocessed stream to disk.", tf);
+            info_!("Did you mean to use `{}` instead?", form);
+        }
+
         TempFile::from(req, data, None, req.content_type().cloned()).await
             .into_outcome(Status::BadRequest)
     }

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use std::path::PathBuf;
-use std::fmt::Debug;
 
 use crate::http::uri::{Segments, PathError};
 
@@ -177,7 +176,7 @@ use crate::http::uri::{Segments, PathError};
 /// ```
 pub trait FromParam<'a>: Sized {
     /// The associated error to be returned if parsing/validation fails.
-    type Error: Debug;
+    type Error: std::fmt::Debug;
 
     /// Parses and validates an instance of `Self` from a path parameter string
     /// or returns an `Error` if parsing or validation fails.
@@ -273,7 +272,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 /// the `Utf8Error`.
 pub trait FromSegments<'r>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error: Debug;
+    type Error: std::fmt::Debug;
 
     /// Parses an instance of `Self` from many dynamic path parameter strings or
     /// returns an `Error` if one cannot be parsed.

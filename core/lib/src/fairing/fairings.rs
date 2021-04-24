@@ -1,6 +1,6 @@
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Info, Kind};
-use crate::logger::PaintExt;
+use crate::log::PaintExt;
 
 use yansi::Paint;
 

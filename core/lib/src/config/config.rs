@@ -285,7 +285,7 @@ impl Config {
     }
 
     pub(crate) fn pretty_print(&self, figment: &Figment) {
-        use crate::logger::PaintExt;
+        use crate::log::PaintExt;
 
         launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), figment.profile());
 
@@ -443,7 +443,7 @@ pub fn pretty_print_error(error: figment::Error) {
 
     let mut config = Config::debug_default();
     config.log_level = LogLevel::Debug;
-    crate::logger::init(&config);
+    crate::log::init(&config);
 
     error!("Rocket configuration extraction from provider failed.");
     for e in error {

@@ -113,6 +113,7 @@ impl<'r> Iterator for RawStrParser<'r> {
             }
         };
 
+        trace_!("url-encoded field: {:?}", (name, value));
         let name_val = match (name.url_decode_lossy(), value.url_decode_lossy()) {
             (Borrowed(name), Borrowed(val)) => (name, val),
             (Borrowed(name), Owned(v)) => (name, self.buffer.push_one(v)),
@@ -165,7 +166,7 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
         };
 
         // A field with a content-type is data; one without is "value".
-        trace_!("multipart field: {:?}", field.name());
+        trace_!("multipart field: {:?}", field);
         let content_type = field.content_type().and_then(|m| m.as_ref().parse().ok());
         let field = if let Some(content_type) = content_type {
             let (name, file_name) = match (field.name(), field.file_name()) {

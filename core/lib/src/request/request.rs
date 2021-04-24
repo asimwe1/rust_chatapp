@@ -925,7 +925,10 @@ impl fmt::Display for Request<'_> {
         // Print the requests media type when the route specifies a format.
         if let Some(media_type) = self.format() {
             if !media_type.is_any() {
-                write!(f, " {}", Paint::yellow(media_type))?;
+                write!(f, " {}{}{}",
+                    Paint::yellow(media_type.top()),
+                    Paint::yellow("/"),
+                    Paint::yellow(media_type.sub()))?;
             }
         }
 

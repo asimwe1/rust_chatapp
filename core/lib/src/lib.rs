@@ -101,11 +101,12 @@
 //!
 //! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
 
-#[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
+#[macro_use]
+#[allow(unused_imports)]
+extern crate rocket_codegen;
+
 pub use rocket_codegen::*;
 pub use async_trait::*;
-
-#[macro_use] extern crate log;
 
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
@@ -116,7 +117,7 @@ pub use tokio;
 pub use figment;
 
 #[doc(hidden)]
-#[macro_use] pub mod logger;
+#[macro_use] pub mod log;
 #[macro_use] pub mod outcome;
 #[macro_use] pub mod data;
 #[doc(hidden)] pub mod sentinel;
@@ -153,7 +154,6 @@ mod rocket;
 mod router;
 mod phase;
 
-#[doc(hidden)] pub use log::{info, warn, error, debug};
 #[doc(inline)] pub use crate::response::Response;
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;

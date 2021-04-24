@@ -99,8 +99,8 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
         )*
 
         if !_e.is_empty() {
-            #_log::warn_("query string failed to match declared route");
-            for _err in _e { #_log::warn_(_err); }
+            #_log::warn_!("query string failed to match declared route");
+            for _err in _e { #_log::warn_!("{}", _err); }
             return #Outcome::Forward(#__data);
         }
 
@@ -110,12 +110,21 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
 
 fn request_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() => __req, __data, _request, FromRequest, Outcome);
+    define_spanned_export!(ty.span() =>
+        __req, __data, _request, _log, FromRequest, Outcome
+    );
+
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromRequest>::from_request(#__req).await {
             #Outcome::Success(__v) => __v,
-            #Outcome::Forward(_) => return #Outcome::Forward(#__data),
-            #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
+            #Outcome::Forward(_) => {
+                #_log::warn_!("`{}` request guard is forwarding.", stringify!(#ty));
+                return #Outcome::Forward(#__data);
+            },
+            #Outcome::Failure((__c, _e)) => {
+                #_log::warn_!("`{}` request guard failed: {:?}.", stringify!(#ty), _e);
+                return #Outcome::Failure(__c);
+            }
         };
     }
 }
@@ -129,7 +138,9 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
 
     // Returned when a dynamic parameter fails to parse.
     let parse_error = quote!({
-        #_log::warn_(&format!("Failed to parse '{}': {:?}", #name, __error));
+        #_log::warn_!("`{}: {}` param guard parsed forwarding with error {:?}",
+            #name, stringify!(#ty), __error);
+
         #Outcome::Forward(#__data)
     });
 
@@ -143,8 +154,9 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
                     #_Err(__error) => return #parse_error,
                 },
                 #_None => {
-                    #_log::error("Internal invariant: dynamic parameter not found.");
-                    #_log::error("Please report this error to the Rocket issue tracker.");
+                    #_log::error_!("Internal invariant broken: dyn param not found.");
+                    #_log::error_!("Please report this to the Rocket issue tracker.");
+                    #_log::error_!("https://github.com/SergioBenitez/Rocket/issues");
                     return #Outcome::Forward(#__data);
                 }
             }
@@ -163,13 +175,19 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
 
 fn data_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() => __req, __data, FromData, Outcome);
+    define_spanned_export!(ty.span() => _log, __req, __data, FromData, Outcome);
 
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromData>::from_data(#__req, #__data).await {
             #Outcome::Success(__d) => __d,
-            #Outcome::Forward(__d) => return #Outcome::Forward(__d),
-            #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
+            #Outcome::Forward(__d) => {
+                #_log::warn_!("`{}` data guard is forwarding.", stringify!(#ty));
+                return #Outcome::Forward(__d);
+            }
+            #Outcome::Failure((__c, _e)) => {
+                #_log::warn_!("`{}` data guard failed: {:?}.", stringify!(#ty), _e);
+                return #Outcome::Failure(__c);
+            }
         };
     }
 }

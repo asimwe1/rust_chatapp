@@ -110,6 +110,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// use rocket::data::{self, Data, FromData, ToByteUnit};
 /// use rocket::http::{Status, ContentType};
 ///
+/// #[derive(Debug)]
 /// enum Error {
 ///     TooLarge,
 ///     NoColon,
@@ -181,7 +182,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 #[crate::async_trait]
 pub trait FromData<'r>: Sized {
     /// The associated error to be returned when the guard fails.
-    type Error: Send;
+    type Error: Send + std::fmt::Debug;
 
     /// Asynchronously validates, parses, and converts an instance of `Self`
     /// from the incoming request body data.

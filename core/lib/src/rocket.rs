@@ -16,7 +16,7 @@ use crate::phase::{Stateful, StateRef, State};
 use crate::http::uri::{self, Origin};
 use crate::http::ext::IntoOwned;
 use crate::error::{Error, ErrorKind};
-use crate::logger::PaintExt;
+use crate::log::PaintExt;
 
 /// The application server itself.
 ///
@@ -463,14 +463,14 @@ impl Rocket<Build> {
     pub async fn ignite(mut self) -> Result<Rocket<Ignite>, Error> {
         // We initialize the logger here so that logging from fairings are
         // visible but change the max-log-level when we have a final config.
-        crate::logger::init(&Config::debug_default());
+        crate::log::init(&Config::debug_default());
         self = Fairings::handle_ignite(self).await;
         self.fairings.audit().map_err(|f| ErrorKind::FailedFairings(f.to_vec()))?;
 
         // Extract the configuration; initialize the logger.
         #[allow(unused_mut)]
         let mut config = self.figment.extract::<Config>().map_err(ErrorKind::Config)?;
-        crate::logger::init(&config);
+        crate::log::init(&config);
 
         // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
