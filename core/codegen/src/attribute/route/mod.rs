@@ -335,7 +335,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         /// Rocket code generated proxy structure.
         #vis struct #handler_fn_name {  }
 
-        /// Rocket code generated proxy static conversion implementation.
+        /// Rocket code generated proxy static conversion implementations.
         impl #handler_fn_name {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
@@ -363,7 +363,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     sentinels: #sentinels,
                 }
             }
-            pub fn into(self) -> #Route {
+
+            #[doc(hidden)]
+            pub fn into_route(self) -> #Route {
                 self.into_info().into()
             }
         }

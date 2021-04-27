@@ -43,6 +43,7 @@ fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> 
     status::Custom(status, msg)
 }
 
+#[allow(dead_code)]
 #[get("/unmanaged")]
 fn unmanaged(_u8: rocket::State<'_, u8>, _string: rocket::State<'_, String>) { }
 
