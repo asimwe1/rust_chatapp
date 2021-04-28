@@ -137,7 +137,7 @@ impl TypeExt for syn::Type {
                         self.0 = false;
                         return;
                     }
-                    ImplTrait(_) | Infer(_) => {
+                    ImplTrait(_) | Infer(_) | Macro(_) => {
                         self.0 = false;
                         return;
                     }
