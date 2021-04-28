@@ -13,7 +13,7 @@ fn hello(name: &str, age: i8) -> String {
 
 #[get("/<code>")]
 fn forced_error(code: u16) -> Status {
-    Status::raw(code)
+    Status::new(code)
 }
 
 #[catch(404)]
@@ -39,7 +39,7 @@ fn sergio_error() -> &'static str {
 
 #[catch(default)]
 fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> {
-    let msg = format!("{} - {} ({})", status.code, status.reason, req.uri());
+    let msg = format!("{} ({})", status, req.uri());
     status::Custom(status, msg)
 }
 

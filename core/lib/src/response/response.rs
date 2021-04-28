@@ -106,27 +106,6 @@ impl<'r> Builder<'r> {
         self
     }
 
-    /// Sets the status of the `Response` being built to a custom status
-    /// constructed from the `code` and `reason` phrase.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Response;
-    /// use rocket::http::Status;
-    ///
-    /// let response = Response::build()
-    ///     .raw_status(699, "Alien Encounter")
-    ///     .finalize();
-    ///
-    /// assert_eq!(response.status(), Status::new(699, "Alien Encounter"));
-    /// ```
-    #[inline(always)]
-    pub fn raw_status(&mut self, code: u16, reason: &'static str) -> &mut Builder<'r> {
-        self.response.set_raw_status(code, reason);
-        self
-    }
-
     /// Adds `header` to the `Response`, replacing any header with the same name
     /// that already exists in the response. If multiple headers with
     /// the same name exist, they are all removed, and only the new header and
@@ -542,25 +521,6 @@ impl<'r> Response<'r> {
     #[inline(always)]
     pub fn content_type(&self) -> Option<ContentType> {
         self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
-    }
-
-    /// Sets the status of `self` to a custom `status` with status code `code`
-    /// and reason phrase `reason`. This method should be used sparingly; prefer
-    /// to use [set_status](#method.set_status) instead.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Response;
-    /// use rocket::http::Status;
-    ///
-    /// let mut response = Response::new();
-    /// response.set_raw_status(699, "Tripped a Wire");
-    /// assert_eq!(response.status(), Status::new(699, "Tripped a Wire"));
-    /// ```
-    #[inline(always)]
-    pub fn set_raw_status(&mut self, code: u16, reason: &'static str) {
-        self.status = Some(Status::new(code, reason));
     }
 
     /// Returns an iterator over the cookies in `self` as identified by the

@@ -303,7 +303,7 @@ route_attribute!(options => Method::Options);
 ///
 /// #[catch(default)]
 /// fn default(status: Status, req: &Request) -> String {
-///     format!("{} - {} ({})", status.code, status.reason, req.uri())
+///     format!("{} ({})", status, req.uri())
 /// }
 /// ```
 ///

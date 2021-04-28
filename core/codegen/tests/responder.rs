@@ -53,7 +53,7 @@ async fn responder_foo() {
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(r.status(), Status::raw(105));
+    assert_eq!(r.status().code, 105);
     assert_eq!(r.content_type(), Some(ContentType::JSON));
     assert_eq!(r.body_mut().to_string().await.unwrap(), "goodbye");
 }
