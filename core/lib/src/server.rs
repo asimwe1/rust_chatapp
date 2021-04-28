@@ -147,31 +147,20 @@ impl Rocket<Orbit> {
             })
         };
 
-        match response.body_mut() {
-            None => {
-                hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, 0);
-                send_response(hyp_res, hyper::Body::empty())?;
-            }
-            Some(body) => {
-                if let Some(s) = body.size().await {
-                    hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, s);
-                }
+        let body = response.body_mut();
+        if let Some(n) = body.size().await {
+            hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, n);
+        }
 
-                let chunk_size = match *body {
-                    Body::Chunked(_, chunk_size) => chunk_size as usize,
-                    Body::Sized(_, _) => crate::response::DEFAULT_CHUNK_SIZE,
-                };
+        let max_chunk_size = body.max_chunk_size();
+        let (mut sender, hyp_body) = hyper::Body::channel();
+        send_response(hyp_res, hyp_body)?;
 
-                let (mut sender, hyp_body) = hyper::Body::channel();
-                send_response(hyp_res, hyp_body)?;
-
-                let mut stream = body.as_reader().into_bytes_stream(chunk_size);
-                while let Some(next) = stream.next().await {
-                    sender.send_data(next?).await
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                }
-            }
-        };
+        let mut stream = body.into_bytes_stream(max_chunk_size);
+        while let Some(next) = stream.next().await {
+            sender.send_data(next?).await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        }
 
         Ok(())
     }
