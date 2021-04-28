@@ -339,7 +339,7 @@ impl Config {
                 warn!("found set deprecated profile `{}`", Paint::white(profile));
 
                 if let Some(new_profile) = replacement {
-                    launch_info_!("profile has been by replaced by `{}`", Paint::white(new_profile));
+                    launch_info_!("profile was replaced by `{}`", Paint::white(new_profile));
                 } else {
                     launch_info_!("profile `{}` has no special meaning", profile);
                 }
