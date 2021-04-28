@@ -45,7 +45,6 @@ pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
 pub use self::stream::Stream;
 pub use self::debug::Debug;
-#[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
 pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;
