@@ -102,13 +102,6 @@
 //!
 //! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
 
-#[macro_use]
-#[allow(unused_imports)]
-extern crate rocket_codegen;
-
-pub use rocket_codegen::*;
-pub use async_trait::*;
-
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
 #[doc(hidden)]
@@ -164,6 +157,7 @@ mod phase;
 #[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
 #[doc(inline)] pub use error::Error;
 #[doc(inline)] pub use sentinel::Sentinel;
+#[doc(inline)] pub use rocket_codegen::*;
 pub use crate::rocket::Rocket;
 pub use crate::request::Request;
 pub use crate::shutdown::Shutdown;
@@ -180,6 +174,12 @@ pub fn build() -> Rocket<Build> {
 pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
     Rocket::custom(provider)
 }
+
+/// Retrofits support for `async fn` in trait impls and declarations.
+///
+/// See [`async_trait`](mod@async_trait) for full details.
+#[doc(inline)]
+pub use async_trait::async_trait;
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]

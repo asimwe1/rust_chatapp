@@ -355,6 +355,23 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
 }
 
+/// Retrofits supports for `async fn` in unit tests.
+///
+/// Simply decorate a test `async fn` with `#[async_test]` instead of `#[test]`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[cfg(test)]
+/// mod tests {
+///     #[async_test]
+///     async fn test() {
+///         /* .. */
+///     }
+/// }
+/// ```
+///
+/// The attribute rewrites the function to execute inside of a Rocket-compatible
+/// async runtime.
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::entry::async_test_attribute(args, input))
@@ -1053,12 +1070,14 @@ pub fn uri(input: TokenStream) -> TokenStream {
 
 #[doc(hidden)]
 #[proc_macro]
+/// Internal macro: `rocket_internal_uri!`.
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_internal_macro(input))
 }
 
 #[doc(hidden)]
 #[proc_macro]
+/// Private Rocket internal macro: `internal_guide_tests!`.
 pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
     emit!(bang::guide_tests_internal(input))
 }
