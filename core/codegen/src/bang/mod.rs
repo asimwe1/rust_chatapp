@@ -7,6 +7,7 @@ use crate::syn::spanned::Spanned;
 mod uri;
 mod uri_parsing;
 mod test_guide;
+mod export;
 
 fn struct_maker_vec(
     input: proc_macro::TokenStream,
@@ -63,5 +64,10 @@ pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
 
 pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {
     test_guide::_macro(input)
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+}
+
+pub fn export_internal(input: proc_macro::TokenStream) -> TokenStream {
+    export::_macro(input)
         .unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

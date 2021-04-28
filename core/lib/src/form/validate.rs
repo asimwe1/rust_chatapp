@@ -88,51 +88,75 @@ use rocket_http::ContentType;
 
 use crate::{data::TempFile, form::{Result, Error}};
 
-/// A helper macro for custom validation error messages.
-///
-/// The macro works identically to [`std::format!`] except it does not allocate
-/// when the expression is a string literal. It returns a function (a closure)
-/// that takes one parameter and evaluates to an `Err` of validation [`Error`]
-/// with the formatted message. While useful in other contexts, it is designed
-/// to be chained to validation results via `.or_else()` and `.and_then()`.
-///
-/// Note that the macro never needs to be imported when used with a `FromForm`
-/// derive; all items in [`form::validate`](crate::form::validate) are already
-/// in scope.
-///
-/// # Example
-///
-/// ```rust
-/// use rocket::form::FromForm;
-///
-/// #[derive(FromForm)]
-/// struct Person<'r> {
-///     #[field(validate = len(3..).or_else(msg!("that's a short name...")))]
-///     name: &'r str,
-///     #[field(validate = contains('f').and_then(msg!("please, no `f`!")))]
-///     non_f_name: &'r str,
-/// }
-/// ```
-///
-/// See the [top-level docs](crate::form::validate) for more examples.
-#[macro_export]
-macro_rules! msg {
-    ($e:expr) => (
-        |_| {
-            Err($crate::form::Errors::from($crate::form::Error::validation($e)))
-                as $crate::form::Result<()>
-        }
-    );
-    ($($arg:tt)*) => (
-        |_| {
-            Err($crate::form::Errors::from($crate::form::Error::validation(format!($($arg)*))))
-                as $crate::form::Result<()>
-        }
-    );
+crate::export! {
+    /// A helper macro for custom validation error messages.
+    ///
+    /// The macro works similar to [`std::format!`]. It generates a form
+    /// [`Validation`] error message. While useful in other contexts, it is
+    /// designed to be chained to validation results in derived `FromForm`
+    /// `#[field]` attributes via `.or_else()` and `.and_then()`.
+    ///
+    /// [`Validation`]: crate::form::error::ErrorKind::Validation
+    /// [`form::validate`]: crate::form::validate
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::FromForm;
+    ///
+    /// #[derive(FromForm)]
+    /// struct Person<'r> {
+    ///     #[field(validate = len(3..).or_else(msg!("that's a short name...")))]
+    ///     name: &'r str,
+    ///     #[field(validate = contains('f').and_then(msg!("please, no `f`!")))]
+    ///     non_f_name: &'r str,
+    /// }
+    /// ```
+    ///
+    /// _**Note:** this macro _never_ needs to be imported when used with a
+    /// `FromForm` derive; all items in [`form::validate`] are automatically in
+    /// scope in `FromForm` derive attributes._
+    ///
+    /// See the [top-level docs](crate::form::validate) for more examples.
+    ///
+    /// # Syntax
+    ///
+    /// The macro has the following "signatures":
+    ///
+    /// ## Variant 1
+    ///
+    /// ```rust
+    /// # use rocket::form;
+    /// # trait Expr {}
+    /// fn msg<'a, T, P, E: Expr>(expr: E) -> impl Fn(P) -> form::Result<'a, T>
+    /// # { |_| unimplemented!() }
+    /// ```
+    ///
+    /// Takes any expression and returns a function that takes any argument type
+    /// and evaluates to a [`form::Result`](crate::form::Result) with an `Ok` of
+    /// any type. The `Result` is guaranteed to be an `Err` of kind
+    /// [`Validation`] with `expr` as the message.
+    ///
+    /// ## Variant 2
+    ///
+    /// ```
+    /// # use rocket::form;
+    /// # trait Format {}
+    /// # trait Args {}
+    /// fn msg<'a, T, P, A: Args>(fmt: &str, args: A) -> impl Fn(P) -> form::Result<'a, T>
+    /// # { |_| unimplemented!() }
+    /// ```
+    ///
+    /// Invokes the first variant as `msg!(format!(fmt, args))`.
+    macro_rules! msg {
+        ($e:expr) => (|_| {
+            Err($crate::form::Errors::from(
+                    $crate::form::Error::validation($e)
+            )) as $crate::form::Result<()>
+        });
+        ($($arg:tt)*) => ($crate::form::validate::msg!(format!($($arg)*)));
+    }
 }
-
-#[doc(inline)]
-pub use msg;
 
 /// Equality validator: succeeds exactly when `a` == `b`, using [`PartialEq`].
 ///

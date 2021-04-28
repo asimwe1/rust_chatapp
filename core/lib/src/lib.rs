@@ -4,6 +4,7 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
+#![cfg_attr(nightly, feature(decl_macro))]
 
 #![warn(rust_2018_idioms)]
 

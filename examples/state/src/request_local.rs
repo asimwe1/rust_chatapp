@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rocket::State;
-use rocket::outcome::Outcome;
+use rocket::outcome::{Outcome, try_outcome};
 use rocket::request::{self, FromRequest, Request};
 use rocket::fairing::AdHoc;
 

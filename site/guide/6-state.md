@@ -122,6 +122,7 @@ implementation. To do so, simply invoke `State<T>` as a guard using the
 
 use rocket::State;
 use rocket::request::{self, Request, FromRequest};
+use rocket::outcome::try_outcome;
 # use std::sync::atomic::{AtomicUsize, Ordering};
 
 # struct T;
