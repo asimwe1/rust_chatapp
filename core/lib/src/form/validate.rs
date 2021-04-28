@@ -197,6 +197,43 @@ pub fn eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
     Ok(())
 }
 
+/// Debug equality validator: like [`eq()`] but mentions `b` in the error
+/// message.
+///
+/// The is identical to [`eq()`] except that `b` must be `Debug` and the error
+/// message is as follows, where `$b` is the [`Debug`] representation of `b`:
+///
+/// ```text
+/// value must be $b
+/// ```
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::form::{FromForm, FromFormField};
+///
+/// #[derive(PartialEq, Debug, Clone, Copy, FromFormField)]
+/// enum Pet { Cat, Dog }
+///
+/// #[derive(FromForm)]
+/// struct Foo {
+///     number: usize,
+///     #[field(validate = dbg_eq(self.number))]
+///     confirm_num: usize,
+///     #[field(validate = dbg_eq(Pet::Dog))]
+///     best_pet: Pet,
+/// }
+/// ```
+pub fn dbg_eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
+    where A: PartialEq<B>, B: Debug
+{
+    if a != &b {
+        Err(Error::validation(format!("value must be {:?}", b)))?
+    }
+
+    Ok(())
+}
+
 /// Negative equality validator: succeeds exactly when `a` != `b`, using
 /// [`PartialEq`].
 ///
@@ -462,7 +499,7 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     Ok(())
 }
 
-/// Verbose contains validator: like `contains` but mentions `item` in the
+/// Debug contains validator: like [`contains()`] but mentions `item` in the
 /// error message.
 ///
 /// The is identical to [`contains()`] except that `item` must be `Debug + Copy`
@@ -484,12 +521,12 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// #[derive(FromForm)]
 /// struct Foo {
 ///     best_pet: Pet,
-///     #[field(validate = verbose_contains(Pet::Dog))]
-///     #[field(validate = verbose_contains(&self.best_pet))]
+///     #[field(validate = dbg_contains(Pet::Dog))]
+///     #[field(validate = dbg_contains(&self.best_pet))]
 ///     pets: Vec<Pet>,
 /// }
 /// ```
-pub fn verbose_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
+pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Debug + Copy
 {
     if !value.contains(item) {
@@ -539,7 +576,7 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     Ok(())
 }
 
-/// Verbose omits validator: like `omits` but mentions `item` in the error
+/// Debug omits validator: like [`omits()`] but mentions `item` in the error
 /// message.
 ///
 /// The is identical to [`omits()`] except that `item` must be `Debug + Copy`
@@ -560,15 +597,15 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {
-///     #[field(validate = verbose_omits(Pet::Cat))]
+///     #[field(validate = dbg_omits(Pet::Cat))]
 ///     pets: Vec<Pet>,
-///     #[field(validate = verbose_omits('@'))]
+///     #[field(validate = dbg_omits('@'))]
 ///     not_email: &'r str,
-///     #[field(validate = verbose_omits("@gmail.com"))]
+///     #[field(validate = dbg_omits("@gmail.com"))]
 ///     non_gmail_email: &'r str,
 /// }
 /// ```
-pub fn verbose_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
+pub fn dbg_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Copy + Debug
 {
     if value.contains(item) {
