@@ -104,8 +104,8 @@
 
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
-#[doc(hidden)]
-pub use yansi;
+#[doc(hidden)] pub use yansi;
+#[doc(hidden)] pub use async_stream;
 pub use futures;
 pub use tokio;
 pub use figment;
@@ -139,6 +139,8 @@ pub mod http {
     pub use crate::cookies::*;
 }
 
+/// TODO: We need a futures mod or something.
+mod trip_wire;
 mod shutdown;
 mod server;
 mod ext;
@@ -183,7 +185,7 @@ pub use async_trait::async_trait;
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
     tokio::runtime::Builder::new_multi_thread()
         .thread_name("rocket-test-worker-thread")
         .worker_threads(1)

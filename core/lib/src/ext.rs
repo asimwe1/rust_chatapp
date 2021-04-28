@@ -1,11 +1,14 @@
-use std::io;
-use std::pin::Pin;
+use std::{io, time::Duration};
 use std::task::{Poll, Context};
+use std::pin::Pin;
 
 use bytes::BytesMut;
-use tokio::io::{AsyncRead, ReadBuf};
 use pin_project_lite::pin_project;
-use futures::{ready, stream::Stream};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tokio::time::{sleep, Sleep};
+
+use futures::stream::Stream;
+use futures::future::{Future, Fuse, FutureExt};
 
 use crate::http::hyper::Bytes;
 
@@ -115,7 +118,7 @@ impl<T: AsyncRead, U: AsyncRead> AsyncRead for Chain<T, U> {
 
         if !*me.done_first {
             let init_rem = buf.remaining();
-            ready!(me.first.poll_read(cx, buf))?;
+            futures::ready!(me.first.poll_read(cx, buf))?;
             if buf.remaining() == init_rem {
                 *me.done_first = true;
             } else {
@@ -123,5 +126,140 @@ impl<T: AsyncRead, U: AsyncRead> AsyncRead for Chain<T, U> {
             }
         }
         me.second.poll_read(cx, buf)
+    }
+}
+
+pin_project! {
+    /// I/O that can be cancelled when a future `F` resolves.
+    #[must_use = "futures do nothing unless polled"]
+    pub struct CancellableIo<F, I> {
+        #[pin]
+        io: I,
+        #[pin]
+        trigger: Fuse<F>,
+        sleep: Option<Pin<Box<Sleep>>>,
+        grace: Duration,
+    }
+}
+
+impl<F: Future, I> CancellableIo<F, I> {
+    pub fn new(trigger: F, io: I, grace: Duration) -> Self {
+        CancellableIo {
+            trigger: trigger.fuse(),
+            sleep: None,
+            io, grace,
+        }
+    }
+
+    fn poll_trigger(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> io::Result<()> {
+        let me = self.project();
+
+        if me.trigger.poll(cx).is_ready() {
+            *me.sleep = Some(Box::pin(sleep(*me.grace)));
+        }
+
+        if let Some(sleep) = me.sleep {
+            if sleep.as_mut().poll(cx).is_ready() {
+                return Err(io::Error::new(io::ErrorKind::TimedOut, "..."));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl<F: Future, I: AsyncRead> AsyncRead for CancellableIo<F, I> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.as_mut().poll_trigger(cx)?;
+        self.as_mut().project().io.poll_read(cx, buf)
+    }
+}
+
+impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        self.as_mut().poll_trigger(cx)?;
+        self.as_mut().project().io.poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<()>> {
+        self.as_mut().poll_trigger(cx)?;
+        self.as_mut().project().io.poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<Result<(), io::Error>> {
+        self.as_mut().poll_trigger(cx)?;
+        self.as_mut().project().io.poll_shutdown(cx)
+    }
+
+    fn poll_write_vectored(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        bufs: &[io::IoSlice<'_>],
+    ) -> Poll<Result<usize, io::Error>> {
+        self.as_mut().poll_trigger(cx)?;
+        self.as_mut().project().io.poll_write_vectored(cx, bufs)
+    }
+
+    fn is_write_vectored(&self) -> bool {
+        self.io.is_write_vectored()
+    }
+}
+
+use crate::http::private::{Listener, Connection};
+
+impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
+    fn remote_addr(&self) -> Option<std::net::SocketAddr> {
+        self.io.remote_addr()
+    }
+}
+
+pin_project! {
+    pub struct CancellableListener<F, L> {
+        pub trigger: F,
+        #[pin]
+        pub listener: L,
+        pub grace: Duration,
+    }
+}
+
+impl<F, L> CancellableListener<F, L> {
+    pub fn new(trigger: F, listener: L, grace: u64) -> Self {
+        CancellableListener { trigger, listener, grace: Duration::from_secs(grace) }
+    }
+}
+
+impl<L: Listener, F: Future + Clone> Listener for CancellableListener<F, L> {
+    type Connection = CancellableIo<F, L::Connection>;
+
+    fn local_addr(&self) -> Option<std::net::SocketAddr> {
+        self.listener.local_addr()
+    }
+
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>> {
+        self.as_mut().project().listener
+            .poll_accept(cx)
+            .map(|res| res.map(|conn| {
+                CancellableIo::new(self.trigger.clone(), conn, self.grace)
+            }))
     }
 }
