@@ -2,9 +2,12 @@ use std::collections::HashMap;
 
 use rocket::Request;
 use rocket::response::Redirect;
+use rocket::serde::Serialize;
+
 use rocket_contrib::templates::{Template, tera::Tera};
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
 struct TemplateContext<'r> {
     title: &'r str,
     name: Option<&'r str>,

@@ -1,9 +1,13 @@
 use rocket::Request;
 use rocket::response::Redirect;
+use rocket::serde::Serialize;
+
 use rocket_contrib::templates::{Template, handlebars};
+
 use self::handlebars::{Handlebars, JsonRender};
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
 struct TemplateContext<'r> {
     title: &'r str,
     name: Option<&'r str>,

@@ -59,8 +59,8 @@ This directory contains projects showcasing Rocket's features.
     derived `Responder`.
 
   * **[`serialization`](./serialization)** - Showcases JSON and MessagePack
-    (de)serialization support in `contrib` by implementing a CRUD-like message
-    API in JSON and a simply read/echo API in MessagePack.
+    (de)serialization support by implementing a CRUD-like message API in JSON
+    and a simply read/echo API in MessagePack.
 
   * **[`state`](./state)** - Illustrates the use of request-local state and
     managed state. Uses request-local state to cache "expensive" per-request

@@ -16,9 +16,7 @@
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [json*](type@json) - JSON (de)serialization
 //! * [serve*](serve) - Static File Serving
-//! * [msgpack](msgpack) - MessagePack (de)serialization
 //! * [handlebars_templates](templates) - Handlebars Templating
 //! * [tera_templates](templates) - Tera Templating
 //! * [uuid](uuid) - UUID (de)serialization
@@ -28,13 +26,14 @@
 //! The recommend way to include features from this crate via Rocket in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
 //! `Cargo.toml` file, setting `default-features` to false, and specifying
-//! features manually. For example, to use the JSON module, you would add:
+//! features manually. For example, to use the `tera_templates` module, you
+//! would add:
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
 //! version = "0.5.0-dev"
 //! default-features = false
-//! features = ["json"]
+//! features = ["tera_templates"]
 //! ```
 //!
 //! This crate is expected to grow with time, bringing in outside crates to be
@@ -42,9 +41,7 @@
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket;
 
-#[cfg(feature="json")] #[macro_use] pub mod json;
 #[cfg(feature="serve")] pub mod serve;
-#[cfg(feature="msgpack")] pub mod msgpack;
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;

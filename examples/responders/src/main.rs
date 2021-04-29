@@ -91,7 +91,7 @@ use rocket::response::content;
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use
-// `rocket_contrib::json::Json` instead!
+// `rocket::serde::json::Json` instead!
 
 // In a `GET` request and all other non-payload supporting request types, the
 // preferred media type in the Accept header is matched against the `format` in
@@ -128,7 +128,7 @@ use rocket::response::content::{Json, MsgPack};
 use rocket::http::uncased::AsUncased;
 
 // NOTE: In a real application, we'd use `Json` and `MsgPack` from
-// `rocket_contrib`, which perform automatic serialization of responses and
+// `rocket::serde`, which perform automatic serialization of responses and
 // automatically set the `Content-Type`.
 #[get("/content/<kind>")]
 fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u8]>> {

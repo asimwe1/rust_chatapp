@@ -1,5 +1,24 @@
 use rocket::local::blocking::Client;
 use rocket::http::{Status, ContentType, Accept};
+use rocket::serde::{Serialize, Deserialize};
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Message {
+    id: Option<usize>,
+    message: String
+}
+
+impl Message {
+    fn new(message: impl Into<String>) -> Self {
+        Message { message: message.into(), id: None }
+    }
+
+    fn with_id(mut self, id: usize) -> Self {
+        self.id = Some(id);
+        self
+    }
+}
 
 #[test]
 fn json_bad_get_put() {
@@ -32,8 +51,7 @@ fn json_bad_get_put() {
 
     // Try to put a message for an ID that doesn't exist.
     let res = client.put("/json/80")
-        .header(ContentType::JSON)
-        .body(r#"{ "message": "Bye bye, world!" }"#)
+        .json(&Message::new("hi"))
         .dispatch();
 
     assert_eq!(res.status(), Status::NotFound);
@@ -46,40 +64,30 @@ fn json_post_get_put_get() {
     // Create/read/update/read a few messages.
     for id in 0..10 {
         let uri = format!("/json/{}", id);
-        let message = format!("Hello, JSON {}!", id);
 
         // Check that a message with doesn't exist.
         let res = client.get(&uri).header(ContentType::JSON).dispatch();
         assert_eq!(res.status(), Status::NotFound);
 
         // Add a new message. This should be ID 0.
-        let res = client.post("/json")
-            .header(ContentType::JSON)
-            .body(format!(r#"{{ "message": "{}" }}"#, message))
-            .dispatch();
-
+        let message = Message::new(format!("Hello, JSON {}!", id));
+        let res = client.post("/json").json(&message).dispatch();
         assert_eq!(res.status(), Status::Ok);
 
         // Check that the message exists with the correct contents.
         let res = client.get(&uri).header(Accept::JSON).dispatch();
         assert_eq!(res.status(), Status::Ok);
-        let body = res.into_string().unwrap();
-        assert!(body.contains(&message));
+        assert_eq!(res.into_json::<Message>().unwrap(), message.with_id(id));
 
         // Change the message contents.
-        let res = client.put(&uri)
-            .header(ContentType::JSON)
-            .body(r#"{ "message": "Bye bye, world!" }"#)
-            .dispatch();
-
+        let message = Message::new("Bye bye, world!");
+        let res = client.put(&uri).json(&message).dispatch();
         assert_eq!(res.status(), Status::Ok);
 
         // Check that the message exists with the updated contents.
         let res = client.get(&uri).header(Accept::JSON).dispatch();
         assert_eq!(res.status(), Status::Ok);
-        let body = res.into_string().unwrap();
-        assert!(!body.contains(&message));
-        assert!(body.contains("Bye bye, world!"));
+        assert_eq!(res.into_json::<Message>().unwrap(), message.with_id(id));
     }
 }
 
@@ -91,8 +99,8 @@ fn msgpack_get() {
     assert_eq!(res.content_type(), Some(ContentType::MsgPack));
 
     // Check that the message is `[1, "Hello, world!"]`
-    assert_eq!(&res.into_bytes().unwrap(), &[146, 1, 173, 72, 101, 108, 108,
-        111, 44, 32, 119, 111, 114, 108, 100, 33]);
+    let msg = Message::new("Hello, world!").with_id(1);
+    assert_eq!(res.into_msgpack::<Message>().unwrap(), msg);
 }
 
 #[test]
@@ -100,11 +108,9 @@ fn msgpack_post() {
     // Dispatch request with a message of `[2, "Goodbye, world!"]`.
     let client = Client::tracked(super::rocket()).unwrap();
     let res = client.post("/msgpack")
-        .header(ContentType::MsgPack)
-        .body(&[146, 2, 175, 71, 111, 111, 100, 98, 121, 101, 44, 32, 119, 111,
-            114, 108, 100, 33])
+        .msgpack(&Message::new("Goodbye, world!").with_id(2))
         .dispatch();
 
     assert_eq!(res.status(), Status::Ok);
-    assert_eq!(res.into_string(), Some("Goodbye, world!".into()));
+    assert_eq!(res.into_string().unwrap(), "Goodbye, world!");
 }

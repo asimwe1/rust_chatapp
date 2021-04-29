@@ -9,8 +9,8 @@ publish = false
 rocket = { path = "../../core/lib", features = ["secrets"] }
 
 [dev-dependencies]
-rocket = { path = "../../core/lib", features = ["secrets"] }
-rocket_contrib = { path = "../../contrib/lib", features = ["json", "tera_templates", "diesel_sqlite_pool"] }
+rocket = { path = "../../core/lib", features = ["secrets", "json"] }
+rocket_contrib = { path = "../../contrib/lib", features = ["tera_templates", "diesel_sqlite_pool"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }

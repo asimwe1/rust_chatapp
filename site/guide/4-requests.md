@@ -612,18 +612,14 @@ Any type that implements [`FromData`] is also known as _a data guard_.
 
 ### JSON
 
-The [`Json<T>`](@api/rocket_contrib/json/struct.Json.html) type from
-[`rocket_contrib`] is a data guard that parses the deserialzies body data as
-JSON. The only condition is that the generic type `T` implements the
-`Deserialize` trait from [Serde](https://github.com/serde-rs/json).
+The [`Json<T>`](@api/rocket/serde/json/struct.Json.html) guard deserialzies body
+data as JSON. The only condition is that the generic type `T` implements the
+`Deserialize` trait from [`serde`](https://serde.rs).
 
 ```rust
 # #[macro_use] extern crate rocket;
-# extern crate rocket_contrib;
-# fn main() {}
 
-use serde::Deserialize;
-use rocket_contrib::json::Json;
+use rocket::serde::{Deserialize, json::Json};
 
 #[derive(Deserialize)]
 struct Task<'r> {

@@ -20,9 +20,7 @@ databases = [
 ]
 
 # User-facing features.
-default = ["json", "serve"]
-json = ["serde", "serde_json", "tokio/io-util"]
-msgpack = ["serde", "rmp-serde", "tokio/io-util"]
+default = ["serve"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
@@ -50,7 +48,6 @@ log = "0.4"
 # Serialization and templating dependencies.
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.26", optional = true }
-rmp-serde = { version = "0.15.0", optional = true }
 
 # Templating dependencies.
 handlebars = { version = "3.0", optional = true }

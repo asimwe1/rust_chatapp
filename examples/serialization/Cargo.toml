@@ -5,11 +5,6 @@ workspace = "../"
 edition = "2018"
 publish = false
 
-[dependencies]
-rocket = { path = "../../core/lib" }
-serde = "1"
-
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
+[dependencies.rocket]
+path = "../../core/lib"
 features = ["json", "msgpack"]

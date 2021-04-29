@@ -22,8 +22,15 @@ all-features = true
 default = []
 tls = ["rocket_http/tls"]
 secrets = ["rocket_http/private-cookies"]
+json = ["serde_json", "tokio/io-util"]
+msgpack = ["rmp-serde", "tokio/io-util"]
 
 [dependencies]
+# Serialization dependencies.
+serde_json = { version = "1.0.26", optional = true }
+rmp-serde = { version = "0.15.0", optional = true }
+
+# Non-optional, core dependencies from here on out.
 futures = "0.3.0"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }

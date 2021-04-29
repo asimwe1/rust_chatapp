@@ -51,8 +51,9 @@
 //!     // Using the preferred `blocking` API.
 //!     #[test]
 //!     fn test_hello_world_blocking() {
-//!         // Construct a client to use for dispatching requests.
 //!         use rocket::local::blocking::Client;
+//!
+//!         // Construct a client to use for dispatching requests.
 //!         let client = Client::tracked(super::rocket())
 //!             .expect("valid `Rocket`");
 //!
@@ -64,8 +65,9 @@
 //!     // Using the `asynchronous` API.
 //!     #[rocket::async_test]
 //!     async fn test_hello_world_async() {
-//!         // Construct a client to use for dispatching requests.
 //!         use rocket::local::asynchronous::Client;
+//!
+//!         // Construct a client to use for dispatching requests.
 //!         let client = Client::tracked(super::rocket()).await
 //!             .expect("valid `Rocket`");
 //!

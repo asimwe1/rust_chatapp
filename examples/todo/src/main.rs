@@ -11,6 +11,7 @@ use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
+use rocket::serde::Serialize;
 use rocket::form::Form;
 
 use rocket_contrib::templates::Template;
@@ -21,7 +22,8 @@ use crate::task::{Task, Todo};
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Context {
     flash: Option<(String, String)>,
     tasks: Vec<Task>

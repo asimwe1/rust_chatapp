@@ -63,7 +63,7 @@ fn json() -> content::Json<&'static str> {
 }
 ```
 
-! warning: This is _not_ the same as the [`Json`] in [`rocket_contrib`]!
+! warning: This is _not_ the same as the [`Json`] in [`serde`]!
 
 [`Accepted`]: @api/rocket/response/status/struct.Accepted.html
 [`content::Json`]: @api/rocket/response/content/struct.Json.html
@@ -346,21 +346,18 @@ how to detect and handle graceful shutdown requests.
 
 ### JSON
 
-The [`Json`] responder in [`rocket_contrib`] allows you to easily respond with
-well-formed JSON data: simply return a value of type `Json<T>` where `T` is the
-type of a structure to serialize into JSON. The type `T` must implement the
-[`Serialize`] trait from [`serde`], which can be automatically derived.
+The [`Json`] responder in allows you to easily respond with well-formed JSON
+data: simply return a value of type `Json<T>` where `T` is the type of a
+structure to serialize into JSON. The type `T` must implement the [`Serialize`]
+trait from [`serde`], which can be automatically derived.
 
 As an example, to respond with the JSON value of a `Task` structure, we might
 write:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# #[macro_use] extern crate rocket_contrib;
-# fn main() {}
 
-use serde::Serialize;
-use rocket_contrib::json::Json;
+use rocket::serde::{Serialize, json::Json};
 
 #[derive(Serialize)]
 struct Task { /* .. */ }
@@ -377,9 +374,9 @@ fails, a **500 - Internal Server Error** is returned.
 
 The [serialization example] provides further illustration.
 
-[`Json`]: @api/rocket_contrib/json/struct.Json.html
+[`Json`]: @api/rocket/serde/json/struct.Json.html
 [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
-[`serde`]: https://docs.serde.rs/serde/
+[`serde`]: https://serde.rs
 [serialization example]: @example/serialization
 
 ## Templates

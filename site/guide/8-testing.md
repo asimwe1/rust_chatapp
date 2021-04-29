@@ -69,6 +69,8 @@ a few below:
   * [`headers`]: returns a map of all of the headers in the response.
   * [`into_string`]: reads the body data into a `String`.
   * [`into_bytes`]: reads the body data into a `Vec<u8>`.
+  * [`into_json`]: deserializes the body data on-the-fly as JSON.
+  * [`into_msgpack`]: deserializes the body data on-the-fly as MessagePack.
 
 [`LocalResponse`]: @api/rocket/local/blocking/struct.LocalResponse.html
 [`status`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.status
@@ -76,6 +78,8 @@ a few below:
 [`headers`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.headers
 [`into_string`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_string
 [`into_bytes`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
+[`into_json`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_json
+[`into_msgpack`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_msgpack
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
@@ -301,24 +305,26 @@ note: emitting Rocket code generation debug output
    | ^^^^^^^^^^^^^^^^
    |
    = note:
-    impl From<world> for rocket::StaticRouteInfo {
-        fn from(_: world) -> rocket::StaticRouteInfo {
+    impl world {
+        fn into_info(self) -> rocket::StaticRouteInfo {
             fn monomorphized_function<'_b>(
                 __req: &'_b rocket::request::Request<'_>,
                 __data: rocket::data::Data,
-            ) -> rocket::handler::HandlerFuture<'_b> {
+            ) -> ::rocket::route::BoxFuture<'_b> {
                 ::std::boxed::Box::pin(async move {
                     let ___responder = world();
-                    rocket::handler::Outcome::from(__req, ___responder)
+                    ::rocket::handler::Outcome::from(__req, ___responder)
                 })
             }
-            rocket::StaticRouteInfo {
+
+            ::rocket::StaticRouteInfo {
                 name: "world",
                 method: ::rocket::http::Method::Get,
                 path: "/world",
                 handler: monomorphized_function,
                 format: ::std::option::Option::None,
                 rank: ::std::option::Option::None,
+                sentinels: sentinels![&'static str],
             }
         }
     }

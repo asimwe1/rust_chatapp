@@ -27,14 +27,6 @@
 //! [quickstart]: https://rocket.rs/master/guide/quickstart
 //! [getting started]: https://rocket.rs/master/guide/getting-started
 //!
-//! ## Libraries
-//!
-//! Rocket's functionality is split into two crates:
-//!
-//!   1. Core - This core library. Needed by every Rocket application.
-//!   2. [Contrib](../rocket_contrib) - Provides useful functionality for many
-//!      Rocket applications. Completely optional.
-//!
 //! ## Usage
 //!
 //! Depend on `rocket` in `Rocket.toml`:
@@ -68,39 +60,44 @@
 //!
 //! ## Features
 //!
-//! There are two optional, disabled-by-default features:
+//! To avoid unused dependencies, Rocket _feaure-gates_ functionalities, all of
+//! which are disabled-by-default:
 //!
-//!   * **secrets:** Enables support for [private cookies].
-//!   * **tls:** Enables support for [TLS].
+//! | Feature   | Description                                             |
+//! |-----------|---------------------------------------------------------|
+//! | `secrets` | Support for authenticated, encrypted [private cookies]. |
+//! | `tls`     | Support for [TLS] encrypted connections.                |
+//! | `json`    | Support for [JSON (de)serialization].                   |
+//! | `msgpack` | Support for [MessagePack (de)serialization].            |
 //!
-//! The features can be enabled in `Rocket.toml`:
+//! Features can be selectively enabled in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0-dev", features = ["secrets", "tls"] }
+//! rocket = { version = "0.5.0-dev", features = ["secrets", "tls", "json"] }
 //! ```
 //!
+//! [JSON (de)serialization]: crate::serde::json
+//! [MessagePack (de)serialization]: crate::serde::msgpack
 //! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //!
 //! ## Configuration
 //!
-//! By default, Rocket applications are configured via a `Rocket.toml` file
-//! and/or `ROCKET_{PARAM}` environment variables. For more information on how
-//! to configure Rocket, including how to completely customize configuration
-//! sources, see the [configuration section] of the guide as well as the
-//! [`config`] module documentation.
-//!
-//! [configuration section]: https://rocket.rs/master/guide/configuration/
+//! Rocket offers a rich, extensible configuration system built on [Figment]. By
+//! default, Rocket applications are configured via a `Rocket.toml` file
+//! and/or `ROCKET_{PARAM}` environment variables, but applications may
+//! configure their own sources. See the [configuration guide] for full details.
 //!
 //! ## Testing
 //!
 //! The [`local`] module contains structures that facilitate unit and
 //! integration testing of a Rocket application. The top-level [`local`] module
-//! documentation and the [testing chapter of the guide] include detailed
-//! examples.
+//! documentation and the [testing guide] include detailed examples.
 //!
-//! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
+//! [configuration guide]: https://rocket.rs/master/guide/configuration/
+//! [testing guide]: https://rocket.rs/master/guide/testing/#testing
+//! [Figment]: https://docs.rs/figment
 
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
@@ -124,6 +121,7 @@ pub mod fairing;
 pub mod error;
 pub mod catcher;
 pub mod route;
+pub mod serde;
 
 // Reexport of HTTP everything.
 pub mod http {

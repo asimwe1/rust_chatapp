@@ -1,35 +1,44 @@
 //! Automatic MessagePack (de)serialization support.
-
 //!
-//! See the [`MsgPack`](crate::msgpack::MsgPack) type for further details.
+//! See [`MsgPack`](crate::serde::msgpack::MsgPack) for further details.
 //!
 //! # Enabling
 //!
-//! This module is only available when the `msgpack` feature is enabled. Enable
-//! it in `Cargo.toml` as follows:
+//! This module is only available when the `json` feature is enabled. Enable it
+//! in `Cargo.toml` as follows:
 //!
 //! ```toml
-//! [dependencies.rocket_contrib]
+//! [dependencies.rocket]
 //! version = "0.5.0-dev"
-//! default-features = false
 //! features = ["msgpack"]
 //! ```
+//!
+//! # Testing
+//!
+//! The [`LocalRequest`] and [`LocalResponse`] types provide [`msgpack()`] and
+//! [`into_msgpack()`] methods to create a request with serialized MessagePack
+//! and deserialize a response as MessagePack, respectively.
+//!
+//! [`LocalRequest`]: crate::local::blocking::LocalRequest
+//! [`LocalResponse`]: crate::local::blocking::LocalResponse
+//! [`msgpack()`]: crate::local::blocking::LocalRequest::msgpack()
+//! [`into_msgpack()`]: crate::local::blocking::LocalResponse::into_msgpack()
 
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use rocket::request::{Request, local_cache};
-use rocket::data::{ByteUnit, Data, FromData, Outcome};
-use rocket::response::{self, Responder, content};
-use rocket::http::Status;
-use rocket::form::prelude as form;
+use crate::request::{Request, local_cache};
+use crate::data::{Limits, Data, FromData, Outcome};
+use crate::response::{self, Responder, content};
+use crate::http::Status;
+use crate::form::prelude as form;
 
 use serde::{Serialize, Deserialize};
 
+#[doc(inline)]
 pub use rmp_serde::decode::Error;
 
-/// The `MsgPack` data guard and responder: easily consume and respond with
-/// MessagePack.
+/// The MessagePack guard: easily consume and return MessagePack.
 ///
 /// ## Receiving MessagePack
 ///
@@ -43,9 +52,8 @@ pub use rmp_serde::decode::Error;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # extern crate rocket_contrib;
 /// # type User = usize;
-/// use rocket_contrib::msgpack::MsgPack;
+/// use rocket::serde::msgpack::MsgPack;
 ///
 /// #[post("/users", format = "msgpack", data = "<user>")]
 /// fn new_user(user: MsgPack<User>) {
@@ -65,10 +73,9 @@ pub use rmp_serde::decode::Error;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # extern crate rocket_contrib;
 /// # type Metadata = usize;
 /// use rocket::form::{Form, FromForm};
-/// use rocket_contrib::msgpack::MsgPack;
+/// use rocket::serde::msgpack::MsgPack;
 ///
 /// #[derive(FromForm)]
 /// struct User<'r> {
@@ -82,27 +89,7 @@ pub use rmp_serde::decode::Error;
 /// }
 /// ```
 ///
-/// ## Sending MessagePack
-///
-/// If you're responding with MessagePack data, return a `MsgPack<T>` type,
-/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
-/// response is set to `application/msgpack` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # extern crate rocket_contrib;
-/// # type User = usize;
-/// use rocket_contrib::msgpack::MsgPack;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> MsgPack<User> {
-///     let user_from_id = User::from(id);
-///     /* ... */
-///     MsgPack(user_from_id)
-/// }
-/// ```
-///
-/// ## Incoming Data Limits
+/// ### Incoming Data Limits
 ///
 /// The default size limit for incoming MessagePack data is 1MiB. Setting a
 /// limit protects your application from denial of service (DOS) attacks and
@@ -115,6 +102,25 @@ pub use rmp_serde::decode::Error;
 /// [global.limits]
 /// msgpack = 5242880
 /// ```
+///
+/// ## Sending MessagePack
+///
+/// If you're responding with MessagePack data, return a `MsgPack<T>` type,
+/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
+/// response is set to `application/msgpack` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::msgpack::MsgPack;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> MsgPack<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     MsgPack(user_from_id)
+/// }
+/// ```
 #[derive(Debug)]
 pub struct MsgPack<T>(pub T);
 
@@ -124,7 +130,7 @@ impl<T> MsgPack<T> {
     /// # Example
     ///
     /// ```rust
-    /// # use rocket_contrib::msgpack::MsgPack;
+    /// # use rocket::serde::msgpack::MsgPack;
     /// let string = "Hello".to_string();
     /// let my_msgpack = MsgPack(string);
     /// assert_eq!(my_msgpack.into_inner(), "Hello".to_string());
@@ -135,16 +141,14 @@ impl<T> MsgPack<T> {
     }
 }
 
-const DEFAULT_LIMIT: ByteUnit = ByteUnit::Mebibyte(1);
-
 impl<'r, T: Deserialize<'r>> MsgPack<T> {
     fn from_bytes(buf: &'r [u8]) -> Result<Self, Error> {
         rmp_serde::from_slice(buf).map(MsgPack)
     }
 
     async fn from_data(req: &'r Request<'_>, data: Data) -> Result<Self, Error> {
-        let size_limit = req.limits().get("msgpack").unwrap_or(DEFAULT_LIMIT);
-        let bytes = match data.open(size_limit).into_bytes().await {
+        let limit = req.limits().get("msgpack").unwrap_or(Limits::MESSAGE_PACK);
+        let bytes = match data.open(limit).into_bytes().await {
             Ok(buf) if buf.is_complete() => buf.into_inner(),
             Ok(_) => {
                 let eof = io::ErrorKind::UnexpectedEof;
@@ -156,7 +160,7 @@ impl<'r, T: Deserialize<'r>> MsgPack<T> {
         Self::from_bytes(local_cache!(req, bytes))
     }
 }
-#[rocket::async_trait]
+#[crate::async_trait]
 impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
     type Error = Error;
 
@@ -192,7 +196,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
     }
 }
 
-#[rocket::async_trait]
+#[crate::async_trait]
 impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
         Self::from_data(f.request, f.data).await.map_err(|e| {

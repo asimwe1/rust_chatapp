@@ -64,8 +64,12 @@ use crate::http::uncased::Uncased;
 /// | `file/$ext`       | _N/A_   | [`TempFile`] | file form field with extension `$ext` |
 /// | `string`          | 8KiB    | [`String`]   | data guard or data form field         |
 /// | `bytes`           | 8KiB    | [`Vec<u8>`]  | data guard                            |
+/// | `json`            | 1MiB    | [`Json`]     | JSON data and form payloads           |
+/// | `msgpack`         | 1MiB    | [`MsgPack`]  | MessagePack data and form payloads    |
 ///
 /// [`TempFile`]: crate::data::TempFile
+/// [`Json`]: crate::serde::json::Json
+/// [`MsgPack`]: crate::serde::msgpack::MsgPack
 ///
 /// # Usage
 ///
@@ -78,7 +82,7 @@ use crate::http::uncased::Uncased;
 /// let limits = Limits::default()
 ///     .limit("form", 64.kibibytes())
 ///     .limit("file/pdf", 3.mebibytes())
-///     .limit("json", 1.mebibytes());
+///     .limit("json", 2.mebibytes());
 /// ```
 ///
 /// The [`Limits::default()`](#impl-Default) method populates the `Limits`
@@ -134,6 +138,8 @@ impl Default for Limits {
             .limit("file", Limits::FILE)
             .limit("string", Limits::STRING)
             .limit("bytes", Limits::BYTES)
+            .limit("json", Limits::JSON)
+            .limit("msgpack", Limits::MESSAGE_PACK)
     }
 }
 
@@ -152,6 +158,12 @@ impl Limits {
 
     /// Default limit for bytes.
     pub const BYTES: ByteUnit = ByteUnit::Kibibyte(8);
+
+    /// Default limit for JSON payloads.
+    pub const JSON: ByteUnit = ByteUnit::Mebibyte(1);
+
+    /// Default limit for MessagePack payloads.
+    pub const MESSAGE_PACK: ByteUnit = ByteUnit::Mebibyte(1);
 
     /// Construct a new `Limits` structure with no limits set.
     ///
@@ -181,11 +193,12 @@ impl Limits {
     ///
     /// let limits = Limits::default();
     /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
-    /// assert_eq!(limits.get("json"), None);
-    ///
-    /// let limits = limits.limit("json", 1.mebibytes());
-    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
     /// assert_eq!(limits.get("json"), Some(1.mebibytes()));
+    /// assert_eq!(limits.get("cat"), None);
+    ///
+    /// let limits = limits.limit("cat", 1.mebibytes());
+    /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
+    /// assert_eq!(limits.get("cat"), Some(1.mebibytes()));
     ///
     /// let limits = limits.limit("json", 64.mebibytes());
     /// assert_eq!(limits.get("json"), Some(64.mebibytes()));
@@ -209,12 +222,12 @@ impl Limits {
     /// use rocket::data::{Limits, ToByteUnit};
     ///
     /// let limits = Limits::default()
-    ///     .limit("json", 1.mebibytes())
+    ///     .limit("json", 2.mebibytes())
     ///     .limit("file/jpeg", 4.mebibytes())
     ///     .limit("file/jpeg/special", 8.mebibytes());
     ///
     /// assert_eq!(limits.get("form"), Some(32.kibibytes()));
-    /// assert_eq!(limits.get("json"), Some(1.mebibytes()));
+    /// assert_eq!(limits.get("json"), Some(2.mebibytes()));
     /// assert_eq!(limits.get("data-form"), Some(Limits::DATA_FORM));
     ///
     /// assert_eq!(limits.get("file"), Some(1.mebibytes()));
@@ -223,7 +236,7 @@ impl Limits {
     /// assert_eq!(limits.get("file/jpeg/inner"), Some(4.mebibytes()));
     /// assert_eq!(limits.get("file/jpeg/special"), Some(8.mebibytes()));
     ///
-    /// assert!(limits.get("msgpack").is_none());
+    /// assert!(limits.get("cats").is_none());
     /// ```
     pub fn get<S: AsRef<str>>(&self, name: S) -> Option<ByteUnit> {
         let mut name = name.as_ref();

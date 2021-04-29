@@ -60,8 +60,6 @@ function check_style() {
 
 function test_contrib() {
   FEATURES=(
-    json
-    msgpack
     tera_templates
     handlebars_templates
     serve
@@ -92,6 +90,8 @@ function test_core() {
   FEATURES=(
     secrets
     tls
+    json
+    msgpack
   )
 
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
