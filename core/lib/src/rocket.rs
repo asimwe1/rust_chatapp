@@ -54,7 +54,8 @@ use crate::log::PaintExt;
 /// To launch an instance of `Rocket`, it _must_ progress through all three
 /// phases. To progress into the ignite or launch phases, a tokio `async`
 /// runtime is required. The [`#[main]`](crate::main) attribute initializes a
-/// Rocket-specific tokio runtime and runs attributed async code inside of it:
+/// Rocket-specific tokio runtime and runs the attributed `async fn` inside of
+/// it:
 ///
 /// ```rust,no_run
 /// #[rocket::main]

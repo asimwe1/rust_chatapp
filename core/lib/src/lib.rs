@@ -179,7 +179,30 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
 
 /// Retrofits support for `async fn` in trait impls and declarations.
 ///
-/// See [`async_trait`](mod@async_trait) for full details.
+/// Any trait declaration or trait `impl` decorated with `#[async_trait]` is
+/// retrofitted with support for `async fn`s:
+///
+/// ```rust
+/// # use rocket::*;
+/// #[async_trait]
+/// trait MyAsyncTrait {
+///     async fn do_async_work();
+/// }
+///
+/// #[async_trait]
+/// impl MyAsyncTrait for () {
+///     async fn do_async_work() { /* .. */ }
+/// }
+/// ```
+///
+/// All `impl`s for a trait declared with `#[async_trait]` must themselves be
+/// decorated with `#[async_trait]`. Many of Rocket's traits, such as
+/// [`FromRequest`](crate::request::FromRequest) and
+/// [`Fairing`](crate::fairing::Fairing) are `async`. As such, implementations
+/// of said traits must be decorated with `#[async_trait]`. See the individual
+/// trait docs for trait-specific details.
+///
+/// For more details on `#[async_trait]`, see [`async_trait`](mod@async_trait).
 #[doc(inline)]
 pub use async_trait::async_trait;
 
