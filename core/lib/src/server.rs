@@ -408,6 +408,7 @@ impl Rocket<Orbit> {
         let shutdown = self.shutdown();
         let external_shutdown = self.config.shutdown.collective_signal();
         let grace = self.config.shutdown.grace as u64;
+        let mercy = self.config.shutdown.mercy as u64;
 
         let rocket = Arc::new(self);
         let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
@@ -421,7 +422,7 @@ impl Rocket<Orbit> {
         };
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
-        let listener = CancellableListener::new(shutdown.clone(), listener, grace);
+        let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
         let server = hyper::Server::builder(Incoming::new(listener))
             .http1_keepalive(http1_keepalive)
             .http2_keep_alive_interval(http2_keep_alive)

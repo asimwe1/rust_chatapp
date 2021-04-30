@@ -129,6 +129,20 @@ impl<T: AsyncRead, U: AsyncRead> AsyncRead for Chain<T, U> {
     }
 }
 
+enum State {
+    /// I/O has not been cancelled. Proceed as normal.
+    Active,
+    /// I/O has been cancelled. See if we can finish before the timer expires.
+    Grace(Pin<Box<Sleep>>),
+    /// Grace period elapsed. Shutdown the connection, waiting for the timer
+    /// until we force close.
+    Mercy(Pin<Box<Sleep>>),
+    /// We failed to shutdown and are force-closing the connection.
+    Terminated,
+    /// We successfuly shutdown the connection.
+    Inactive,
+}
+
 pin_project! {
     /// I/O that can be cancelled when a future `F` resolves.
     #[must_use = "futures do nothing unless polled"]
@@ -137,48 +151,109 @@ pin_project! {
         io: I,
         #[pin]
         trigger: Fuse<F>,
-        sleep: Option<Pin<Box<Sleep>>>,
+        state: State,
         grace: Duration,
+        mercy: Duration,
     }
 }
 
-impl<F: Future, I> CancellableIo<F, I> {
-    pub fn new(trigger: F, io: I, grace: Duration) -> Self {
+impl<F: Future, I: AsyncWrite> CancellableIo<F, I> {
+    pub fn new(trigger: F, io: I, grace: Duration, mercy: Duration) -> Self {
         CancellableIo {
+            io, grace, mercy,
             trigger: trigger.fuse(),
-            sleep: None,
-            io, grace,
+            state: State::Active
         }
     }
 
-    fn poll_trigger(
+    /// Returns `Ok(true)` if connection processing should continue.
+    fn poll_trigger_then<T>(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
-    ) -> io::Result<()> {
-        let me = self.project();
+        cx: &mut Context<'_>,
+        io: impl FnOnce(Pin<&mut I>, &mut Context<'_>) -> Poll<io::Result<T>>,
+    ) -> Poll<io::Result<T>> {
+        let mut me = self.project();
 
-        if me.trigger.poll(cx).is_ready() {
-            *me.sleep = Some(Box::pin(sleep(*me.grace)));
-        }
+        // CORRECTNESS: _EVERY_ branch must reset `state`! If `state` is
+        // unchanged in a branch, that branch _must_ `break`! No `return`!
+        let mut state = std::mem::replace(me.state, State::Active);
+        let result = loop {
+            match state {
+                State::Active => {
+                    if me.trigger.as_mut().poll(cx).is_ready() {
+                        state = State::Grace(Box::pin(sleep(*me.grace)));
+                    } else {
+                        state = State::Active;
+                        break io(me.io, cx);
+                    }
+                }
+                State::Grace(mut sleep) => {
+                    if sleep.as_mut().poll(cx).is_ready() {
+                        if let Some(deadline) = sleep.deadline().checked_add(*me.mercy) {
+                            sleep.as_mut().reset(deadline);
+                            state = State::Mercy(sleep);
+                        } else {
+                            state = State::Terminated;
+                        }
+                    } else {
+                        state = State::Grace(sleep);
+                        break io(me.io, cx);
+                    }
+                },
+                State::Mercy(mut sleep) => {
+                    if sleep.as_mut().poll(cx).is_ready() {
+                        state = State::Terminated;
+                        continue;
+                    }
 
-        if let Some(sleep) = me.sleep {
-            if sleep.as_mut().poll(cx).is_ready() {
-                return Err(io::Error::new(io::ErrorKind::TimedOut, "..."));
+                    match me.io.as_mut().poll_shutdown(cx) {
+                        Poll::Ready(Err(e)) => {
+                            state = State::Terminated;
+                            break Poll::Ready(Err(e));
+                        }
+                        Poll::Ready(Ok(())) => {
+                            state = State::Inactive;
+                            break Poll::Ready(Err(gone()));
+                        }
+                        Poll::Pending => {
+                            state = State::Mercy(sleep);
+                            break Poll::Pending;
+                        }
+                    }
+                },
+                State::Terminated => {
+                    // Just in case, as a last ditch effort. Ignore pending.
+                    state = State::Terminated;
+                    let _ = me.io.as_mut().poll_shutdown(cx);
+                    break Poll::Ready(Err(time_out()));
+                },
+                State::Inactive => {
+                    state = State::Inactive;
+                    break Poll::Ready(Err(gone()));
+                }
             }
-        }
+        };
 
-        Ok(())
+        *me.state = state;
+        result
     }
 }
 
-impl<F: Future, I: AsyncRead> AsyncRead for CancellableIo<F, I> {
+fn time_out() -> io::Error {
+    io::Error::new(io::ErrorKind::TimedOut, "Shutdown grace timed out")
+}
+
+fn gone() -> io::Error {
+    io::Error::new(io::ErrorKind::BrokenPipe, "IO driver has terminated")
+}
+
+impl<F: Future, I: AsyncRead + AsyncWrite> AsyncRead for CancellableIo<F, I> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        self.as_mut().poll_trigger(cx)?;
-        self.as_mut().project().io.poll_read(cx, buf)
+        self.as_mut().poll_trigger_then(cx, |io, cx| io.poll_read(cx, buf))
     }
 }
 
@@ -187,34 +262,30 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<Result<usize, io::Error>> {
-        self.as_mut().poll_trigger(cx)?;
-        self.as_mut().project().io.poll_write(cx, buf)
+    ) -> Poll<io::Result<usize>> {
+        self.as_mut().poll_trigger_then(cx, |io, cx| io.poll_write(cx, buf))
     }
 
     fn poll_flush(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>
     ) -> Poll<io::Result<()>> {
-        self.as_mut().poll_trigger(cx)?;
-        self.as_mut().project().io.poll_flush(cx)
+        self.as_mut().poll_trigger_then(cx, |io, cx| io.poll_flush(cx))
     }
 
     fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>
-    ) -> Poll<Result<(), io::Error>> {
-        self.as_mut().poll_trigger(cx)?;
-        self.as_mut().project().io.poll_shutdown(cx)
+    ) -> Poll<io::Result<()>> {
+        self.as_mut().poll_trigger_then(cx, |io, cx| io.poll_shutdown(cx))
     }
 
     fn poll_write_vectored(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         bufs: &[io::IoSlice<'_>],
-    ) -> Poll<Result<usize, io::Error>> {
-        self.as_mut().poll_trigger(cx)?;
-        self.as_mut().project().io.poll_write_vectored(cx, bufs)
+    ) -> Poll<io::Result<usize>> {
+        self.as_mut().poll_trigger_then(cx, |io, cx| io.poll_write_vectored(cx, bufs))
     }
 
     fn is_write_vectored(&self) -> bool {
@@ -236,12 +307,14 @@ pin_project! {
         #[pin]
         pub listener: L,
         pub grace: Duration,
+        pub mercy: Duration,
     }
 }
 
 impl<F, L> CancellableListener<F, L> {
-    pub fn new(trigger: F, listener: L, grace: u64) -> Self {
-        CancellableListener { trigger, listener, grace: Duration::from_secs(grace) }
+    pub fn new(trigger: F, listener: L, grace: u64, mercy: u64) -> Self {
+        let (grace, mercy) = (Duration::from_secs(grace), Duration::from_secs(mercy));
+        CancellableListener { trigger, listener, grace, mercy }
     }
 }
 
@@ -259,7 +332,7 @@ impl<L: Listener, F: Future + Clone> Listener for CancellableListener<F, L> {
         self.as_mut().project().listener
             .poll_accept(cx)
             .map(|res| res.map(|conn| {
-                CancellableIo::new(self.trigger.clone(), conn, self.grace)
+                CancellableIo::new(self.trigger.clone(), conn, self.grace, self.mercy)
             }))
     }
 }

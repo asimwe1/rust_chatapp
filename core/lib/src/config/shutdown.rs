@@ -67,28 +67,48 @@ impl fmt::Display for Sig {
 
 /// Graceful shutdown configuration.
 ///
+/// # Summary
+///
 /// This structure configures when and how graceful shutdown occurs. The `ctrlc`
-/// and `signals` properties control _when_ and the `grace` property controls
-/// _how_.
+/// and `signals` properties control _when_ and the `grace` and `mercy`
+/// properties control _how_.
+///
+/// When a shutdown is triggered by an externally or internally initiated
+/// [`Shutdown::notify()`], Rocket allows application I/O to make progress for
+/// at most `grace` seconds before initiating connection-level shutdown.
+/// Connection shutdown forcibly terminates _application_ I/O, but connections
+/// are allowed an additional `mercy` seconds to shutdown before being
+/// forcefully terminated. This implies that a _cooperating_ and active remote
+/// client maintaining an open connection can stall shutdown for at most `grace`
+/// seconds, while an _uncooperative_ remote client can stall shutdown for at
+/// most `grace + mercy` seconds.
 ///
 /// # Triggers
 ///
-/// _All_ graceful shutdowns are initiated via
-/// [`Shutdown::notify()`](crate::Shutdown::notify()). Rocket can be configured
-/// to trigger shutdown automatically on certain conditions, specified via the
-/// `ctrlc` and `signals` properties of this structure. More specifically, if
-/// `ctrlc` is `true` (the default), `ctrl-c` (`SIGINT`) initiates a server
-/// shutdown, and on Unix, `signals` specifies a list of IPC signals that
-/// trigger a shutdown (`["term"]` by default).
+/// _All_ graceful shutdowns are initiated via [`Shutdown::notify()`]. Rocket
+/// can be configured to call [`Shutdown::notify()`] automatically on certain
+/// conditions, specified via the `ctrlc` and `signals` properties of this
+/// structure. More specifically, if `ctrlc` is `true` (the default), `ctrl-c`
+/// (`SIGINT`) initiates a server shutdown, and on Unix, `signals` specifies a
+/// list of IPC signals that trigger a shutdown (`["term"]` by default).
+///
+/// [`Shutdown::notify()`]: crate::Shutdown::notify()
 ///
 /// # Grace Period
 ///
 /// Once a shutdown is triggered, Rocket stops accepting new connections and
-/// waits at most `grace` seconds before force-closing all outstanding I/O.
+/// waits at most `grace` seconds before initiating connection shutdown.
 /// Applications can `await` the [`Shutdown`](crate::Shutdown) future to detect
-/// a shutdown and cancel any server-initiated I/O, such, as from [infinite
+/// a shutdown and cancel any server-initiated I/O, such as from [infinite
 /// responders](crate::response::stream#graceful-shutdown), to avoid abrupt I/O
 /// cancellation.
+///
+/// # Mercy Period
+///
+/// After the grace period has elapsed, Rocket initiates connection shutdown,
+/// allowing connection-level I/O termination such as TLS's `close_notify` to
+/// proceed nominally. Rocket waits at most `mercy` seconds for connections to
+/// shutdown before forcefully terminating all connections.
 ///
 /// # Example
 ///
@@ -108,12 +128,14 @@ impl fmt::Display for Sig {
 /// ctrlc = false
 /// signals = ["term", "hup"]
 /// grace = 10
+/// mercy = 5
 /// # "#).nested();
 ///
 /// // The config parses as follows:
 /// # let config = Config::from(Figment::from(Config::debug_default()).merge(toml));
 /// assert_eq!(config.shutdown.ctrlc, false);
 /// assert_eq!(config.shutdown.grace, 10);
+/// assert_eq!(config.shutdown.mercy, 5);
 ///
 /// # #[cfg(unix)] {
 /// use rocket::config::Sig;
@@ -144,13 +166,15 @@ impl fmt::Display for Sig {
 ///             set.insert(Sig::Hup);
 ///             set
 ///         },
-///         grace: 10
+///         grace: 10,
+///         mercy: 5,
 ///     },
 ///     ..Config::default()
 /// };
 ///
 /// assert_eq!(config.shutdown.ctrlc, false);
 /// assert_eq!(config.shutdown.grace, 10);
+/// assert_eq!(config.shutdown.mercy, 5);
 ///
 /// #[cfg(unix)] {
 ///     assert_eq!(config.shutdown.signals.len(), 2);
@@ -172,11 +196,16 @@ pub struct Shutdown {
     #[cfg(unix)]
     #[cfg_attr(nightly, doc(cfg(unix)))]
     pub signals: HashSet<Sig>,
-    /// The shutdown grace period: number of seconds to continue to try to
-    /// finish outstanding I/O for before forcibly terminating it.
+    /// The grace period: number of seconds to continue to try to finish
+    /// outstanding _server_ I/O for before forcibly terminating it.
     ///
-    /// **default: `5`**
+    /// **default: `2`**
     pub grace: u32,
+    /// The mercy period: number of seconds to continue to try to finish
+    /// outstanding _connection_ I/O for before forcibly terminating it.
+    ///
+    /// **default: `3`**
+    pub mercy: u32,
 }
 
 impl fmt::Display for Shutdown {
@@ -192,7 +221,7 @@ impl fmt::Display for Shutdown {
             write!(f, "], ")?;
         }
 
-        write!(f, "grace = {}s", self.grace)?;
+        write!(f, "grace = {}s, mercy = {}s", self.grace, self.mercy)?;
         Ok(())
     }
 }
@@ -203,7 +232,8 @@ impl Default for Shutdown {
             ctrlc: true,
             #[cfg(unix)]
             signals: { let mut set = HashSet::new(); set.insert(Sig::Term); set },
-            grace: 5,
+            grace: 2,
+            mercy: 3,
         }
     }
 }
