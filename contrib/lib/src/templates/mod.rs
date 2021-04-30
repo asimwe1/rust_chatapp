@@ -165,6 +165,10 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
 /// Responder that renders a dynamic template.
 ///
+/// `Template` serves as a _proxy_ type for rendering a template and _does not_
+/// contain the rendered template itself. The template is lazily rendered, at
+/// response time. To render a template greedily, use [`Template::show()`].
+///
 /// # Usage
 ///
 /// To use, add the `handlebars_templates` feature, the `tera_templates`
