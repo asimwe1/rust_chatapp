@@ -45,7 +45,7 @@ fn default_catcher(status: Status, req: &Request<'_>) -> status::Custom<String> 
 
 #[allow(dead_code)]
 #[get("/unmanaged")]
-fn unmanaged(_u8: rocket::State<'_, u8>, _string: rocket::State<'_, String>) { }
+fn unmanaged(_u8: &rocket::State<u8>, _string: &rocket::State<String>) { }
 
 fn rocket() -> Rocket<Build> {
     rocket::build()

@@ -30,7 +30,7 @@ use crate::{Rocket, Ignite};
 /// # use rocket::*;
 /// # type Response = ();
 /// #[get("/<id>")]
-/// fn index(id: usize, state: State<String>) -> Response {
+/// fn index(id: usize, state: &State<String>) -> Response {
 ///     /* ... */
 /// }
 ///
@@ -63,7 +63,7 @@ use crate::{Rocket, Ignite};
 /// # use rocket::*;
 /// # type Response = ();
 /// # #[get("/<id>")]
-/// # fn index(id: usize, state: State<String>) -> Response {
+/// # fn index(id: usize, state: &State<String>) -> Response {
 /// #     /* ... */
 /// # }
 /// #
@@ -92,19 +92,21 @@ use crate::{Rocket, Ignite};
 /// # type Foo = ();
 /// # type Bar = ();
 /// #[get("/")]
-/// fn f(guard: Option<State<'_, String>>) -> Either<Foo, Inner<Bar>> {
+/// fn f(guard: Option<&State<String>>) -> Either<Foo, Inner<Bar>> {
 ///     unimplemented!()
 /// }
 /// ```
 ///
 /// The directly eligible sentinel types, guard and responders, are:
 ///
-///   * `Option<State<'_, String>>`
+///   * `Option<&State<String>>`
 ///   * `Either<Foo, INner<Bar>>`
 ///
 /// In addition, all embedded types are _also_ eligble. These are:
 ///
-///   * `State<'_, String>`
+///   * `&State<String>`
+///   * `State<String>`
+///   * `String`
 ///   * `Foo`
 ///   * `Inner<Bar>`
 ///   * `Bar`
@@ -116,15 +118,17 @@ use crate::{Rocket, Ignite};
 /// breadth-first order, is queried:
 ///
 /// ```text
-///   Option<State<'_, String>>            Either<Foo, Inner<Bar>>
-///             |                                /         \
-///      State<'_, String>                     Foo     Inner<Bar>
-///                                                        |
-///                                                       Bar
+///   Option<&State<String>>           Either<Foo, Inner<Bar>>
+///            |                              /         \
+///      &State<String>                      Foo     Inner<Bar>
+///            |                                        |
+///       State<String>                                 Bar
+///            |
+///          String
 /// ```
 ///
 /// Neither `Option` nor `Either` are sentinels, so they won't be queried. In
-/// the next level, `State` is a `Sentinel`, so it _is_ queried. If `Foo` is a
+/// the next level, `&State` is a `Sentinel`, so it _is_ queried. If `Foo` is a
 /// sentinel, it is queried as well. If `Inner` is a sentinel, it is queried,
 /// and traversal stops without considering `Bar`. If `Inner` is _not_ a
 /// `Sentinel`, `Bar` is considered and queried if it is a sentinel.
@@ -178,10 +182,10 @@ use crate::{Rocket, Ignite};
 /// ## Aliases
 ///
 /// Embedded discovery of sentinels is syntactic in nature: an embedded sentinel
-/// is only discovered if its named in the type. As such, sentinels made opaque
-/// by a type alias will fail to be considered. In the example below, only
-/// `Result<Foo, Bar>` will be considered, while the embedded `Foo` and `Bar`
-/// will not.
+/// is only discovered if its named in the type. As such, embedded sentinels
+/// made opaque by a type alias will fail to be considered. In the example
+/// below, only `Result<Foo, Bar>` will be considered, while the embedded `Foo`
+/// and `Bar` will not.
 ///
 /// ```rust
 /// # use rocket::get;

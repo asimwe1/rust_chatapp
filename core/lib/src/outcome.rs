@@ -666,7 +666,7 @@ crate::export! {
     ///
     ///     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
     ///         // Attempt to fetch the guard, passing through any error or forward.
-    ///         let atomics = try_outcome!(req.guard::<State<'_, Atomics>>().await);
+    ///         let atomics = try_outcome!(req.guard::<&State<Atomics>>().await);
     ///         atomics.uncached.fetch_add(1, Ordering::Relaxed);
     ///         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
     ///

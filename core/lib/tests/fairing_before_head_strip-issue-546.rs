@@ -19,7 +19,6 @@ mod fairing_before_head_strip {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::io::Cursor;
 
-    use rocket::State;
     use rocket::fairing::AdHoc;
     use rocket::local::blocking::Client;
     use rocket::http::{Method, Status};
@@ -62,7 +61,7 @@ mod fairing_before_head_strip {
                     assert_eq!(req.method(), Method::Head);
 
                     // This should be called exactly once.
-                    let c = req.guard::<State<Counter>>().await.unwrap();
+                    let c = req.rocket().state::<Counter>().unwrap();
                     assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
                 })
             }))

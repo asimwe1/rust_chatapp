@@ -366,13 +366,13 @@ impl Rocket<Build> {
     /// struct MyString(String);
     ///
     /// #[get("/int")]
-    /// fn int(state: State<'_, MyInt>) -> String {
+    /// fn int(state: &State<MyInt>) -> String {
     ///     format!("The stateful int is: {}", state.0)
     /// }
     ///
     /// #[get("/string")]
-    /// fn string<'r>(state: State<'r, MyString>) -> &'r str {
-    ///     &state.inner().0
+    /// fn string(state: &State<MyString>) -> &str {
+    ///     &state.0
     /// }
     ///
     /// #[launch]
