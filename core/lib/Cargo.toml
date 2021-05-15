@@ -44,6 +44,7 @@ pin-project-lite = "0.2"
 indexmap = { version = "1.0", features = ["serde-1"] }
 tempfile = "3"
 async-trait = "0.1.43"
+multer = { version = "2", features = ["tokio-io"] }
 
 [dependencies.async-stream]
 git = "https://github.com/SergioBenitez/async-stream.git"
@@ -61,11 +62,6 @@ path = "../codegen"
 version = "0.5.0-dev"
 path = "../http"
 features = ["serde"]
-
-[dependencies.multer]
-git = "https://github.com/rousan/multer-rs.git"
-rev = "7e4f0c5f"
-features = ["tokio-io"]
 
 [dependencies.tokio]
 version = "1.0"

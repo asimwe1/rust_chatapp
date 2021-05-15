@@ -21,7 +21,7 @@ pub struct Buffer {
 pub struct MultipartParser<'r, 'i> {
     request: &'r Request<'i>,
     buffer: &'r Buffer,
-    source: Multipart,
+    source: Multipart<'static>,
     done: bool,
 }
 
