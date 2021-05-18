@@ -1,118 +1,8 @@
-use std::error::Error;
-
 use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
+use crate::templates::context::{Callback, ContextManager};
 
 use rocket::{Rocket, Build, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
-
-pub(crate) use self::context::ContextManager;
-
-type Callback = Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>>+ Send + Sync + 'static>;
-
-#[cfg(not(debug_assertions))]
-mod context {
-    use std::ops::Deref;
-    use crate::templates::Context;
-
-    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
-    /// additionally provides a method to reload the context at runtime.
-    pub(crate) struct ContextManager(Context);
-
-    impl ContextManager {
-        pub fn new(ctxt: Context) -> ContextManager {
-            ContextManager(ctxt)
-        }
-
-        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
-            &self.0
-        }
-
-        pub fn is_reloading(&self) -> bool {
-            false
-        }
-    }
-}
-
-#[cfg(debug_assertions)]
-mod context {
-    use std::ops::{Deref, DerefMut};
-    use std::sync::{RwLock, Mutex};
-    use std::sync::mpsc::{channel, Receiver};
-
-    use notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
-
-    use super::{Callback, Context};
-
-    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
-    /// additionally provides a method to reload the context at runtime.
-    pub(crate) struct ContextManager {
-        /// The current template context, inside an RwLock so it can be updated.
-        context: RwLock<Context>,
-        /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
-    }
-
-    impl ContextManager {
-        pub fn new(ctxt: Context) -> ContextManager {
-            let (tx, rx) = channel();
-            let watcher = raw_watcher(tx).and_then(|mut watcher| {
-                watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
-                Ok(watcher)
-            });
-
-            let watcher = match watcher {
-                Ok(watcher) => Some((watcher, Mutex::new(rx))),
-                Err(e) => {
-                    warn!("Failed to enable live template reloading: {}", e);
-                    debug_!("Reload error: {:?}", e);
-                    warn_!("Live template reloading is unavailable.");
-                    None
-                }
-            };
-
-            ContextManager { watcher, context: RwLock::new(ctxt), }
-        }
-
-        pub fn context(&self) -> impl Deref<Target=Context> + '_ {
-            self.context.read().unwrap()
-        }
-
-        pub fn is_reloading(&self) -> bool {
-            self.watcher.is_some()
-        }
-
-        fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
-            self.context.write().unwrap()
-        }
-
-        /// Checks whether any template files have changed on disk. If there
-        /// have been changes since the last reload, all templates are
-        /// reinitialized from disk and the user's customization callback is run
-        /// again.
-        pub fn reload_if_needed(&self, callback: &Callback) {
-            let templates_changes = self.watcher.as_ref()
-                .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
-
-            if let Some(true) = templates_changes {
-                info_!("Change detected: reloading templates.");
-                let root = self.context().root.clone();
-                if let Some(mut new_ctxt) = Context::initialize(&root) {
-                    match callback(&mut new_ctxt.engines) {
-                        Ok(()) => *self.context_mut() = new_ctxt,
-                        Err(e) => {
-                            warn_!("The template customization callback returned an error:");
-                            warn_!("{}", e);
-                            warn_!("The existing templates will remain active.");
-                        }
-                    }
-                } else {
-                    warn_!("An error occurred while reloading templates.");
-                    warn_!("The existing templates will remain active.");
-                };
-            }
-        }
-    }
-}
 
 /// The TemplateFairing initializes the template system on attach, running
 /// custom_callback after templates have been loaded. In debug mode, the fairing
@@ -155,21 +45,11 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        match Context::initialize(&path) {
-            Some(mut ctxt) => {
-                match (self.callback)(&mut ctxt.engines) {
-                    Ok(()) => Ok(rocket.manage(ContextManager::new(ctxt))),
-                    Err(e) => {
-                        error_!("The template customization callback returned an error:");
-                        error_!("{}", e);
-                        Err(rocket)
-                    }
-                }
-            }
-            None => {
-                error_!("Launch will be aborted due to failed template initialization.");
-                Err(rocket)
-            }
+        if let Some(ctxt) = Context::initialize(&path, &self.callback) {
+            Ok(rocket.manage(ContextManager::new(ctxt)))
+        } else {
+            error_!("Template initialization failed. Aborting launch.");
+            Err(rocket)
         }
     }
 

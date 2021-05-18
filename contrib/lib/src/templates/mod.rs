@@ -14,7 +14,7 @@
 //!      features = ["handlebars_templates", "tera_templates"]
 //!      ```
 //!
-//!   1. Write your template files in Handlebars (extension: `.hbs`) or tera
+//!   1. Write your template files in Handlebars (extension: `.hbs`) and/or tera
 //!      (extensions: `.tera`) in the templates directory (default:
 //!      `{rocket_root}/templates`).
 //!
@@ -34,7 +34,7 @@
 //!      ```
 //!
 //!   3. Return a [`Template`] using [`Template::render()`], supplying the name
-//!      of the template file minus the last two extensions, from a handler.
+//!      of the template file **minus the last two extensions**, from a handler.
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
@@ -48,6 +48,25 @@
 //!          Template::render("template-name", &context)
 //!      }
 //!      ```
+//!
+//! ## Naming
+//!
+//! Templates discovered by Rocket are _renamed_ from their file name to their
+//! file name **without the last two extensions**. As such, refer to a template
+//! with file name `foo.html.hbs` or `foo.html.tera` as `foo`. See
+//! [Discovery](#discovery) for more.
+//!
+//! Templates that are _not_ discovered by Rocket, such as those registered
+//! directly via [`Template::custom()`], are _not_ renamed.
+//!
+//! ## Content Type
+//!
+//! The `Content-Type` of the response is automatically determined by the
+//! non-engine extension of the template name or `text/plain` if there is no
+//! extension or the extension is unknown. For example, for a discovered
+//! template with file name `foo.html.hbs` or a manually registered template
+//! with name ending in `foo.html`, the `Content-Type` is automatically set to
+//! [`ContentType::HTML`].
 //!
 //! ## Discovery
 //!
@@ -66,10 +85,10 @@
 //! | Engine       | Version | Extension |
 //! |--------------|---------|-----------|
 //! | [Tera]       | 1       | `.tera`   |
-//! | [Handlebars] | 2       | `.hbs`    |
+//! | [Handlebars] | 3       | `.hbs`    |
 //!
 //! [Tera]: https://docs.rs/crate/tera/1
-//! [Handlebars]: https://docs.rs/crate/handlebars/2
+//! [Handlebars]: https://docs.rs/crate/handlebars/3
 //!
 //! Any file that ends with one of these extension will be discovered and
 //! rendered with the corresponding templating engine. The _name_ of the
@@ -124,11 +143,10 @@ mod metadata;
 
 pub use self::engine::Engines;
 pub use self::metadata::Metadata;
-pub(crate) use self::context::Context;
-pub(crate) use self::fairing::ContextManager;
 
 use self::engine::Engine;
 use self::fairing::TemplateFairing;
+use self::context::{Context, ContextManager};
 
 use serde::Serialize;
 use serde_json::{Value, to_value};
@@ -205,10 +223,10 @@ pub struct Template {
 
 #[derive(Debug)]
 pub(crate) struct TemplateInfo {
-    /// The complete path, including `template_dir`, to this template.
-    path: PathBuf,
+    /// The complete path, including `template_dir`, to this template, if any.
+    path: Option<PathBuf>,
     /// The extension for the engine of this template.
-    extension: String,
+    engine_ext: &'static str,
     /// The extension before the engine extension in the template, if any.
     data_type: ContentType
 }

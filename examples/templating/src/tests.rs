@@ -82,4 +82,5 @@ fn tera() {
     test_root("tera");
     test_name("tera");
     test_404("tera");
+    test_about("tera");
 }

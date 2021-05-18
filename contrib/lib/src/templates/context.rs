@@ -1,10 +1,14 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::error::Error;
 
 use crate::templates::{Engines, TemplateInfo};
 
 use rocket::http::ContentType;
 use normpath::PathExt;
+
+pub(crate) type Callback =
+    Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
 
 pub(crate) struct Context {
     /// The root of the template directory.
@@ -15,11 +19,13 @@ pub(crate) struct Context {
     pub engines: Engines,
 }
 
+pub(crate) use self::manager::ContextManager;
+
 impl Context {
     /// Load all of the templates at `root`, initialize them using the relevant
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
-    pub fn initialize(root: &Path) -> Option<Context> {
+    pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
         let root = match root.normalize() {
             Ok(root) => root.into_path_buf(),
             Err(e) => {
@@ -46,18 +52,134 @@ impl Context {
 
                 let data_type = data_type_str.as_ref()
                     .and_then(|ext| ContentType::from_extension(ext))
-                    .unwrap_or(ContentType::HTML);
+                    .unwrap_or(ContentType::Text);
 
                 templates.insert(name, TemplateInfo {
-                    path: path.to_path_buf(),
-                    extension: ext.to_string(),
+                    path: Some(path.clone()),
+                    engine_ext: ext,
                     data_type,
                 });
             }
         }
 
-        Engines::init(&templates)
-            .map(|engines| Context { root: root.into(), templates, engines } )
+        let mut engines = Engines::init(&templates)?;
+        if let Err(e) = callback(&mut engines) {
+            error_!("Template customization callback failed.");
+            error_!("{}", e);
+            return None;
+        }
+
+        for (name, engine_ext) in engines.templates() {
+            if !templates.contains_key(name) {
+                let data_type = Path::new(name).extension()
+                    .and_then(|osstr| osstr.to_str())
+                    .and_then(|ext| ContentType::from_extension(ext))
+                    .unwrap_or(ContentType::Text);
+
+                let info = TemplateInfo { path: None, engine_ext, data_type };
+                templates.insert(name.to_string(), info);
+            }
+        }
+
+        Some(Context { root, templates, engines })
+    }
+}
+
+#[cfg(not(debug_assertions))]
+mod manager {
+    use std::ops::Deref;
+    use crate::templates::Context;
+
+    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
+    /// additionally provides a method to reload the context at runtime.
+    pub(crate) struct ContextManager(Context);
+
+    impl ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
+            ContextManager(ctxt)
+        }
+
+        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+            &self.0
+        }
+
+        pub fn is_reloading(&self) -> bool {
+            false
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+mod manager {
+    use std::ops::{Deref, DerefMut};
+    use std::sync::{RwLock, Mutex};
+    use std::sync::mpsc::{channel, Receiver};
+
+    use notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
+
+    use super::{Callback, Context};
+
+    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
+    /// additionally provides a method to reload the context at runtime.
+    pub(crate) struct ContextManager {
+        /// The current template context, inside an RwLock so it can be updated.
+        context: RwLock<Context>,
+        /// A filesystem watcher and the receive queue for its events.
+        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
+    }
+
+    impl ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
+            let (tx, rx) = channel();
+            let watcher = raw_watcher(tx).and_then(|mut watcher| {
+                watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
+                Ok(watcher)
+            });
+
+            let watcher = match watcher {
+                Ok(watcher) => Some((watcher, Mutex::new(rx))),
+                Err(e) => {
+                    warn!("Failed to enable live template reloading: {}", e);
+                    debug_!("Reload error: {:?}", e);
+                    warn_!("Live template reloading is unavailable.");
+                    None
+                }
+            };
+
+            ContextManager { watcher, context: RwLock::new(ctxt), }
+        }
+
+        pub fn context(&self) -> impl Deref<Target=Context> + '_ {
+            self.context.read().unwrap()
+        }
+
+        pub fn is_reloading(&self) -> bool {
+            self.watcher.is_some()
+        }
+
+        fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
+            self.context.write().unwrap()
+        }
+
+        /// Checks whether any template files have changed on disk. If there
+        /// have been changes since the last reload, all templates are
+        /// reinitialized from disk and the user's customization callback is run
+        /// again.
+        pub fn reload_if_needed(&self, callback: &Callback) {
+            let templates_changes = self.watcher.as_ref()
+                .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
+
+            if let Some(true) = templates_changes {
+                info_!("Change detected: reloading templates.");
+                let root = self.context().root.clone();
+                if let Some(new_ctxt) = Context::initialize(&root, &callback) {
+                    *self.context_mut() = new_ctxt;
+                } else {
+                    warn_!("An error occurred while reloading templates.");
+                    warn_!("Existing templates will remain active.");
+                };
+            }
+        }
     }
 }
 

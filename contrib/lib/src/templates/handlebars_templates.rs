@@ -1,25 +1,26 @@
-use serde::Serialize;
+use std::path::Path;
 
-use crate::templates::{Engine, TemplateInfo};
+use serde::Serialize;
+use crate::templates::Engine;
 
 pub use crate::templates::handlebars::Handlebars;
 
 impl Engine for Handlebars<'static> {
     const EXT: &'static str = "hbs";
 
-    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Handlebars<'static>> {
+    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self> {
         let mut hb = Handlebars::new();
-        for &(name, info) in templates {
-            let path = &info.path;
+        let mut ok = true;
+        for (name, path) in templates {
             if let Err(e) = hb.register_template_file(name, path) {
-                error!("Error in Handlebars template '{}'.", name);
-                info_!("{}", e);
+                error!("Handlebars template '{}' failed to register.", name);
+                error_!("{}", e);
                 info_!("Template path: '{}'.", path.to_string_lossy());
-                return None;
+                ok = false;
             }
         }
 
-        Some(hb)
+        ok.then(|| hb)
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {

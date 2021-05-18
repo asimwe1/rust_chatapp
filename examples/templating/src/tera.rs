@@ -7,7 +7,7 @@ use rocket_contrib::templates::{Template, tera::Tera};
 #[derive(serde::Serialize)]
 struct TemplateContext<'r> {
     title: &'r str,
-    name: &'r str,
+    name: Option<&'r str>,
     items: Vec<&'r str>
 }
 
@@ -19,10 +19,17 @@ pub fn index() -> Redirect {
 #[get("/hello/<name>")]
 pub fn hello(name: &str) -> Template {
     Template::render("tera/index", &TemplateContext {
-        name,
         title: "Hello",
+        name: Some(name),
         items: vec!["One", "Two", "Three"],
     })
+}
+
+#[get("/about")]
+pub fn about() -> Template {
+    let mut map = HashMap::new();
+    map.insert("title", "About");
+    Template::render("tera/about.html", &map)
 }
 
 #[catch(404)]
@@ -32,6 +39,14 @@ pub fn not_found(req: &Request<'_>) -> Template {
     Template::render("tera/error/404", &map)
 }
 
-pub fn customize(_tera: &mut Tera) {
-    /* register helpers, and so on */
+pub fn customize(tera: &mut Tera) {
+    tera.add_raw_template("tera/about.html", r#"
+        {% extends "tera/base" %}
+
+        {% block content %}
+            <section id="about">
+              <h1>About - Here's another page!</h1>
+            </section>
+        {% endblock content %}
+    "#).expect("valid Tera template");
 }

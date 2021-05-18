@@ -29,12 +29,10 @@ pub fn hello(name: &str) -> Template {
 
 #[get("/about")]
 pub fn about() -> Template {
-    Template::render("hbs/about", &TemplateContext {
-        title: "About",
-        name: None,
-        items: vec!["Some", "Important", "Info"],
-        parent: "hbs/layout",
-    })
+    let mut map = std::collections::HashMap::new();
+    map.insert("title", "About");
+    map.insert("parent", "hbs/layout");
+    Template::render("hbs/about.html", &map)
 }
 
 #[catch(404)]
@@ -62,4 +60,14 @@ fn wow_helper(
 
 pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("wow", Box::new(wow_helper));
+    hbs.register_template_string("hbs/about.html", r#"
+        {{#*inline "page"}}
+
+        <section id="about">
+          <h1>About - Here's another page!</h1>
+        </section>
+
+        {{/inline}}
+        {{~> (parent)~}}
+    "#).expect("valid HBS template");
 }

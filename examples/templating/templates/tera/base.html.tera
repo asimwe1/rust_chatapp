@@ -5,9 +5,12 @@
     <title>Tera Demo - {{ title }}</title>
   </head>
   <body>
+    <a href="/tera/hello/Unknown">Hello</a> | <a href="/tera/about">About</a>
+
     {% block content %}{% endblock content %}
+
+      <footer>
+        <a href="/">Home</a>
+      </footer>
   </body>
-  <footer>
-    <a href="/">Home</a>
-  </footer>
 </html>

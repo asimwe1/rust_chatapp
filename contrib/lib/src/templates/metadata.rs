@@ -2,7 +2,7 @@ use rocket::{Request, Rocket, Ignite, Sentinel};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
-use crate::templates::ContextManager;
+use crate::templates::context::ContextManager;
 
 /// Request guard for dynamically querying template metadata.
 ///

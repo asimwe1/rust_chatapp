@@ -1,26 +1,26 @@
-use serde::Serialize;
+use std::path::Path;
 use std::error::Error;
 
-use crate::templates::{Engine, TemplateInfo};
+use serde::Serialize;
+use crate::templates::Engine;
 
 pub use crate::templates::tera::{Context, Tera};
 
 impl Engine for Tera {
     const EXT: &'static str = "tera";
 
-    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Tera> {
+    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self> {
         // Create the Tera instance.
         let mut tera = Tera::default();
         let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
         tera.autoescape_on(ext.to_vec());
 
-        // Collect into a tuple of (name, path) for Tera.
-        let tera_templates = templates.iter()
-            .map(|&(name, info)| (&info.path, Some(name)))
-            .collect::<Vec<_>>();
+        // Collect into a tuple of (name, path) for Tera. If we register one at
+        // a time, it will complain about unregistered base templates.
+        let files = templates.map(|(name, path)| (path, Some(name)));
 
         // Finally try to tell Tera about all of the templates.
-        if let Err(e) = tera.add_template_files(tera_templates) {
+        if let Err(e) = tera.add_template_files(files) {
             error!("Failed to initialize Tera templating.");
 
             let mut error = Some(&e as &dyn Error);

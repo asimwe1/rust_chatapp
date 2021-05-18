@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::collections::HashMap;
 
 use serde::Serialize;
@@ -7,10 +8,10 @@ use crate::templates::TemplateInfo;
 #[cfg(feature = "tera_templates")] use crate::templates::tera::Tera;
 #[cfg(feature = "handlebars_templates")] use crate::templates::handlebars::Handlebars;
 
-pub(crate) trait Engine: Send + Sync + 'static {
+pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
 
-    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Self> where Self: Sized;
+    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self>;
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String>;
 }
 
@@ -74,11 +75,11 @@ impl Engines {
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
             let named_templates = templates.iter()
-                .filter(|&(_, i)| i.extension == E::EXT)
-                .map(|(k, i)| (k.as_str(), i))
-                .collect::<Vec<_>>();
+                .filter(|&(_, i)| i.engine_ext == E::EXT)
+                .filter_map(|(k, i)| Some((k.as_str(), i.path.as_ref()?)))
+                .map(|(k, p)| (k, p.as_path()));
 
-            E::init(&*named_templates)
+            E::init(named_templates)
         }
 
         Some(Engines {
@@ -101,20 +102,37 @@ impl Engines {
         info: &TemplateInfo,
         context: C
     ) -> Option<String> {
-        #[cfg(feature = "tera_templates")]
-        {
-            if info.extension == Tera::EXT {
+        #[cfg(feature = "tera_templates")] {
+            if info.engine_ext == Tera::EXT {
                 return Engine::render(&self.tera, name, context);
             }
         }
 
-        #[cfg(feature = "handlebars_templates")]
-        {
-            if info.extension == Handlebars::EXT {
+        #[cfg(feature = "handlebars_templates")] {
+            if info.engine_ext == Handlebars::EXT {
                 return Engine::render(&self.handlebars, name, context);
             }
         }
 
         None
+    }
+
+    pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
+        #[cfg(all(feature = "tera_templates", feature = "handlebars_templates"))] {
+            self.tera.templates.keys()
+                .map(|name| (name.as_str(), Tera::EXT))
+                .chain(self.handlebars.get_templates().keys()
+                    .map(|name| (name.as_str(), Handlebars::EXT)))
+        }
+
+        #[cfg(all(feature = "tera_templates", not(feature = "handlebars_templates")))] {
+            self.tera.templates.keys()
+                .map(|name| (name.as_str(), Tera::EXT))
+        }
+
+        #[cfg(all(feature = "handlebars_templates", not(feature = "tera_templates")))] {
+            self.handlebars.get_templates().keys()
+                .map(|name| (name.as_str(), Handlebars::EXT))
+        }
     }
 }
