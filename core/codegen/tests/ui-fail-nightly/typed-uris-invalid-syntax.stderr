@@ -34,7 +34,7 @@ error: unexpected end of input, expected identifier
 12 |     uri!("/mount",);
    |     ^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid mount point; mount points must be static, absolute URIs: `/example`
   --> $DIR/typed-uris-invalid-syntax.rs:13:10
@@ -54,7 +54,7 @@ error: unexpected end of input, call to `uri!` cannot be empty
 15 |     uri!();
    |     ^^^^^^^
    |
-   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected end of input, expected expression
   --> $DIR/typed-uris-invalid-syntax.rs:16:5
@@ -62,4 +62,4 @@ error: unexpected end of input, expected expression
 16 |     uri!(simple: id = );
    |     ^^^^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
