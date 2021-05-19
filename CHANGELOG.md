@@ -1,3 +1,12 @@
+# Version 0.4.9 (May 19, 2021)
+
+## Core
+
+  * [[`#1645`], [`f2a56f`]] Fixed `Try` `impl FromResidual<Result> for Outcome`.
+
+[`#1645`]: https://github.com/SergioBenitez/Rocket/issues/1645
+[`f2a56f`]: https://github.com/SergioBenitez/Rocket/commit/f2a56f
+
 # Version 0.4.8 (May 18, 2021)
 
 ## Core
