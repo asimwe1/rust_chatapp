@@ -1,8 +1,8 @@
 use quote::ToTokens;
 use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
 
-use crate::proc_macro2::TokenStream;
 use crate::http;
+use crate::proc_macro2::{TokenStream, Span};
 
 #[derive(Debug)]
 pub struct ContentType(pub http::ContentType);
@@ -18,6 +18,21 @@ pub struct Method(pub http::Method);
 
 #[derive(Clone, Debug)]
 pub struct Optional<T>(pub Option<T>);
+
+#[derive(Debug)]
+pub struct Origin<'a>(pub &'a http::uri::Origin<'a>, pub Span);
+
+#[derive(Debug)]
+pub struct Absolute<'a>(pub &'a http::uri::Absolute<'a>, pub Span);
+
+#[derive(Debug)]
+pub struct Authority<'a>(pub &'a http::uri::Authority<'a>, pub Span);
+
+#[derive(Debug)]
+pub struct Reference<'a>(pub &'a http::uri::Reference<'a>, pub Span);
+
+#[derive(Debug)]
+pub struct Asterisk(pub http::uri::Asterisk, pub Span);
 
 impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
@@ -143,5 +158,73 @@ impl<T: ToTokens> ToTokens for Optional<T> {
         };
 
         tokens.extend(opt_tokens);
+    }
+}
+
+impl ToTokens for Origin<'_> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let (origin, span) = (self.0, self.1);
+        let origin = origin.clone().into_normalized();
+        define_spanned_export!(span => _uri);
+
+        let path = origin.path().as_str();
+        let query = Optional(origin.query().map(|q| q.as_str()));
+        tokens.extend(quote_spanned! { span =>
+            #_uri::Origin::const_new(#path, #query)
+        });
+    }
+}
+
+impl ToTokens for Absolute<'_> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let (absolute, span) = (self.0, self.1);
+        define_spanned_export!(span => _uri);
+        let absolute = absolute.clone().into_normalized();
+
+        let scheme = absolute.scheme();
+        let auth = Optional(absolute.authority().map(|a| Authority(a, span)));
+        let path = absolute.path().as_str();
+        let query = Optional(absolute.query().map(|q| q.as_str()));
+        tokens.extend(quote_spanned! { span =>
+            #_uri::Absolute::const_new(#scheme, #auth, #path, #query)
+        });
+    }
+}
+
+impl ToTokens for Authority<'_> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let (authority, span) = (self.0, self.1);
+        define_spanned_export!(span => _uri);
+
+        let user_info = Optional(authority.user_info());
+        let host = authority.host();
+        let port = Optional(authority.port());
+        tokens.extend(quote_spanned! { span =>
+            #_uri::Authority::const_new(#user_info, #host, #port)
+        });
+    }
+}
+
+impl ToTokens for Reference<'_> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let (reference, span) = (self.0, self.1);
+        define_spanned_export!(span => _uri);
+        let reference = reference.clone().into_normalized();
+
+        let scheme = Optional(reference.scheme());
+        let auth = Optional(reference.authority().map(|a| Authority(a, span)));
+        let path = reference.path().as_str();
+        let query = Optional(reference.query().map(|q| q.as_str()));
+        let frag = Optional(reference.fragment().map(|f| f.as_str()));
+        tokens.extend(quote_spanned! { span =>
+            #_uri::Reference::const_new(#scheme, #auth, #path, #query, #frag)
+        });
+    }
+}
+
+impl ToTokens for Asterisk {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        define_spanned_export!(self.1 => _uri);
+        tokens.extend(quote_spanned!(self.1 => #_uri::Asterisk));
     }
 }

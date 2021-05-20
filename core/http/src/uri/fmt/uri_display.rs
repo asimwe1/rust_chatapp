@@ -1,7 +1,8 @@
 use std::{fmt, path};
 use std::borrow::Cow;
 
-use crate::uri::{Uri, UriPart, Path, Query, Formatter};
+use crate::RawStr;
+use crate::uri::fmt::{Part, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
 /// [`uri!`].
@@ -14,8 +15,8 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// # Marker Generic: `Path`, `Query`
 ///
-/// The [`UriPart`] parameter `P` in `UriDisplay<P>` must be either [`Path`] or
-/// [`Query`] (see the [`UriPart`] documentation for how this is enforced),
+/// The [`Part`] parameter `P` in `UriDisplay<P>` must be either [`Path`] or
+/// [`Query`] (see the [`Part`] documentation for how this is enforced),
 /// resulting in either `UriDisplay<Path>` or `UriDisplay<Query>`.
 ///
 /// As the names might imply, the `Path` version of the trait is used when
@@ -37,15 +38,11 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// ```rust
 /// # extern crate rocket;
 /// # use std::fmt;
-/// # use rocket::http::uri::{UriPart, UriDisplay, Formatter};
+/// # use rocket::http::uri::fmt::{Part, UriDisplay, Formatter};
 /// # struct SomeType;
-/// impl<P: UriPart> UriDisplay<P> for SomeType
+/// impl<P: Part> UriDisplay<P> for SomeType
 /// # { fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result { Ok(()) } }
 /// ```
-///
-/// [`UriPart`]: crate::uri::UriPart
-/// [`Path`]: crate::uri::Path
-/// [`Query`]: crate::uri::Query
 ///
 /// # Code Generation
 ///
@@ -74,18 +71,18 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// # fn get_item(id: i32, track: Option<String>) { /* .. */ }
 /// #
 /// // With unnamed parameters.
-/// uri!(get_item: 100, Some("inbound"));
+/// uri!(get_item(100, Some("inbound")));
 ///
 /// // With named parameters.
-/// uri!(get_item: id = 100, track = Some("inbound"));
-/// uri!(get_item: track = Some("inbound"), id = 100);
+/// uri!(get_item(id = 100, track = Some("inbound")));
+/// uri!(get_item(track = Some("inbound"), id = 100));
 ///
 /// // Ignoring `track`.
-/// uri!(get_item: 100, _);
-/// uri!(get_item: 100, None as Option<String>);
-/// uri!(get_item: id = 100, track = _);
-/// uri!(get_item: track = _, id = 100);
-/// uri!(get_item: id = 100, track = None as Option<&str>);
+/// uri!(get_item(100, _));
+/// uri!(get_item(100, None as Option<String>));
+/// uri!(get_item(id = 100, track = _));
+/// uri!(get_item(track = _, id = 100));
+/// uri!(get_item(id = 100, track = None as Option<&str>));
 /// ```
 ///
 /// After verifying parameters and their types, Rocket will generate code
@@ -93,10 +90,11 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// ```rust
 /// # extern crate rocket;
-/// # use rocket::http::uri::{UriDisplay, Path, Query, Origin};
+/// # use rocket::http::uri::Origin;
+/// # use rocket::http::uri::fmt::{UriDisplay, Path, Query};
 /// #
 /// Origin::parse(&format!("/item/{}?track={}",
-///     &100 as &UriDisplay<Path>, &"inbound" as &UriDisplay<Query>));
+///     &100 as &dyn UriDisplay<Path>, &"inbound" as &dyn UriDisplay<Query>));
 /// ```
 ///
 /// For this expression to typecheck, `i32` must implement `UriDisplay<Path>`
@@ -105,11 +103,11 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// seen, the implementations will be used to display the value in a URI-safe
 /// manner.
 ///
-/// [`uri!`]: ../../../rocket/macro.uri.html
+/// [`uri!`]: rocket::uri
 ///
 /// # Provided Implementations
 ///
-/// Rocket implements `UriDisplay<P>` for all `P: UriPart` for several built-in
+/// Rocket implements `UriDisplay<P>` for all `P: Part` for several built-in
 /// types.
 ///
 ///   * **i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32,
@@ -167,7 +165,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///     If the `Result` is `Ok`, uses the implementation of `UriDisplay` for
 ///     `T`. Otherwise, nothing is rendered.
 ///
-/// [`FromUriParam`]: crate::uri::FromUriParam
+/// [`FromUriParam`]: crate::uri::fmt::FromUriParam
 ///
 /// # Deriving
 ///
@@ -176,7 +174,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # use rocket::http::uri::{UriDisplay, Query, Path};
+/// # use rocket::http::uri::fmt::{UriDisplay, Query, Path};
 /// // Derives `UriDisplay<Query>`
 /// #[derive(UriDisplayQuery)]
 /// struct User {
@@ -185,7 +183,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// }
 ///
 /// let user = User { name: "Michael Smith".into(), age: 31 };
-/// let uri_string = format!("{}", &user as &UriDisplay<Query>);
+/// let uri_string = format!("{}", &user as &dyn UriDisplay<Query>);
 /// assert_eq!(uri_string, "name=Michael%20Smith&age=31");
 ///
 /// // Derives `UriDisplay<Path>`
@@ -193,7 +191,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// struct Name(String);
 ///
 /// let name = Name("Bob Smith".into());
-/// let uri_string = format!("{}", &name as &UriDisplay<Path>);
+/// let uri_string = format!("{}", &name as &dyn UriDisplay<Path>);
 /// assert_eq!(uri_string, "Bob%20Smith");
 /// ```
 ///
@@ -204,11 +202,9 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// [`UriDisplay<Path>`] and [`UriDisplay<Query>`] derive documentation for full
 /// details.
 ///
-/// [`Ignorable`]: crate::uri::Ignorable
+/// [`Ignorable`]: crate::uri::fmt::Ignorable
 /// [`UriDisplay<Path>`]: ../../derive.UriDisplayPath.html
 /// [`UriDisplay<Query>`]: ../../derive.UriDisplayQuery.html
-/// [`Formatter::write_named_value()`]: crate::uri::Formatter::write_named_value()
-/// [`Formatter::write_value()`]: crate::uri::Formatter::write_value()
 ///
 /// # Implementing
 ///
@@ -259,7 +255,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// use std::fmt;
 /// use rocket::http::impl_from_uri_param_identity;
-/// use rocket::http::uri::{Formatter, FromUriParam, UriDisplay, Path};
+/// use rocket::http::uri::fmt::{Formatter, FromUriParam, UriDisplay, Path};
 /// use rocket::response::Redirect;
 ///
 /// impl UriDisplay<Path> for Name<'_> {
@@ -276,7 +272,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///
 /// #[get("/name/<name>")]
 /// fn redirector(name: Name<'_>) -> Redirect {
-///     Redirect::to(uri!(real: name))
+///     Redirect::to(uri!(real(name)))
 /// }
 ///
 /// #[get("/<name>")]
@@ -284,15 +280,15 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///     format!("Hello, {}!", name.0)
 /// }
 ///
-/// let uri = uri!(real: Name("Mike Smith".into()));
+/// let uri = uri!(real(Name("Mike Smith".into())));
 /// assert_eq!(uri.path(), "/name:Mike%20Smith");
 /// ```
-pub trait UriDisplay<P: UriPart> {
+pub trait UriDisplay<P: Part> {
     /// Formats `self` in a URI-safe manner using the given formatter.
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result;
 }
 
-impl<P: UriPart> fmt::Display for &dyn UriDisplay<P> {
+impl<P: Part> fmt::Display for &dyn UriDisplay<P> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UriDisplay::fmt(*self, &mut <Formatter<'_, P>>::new(f))
@@ -302,10 +298,10 @@ impl<P: UriPart> fmt::Display for &dyn UriDisplay<P> {
 // Direct implementations: these are the leaves of a call to `UriDisplay::fmt`.
 
 /// Percent-encodes the raw string.
-impl<P: UriPart> UriDisplay<P> for str {
+impl<P: Part> UriDisplay<P> for str {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
-        f.write_raw(&Uri::percent_encode(self))
+        f.write_raw(RawStr::new(self).percent_encode().as_str())
     }
 }
 
@@ -328,7 +324,7 @@ impl UriDisplay<Path> for path::Path {
 macro_rules! impl_with_display {
     ($($T:ty),+) => {$(
         /// This implementation is identical to the `Display` implementation.
-        impl<P: UriPart> UriDisplay<P> for $T  {
+        impl<P: Part> UriDisplay<P> for $T  {
             #[inline(always)]
             fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
                 use std::fmt::Write;
@@ -351,7 +347,7 @@ impl_with_display! {
 // implementation.
 
 /// Percent-encodes the raw string. Defers to `str`.
-impl<P: UriPart> UriDisplay<P> for String {
+impl<P: Part> UriDisplay<P> for String {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_str().fmt(f)
@@ -359,7 +355,7 @@ impl<P: UriPart> UriDisplay<P> for String {
 }
 
 /// Percent-encodes the raw string. Defers to `str`.
-impl<P: UriPart> UriDisplay<P> for Cow<'_, str> {
+impl<P: Part> UriDisplay<P> for Cow<'_, str> {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -375,7 +371,7 @@ impl UriDisplay<Path> for path::PathBuf {
 }
 
 /// Defers to the `UriDisplay<P>` implementation for `T`.
-impl<P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &T {
+impl<P: Part, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &T {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)
@@ -383,7 +379,7 @@ impl<P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &T {
 }
 
 /// Defers to the `UriDisplay<P>` implementation for `T`.
-impl<P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &mut T {
+impl<P: Part, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &mut T {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)
@@ -419,7 +415,7 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 ///
 /// When a parameter is explicitly ignored in `uri!` by supplying `_` as the
 /// parameter's value, that parameter's type is required to implement this
-/// trait for the corresponding `UriPart`.
+/// trait for the corresponding `Part`.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -427,12 +423,12 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 /// fn get_item(id: i32, track: Option<u8>) { /* .. */ }
 ///
 /// // Ignore the `track` parameter: `Option<u8>` must be `Ignorable`.
-/// uri!(get_item: 100, _);
-/// uri!(get_item: id = 100, track = _);
+/// uri!(get_item(100, _));
+/// uri!(get_item(id = 100, track = _));
 ///
 /// // Provide a value for `track`.
-/// uri!(get_item: 100, Some(4));
-/// uri!(get_item: id = 100, track = Some(4));
+/// uri!(get_item(100, Some(4)));
+/// uri!(get_item(id = 100, track = Some(4)));
 /// ```
 ///
 /// # Implementations
@@ -442,23 +438,24 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::http::uri::{Ignorable, Query};
+/// use rocket::http::uri::fmt::{Ignorable, Query};
 ///
 /// # struct MyType;
 /// impl Ignorable<Query> for MyType { }
 /// ```
-pub trait Ignorable<P: UriPart> { }
+pub trait Ignorable<P: Part> { }
 
 impl<T> Ignorable<Query> for Option<T> { }
 impl<T, E> Ignorable<Query> for Result<T, E> { }
 
 #[doc(hidden)]
-pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
+pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
 
 #[cfg(test)]
 mod uri_display_tests {
     use std::path;
-    use crate::uri::{FromUriParam, UriDisplay, Query, Path};
+    use crate::uri::fmt::{FromUriParam, UriDisplay};
+    use crate::uri::fmt::{Query, Path};
 
     macro_rules! uri_display {
         (<$P:ident, $Target:ty> $source:expr) => ({
@@ -566,7 +563,7 @@ mod uri_display_tests {
 
     #[test]
     fn check_ignorables() {
-        use crate::uri::assert_ignorable;
+        use crate::uri::fmt::assert_ignorable;
 
         assert_ignorable::<Query, Option<usize>>();
         assert_ignorable::<Query, Option<Wrapper<usize>>>();

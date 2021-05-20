@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::uri::{UriDisplay, Query, Path};
+use rocket::http::uri::fmt::{UriDisplay, Query, Path};
 
 macro_rules! assert_uri_display_query {
     ($v:expr, $s:expr) => (

@@ -87,7 +87,7 @@ async fn hyper_service_fn(
                 // fabricate one. This is weird. We should let the user know
                 // that we failed to parse a request (by invoking some special
                 // handler) instead of doing this.
-                let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
+                let dummy = Request::new(&rocket, Method::Get, Origin::ROOT);
                 let r = rocket.handle_error(Status::BadRequest, &dummy).await;
                 return rocket.send_response(r, tx).await;
             }

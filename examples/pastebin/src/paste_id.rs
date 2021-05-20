@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use rocket::http::uri::{self, FromUriParam};
+use rocket::http::uri::fmt;
 use rocket::request::FromParam;
 use rand::{self, Rng};
 
@@ -46,7 +46,7 @@ impl<'a> FromParam<'a> for PasteId<'a> {
     }
 }
 
-impl<'a> FromUriParam<uri::Path, &'a str> for PasteId<'_> {
+impl<'a> fmt::FromUriParam<fmt::Path, &'a str> for PasteId<'_> {
     type Target = PasteId<'a>;
 
     fn from_uri_param(param: &'a str) -> Self::Target {

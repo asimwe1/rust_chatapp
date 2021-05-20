@@ -76,17 +76,17 @@
 //! `SpaceHelmet`:
 //!
 //! ```rust
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # extern crate rocket_contrib;
 //! use rocket::http::uri::Uri;
 //! use rocket_contrib::helmet::{SpaceHelmet, Frame, XssFilter, Hsts, NoSniff};
 //!
-//! let site_uri = Uri::parse("https://mysite.example.com").unwrap();
-//! let report_uri = Uri::parse("https://report.example.com").unwrap();
+//! let site_uri = uri!("https://mysite.example.com");
+//! let report_uri = uri!("https://report.example.com");
 //! let helmet = SpaceHelmet::default()
 //!     .enable(Hsts::default())
-//!     .enable(Frame::AllowFrom(site_uri))
-//!     .enable(XssFilter::EnableReport(report_uri))
+//!     .enable(Frame::AllowFrom(site_uri.into()))
+//!     .enable(XssFilter::EnableReport(report_uri.into()))
 //!     .disable::<NoSniff>();
 //! ```
 //!

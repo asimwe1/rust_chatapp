@@ -4,12 +4,13 @@ use std::borrow::Cow;
 use percent_encoding::{AsciiSet, utf8_percent_encode};
 
 use crate::RawStr;
-use crate::uri::{UriPart, Path, Query};
+use crate::uri::fmt::{Part, Path, Query};
 use crate::parse::uri::tables::PATH_CHARS;
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
-pub struct UNSAFE_ENCODE_SET<P: UriPart>(PhantomData<P>);
+pub struct UNSAFE_ENCODE_SET<P: Part>(PhantomData<P>);
+
 pub trait EncodeSet {
     const SET: AsciiSet;
 }
@@ -32,7 +33,7 @@ const fn set_from_table(table: &'static [u8; 256]) -> AsciiSet {
 
 const PATH_SET: AsciiSet = set_from_table(&PATH_CHARS);
 
-impl<P: UriPart> Default for UNSAFE_ENCODE_SET<P> {
+impl<P: Part> Default for UNSAFE_ENCODE_SET<P> {
     #[inline(always)]
     fn default() -> Self { UNSAFE_ENCODE_SET(PhantomData) }
 }
@@ -51,7 +52,7 @@ impl EncodeSet for UNSAFE_ENCODE_SET<Query> {
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
-pub struct ENCODE_SET<P: UriPart>(PhantomData<P>);
+pub struct ENCODE_SET<P: Part>(PhantomData<P>);
 
 impl EncodeSet for ENCODE_SET<Path> {
     const SET: AsciiSet = <UNSAFE_ENCODE_SET<Path>>::SET

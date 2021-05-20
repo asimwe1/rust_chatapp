@@ -1028,77 +1028,221 @@ pub fn catchers(input: TokenStream) -> TokenStream {
     emit!(bang::catchers_macro(input))
 }
 
-/// Type-safe, URI-safe generation of an [`Origin`] URI from a route.
+/// Type-safe, encoding-safe route and non-route URI generation.
 ///
-/// The `uri!` macro creates a type-safe, URL-safe URI given a route and values
-/// for the route's URI parameters. The inputs to the macro are the path to a
-/// route, a colon, and one argument for each dynamic parameter (parameters in
-/// `<>`) in the route's path and query.
+/// The `uri!` macro creates type-safe, URL-safe URIs given a route and concrete
+/// parameters for its URI or a URI string literal.
 ///
-/// For example, for the following route:
+/// # String Literal Parsing
 ///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// #
-/// #[get("/person/<name>?<age>")]
-/// fn person(name: String, age: Option<u8>) -> String {
-/// # "".into() /*
-///     ...
-/// # */
-/// }
+/// Given a string literal as input, `uri!` parses the string using
+/// [`Uri::parse_any()`] and emits a `'static`, `const` value whose type is one
+/// of [`Asterisk`], [`Origin`], [`Authority`], [`Absolute`], or [`Reference`],
+/// reflecting the parsed value. If the type allows normalization, the value is
+/// normalized before being emitted. Parse errors are caught and emitted at
+/// compile-time.
+///
+/// The grammar for this variant of `uri!` is:
+///
+/// ```text
+/// uri := STRING
+///
+/// STRING := an uncooked string literal, as defined by Rust (example: `"/hi"`)
 /// ```
 ///
-/// A URI can be created as follows:
+/// `STRING` is expected to be an undecoded URI of any variant.
+///
+/// ## Examples
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
+/// use rocket::http::uri::Absolute;
+///
+/// // Values returned from `uri!` are `const` and `'static`.
+/// const ROOT_CONST: Absolute<'static> = uri!("https://rocket.rs");
+/// static ROOT_STATIC: Absolute<'static> = uri!("https://rocket.rs?root");
+///
+/// // Any variant can be parsed, but beware of ambiguities.
+/// let asterisk = uri!("*");
+/// let origin = uri!("/foo/bar/baz");
+/// let authority = uri!("rocket.rs:443");
+/// let absolute = uri!("https://rocket.rs:443");
+/// let reference = uri!("foo?bar#baz");
+///
+/// # use rocket::http::uri::{Asterisk, Origin, Authority, Reference};
+/// # // Ensure we get the types we expect.
+/// # let asterisk: Asterisk = asterisk;
+/// # let origin: Origin<'static> = origin;
+/// # let authority: Authority<'static> = authority;
+/// # let absolute: Absolute<'static> = absolute;
+/// # let reference: Reference<'static> = reference;
+/// ```
+///
+/// # Type-Safe Route URIs
+///
+/// A URI to a route name `foo` is generated using `uri!(foo(v1, v2, v3))` or
+/// `uri!(foo(a = v1, b = v2, c = v3))`, where `v1`, `v2`, `v3` are the values
+/// to fill in for route parameters named `a`, `b`, and `c`. If the named
+/// parameter sytnax is used (`a = v1`, etc.), parameters can appear in any
+/// order.
+///
+/// More concretely, for the route `person` defined below:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>?<age>")]
+/// fn person(name: &str, age: Option<u8>) { }
+/// ```
+///
+/// ...a URI can be created as follows:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
 /// # #[get("/person/<name>?<age>")]
-/// # fn person(name: String, age: Option<u8>) { }
-/// #
+/// # fn person(name: &str, age: Option<u8>) { }
 /// // with unnamed parameters, in route path declaration order
-/// let mike = uri!(person: "Mike Smith", Some(28));
+/// let mike = uri!(person("Mike Smith", Some(28)));
 /// assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
 ///
 /// // with named parameters, order irrelevant
-/// let mike = uri!(person: name = "Mike", age = Some(28));
-/// let mike = uri!(person: age = Some(28), name = "Mike");
+/// let mike = uri!(person(name = "Mike", age = Some(28)));
+/// let mike = uri!(person(age = Some(28), name = "Mike"));
 /// assert_eq!(mike.to_string(), "/person/Mike?age=28");
 ///
-/// // with a specific mount-point
-/// let mike = uri!("/api", person: name = "Mike", age = Some(28));
-/// assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
-///
-/// // with unnamed values ignored
-/// let mike = uri!(person: "Mike", _);
-/// assert_eq!(mike.to_string(), "/person/Mike");
-///
 /// // with unnamed values, explicitly `None`.
-/// let option: Option<u8> = None;
-/// let mike = uri!(person: "Mike", option);
-/// assert_eq!(mike.to_string(), "/person/Mike");
-///
-/// // with named values ignored
-/// let mike = uri!(person: name = "Mike", age = _);
+/// let mike = uri!(person("Mike", None::<u8>));
 /// assert_eq!(mike.to_string(), "/person/Mike");
 ///
 /// // with named values, explicitly `None`
 /// let option: Option<u8> = None;
-/// let mike = uri!(person: name = "Mike", age = option);
+/// let mike = uri!(person(name = "Mike", age = None::<u8>));
 /// assert_eq!(mike.to_string(), "/person/Mike");
+/// ```
+///
+/// For optional query parameters, those of type `Option` or `Result`, a `_` can
+/// be used in-place of `None` or `Err`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[get("/person/<name>?<age>")]
+/// # fn person(name: &str, age: Option<u8>) { }
+/// // with named values ignored
+/// let mike = uri!(person(name = "Mike", age = _));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with named values ignored
+/// let mike = uri!(person(age = _, name = "Mike"));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with unnamed values ignored
+/// let mike = uri!(person("Mike", _));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+/// ```
+///
+/// It is a type error to attempt to ignore query parameters that are neither
+/// `Option` or `Result`. Path parameters can never be ignored. A path parameter
+/// of type `Option<T>` or `Result<T, E>` must be filled by a value that can
+/// target a type of `T`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>")]
+/// fn maybe(name: Option<&str>) { }
+///
+/// let bob1 = uri!(maybe(name = "Bob"));
+/// let bob2 = uri!(maybe("Bob Smith"));
+/// assert_eq!(bob1.to_string(), "/person/Bob");
+/// assert_eq!(bob2.to_string(), "/person/Bob%20Smith");
+///
+/// #[get("/person/<age>")]
+/// fn ok(age: Result<u8, &str>) { }
+///
+/// let kid1 = uri!(ok(age = 10));
+/// let kid2 = uri!(ok(12));
+/// assert_eq!(kid1.to_string(), "/person/10");
+/// assert_eq!(kid2.to_string(), "/person/12");
+/// ```
+///
+/// Values for ignored route segments can be of any type as long as the type
+/// implements [`UriDisplay`] for the appropriate URI part. If a route URI
+/// contains ignored segments, the route URI invocation cannot use named
+/// arguments.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/ignore/<_>/<other>")]
+/// fn ignore(other: &str) { }
+///
+/// let bob = uri!(ignore("Bob Hope", "hello"));
+/// let life = uri!(ignore(42, "cat&dog"));
+/// assert_eq!(bob.to_string(), "/ignore/Bob%20Hope/hello");
+/// assert_eq!(life.to_string(), "/ignore/42/cat%26dog");
+/// ```
+///
+/// ## Prefixes and Suffixes
+///
+/// A route URI can be be optionally prefixed and/or suffixed by a URI generated
+/// from a string literal or an arbitrary expression. This takes the form
+/// `uri!(prefix, foo(v1, v2, v3), suffix)`, where both `prefix` and `suffix`
+/// are optional, and either `prefix` or `suffix` may be `_` to specify the
+/// value as empty.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>?<age>")]
+/// fn person(name: &str, age: Option<u8>) { }
+///
+/// // with a specific mount-point of `/api`.
+/// let bob = uri!("/api", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "/api/person/Bob?age=28");
+///
+/// // with an absolute URI as a prefix
+/// let bob = uri!("https://rocket.rs", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "https://rocket.rs/person/Bob?age=28");
+///
+/// // with another absolute URI as a prefix
+/// let bob = uri!("https://rocket.rs/foo", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "https://rocket.rs/foo/person/Bob?age=28");
+///
+/// // with an expression as a prefix
+/// let host = uri!("http://bob.me");
+/// let bob = uri!(host, person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "http://bob.me/person/Bob?age=28");
+///
+/// // with a suffix but no prefix
+/// let bob = uri!(_, person("Bob", Some(28)), "#baz");
+/// assert_eq!(bob.to_string(), "/person/Bob?age=28#baz");
+///
+/// // with both a prefix and suffix
+/// let bob = uri!("https://rocket.rs/", person("Bob", Some(28)), "#woo");
+/// assert_eq!(bob.to_string(), "https://rocket.rs/person/Bob?age=28#woo");
+///
+/// // with an expression suffix. if the route URI already has a query, the
+/// // query part is ignored. otherwise it is added.
+/// let suffix = uri!("?woo#bam");
+/// let bob = uri!(_, person("Bob", Some(28)), suffix.clone());
+/// assert_eq!(bob.to_string(), "/person/Bob?age=28#bam");
+///
+/// let bob = uri!(_, person("Bob", None::<u8>), suffix.clone());
+/// assert_eq!(bob.to_string(), "/person/Bob?woo#bam");
 /// ```
 ///
 /// ## Grammar
 ///
-/// The grammar for the `uri!` macro is:
+/// The grammar for this variant of the `uri!` macro is:
 ///
 /// ```text
-/// uri := (mount ',')? PATH (':' params)?
+/// uri := (prefix ',')? route
+///      | prefix ',' route ',' suffix
 ///
-/// mount = STRING
-/// params := unnamed | named
-/// unnamed := expr (',' expr)*
-/// named := IDENT = expr (',' named)?
+/// prefix := STRING | expr                     ; `Origin` or `Absolute`
+/// suffix := STRING | expr                     ; `Reference` or `Absolute`
+///
+/// route := PATH '(' (named | unnamed) ')'
+///
+/// named := IDENT = expr (',' named)? ','?
+/// unnamed := expr (',' unnamed)? ','?
+///
 /// expr := EXPR | '_'
 ///
 /// EXPR := a valid Rust expression (examples: `foo()`, `12`, `"hey"`)
@@ -1107,37 +1251,55 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// PATH := a path, as defined by Rust (examples: `route`, `my_mod::route`)
 /// ```
 ///
-/// ## Semantics
+/// ## Dynamic Semantics
 ///
-/// The `uri!` macro returns an [`Origin`] structure with the URI of the
-/// supplied route interpolated with the given values. Note that `Origin`
-/// implements `Into<Uri>` (and by extension, `TryInto<Uri>`), so it can be
-/// converted into a [`Uri`] using `.into()` as needed.
+/// The returned value is that of the prefix (minus any query part) concatenated
+/// with the route URI concatenated with the query (if the route has no query
+/// part) and fragment parts of the suffix. The route URI is generated by
+/// interpolating the declared route URI with the URL-safe version of the route
+/// values in `uri!()`. The generated URI is guaranteed to be URI-safe.
 ///
-/// A `uri!` invocation only typechecks if the type of every value in the
-/// invocation matches the type declared for the parameter in the given route,
-/// after conversion with [`FromUriParam`], or if a value is ignored using `_`
-/// and the corresponding route type implements [`Ignorable`].
+/// Each route value is rendered in its appropriate place in the URI using the
+/// [`UriDisplay`] implementation for the value's type. The `UriDisplay`
+/// implementation ensures that the rendered value is URL-safe.
 ///
-/// Each value passed into `uri!` is rendered in its appropriate place in the
-/// URI using the [`UriDisplay`] implementation for the value's type. The
-/// `UriDisplay` implementation ensures that the rendered value is URI-safe.
+/// A `uri!()` invocation allocated at-most once.
 ///
-/// If a mount-point is provided, the mount-point is prepended to the route's
-/// URI.
+/// ## Static Semantics
+///
+/// The `uri!` macro returns one of [`Origin`], [`Absolute`], or [`Reference`],
+/// depending on the types of the prefix and suffix, if any. The table below
+/// specifies all combinations:
+///
+/// | Prefix     | Suffix      | Output      |
+/// |------------|-------------|-------------|
+/// | None       | None        | `Origin`    |
+/// | None       | `Absolute`  | `Origin`    |
+/// | None       | `Reference` | `Reference` |
+/// | `Origin`   | None        | `Origin`    |
+/// | `Origin`   | `Absolute`  | `Origin`    |
+/// | `Origin`   | `Reference` | `Reference` |
+/// | `Absolute` | None        | `Absolute`  |
+/// | `Absolute` | `Absolute`  | `Absolute`  |
+/// | `Absolute` | `Reference` | `Reference` |
+///
+/// A `uri!` invocation only typechecks if the type of every route URI value in
+/// the invocation matches the type declared for the parameter in the given
+/// route, after conversion with [`FromUriParam`], or if a value is ignored
+/// using `_` and the corresponding route type implements [`Ignorable`].
 ///
 /// ### Conversion
 ///
 /// The [`FromUriParam`] trait is used to typecheck and perform a conversion for
-/// each value passed to `uri!`. If a `FromUriParam<P, S>` implementation exists
-/// for a type `T` for part URI part `P`, then a value of type `S` can be used
-/// in `uri!` macro for a route URI parameter declared with a type of `T` in
-/// part `P`. For example, the following implementation, provided by Rocket,
+/// each value passed to `uri!`. If a `FromUriParam<P, S> for T` implementation
+/// exists for a type `T` for part URI part `P`, then a value of type `S` can be
+/// used in `uri!` macro for a route URI parameter declared with a type of `T`
+/// in part `P`. For example, the following implementation, provided by Rocket,
 /// allows an `&str` to be used in a `uri!` invocation for route URI parameters
 /// declared as `String`:
 ///
 /// ```rust,ignore
-/// impl<P: UriPart, 'a> FromUriParam<P, &'a str> for String { .. }
+/// impl<P: Part, 'a> FromUriParam<P, &'a str> for String { .. }
 /// ```
 ///
 /// ### Ignorables
@@ -1149,6 +1311,10 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 ///
 /// [`Uri`]: ../rocket/http/uri/enum.Uri.html
 /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
+/// [`Asterisk`]: ../rocket/http/uri/struct.Asterisk.html
+/// [`Authority`]: ../rocket/http/uri/struct.Authority.html
+/// [`Absolute`]: ../rocket/http/uri/struct.Absolute.html
+/// [`Reference`]: ../rocket/http/uri/struct.Reference.html
 /// [`FromUriParam`]: ../rocket/http/uri/trait.FromUriParam.html
 /// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
 /// [`Ignorable`]: ../rocket/http/uri/trait.Ignorable.html

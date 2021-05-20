@@ -14,7 +14,7 @@ struct TemplateContext<'r> {
 
 #[get("/")]
 pub fn index() -> Redirect {
-    Redirect::to(uri!("/hbs", hello: name = "Your Name"))
+    Redirect::to(uri!("/hbs", hello(name = "Your Name")))
 }
 
 #[get("/hello/<name>")]
@@ -38,7 +38,7 @@ pub fn about() -> Template {
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
     let mut map = std::collections::HashMap::new();
-    map.insert("path", req.uri().path());
+    map.insert("path", req.uri().path().raw());
     Template::render("hbs/error/404", &map)
 }
 

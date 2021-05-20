@@ -18,6 +18,7 @@ pub struct Error<'a> {
     pub(crate) index: usize,
 }
 
+#[doc(hidden)]
 impl<'a> From<ParseError<RawInput<'a>>> for Error<'a> {
     fn from(inner: ParseError<RawInput<'a>>) -> Self {
         let expected = inner.error.map(|t| t.into(), |v| v.values.into());

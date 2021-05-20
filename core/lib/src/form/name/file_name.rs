@@ -58,7 +58,7 @@ impl FileName {
     /// '(', ')', '&', ';', '#', '?', '*'`.
     ///
     /// On Windows (and non-Unix OSs), these are the characters `'.', '<', '>',
-    /// ':', '"', '/', '\\', '|', '?', '*', ',', ';', '=', '(', ')', '&', '#'`,
+    /// ':', '"', '/', '\', '|', '?', '*', ',', ';', '=', '(', ')', '&', '#'`,
     /// and the reserved names `"CON", "PRN", "AUX", "NUL", "COM1", "COM2",
     /// "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
     /// "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"`.
@@ -164,6 +164,33 @@ impl FileName {
         Some(file_name)
     }
 
+    /// Returns `true` if the _complete_ raw file name is safe.
+    ///
+    /// Note that `.as_str()` returns a safe _subset_ of the raw file name, if
+    /// there is one. If this method returns `true`, then that subset is the
+    /// complete raw file name.
+    ///
+    /// This method should be use sparingly. In particular, there is no
+    /// advantage to calling `is_safe()` prior to calling `as_str()`; simply
+    /// call `as_str()`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::name::FileName;
+    ///
+    /// let name = FileName::new("some-file.txt");
+    /// assert_eq!(name.as_str(), Some("some-file"));
+    /// assert!(!name.is_safe());
+    ///
+    /// let name = FileName::new("some-file");
+    /// assert_eq!(name.as_str(), Some("some-file"));
+    /// assert!(name.is_safe());
+    /// ```
+    pub fn is_safe(&self) -> bool {
+        self.as_str().map_or(false, |s| s == &self.0)
+    }
+
     /// The raw, unsanitized, potentially unsafe file name. Prefer to use
     /// [`FileName::as_str()`], always.
     ///
@@ -171,8 +198,8 @@ impl FileName {
     ///
     /// This method returns the file name exactly as it was specified by the
     /// client. You should **_not_** use this name _unless_ you require the
-    /// originally specified `filename` _and_ it is known to contain special,
-    /// potentially dangerous characters, _and_:
+    /// originally specified `filename` _and_ it is known not to contain
+    /// special, potentially dangerous characters, _and_:
     ///
     ///   1. All clients are known to be trusted, perhaps because the server
     ///      only runs locally, serving known, local requests, or...

@@ -492,23 +492,23 @@ URIs to `person` can be created as follows:
 # fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 
 // with unnamed parameters, in route path declaration order
-let mike = uri!(person: 101, "Mike Smith", Some(28));
+let mike = uri!(person(101, "Mike Smith", Some(28)));
 assert_eq!(mike.to_string(), "/101/Mike%20Smith?age=28");
 
 // with named parameters, order irrelevant
-let mike = uri!(person: name = "Mike", id = 101, age = Some(28));
+let mike = uri!(person(name = "Mike", id = 101, age = Some(28)));
 assert_eq!(mike.to_string(), "/101/Mike?age=28");
-let mike = uri!(person: id = 101, age = Some(28), name = "Mike");
+let mike = uri!(person(id = 101, age = Some(28), name = "Mike"));
 assert_eq!(mike.to_string(), "/101/Mike?age=28");
 
 // with a specific mount-point
-let mike = uri!("/api", person: id = 101, name = "Mike", age = Some(28));
+let mike = uri!("/api", person(id = 101, name = "Mike", age = Some(28)));
 assert_eq!(mike.to_string(), "/api/101/Mike?age=28");
 
 // with optional (defaultable) query parameters ignored
-let mike = uri!(person: 101, "Mike", _);
+let mike = uri!(person(101, "Mike", _));
 assert_eq!(mike.to_string(), "/101/Mike");
-let mike = uri!(person: id = 101, name = "Mike", age = _);
+let mike = uri!(person(id = 101, name = "Mike", age = _));
 assert_eq!(mike.to_string(), "/101/Mike");
 ```
 
@@ -518,8 +518,8 @@ Rocket informs you of any mismatched parameters at compile-time:
 error: `person` route uri expects 3 parameters but 1 was supplied
  --> examples/uri/main.rs:7:26
   |
-7 |     let x = uri!(person: "Mike Smith");
-  |                          ^^^^^^^^^^^^
+7 |     let x = uri!(person("Mike Smith"));
+  |                         ^^^^^^^^^^^^
   |
   = note: expected parameters: id: Option <usize>, name: &str, age: Option <u8>
 ```
@@ -529,8 +529,8 @@ Rocket also informs you of any type errors at compile-time:
 ```rust,ignore
  --> examples/uri/src/main.rs:7:31
   |
-7 |     let x = uri!(person: id = "10", name = "Mike Smith", age = Some(10));
-  |                               ^^^^ `FromUriParam<Path, &str>` is not implemented for `usize`
+7 |     let x = uri!(person(id = "10", name = "Mike Smith", age = Some(10)));
+  |                              ^^^^ `FromUriParam<Path, &str>` is not implemented for `usize`
 ```
 
 We recommend that you use `uri!` exclusively when constructing URIs to your
@@ -585,17 +585,17 @@ automatically generated, allowing for URIs to `add_user` to be generated using
 # #[post("/user/<id>?<details..>")]
 # fn add_user(id: usize, details: UserDetails) { /* .. */ }
 
-let link = uri!(add_user: 120, UserDetails { age: Some(20), nickname: "Bob".into() });
+let link = uri!(add_user(120, UserDetails { age: Some(20), nickname: "Bob".into() }));
 assert_eq!(link.to_string(), "/user/120?age=20&nickname=Bob");
 ```
 
 ### Typed URI Parts
 
-The [`UriPart`] trait categorizes types that mark a part of the URI as either a
-[`Path`] or a [`Query`]. Said another way, types that implement `UriPart` are
+The [`Part`] trait categorizes types that mark a part of the URI as either a
+[`Path`] or a [`Query`]. Said another way, types that implement `Part` are
 marker types that represent a part of a URI at the type-level. Traits such as
-[`UriDisplay`] and [`FromUriParam`] bound a generic parameter by `UriPart`: `P:
-UriPart`. This creates two instances of each trait: `UriDisplay<Query>` and
+[`UriDisplay`] and [`FromUriParam`] bound a generic parameter by `Part`: `P:
+Part`. This creates two instances of each trait: `UriDisplay<Query>` and
 `UriDisplay<Path>`, and `FromUriParam<Query>` and `FromUriParam<Path>`.
 
 As the names might imply, the `Path` version of the traits is used when
@@ -624,7 +624,7 @@ generated.
 /// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
 /// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`
 /// or `_`) as its in the query part and is allowed to be ignored.
-let mike = uri!(person: id = 101, name = "Mike", age = Some(28));
+let mike = uri!(person(id = 101, name = "Mike", age = Some(28)));
 assert_eq!(mike.to_string(), "/101/Mike?age=28");
 ```
 
@@ -639,10 +639,10 @@ Rocket, allows an `&str` to be used in a `uri!` invocation for route URI
 parameters declared as `String`:
 
 ```rust
-# use rocket::http::uri::{FromUriParam, UriPart};
+# use rocket::http::uri::fmt::{FromUriParam, Part};
 # struct S;
 # type String = S;
-impl<'a, P: UriPart> FromUriParam<P, &'a str> for String {
+impl<'a, P: Part> FromUriParam<P, &'a str> for String {
     type Target = &'a str;
 #   fn from_uri_param(s: &'a str) -> Self::Target { "hi" }
 }
@@ -679,13 +679,13 @@ use std::path::PathBuf;
 #[get("/person/<id>/<details..>")]
 fn person(id: usize, details: Option<PathBuf>) { /* .. */ }
 
-uri!(person: id = 100, details = "a/b/c");
+uri!(person(id = 100, details = "a/b/c"));
 ```
 
 See the [`FromUriParam`] documentation for further details.
 
 [`Origin`]: @api/rocket/http/uri/struct.Origin.html
-[`UriPart`]: @api/rocket/http/uri/trait.UriPart.html
+[`Part`]: @api/rocket/http/uri/trait.Part.html
 [`Uri`]: @api/rocket/http/uri/enum.Uri.html
 [`Redirect::to()`]: @api/rocket/response/struct.Redirect.html#method.to
 [`uri!`]: @api/rocket/macro.uri.html

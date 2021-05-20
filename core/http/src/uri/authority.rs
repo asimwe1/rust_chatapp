@@ -1,9 +1,10 @@
 use std::fmt::{self, Display};
+use std::convert::TryFrom;
 use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Extent, IndexedStr};
-use crate::uri::{as_utf8_unchecked, Error};
+use crate::uri::{as_utf8_unchecked, error::Error};
 
 /// A URI with an authority only: `user:pass@host:8000`.
 ///
@@ -21,24 +22,10 @@ use crate::uri::{as_utf8_unchecked, Error};
 /// Only the host part of the URI is required.
 #[derive(Debug, Clone)]
 pub struct Authority<'a> {
-    source: Option<Cow<'a, str>>,
+    pub(crate) source: Option<Cow<'a, str>>,
     user_info: Option<IndexedStr<'a>>,
-    host: Host<IndexedStr<'a>>,
+    host: IndexedStr<'a>,
     port: Option<u16>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum Host<T> {
-    Bracketed(T),
-    Raw(T)
-}
-
-impl<T: IntoOwned> IntoOwned for Host<T> {
-    type Owned = Host<T::Owned>;
-
-    fn into_owned(self) -> Self::Owned {
-        self.map_inner(IntoOwned::into_owned)
-    }
 }
 
 impl IntoOwned for Authority<'_> {
@@ -55,31 +42,42 @@ impl IntoOwned for Authority<'_> {
 }
 
 impl<'a> Authority<'a> {
+    // SAFETY: `source` must be valid UTF-8.
+    // CORRECTNESS: `host` must be non-empty.
     pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
         user_info: Option<Extent<&'a [u8]>>,
-        host: Host<Extent<&'a [u8]>>,
+        host: Extent<&'a [u8]>,
         port: Option<u16>
     ) -> Authority<'a> {
         Authority {
             source: Some(as_utf8_unchecked(source)),
             user_info: user_info.map(IndexedStr::from),
-            host: host.map_inner(IndexedStr::from),
-            port: port
+            host: IndexedStr::from(host),
+            port,
         }
     }
 
     #[cfg(test)]
-    pub(crate) fn new(
-        user_info: Option<&'a str>,
-        host: Host<&'a str>,
-        port: Option<u16>
-    ) -> Authority<'a> {
+    pub fn new(
+        user_info: impl Into<Option<&'a str>>,
+        host: &'a str,
+        port: impl Into<Option<u16>>,
+    ) -> Self {
+        Authority::const_new(user_info.into(), host, port.into())
+    }
+
+    /// PRIVATE. Used by codegen.
+    #[doc(hidden)]
+    pub const fn const_new(user_info: Option<&'a str>, host: &'a str, port: Option<u16>) -> Self {
         Authority {
             source: None,
-            user_info: user_info.map(|u| Cow::Borrowed(u).into()),
-            host: host.map_inner(|inner| Cow::Borrowed(inner).into()),
-            port: port
+            user_info: match user_info {
+                Some(info) => Some(IndexedStr::Concrete(Cow::Borrowed(info))),
+                None => None
+            },
+            host: IndexedStr::Concrete(Cow::Borrowed(host)),
+            port,
         }
     }
 
@@ -89,7 +87,7 @@ impl<'a> Authority<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::http::uri::Authority;
     ///
     /// // Parse a valid authority URI.
@@ -99,7 +97,13 @@ impl<'a> Authority<'a> {
     /// assert_eq!(uri.port(), None);
     ///
     /// // Invalid authority URIs fail to parse.
-    /// Authority::parse("http://google.com").expect_err("invalid authority");
+    /// Authority::parse("https://rocket.rs").expect_err("invalid authority");
+    ///
+    /// // Prefer to use `uri!()` when the input is statically known:
+    /// let uri = uri!("user:pass@host");
+    /// assert_eq!(uri.user_info(), Some("user:pass"));
+    /// assert_eq!(uri.host(), "host");
+    /// assert_eq!(uri.port(), None);
     /// ```
     pub fn parse(string: &'a str) -> Result<Authority<'a>, Error<'a>> {
         crate::parse::uri::authority_from_str(string)
@@ -108,12 +112,9 @@ impl<'a> Authority<'a> {
     /// Returns the user info part of the authority URI, if there is one.
     ///
     /// # Example
-    ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Authority;
-    ///
-    /// let uri = Authority::parse("username:password@host").unwrap();
+    /// # #[macro_use] extern crate rocket;
+    /// let uri = uri!("username:password@host");
     /// assert_eq!(uri.user_info(), Some("username:password"));
     /// ```
     pub fn user_info(&self) -> Option<&str> {
@@ -127,23 +128,21 @@ impl<'a> Authority<'a> {
     /// brackets will not be part of the returned string.
     ///
     /// # Example
-    ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Authority;
+    /// # #[macro_use] extern crate rocket;
     ///
-    /// let uri = Authority::parse("domain.com:123").unwrap();
+    /// let uri = uri!("domain.com:123");
     /// assert_eq!(uri.host(), "domain.com");
     ///
-    /// let uri = Authority::parse("username:password@host:123").unwrap();
+    /// let uri = uri!("username:password@host:123");
     /// assert_eq!(uri.host(), "host");
     ///
-    /// let uri = Authority::parse("username:password@[1::2]:123").unwrap();
-    /// assert_eq!(uri.host(), "1::2");
+    /// let uri = uri!("username:password@[1::2]:123");
+    /// assert_eq!(uri.host(), "[1::2]");
     /// ```
     #[inline(always)]
     pub fn host(&self) -> &str {
-        self.host.inner().from_cow_source(&self.source)
+        self.host.from_cow_source(&self.source)
     }
 
     /// Returns the port part of the authority URI, if there is one.
@@ -151,18 +150,16 @@ impl<'a> Authority<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Authority;
-    ///
+    /// # #[macro_use] extern crate rocket;
     /// // With a port.
-    /// let uri = Authority::parse("username:password@host:123").unwrap();
+    /// let uri = uri!("username:password@host:123");
     /// assert_eq!(uri.port(), Some(123));
     ///
-    /// let uri = Authority::parse("domain.com:8181").unwrap();
+    /// let uri = uri!("domain.com:8181");
     /// assert_eq!(uri.port(), Some(8181));
     ///
     /// // Without a port.
-    /// let uri = Authority::parse("username:password@host").unwrap();
+    /// let uri = uri!("username:password@host");
     /// assert_eq!(uri.port(), None);
     /// ```
     #[inline(always)]
@@ -175,7 +172,6 @@ impl<'b> PartialEq<Authority<'b>> for Authority<'_> {
     fn eq(&self, other: &Authority<'b>) -> bool {
         self.user_info() == other.user_info()
             && self.host() == other.host()
-            && self.host.is_bracketed() == other.host.is_bracketed()
             && self.port() == other.port()
     }
 }
@@ -186,11 +182,7 @@ impl Display for Authority<'_> {
             write!(f, "{}@", user_info)?;
         }
 
-        match self.host {
-            Host::Bracketed(_) => write!(f, "[{}]", self.host())?,
-            Host::Raw(_) => write!(f, "{}", self.host())?
-        }
-
+        self.host().fmt(f)?;
         if let Some(port) = self.port {
             write!(f, ":{}", port)?;
         }
@@ -199,29 +191,19 @@ impl Display for Authority<'_> {
     }
 }
 
-impl<T> Host<T> {
-    #[inline]
-    fn inner(&self) -> &T {
-        match *self {
-            Host::Bracketed(ref inner) | Host::Raw(ref inner) => inner
-        }
-    }
+// Because inference doesn't take `&String` to `&str`.
+impl<'a> TryFrom<&'a String> for Authority<'a> {
+    type Error = Error<'a>;
 
-    #[inline]
-    fn is_bracketed(&self) -> bool {
-        match *self {
-            Host::Bracketed(_) => true,
-            _ => false
-        }
+    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
+        Authority::parse(value.as_str())
     }
+}
 
-    #[inline]
-    fn map_inner<F, U>(self, f: F) -> Host<U>
-        where F: FnOnce(T) -> U
-    {
-        match self {
-            Host::Bracketed(inner) => Host::Bracketed(f(inner)),
-            Host::Raw(inner) => Host::Raw(f(inner))
-        }
+impl<'a> TryFrom<&'a str> for Authority<'a> {
+    type Error = Error<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Authority::parse(value)
     }
 }

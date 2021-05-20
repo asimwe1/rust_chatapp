@@ -19,8 +19,8 @@ impl FromMeta for Dynamic {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..string.len() + 1);
 
-        // We don't allow `_`. We abuse `uri::Query` to enforce this.
-        Ok(Dynamic::parse::<uri::Query>(&string, span)?)
+        // We don't allow `_`. We abuse `fmt::Query` to enforce this.
+        Ok(Dynamic::parse::<fmt::Query>(&string, span)?)
     }
 }
 

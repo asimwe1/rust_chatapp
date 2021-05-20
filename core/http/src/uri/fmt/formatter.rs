@@ -1,24 +1,22 @@
 use std::fmt::{self, Write};
 use std::marker::PhantomData;
+use std::borrow::Cow;
 
 use smallvec::SmallVec;
 
-use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
+use crate::uri::{Absolute, Origin, Reference};
+use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
 /// # Marker Generic: `Formatter<Path>` vs. `Formatter<Query>`
 ///
-/// Like [`UriDisplay`], the [`UriPart`] parameter `P` in `Formatter<P>` must be
+/// Like [`UriDisplay`], the [`Part`] parameter `P` in `Formatter<P>` must be
 /// either [`Path`] or [`Query`] resulting in either `Formatter<Path>` or
 /// `Formatter<Query>`. The `Path` version is used when formatting parameters
 /// in the path part of the URI while the `Query` version is used when
 /// formatting parameters in the query part of the URI. The
 /// [`write_named_value()`] method is only available to `UriDisplay<Query>`.
-///
-/// [`UriPart`]: crate::uri::UriPart
-/// [`Path`]: crate::uri::Path
-/// [`Query`]: crate::uri::Query
 ///
 /// # Overview
 ///
@@ -39,10 +37,6 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 ///     calls `write_named_vlaue()`, the nested names are joined by a `.`,
 ///     written out followed by a `=`, followed by the value.
 ///
-/// [`UriDisplay`]: crate::uri::UriDisplay
-/// [`UriDisplay::fmt()`]: crate::uri::UriDisplay::fmt()
-/// [`write_named_value()`]: crate::uri::Formatter::write_named_value()
-///
 /// # Usage
 ///
 /// Usage is fairly straightforward:
@@ -59,8 +53,6 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 /// called, after a call to `write_named_value` or `write_value`, or after a
 /// call to [`refresh()`].
 ///
-/// [`refresh()`]: crate::uri::Formatter::refresh()
-///
 /// # Example
 ///
 /// The following example uses all of the `write` methods in a varied order to
@@ -72,7 +64,7 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 /// # extern crate rocket;
 /// use std::fmt;
 ///
-/// use rocket::http::uri::{Formatter, UriDisplay, Query};
+/// use rocket::http::uri::fmt::{Formatter, UriDisplay, Query};
 ///
 /// struct Outer {
 ///     value: Inner,
@@ -105,7 +97,7 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 ///
 /// let inner = Inner { value: 0, extra: 1 };
 /// let outer = Outer { value: inner, another: 2, extra: 3 };
-/// let uri_string = format!("{}", &outer as &UriDisplay<Query>);
+/// let uri_string = format!("{}", &outer as &dyn UriDisplay<Query>);
 /// assert_eq!(uri_string, "outer_field.inner_field=0&\
 ///                         outer_field=1&\
 ///                         outer_field=inside&\
@@ -123,17 +115,17 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 /// # #[macro_use] extern crate rocket;
 /// use std::fmt::{self, Write};
 ///
-/// use rocket::http::uri::{UriDisplay, Formatter, UriPart, Path, Query};
+/// use rocket::http::uri::fmt::{UriDisplay, Formatter, Part, Path, Query};
 ///
 /// pub struct Complex(u8, u8);
 ///
-/// impl<P: UriPart> UriDisplay<P> for Complex {
+/// impl<P: Part> UriDisplay<P> for Complex {
 ///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
 ///         write!(f, "{}+{}", self.0, self.1)
 ///     }
 /// }
 ///
-/// let uri_string = format!("{}", &Complex(42, 231) as &UriDisplay<Path>);
+/// let uri_string = format!("{}", &Complex(42, 231) as &dyn UriDisplay<Path>);
 /// assert_eq!(uri_string, "42+231");
 ///
 /// #[derive(UriDisplayQuery)]
@@ -142,13 +134,15 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin, Kind};
 /// }
 ///
 /// let message = Message { number: Complex(42, 47) };
-/// let uri_string = format!("{}", &message as &UriDisplay<Query>);
+/// let uri_string = format!("{}", &message as &dyn UriDisplay<Query>);
 /// assert_eq!(uri_string, "number=42+47");
 /// ```
 ///
-/// [`write_value()`]: crate::uri::Formatter::write_value()
-/// [`write_raw()`]: crate::uri::Formatter::write_raw()
-pub struct Formatter<'i, P: UriPart> {
+/// [`write_named_value()`]: Formatter::write_value()
+/// [`write_value()`]: Formatter::write_value()
+/// [`write_raw()`]: Formatter::write_raw()
+/// [`refresh()`]: Formatter::refresh()
+pub struct Formatter<'i, P: Part> {
     prefixes: SmallVec<[&'static str; 3]>,
     inner: &'i mut (dyn Write + 'i),
     previous: bool,
@@ -156,7 +150,7 @@ pub struct Formatter<'i, P: UriPart> {
     _marker: PhantomData<P>,
 }
 
-impl<'i, P: UriPart> Formatter<'i, P> {
+impl<'i, P: Part> Formatter<'i, P> {
     #[inline(always)]
     pub(crate) fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
         Formatter {
@@ -191,11 +185,11 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     /// # extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay, UriPart, Path};
+    /// use rocket::http::uri::fmt::{Formatter, UriDisplay, Part, Path};
     ///
     /// struct Foo;
     ///
-    /// impl<P: UriPart> UriDisplay<P> for Foo {
+    /// impl<P: Part> UriDisplay<P> for Foo {
     ///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
     ///         f.write_raw("f")?;
     ///         f.write_raw("o")?;
@@ -204,7 +198,7 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     /// }
     ///
     /// let foo = Foo;
-    /// let uri_string = format!("{}", &foo as &UriDisplay<Path>);
+    /// let uri_string = format!("{}", &foo as &dyn UriDisplay<Path>);
     /// assert_eq!(uri_string, "foo");
     /// ```
     pub fn write_raw<S: AsRef<str>>(&mut self, string: S) -> fmt::Result {
@@ -247,11 +241,11 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     /// # extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay, UriPart, Path, Query};
+    /// use rocket::http::uri::fmt::{Formatter, UriDisplay, Part, Path, Query};
     ///
     /// struct Foo(usize);
     ///
-    /// impl<P: UriPart> UriDisplay<P> for Foo {
+    /// impl<P: Part> UriDisplay<P> for Foo {
     ///     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
     ///         f.write_value(&self.0)
     ///     }
@@ -259,10 +253,10 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     ///
     /// let foo = Foo(123);
     ///
-    /// let uri_string = format!("{}", &foo as &UriDisplay<Path>);
+    /// let uri_string = format!("{}", &foo as &dyn UriDisplay<Path>);
     /// assert_eq!(uri_string, "123");
     ///
-    /// let uri_string = format!("{}", &foo as &UriDisplay<Query>);
+    /// let uri_string = format!("{}", &foo as &dyn UriDisplay<Query>);
     /// assert_eq!(uri_string, "123");
     /// ```
     #[inline]
@@ -283,7 +277,7 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     /// # #[macro_use] extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay, Query, Path};
+    /// use rocket::http::uri::fmt::{Formatter, UriDisplay, Query, Path};
     ///
     /// struct Foo;
     ///
@@ -296,17 +290,8 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     ///     }
     /// }
     ///
-    /// let uri_string = format!("{}", &Foo as &UriDisplay<Query>);
+    /// let uri_string = format!("{}", &Foo as &dyn UriDisplay<Query>);
     /// assert_eq!(uri_string, "araw&format");
-    ///
-    ///// #[derive(UriDisplayQuery)]
-    ///// struct Message {
-    /////     inner: Foo,
-    ///// }
-    /////
-    ///// let msg = Message { inner: Foo };
-    ///// let uri_string = format!("{}", &msg as &UriDisplay);
-    ///// assert_eq!(uri_string, "inner=araw&inner=format");
     ///
     /// impl UriDisplay<Path> for Foo {
     ///     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
@@ -317,8 +302,17 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     ///     }
     /// }
     ///
-    /// let uri_string = format!("{}", &Foo as &UriDisplay<Path>);
+    /// let uri_string = format!("{}", &Foo as &dyn UriDisplay<Path>);
     /// assert_eq!(uri_string, "araw/format");
+    ///
+    /// #[derive(UriDisplayQuery)]
+    /// struct Message {
+    ///     inner: Foo,
+    /// }
+    ///
+    /// let msg = Message { inner: Foo };
+    /// let uri_string = format!("{}", &msg as &dyn UriDisplay<Query>);
+    /// assert_eq!(uri_string, "inner=araw&inner=format");
     /// ```
     #[inline(always)]
     pub fn refresh(&mut self) {
@@ -380,7 +374,7 @@ impl Formatter<'_, Query> {
     /// # extern crate rocket;
     /// use std::fmt;
     ///
-    /// use rocket::http::uri::{Formatter, UriDisplay, Query};
+    /// use rocket::http::uri::fmt::{Formatter, UriDisplay, Query};
     ///
     /// struct Foo {
     ///     name: usize
@@ -395,7 +389,7 @@ impl Formatter<'_, Query> {
     /// }
     ///
     /// let foo = Foo { name: 123 };
-    /// let uri_string = format!("{}", &foo as &UriDisplay<Query>);
+    /// let uri_string = format!("{}", &foo as &dyn UriDisplay<Query>);
     /// assert_eq!(uri_string, "name=123");
     /// ```
     #[inline]
@@ -404,7 +398,7 @@ impl Formatter<'_, Query> {
     }
 }
 
-impl<P: UriPart> fmt::Write for Formatter<'_, P> {
+impl<P: Part> fmt::Write for Formatter<'_, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_raw(s)
     }
@@ -425,66 +419,221 @@ pub enum UriQueryArgument<'a> {
     Value(&'a dyn UriDisplay<Query>)
 }
 
+/// No prefix at all.
+#[doc(hidden)]
+pub struct Void;
+
 // Used by code generation.
 #[doc(hidden)]
-pub struct UriArguments<'a> {
-    pub path: UriArgumentsKind<&'a [&'a dyn UriDisplay<Path>]>,
-    pub query: Option<UriArgumentsKind<&'a [UriQueryArgument<'a>]>>,
+pub trait ValidRoutePrefix {
+    type Output;
+
+    fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output;
+}
+
+impl<'a> ValidRoutePrefix for Origin<'a> {
+    type Output = Self;
+
+    fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
+        // No-op if `self` is already normalzied.
+        let mut prefix = self.into_normalized();
+        prefix.clear_query();
+
+        if prefix.path() == "/" {
+            // Avoid a double `//` to start.
+            return Origin::new(path, query);
+        } else if path == "/" {
+            // Appending path to `/` is a no-op, but append any query.
+            prefix.set_query(query);
+            return prefix;
+        }
+
+        Origin::new(format!("{}{}", prefix.path(), path), query)
+    }
+}
+
+impl<'a> ValidRoutePrefix for Absolute<'a> {
+    type Output = Self;
+
+    fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
+        // No-op if `self` is already normalzied.
+        let mut prefix = self.into_normalized();
+        prefix.clear_query();
+
+        if prefix.authority().is_some() {
+            // The prefix is normalized. Appending a `/` is a no-op.
+            if path == "/" {
+                prefix.set_query(query);
+                return prefix;
+            }
+        }
+
+        // In these cases, appending `path` would be a no-op or worse.
+        if prefix.path().is_empty() || prefix.path() == "/" {
+            prefix.set_path(path);
+            prefix.set_query(query);
+            return prefix;
+        }
+
+        if path == "/" {
+            prefix.set_query(query);
+            return prefix;
+        }
+
+        prefix.set_path(format!("{}{}", prefix.path(), path));
+        prefix.set_query(query);
+        prefix
+    }
+}
+
+// `Self` is a valid suffix for `T`.
+#[doc(hidden)]
+pub trait ValidRouteSuffix<T> {
+    type Output;
+
+    fn prepend(self, prefix: T) -> Self::Output;
+}
+
+impl<'a> ValidRouteSuffix<Origin<'a>> for Reference<'a> {
+    type Output = Self;
+
+    fn prepend(self, prefix: Origin<'a>) -> Self::Output {
+        Reference::from(prefix).with_query_fragment_of(self)
+    }
+}
+
+impl<'a> ValidRouteSuffix<Absolute<'a>> for Reference<'a> {
+    type Output = Self;
+
+    fn prepend(self, prefix: Absolute<'a>) -> Self::Output {
+        Reference::from(prefix).with_query_fragment_of(self)
+    }
+}
+
+impl<'a> ValidRouteSuffix<Origin<'a>> for Absolute<'a> {
+    type Output = Origin<'a>;
+
+    fn prepend(self, mut prefix: Origin<'a>) -> Self::Output {
+        if let Some(query) = self.query {
+            if prefix.query().is_none() {
+                prefix.set_query(query.value.into_concrete(&self.source));
+            }
+        }
+
+        prefix
+    }
+}
+
+impl<'a> ValidRouteSuffix<Absolute<'a>> for Absolute<'a> {
+    type Output = Self;
+
+    fn prepend(self, mut prefix: Absolute<'a>) -> Self::Output {
+        if let Some(query) = self.query {
+            if prefix.query().is_none() {
+                prefix.set_query(query.value.into_concrete(&self.source));
+            }
+        }
+
+        prefix
+    }
 }
 
 // Used by code generation.
-impl UriArguments<'_> {
-    #[doc(hidden)]
-    pub fn into_origin(self) -> Origin<'static> {
-        use std::borrow::Cow;
+#[doc(hidden)]
+pub struct RouteUriBuilder {
+    pub path: Cow<'static, str>,
+    pub query: Option<Cow<'static, str>>,
+}
+
+// Used by code generation.
+#[doc(hidden)]
+pub struct PrefixedRouteUri<T>(T);
+
+// Used by code generation.
+#[doc(hidden)]
+pub struct SuffixedRouteUri<T>(T);
+
+// Used by code generation.
+#[doc(hidden)]
+impl RouteUriBuilder {
+    /// Create a new `RouteUriBuilder` with the given path/query args.
+    pub fn new(
+        path_args: UriArgumentsKind<&[&dyn UriDisplay<Path>]>,
+        query_args: Option<UriArgumentsKind<&[UriQueryArgument<'_>]>>,
+    ) -> Self {
         use self::{UriArgumentsKind::*, UriQueryArgument::*};
 
-        let path: Cow<'static, str> = match self.path {
+        let path: Cow<'static, str> = match path_args {
             Static(path) => path.into(),
             Dynamic(args) => {
                 let mut string = String::from("/");
-                {
-                    let mut formatter = Formatter::<Path>::new(&mut string);
-                    for value in args {
-                        let _ = formatter.write_value(value);
-                    }
+                let mut formatter = Formatter::<Path>::new(&mut string);
+                for value in args {
+                    let _ = formatter.write_value(value);
                 }
 
                 string.into()
             }
         };
 
-        let query: Option<Cow<'_, str>> = self.query.and_then(|q| match q {
-            Static(query) => Some(query.into()),
-            Dynamic(args) if args.is_empty() => None,
-            Dynamic(args) => {
+        let query: Option<Cow<'_, str>> = match query_args {
+            None => None,
+            Some(Static(query)) => Some(query.into()),
+            Some(Dynamic(args)) => {
                 let mut string = String::new();
-                {
-                    let mut f = Formatter::<Query>::new(&mut string);
-                    for arg in args {
-                        let _ = match arg {
-                            Raw(v) => f.write_raw(v),
-                            NameValue(n, v) => f.write_named_value(n, v),
-                            Value(v) => f.write_value(v),
-                        };
-                    }
+                let mut f = Formatter::<Query>::new(&mut string);
+                for arg in args {
+                    let _ = match arg {
+                        Raw(v) => f.write_raw(v),
+                        NameValue(n, v) => f.write_named_value(n, v),
+                        Value(v) => f.write_value(v),
+                    };
                 }
 
-                match string.is_empty() {
-                    false => Some(string.into()),
-                    true => None,
-                }
+                (!string.is_empty()).then(|| string.into())
             }
-        });
+        };
 
-        Origin::new(path, query)
+        RouteUriBuilder { path, query }
+    }
+
+    pub fn with_prefix<P: ValidRoutePrefix>(self, p: P) -> PrefixedRouteUri<P::Output> {
+        PrefixedRouteUri(p.append(self.path, self.query))
+    }
+
+    pub fn with_suffix<S>(self, suffix: S) -> SuffixedRouteUri<S::Output>
+        where S: ValidRouteSuffix<Origin<'static>>
+    {
+        SuffixedRouteUri(suffix.prepend(self.render()))
+    }
+
+    pub fn render(self) -> Origin<'static> {
+        Origin::new(self.path, self.query)
+    }
+}
+
+#[doc(hidden)]
+impl<T> PrefixedRouteUri<T> {
+    pub fn with_suffix<S: ValidRouteSuffix<T>>(self, suffix: S) -> SuffixedRouteUri<S::Output> {
+        SuffixedRouteUri(suffix.prepend(self.0))
+    }
+
+    pub fn render(self) -> T {
+        self.0
+    }
+}
+
+#[doc(hidden)]
+impl<T> SuffixedRouteUri<T> {
+    pub fn render(self) -> T {
+        self.0
     }
 }
 
 // See https://github.com/SergioBenitez/Rocket/issues/1534.
 #[cfg(test)]
 mod prefix_soundness_test {
-    use crate::uri::{Formatter, Query, UriDisplay};
+    use crate::uri::fmt::{Formatter, UriDisplay, Query};
 
     struct MyValue;
 

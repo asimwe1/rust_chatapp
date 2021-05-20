@@ -171,7 +171,7 @@ impl<'a> RouteUri<'a> {
         self.origin.path().as_str()
     }
 
-    /// The query part of this route URI as an `Option<&str>`.
+    /// The query part of this route URI, if there is one.
     ///
     /// # Example
     ///
@@ -180,10 +180,18 @@ impl<'a> RouteUri<'a> {
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
     ///
+    /// let index = Route::new(Method::Get, "/foo/bar", handler);
+    /// assert!(index.uri.query().is_none());
+    ///
+    /// // Normalization clears the empty '?'.
+    /// let index = Route::new(Method::Get, "/foo/bar?", handler);
+    /// assert!(index.uri.query().is_none());
+    ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
-    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.uri.query().unwrap(), "a=1");
+    ///
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.uri.query().unwrap(), "a=1");
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<&str> {
@@ -241,17 +249,17 @@ impl<'a> RouteUri<'a> {
 
 impl Metadata {
     fn from(base: &Origin<'_>, origin: &Origin<'_>) -> Self {
-        let base_segs = base.raw_path_segments()
+        let base_segs = base.path().raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let path_segs = origin.raw_path_segments()
+        let path_segs = origin.path().raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let query_segs = origin.raw_query_segments()
-            .map(Segment::from)
-            .collect::<Vec<_>>();
+        let query_segs = origin.query()
+            .map(|q| q.raw_segments().map(Segment::from).collect::<Vec<_>>())
+            .unwrap_or_default();
 
         let static_query_fields = query_segs.iter().filter(|s| !s.dynamic)
             .map(|s| ValueField::parse(&s.value))

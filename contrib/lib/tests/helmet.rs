@@ -4,7 +4,7 @@ extern crate rocket;
 
 #[cfg(feature = "helmet")]
 mod helmet_tests {
-    use rocket::http::{Status, uri::Uri};
+    use rocket::http::Status;
     use rocket::local::blocking::{Client, LocalResponse};
 
     use rocket_contrib::helmet::*;
@@ -108,24 +108,22 @@ mod helmet_tests {
 
     #[test]
     fn uri_test() {
-        let allow_uri = Uri::parse("https://www.google.com").unwrap();
-        let report_uri = Uri::parse("https://www.google.com").unwrap();
-        let enforce_uri = Uri::parse("https://www.google.com").unwrap();
+        let allow_uri = uri!("https://rocket.rs");
+        let report_uri = uri!("https://rocket.rs");
+        let enforce_uri = uri!("https://rocket.rs");
 
         let helmet = SpaceHelmet::default()
-            .enable(Frame::AllowFrom(allow_uri))
-            .enable(XssFilter::EnableReport(report_uri))
-            .enable(ExpectCt::ReportAndEnforce(Duration::seconds(30), enforce_uri));
+            .enable(Frame::AllowFrom(allow_uri.into()))
+            .enable(XssFilter::EnableReport(report_uri.into()))
+            .enable(ExpectCt::ReportAndEnforce(Duration::seconds(30), enforce_uri.into()));
 
         dispatch!(helmet, |response: LocalResponse<'_>| {
-            assert_header!(response, "X-Frame-Options",
-                           "ALLOW-FROM https://www.google.com");
+            assert_header!(response, "X-Frame-Options", "ALLOW-FROM https://rocket.rs");
 
-            assert_header!(response, "X-XSS-Protection",
-                           "1; report=https://www.google.com");
+            assert_header!(response, "X-XSS-Protection", "1; report=https://rocket.rs");
 
             assert_header!(response, "Expect-CT",
-                "max-age=30, enforce, report-uri=\"https://www.google.com\"");
+                "max-age=30, enforce, report-uri=\"https://rocket.rs\"");
         });
     }
 

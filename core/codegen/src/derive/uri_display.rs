@@ -1,10 +1,10 @@
 
 use devise::{*, ext::SpanDiagnosticExt};
-use rocket_http::uri;
 
 use crate::exports::*;
 use crate::derive::form_field::{FieldExt, VariantExt};
 use crate::proc_macro2::TokenStream;
+use crate::http::uri::fmt;
 
 const NO_EMPTY_FIELDS: &str = "fieldless structs are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
@@ -13,10 +13,9 @@ const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one 
 const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
 
 pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
-    use crate::http::uri::Query;
 
-    const URI_DISPLAY: StaticTokens = quote_static!(#_uri::UriDisplay<#_uri::Query>);
-    const FORMATTER: StaticTokens = quote_static!(#_uri::Formatter<#_uri::Query>);
+    const URI_DISPLAY: StaticTokens = quote_static!(#_fmt::UriDisplay<#_fmt::Query>);
+    const FORMATTER: StaticTokens = quote_static!(#_fmt::Formatter<#_fmt::Query>);
 
     let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #URI_DISPLAY))
         .support(Support::Struct | Support::Enum | Support::Type | Support::Lifetime)
@@ -84,9 +83,9 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
         Err(diag) => return diag.emit_as_item_tokens()
     };
 
-    let from_self = from_uri_param::<Query>(input.clone(), quote!(Self));
-    let from_ref = from_uri_param::<Query>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<Query>(input.clone(), quote!(&'__r mut Self));
+    let from_self = from_uri_param::<fmt::Query>(input.clone(), quote!(Self));
+    let from_ref = from_uri_param::<fmt::Query>(input.clone(), quote!(&'__r Self));
+    let from_mut = from_uri_param::<fmt::Query>(input.clone(), quote!(&'__r mut Self));
 
     let mut ts = TokenStream::from(uri_display);
     ts.extend(TokenStream::from(from_self));
@@ -97,10 +96,8 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
 
 #[allow(non_snake_case)]
 pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
-    use crate::http::uri::Path;
-
-    const URI_DISPLAY: StaticTokens = quote_static!(#_uri::UriDisplay<#_uri::Path>);
-    const FORMATTER: StaticTokens = quote_static!(#_uri::Formatter<#_uri::Path>);
+    const URI_DISPLAY: StaticTokens = quote_static!(#_fmt::UriDisplay<#_fmt::Path>);
+    const FORMATTER: StaticTokens = quote_static!(#_fmt::Formatter<#_fmt::Path>);
 
     let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #URI_DISPLAY))
         .support(Support::TupleStruct | Support::Type | Support::Lifetime)
@@ -130,9 +127,9 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
         Err(diag) => return diag.emit_as_item_tokens()
     };
 
-    let from_self = from_uri_param::<Path>(input.clone(), quote!(Self));
-    let from_ref = from_uri_param::<Path>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<Path>(input.clone(), quote!(&'__r mut Self));
+    let from_self = from_uri_param::<fmt::Path>(input.clone(), quote!(Self));
+    let from_ref = from_uri_param::<fmt::Path>(input.clone(), quote!(&'__r Self));
+    let from_mut = from_uri_param::<fmt::Path>(input.clone(), quote!(&'__r mut Self));
 
     let mut ts = TokenStream::from(uri_display);
     ts.extend(TokenStream::from(from_self));
@@ -141,10 +138,10 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
     ts.into()
 }
 
-fn from_uri_param<P: uri::UriPart>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {
+fn from_uri_param<P: fmt::Part>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {
     let part = match P::KIND {
-        uri::Kind::Path => quote!(#_uri::Path),
-        uri::Kind::Query => quote!(#_uri::Query),
+        fmt::Kind::Path => quote!(#_fmt::Path),
+        fmt::Kind::Query => quote!(#_fmt::Query),
     };
 
     let ty: syn::Type = syn::parse2(ty).expect("valid type");
@@ -153,10 +150,10 @@ fn from_uri_param<P: uri::UriPart>(input: proc_macro::TokenStream, ty: TokenStre
         _ => None
     };
 
-    let param_trait = quote!(impl #gen #_uri::FromUriParam<#part, #ty>);
+    let param_trait = quote!(impl #gen #_fmt::FromUriParam<#part, #ty>);
     DeriveGenerator::build_for(input, param_trait)
         .support(Support::All)
-        .type_bound(quote!(#_uri::UriDisplay<#part>))
+        .type_bound(quote!(#_fmt::UriDisplay<#part>))
         .inner_mapper(MapperBuild::new()
             .with_output(move |_, _| quote! {
                 type Target = #ty;

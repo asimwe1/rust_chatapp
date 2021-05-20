@@ -164,7 +164,7 @@ impl Catcher {
 
         Catcher {
             name: None,
-            base: uri::Origin::new("/", None::<&str>),
+            base: uri::Origin::ROOT,
             handler: Box::new(handler),
             code,
         }

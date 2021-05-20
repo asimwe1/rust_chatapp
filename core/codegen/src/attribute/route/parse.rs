@@ -10,7 +10,7 @@ use crate::syn_ext::FnArgExt;
 use crate::name::Name;
 use crate::proc_macro2::Span;
 use crate::http::ext::IntoOwned;
-use crate::http::uri::{self, Origin};
+use crate::http::uri::{Origin, fmt};
 
 /// This structure represents the parsed `route` attribute and associated items.
 #[derive(Debug)]
@@ -159,14 +159,14 @@ impl Route {
 
         // Parse and collect the path parameters.
         let (source, span) = (attr.uri.path(), attr.uri.path_span);
-        let path_params = Parameter::parse_many::<uri::Path>(source.as_str(), span)
+        let path_params = Parameter::parse_many::<fmt::Path>(source.as_str(), span)
             .map(|p| Route::upgrade_param(p?, &arguments))
             .filter_map(|p| p.map_err(|e| diags.push(e.into())).ok())
             .collect::<Vec<_>>();
 
         // Parse and collect the query parameters.
         let query_params = match (attr.uri.query(), attr.uri.query_span) {
-            (Some(r), Some(span)) => Parameter::parse_many::<uri::Query>(r.as_str(), span)
+            (Some(q), Some(span)) => Parameter::parse_many::<fmt::Query>(q.as_str(), span)
                 .map(|p| Route::upgrade_param(p?, &arguments))
                 .filter_map(|p| p.map_err(|e| diags.push(e.into())).ok())
                 .collect::<Vec<_>>(),

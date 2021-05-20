@@ -70,6 +70,13 @@ impl StringLit {
     }
 }
 
+impl crate::syn::parse::Parse for StringLit {
+    fn parse(input: devise::syn::parse::ParseStream<'_>) -> devise::syn::Result<Self> {
+        let lit = input.parse::<crate::syn::LitStr>()?;
+        Ok(StringLit::new(lit.value(), lit.span()))
+    }
+}
+
 impl devise::FromMeta for StringLit {
     fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
         Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))

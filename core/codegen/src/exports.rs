@@ -76,6 +76,7 @@ define_exported_paths! {
     _form => ::rocket::form::prelude,
     _http => ::rocket::http,
     _uri => ::rocket::http::uri,
+    _fmt => ::rocket::http::uri::fmt,
     _Option => ::std::option::Option,
     _Result => ::std::result::Result,
     _Some => ::std::option::Option::Some,

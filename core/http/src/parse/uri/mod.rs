@@ -4,9 +4,9 @@ pub(crate) mod tables;
 
 #[cfg(test)] mod tests;
 
-use crate::uri::{Uri, Origin, Absolute, Authority};
+use crate::uri::{Uri, Origin, Absolute, Authority, Reference};
 
-use self::parser::{uri, origin, authority_only, absolute_only};
+use self::parser::*;
 
 pub use self::error::Error;
 
@@ -24,10 +24,15 @@ pub fn origin_from_str(s: &str) -> Result<Origin<'_>, Error<'_>> {
 
 #[inline]
 pub fn authority_from_str(s: &str) -> Result<Authority<'_>, Error<'_>> {
-    Ok(parse!(authority_only: RawInput::new(s.as_bytes()))?)
+    Ok(parse!(authority: RawInput::new(s.as_bytes()))?)
 }
 
 #[inline]
 pub fn absolute_from_str(s: &str) -> Result<Absolute<'_>, Error<'_>> {
-    Ok(parse!(absolute_only: RawInput::new(s.as_bytes()))?)
+    Ok(parse!(absolute: RawInput::new(s.as_bytes()))?)
+}
+
+#[inline]
+pub fn reference_from_str(s: &str) -> Result<Reference<'_>, Error<'_>> {
+    Ok(parse!(reference: RawInput::new(s.as_bytes()))?)
 }

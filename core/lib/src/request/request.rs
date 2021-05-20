@@ -1,8 +1,7 @@
-use std::{ops::RangeFrom, sync::Arc};
-use std::net::{IpAddr, SocketAddr};
-use std::future::Future;
 use std::fmt;
-use std::str;
+use std::ops::RangeFrom;
+use std::{future::Future, borrow::Cow, sync::Arc};
+use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
 use state::{Container, Storage};
@@ -14,7 +13,7 @@ use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 
 use crate::{Rocket, Route, Orbit};
-use crate::http::{hyper, uri::{Origin, Segments}, uncased::UncasedStr};
+use crate::http::{hyper, uri::{Origin, Segments, fmt::Path}, uncased::UncasedStr};
 use crate::http::{Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::data::Limits;
@@ -794,18 +793,21 @@ impl<'r> Request<'r> {
     /// Get the segments beginning at the `n`th, 0-indexed, after the mount
     /// point for the currently matched route, if they exist. Used by codegen.
     #[inline]
-    pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_> {
+    pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_, Path> {
         let mount_segments = self.route()
             .map(|r| r.uri.metadata.base_segs.len())
             .unwrap_or(0);
 
-        self.uri().path_segments().skip(mount_segments + n.start)
+        self.uri().path().segments().skip(mount_segments + n.start)
     }
 
     // Retrieves the pre-parsed query items. Used by matching and codegen.
     #[inline]
     pub fn query_fields(&self) -> impl Iterator<Item = ValueField<'_>> {
-        self.uri().query_segments().map(ValueField::from)
+        self.uri().query()
+            .map(|q| q.segments().map(ValueField::from))
+            .into_iter()
+            .flatten()
     }
 
     /// Set `self`'s parameters given that the route used to reach this request
@@ -836,7 +838,7 @@ impl<'r> Request<'r> {
     ) -> Result<Request<'r>, Error<'r>> {
         // Get a copy of the URI (only supports path-and-query) for later use.
         let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
-            (None, None, Some(path_query)) => path_query.as_str(),
+            (None, None, Some(path_query)) => path_query,
             _ => return Err(Error::InvalidUri(h_uri)),
         };
 
@@ -846,8 +848,10 @@ impl<'r> Request<'r> {
             None => return Err(Error::BadMethod(h_method))
         };
 
-        // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse(uri)?;
+        // In debug, make sure we agree with Hyper. Otherwise, cross our fingers
+        // and trust that it only gives us valid URIs like it's supposed to.
+        debug_assert!(Origin::parse(uri.as_str()).is_ok());
+        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);

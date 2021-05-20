@@ -357,10 +357,12 @@ impl Into<Vec<Route>> for StaticFiles {
 #[rocket::async_trait]
 impl Handler for StaticFiles {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+        use rocket::http::uri::fmt::Path;
+
         // Get the segments as a `PathBuf`, allowing dotfiles requested.
         let options = self.options;
         let allow_dotfiles = options.contains(Options::DotFiles);
-        let path = req.segments::<Segments<'_>>(0..).ok()
+        let path = req.segments::<Segments<'_, Path>>(0..).ok()
             .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 

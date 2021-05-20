@@ -6,7 +6,7 @@ use std::fmt;
 
 use ref_cast::RefCast;
 use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
-use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use crate::uri::fmt::{percent_encode, DEFAULT_ENCODE_SET};
 
 use crate::uncased::UncasedStr;
 

@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crate::uri::{self, UriPart, UriDisplay};
+use crate::uri::fmt::UriDisplay;
+use crate::uri::fmt::{self, Part};
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
 ///
@@ -17,9 +18,9 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// be automated. Rocket provides [`impl_from_uri_param_identity`] to generate
 /// the _identity_ implementations automatically. For a type `T`, these are:
 ///
-///   * `impl<P: UriPart> FromUriParam<P, T> for T`
-///   * `impl<'x, P: UriPart> FromUriParam<P, &'x T> for T`
-///   * `impl<'x, P: UriPart> FromUriParam<P, &'x mut T> for T`
+///   * `impl<P: Part> FromUriParam<P, T> for T`
+///   * `impl<'x, P: Part> FromUriParam<P, &'x T> for T`
+///   * `impl<'x, P: Part> FromUriParam<P, &'x mut T> for T`
 ///
 /// See [`impl_from_uri_param_identity`] for usage details.
 ///
@@ -40,10 +41,10 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///
 /// ```rust
 /// # extern crate rocket;
-/// # use rocket::http::uri::{FromUriParam, UriPart};
+/// # use rocket::http::uri::fmt::{FromUriParam, Part};
 /// # struct S;
 /// # type String = S;
-/// impl<'a, P: UriPart> FromUriParam<P, &'a str> for String {
+/// impl<'a, P: Part> FromUriParam<P, &'a str> for String {
 ///     type Target = &'a str;
 /// #   fn from_uri_param(s: &'a str) -> Self::Target { "hi" }
 /// }
@@ -99,7 +100,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// invocation. For instance, if the route has a type of `T` and you'd like to
 /// use a type of `S` in a `uri!` invocation, you'd implement `FromUriParam<P,
 /// T> for S` where `P` is `Path` for conversions valid in the path part of a
-/// URI, `Uri` for conversions valid in the query part of a URI, or `P: UriPart`
+/// URI, `Uri` for conversions valid in the query part of a URI, or `P: Part`
 /// when a conversion is valid in either case.
 ///
 /// This is typically only warranted for owned-value types with corresponding
@@ -121,7 +122,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// # #[macro_use] extern crate rocket;
 /// use std::fmt;
 ///
-/// use rocket::http::uri::{Formatter, UriDisplay, FromUriParam, Query};
+/// use rocket::http::uri::fmt::{Formatter, UriDisplay, FromUriParam, Query};
 ///
 /// #[derive(FromForm)]
 /// struct User<'a> {
@@ -150,7 +151,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # use std::fmt;
-/// # use rocket::http::uri::{Formatter, UriDisplay, FromUriParam, Query};
+/// # use rocket::http::uri::fmt::{Formatter, UriDisplay, FromUriParam, Query};
 /// #
 /// # #[derive(FromForm)]
 /// # struct User<'a> { name: &'a str, nickname: String, }
@@ -172,22 +173,22 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// #[post("/<name>?<user..>")]
 /// fn some_route(name: &str, user: User<'_>)  { /* .. */ }
 ///
-/// let uri = uri!(some_route: name = "hey", user = ("Robert Mike", "Bob"));
+/// let uri = uri!(some_route(name = "hey", user = ("Robert Mike", "Bob")));
 /// assert_eq!(uri.path(), "/hey");
 /// assert_eq!(uri.query().unwrap(), "name=Robert%20Mike&nickname=Bob");
 /// ```
 ///
-/// [`uri!`]: crate::uri
-/// [`UriDisplay`]: crate::uri::UriDisplay
-/// [`FromUriParam::Target`]: crate::uri::FromUriParam::Target
-/// [`Path`]: crate::uri::Path
-pub trait FromUriParam<P: UriPart, T> {
+/// [`uri!`]: rocket::uri
+/// [`FromUriParam::Target`]: crate::uri::fmt::FromUriParam::Target
+/// [`Path`]: crate::uri::fmt::Path
+/// [`Query`]: crate::uri::fmt::Query
+pub trait FromUriParam<P: Part, T> {
     /// The resulting type of this conversion.
     type Target: UriDisplay<P>;
 
     /// Converts a value of type `T` into a value of type `Self::Target`. The
     /// resulting value of type `Self::Target` will be rendered into a URI using
-    /// its [`UriDisplay`](crate::uri::UriDisplay) implementation.
+    /// its [`UriDisplay`] implementation.
     fn from_uri_param(param: T) -> Self::Target;
 }
 
@@ -200,7 +201,7 @@ macro_rules! impl_conversion_ref {
     ($($A:ty => $B:ty),*) => ( impl_conversion_ref!(@_ $(() $A => $B),*); );
 
     (@_ $(($($l:tt)*) $A:ty => $B:ty),*) => ($(
-        impl_conversion_ref!([P] ($($l)* P: $crate::uri::UriPart) $A => $B);
+        impl_conversion_ref!([P] ($($l)* P: $crate::uri::fmt::Part) $A => $B);
     )*);
 
     ($([$P:ty] ($($l:tt)*) $A:ty => $B:ty),*) => ($(
@@ -212,7 +213,7 @@ macro_rules! impl_conversion_ref {
     ($([$P:ty] $A:ty => $B:ty),*) => ( impl_conversion_ref!($([$P] () $A => $B),*););
 
     (@_ [$P:ty] ($($l:tt)*) $A:ty => $B:ty) => (
-        impl<$($l)*> $crate::uri::FromUriParam<$P, $A> for $B {
+        impl<$($l)*> $crate::uri::fmt::FromUriParam<$P, $A> for $B {
             type Target = $A;
             #[inline(always)] fn from_uri_param(param: $A) -> $A { param }
         }
@@ -224,13 +225,13 @@ macro_rules! impl_conversion_ref {
 ///
 /// For a type `T`, the _identity_ implementations of `FromUriParam` are:
 ///
-///   * `impl<P: UriPart> FromUriParam<P, T> for T`
+///   * `impl<P: Part> FromUriParam<P, T> for T`
 ///   * `impl<'x> FromUriParam<P, &'x T> for T`
 ///   * `impl<'x> FromUriParam<P, &'x mut T> for T`
 ///
 /// where `P` is one of:
 ///
-///   * `P: UriPart` (the generic `P`)
+///   * `P: Part` (the generic `P`)
 ///   * [`Path`]
 ///   * [`Query`]
 ///
@@ -241,7 +242,7 @@ macro_rules! impl_conversion_ref {
 ///      Generates the three _identity_ implementations for the generic `P`.
 ///
 ///      * Example: `impl_from_uri_param_identity!(MyType);`
-///      * Generates: `impl<P: UriPart> FromUriParam<P, _> for MyType { ... }`
+///      * Generates: `impl<P: Part> FromUriParam<P, _> for MyType { ... }`
 ///
 ///   2. `impl_from_uri_param_identity!((generics*) Type);`
 ///
@@ -250,11 +251,11 @@ macro_rules! impl_conversion_ref {
 ///      implementation.
 ///
 ///      * Example: `impl_from_uri_param_identity!(('a) MyType<'a>);`
-///      * Generates: `impl<'a, P: UriPart> FromUriParam<P, _> for MyType<'a> { ... }`
+///      * Generates: `impl<'a, P: Part> FromUriParam<P, _> for MyType<'a> { ... }`
 ///
 ///   3. `impl_from_uri_param_identity!([Part] Type);`
 ///
-///      Generates the three _identity_ implementations for the `UriPart`
+///      Generates the three _identity_ implementations for the `Part`
 ///      `Part`, where `Part` is a path to [`Path`] or [`Query`].
 ///
 ///      * Example: `impl_from_uri_param_identity!([Path] MyType);`
@@ -267,9 +268,9 @@ macro_rules! impl_conversion_ref {
 ///      * Example: `impl_from_uri_param_identity!([Path] ('a) MyType<'a>);`
 ///      * Generates: `impl<'a> FromUriParam<Path, _> for MyType<'a> { ... }`
 ///
-/// [`FromUriParam`]: crate::uri::FromUriParam
-/// [`Path`]: crate::uri::Path
-/// [`Query`]: crate::uri::Query
+/// [`FromUriParam`]: crate::uri::fmt::FromUriParam
+/// [`Path`]: crate::uri::fmt::Path
+/// [`Query`]: crate::uri::fmt::Query
 #[macro_export(local_inner_macros)]
 macro_rules! impl_from_uri_param_identity {
     ($(($($l:tt)*) $T:ty),*) => ($( impl_conversion_ref!(($($l)*) $T => $T); )*);
@@ -297,16 +298,16 @@ impl_conversion_ref! {
     ('a) String => &'a str
 }
 
-impl_from_uri_param_identity!([uri::Path] ('a) &'a Path);
-impl_from_uri_param_identity!([uri::Path] PathBuf);
+impl_from_uri_param_identity!([fmt::Path] ('a) &'a Path);
+impl_from_uri_param_identity!([fmt::Path] PathBuf);
 
 impl_conversion_ref! {
-    [uri::Path] ('a) &'a Path => PathBuf,
-    [uri::Path] ('a) PathBuf => &'a Path
+    [fmt::Path] ('a) &'a Path => PathBuf,
+    [fmt::Path] ('a) PathBuf => &'a Path
 }
 
 /// A no cost conversion allowing an `&str` to be used in place of a `PathBuf`.
-impl<'a> FromUriParam<uri::Path, &'a str> for PathBuf {
+impl<'a> FromUriParam<fmt::Path, &'a str> for PathBuf {
     type Target = &'a Path;
 
     #[inline(always)]
@@ -316,7 +317,7 @@ impl<'a> FromUriParam<uri::Path, &'a str> for PathBuf {
 }
 
 /// A no cost conversion allowing an `&&str` to be used in place of a `PathBuf`.
-impl<'a, 'b> FromUriParam<uri::Path, &'a &'b str> for PathBuf {
+impl<'a, 'b> FromUriParam<fmt::Path, &'a &'b str> for PathBuf {
     type Target = &'b Path;
 
     #[inline(always)]
@@ -326,7 +327,7 @@ impl<'a, 'b> FromUriParam<uri::Path, &'a &'b str> for PathBuf {
 }
 
 /// A no cost conversion allowing any `T` to be used in place of an `Option<T>`.
-impl<A, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Option<T> {
+impl<A, T: FromUriParam<fmt::Path, A>> FromUriParam<fmt::Path, A> for Option<T> {
     type Target = T::Target;
 
     #[inline(always)]
@@ -336,7 +337,7 @@ impl<A, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Option<T> 
 }
 
 /// A no cost conversion allowing `T` to be used in place of an `Result<T, E>`.
-impl<A, E, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Result<T, E> {
+impl<A, E, T: FromUriParam<fmt::Path, A>> FromUriParam<fmt::Path, A> for Result<T, E> {
     type Target = T::Target;
 
     #[inline(always)]
@@ -345,7 +346,7 @@ impl<A, E, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Result<
     }
 }
 
-impl<A, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> for Option<T> {
+impl<A, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Option<A>> for Option<T> {
     type Target = Option<T::Target>;
 
     #[inline(always)]
@@ -354,7 +355,7 @@ impl<A, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> for 
     }
 }
 
-impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> for Result<T, E> {
+impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Option<A>> for Result<T, E> {
     type Target = Option<T::Target>;
 
     #[inline(always)]
@@ -363,7 +364,7 @@ impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> f
     }
 }
 
-impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Result<A, E>> for Result<T, E> {
+impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Result<A, E>> for Result<T, E> {
     type Target = Result<T::Target, E>;
 
     #[inline(always)]
@@ -372,7 +373,7 @@ impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Result<A, E>
     }
 }
 
-impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Result<A, E>> for Option<T> {
+impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Result<A, E>> for Option<T> {
     type Target = Result<T::Target, E>;
 
     #[inline(always)]

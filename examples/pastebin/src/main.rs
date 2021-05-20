@@ -5,7 +5,6 @@ mod paste_id;
 
 use std::io;
 
-use rocket::State;
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::uri::Absolute;
 use rocket::response::content::Plain;
@@ -13,17 +12,15 @@ use rocket::tokio::fs::{self, File};
 
 use crate::paste_id::PasteId;
 
-const HOST: &str = "http://localhost:8000";
+const HOST: Absolute<'static> = uri!("http://localhost:8000");
+
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
-async fn upload(paste: Data, host: &State<Absolute<'_>>) -> io::Result<String> {
+async fn upload(paste: Data) -> io::Result<String> {
     let id = PasteId::new(ID_LENGTH);
     paste.open(128.kibibytes()).into_file(id.file_path()).await?;
-
-    // TODO: Ok(uri!(HOST, retrieve: id))
-    let host = host.inner().clone();
-    Ok(host.with_origin(uri!(retrieve: id)).to_string())
+    Ok(uri!(HOST, retrieve(id)).to_string())
 }
 
 #[get("/<id>")]
@@ -57,6 +54,5 @@ fn index() -> &'static str {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .manage(Absolute::parse(HOST).expect("valid host"))
         .mount("/", routes![index, upload, delete, retrieve])
 }
