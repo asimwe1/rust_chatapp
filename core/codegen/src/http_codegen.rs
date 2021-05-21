@@ -1,8 +1,8 @@
 use quote::ToTokens;
 use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
+use proc_macro2::{TokenStream, Span};
 
 use crate::http;
-use crate::proc_macro2::{TokenStream, Span};
 
 #[derive(Debug)]
 pub struct ContentType(pub http::ContentType);

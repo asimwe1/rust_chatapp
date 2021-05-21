@@ -1,12 +1,11 @@
 use std::hash::{Hash, Hasher};
 
-use devise::{syn, FromMeta, MetaItem, Result};
+use devise::{FromMeta, MetaItem, Result};
+use proc_macro2::Span;
 
 use crate::name::Name;
-use crate::proc_macro2::Span;
 use crate::proc_macro_ext::StringLit;
 use crate::http::uri;
-
 
 impl Dynamic {
     pub fn is_wild(&self) -> bool {

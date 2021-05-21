@@ -2,8 +2,8 @@ use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 
 use syn::visit_mut::VisitMut;
 use syn::visit::Visit;
+use proc_macro2::{TokenStream, TokenTree, Span};
 
-use crate::proc_macro2::{TokenStream, TokenTree, Span};
 use crate::syn_ext::IdentExt;
 use crate::name::Name;
 

@@ -1,14 +1,13 @@
 use std::fmt::Display;
 
-use devise::{syn, Result};
-use devise::ext::{SpanDiagnosticExt, quote_respanned};
+use devise::{Result, ext::{SpanDiagnosticExt, quote_respanned}};
+use syn::{Expr, Ident, Type, spanned::Spanned};
+use proc_macro2::TokenStream;
 
 use crate::http::uri::fmt;
 use crate::http_codegen::Optional;
-use crate::syn::{Expr, Ident, Type, spanned::Spanned};
 use crate::syn_ext::IdentExt;
 use crate::bang::uri_parsing::*;
-use crate::proc_macro2::TokenStream;
 use crate::attribute::param::Parameter;
 use crate::exports::*;
 use crate::URI_MACRO_PREFIX;

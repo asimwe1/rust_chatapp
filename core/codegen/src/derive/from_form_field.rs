@@ -1,7 +1,7 @@
 use devise::{*, ext::SpanDiagnosticExt};
+use proc_macro2::TokenStream;
 
 use crate::exports::*;
-use crate::proc_macro2::TokenStream;
 use crate::derive::form_field::{VariantExt, first_duplicate};
 
 pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {

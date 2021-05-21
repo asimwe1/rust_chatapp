@@ -1,7 +1,7 @@
 use devise::{*, ext::{TypeExt, SpanDiagnosticExt, GenericsExt, Split2, quote_respanned}};
+use proc_macro2::TokenStream;
 
 use crate::exports::*;
-use crate::proc_macro2::TokenStream;
 use crate::derive::form_field::{*, FieldName::*};
 
 // F: fn(field_ty: Ty, field_context: Expr)

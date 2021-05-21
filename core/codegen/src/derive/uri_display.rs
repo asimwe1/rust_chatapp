@@ -1,9 +1,8 @@
-
+use proc_macro2::TokenStream;
 use devise::{*, ext::SpanDiagnosticExt};
 
 use crate::exports::*;
 use crate::derive::form_field::{FieldExt, VariantExt};
-use crate::proc_macro2::TokenStream;
 use crate::http::uri::fmt;
 
 const NO_EMPTY_FIELDS: &str = "fieldless structs are not supported";

@@ -1,7 +1,7 @@
 use super::EntryAttr;
 
-use devise::{syn, Spanned, Result};
-use devise::proc_macro2::TokenStream;
+use devise::{Spanned, Result};
+use proc_macro2::TokenStream;
 
 /// `#[rocket::async_test]`: calls the attributed fn inside `rocket::async_test`
 pub struct Test;

@@ -1,9 +1,9 @@
 use std::path::Path;
 use std::error::Error;
 
+use syn::{self, Ident, LitStr};
 use devise::ext::SpanDiagnosticExt;
-use devise::syn::{self, Ident, LitStr};
-use devise::proc_macro2::TokenStream;
+use proc_macro2::TokenStream;
 
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
     let root_glob = syn::parse::<LitStr>(input.into())?;

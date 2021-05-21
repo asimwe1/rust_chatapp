@@ -1,6 +1,5 @@
-use crate::syn;
-use crate::proc_macro2::{Span, TokenStream};
-use crate::quote::{ToTokens, TokenStreamExt};
+use proc_macro2::{Span, TokenStream};
+use quote::{ToTokens, TokenStreamExt};
 
 #[derive(Debug, Copy, Clone)]
 pub struct StaticPath(pub Option<Span>, pub &'static str);

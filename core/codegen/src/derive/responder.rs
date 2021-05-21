@@ -1,8 +1,8 @@
 use quote::ToTokens;
 use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
+use proc_macro2::TokenStream;
 
 use crate::exports::*;
-use crate::proc_macro2::TokenStream;
 use crate::http_codegen::{ContentType, Status};
 
 #[derive(Debug, Default, FromMeta)]

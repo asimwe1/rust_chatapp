@@ -1,9 +1,9 @@
 use unicode_xid::UnicodeXID;
 use devise::{Diagnostic, ext::SpanDiagnosticExt};
+use proc_macro2::Span;
 
 use crate::name::Name;
 use crate::proc_macro_ext::StringLit;
-use crate::proc_macro2::Span;
 use crate::attribute::param::{Parameter, Dynamic};
 use crate::http::uri::fmt::{Part, Kind, Path};
 

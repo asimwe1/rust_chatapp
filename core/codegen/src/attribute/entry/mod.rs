@@ -2,9 +2,9 @@ mod main;
 mod launch;
 mod test;
 
-use devise::{syn, Diagnostic, Spanned, Result};
+use devise::{Diagnostic, Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use devise::proc_macro2::{TokenStream, Span};
+use proc_macro2::{TokenStream, Span};
 
 // Common trait implemented by `async` entry generating attributes.
 trait EntryAttr {

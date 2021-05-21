@@ -3,15 +3,14 @@ use std::ops::Deref;
 use indexmap::IndexMap;
 use devise::{Spanned, ext::TypeExt};
 use quote::{ToTokens, TokenStreamExt};
+use syn::{Expr, Ident, LitStr, Path, Token, Type};
+use syn::parse::{self, Parse, ParseStream, Parser};
+use syn::punctuated::Punctuated;
+use proc_macro2::{TokenStream, TokenTree, Span};
 use rocket_http::uri::{Error, Reference};
-
-use crate::{http_codegen, syn::{self, Expr, Ident, LitStr, Path, Token, Type}};
-use crate::syn::parse::{self, Parse, ParseStream, Parser};
-use crate::syn::punctuated::Punctuated;
 
 use crate::http::uri::{Uri, Origin, Absolute, fmt};
 use crate::http::ext::IntoOwned;
-use crate::proc_macro2::{TokenStream, TokenTree, Span};
 use crate::proc_macro_ext::StringLit;
 use crate::attribute::param::{Parameter, Dynamic};
 use crate::name::Name;
@@ -549,7 +548,7 @@ impl Deref for UriLit {
 
 impl ToTokens for UriLit {
     fn to_tokens(&self, t: &mut TokenStream) {
-        use http_codegen::*;
+        use crate::http_codegen::*;
 
         let (uri, span) = (&self.0, self.1);
         match uri {

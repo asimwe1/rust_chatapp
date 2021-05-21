@@ -1,8 +1,7 @@
 use devise::Result;
-
-use crate::syn::{Path, punctuated::Punctuated, parse::Parser, Token};
-use crate::proc_macro2::TokenStream;
-use crate::syn::spanned::Spanned;
+use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
+use syn::spanned::Spanned;
+use proc_macro2::TokenStream;
 
 mod uri;
 mod uri_parsing;

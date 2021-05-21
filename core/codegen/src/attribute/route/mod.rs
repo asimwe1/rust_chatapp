@@ -2,11 +2,10 @@ mod parse;
 
 use std::hash::Hash;
 
-use proc_macro2::{TokenStream, Span};
 use devise::{Spanned, SpanWrapped, Result, FromMeta, Diagnostic};
 use devise::ext::TypeExt as _;
+use proc_macro2::{TokenStream, Span};
 
-use crate::{proc_macro2, syn};
 use crate::proc_macro_ext::StringLit;
 use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};

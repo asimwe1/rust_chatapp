@@ -1,10 +1,10 @@
 mod parse;
 
 use devise::ext::SpanDiagnosticExt;
-use devise::{syn, Spanned, Result};
+use devise::{Spanned, Result};
+use proc_macro2::{TokenStream, Span};
 
 use crate::http_codegen::Optional;
-use crate::proc_macro2::{TokenStream, Span};
 use crate::syn_ext::ReturnTypeExt;
 use crate::exports::*;
 

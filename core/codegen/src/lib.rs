@@ -70,7 +70,6 @@ mod name;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-use devise::{proc_macro2, syn};
 
 static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
 static ROCKET_IDENT_PREFIX: &str = "__rocket_";

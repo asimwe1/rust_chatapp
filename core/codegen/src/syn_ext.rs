@@ -3,8 +3,8 @@
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 
-use crate::syn::{self, Ident, ext::IdentExt as _, visit::Visit};
-use crate::proc_macro2::Span;
+use syn::{self, Ident, ext::IdentExt as _, visit::Visit};
+use proc_macro2::{Span, TokenStream};
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
@@ -19,7 +19,7 @@ pub trait ReturnTypeExt {
 }
 
 pub trait TokenStreamExt {
-    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
+    fn respanned(&self, span: Span) -> Self;
 }
 
 pub trait FnArgExt {
@@ -91,8 +91,8 @@ impl ReturnTypeExt for syn::ReturnType {
     }
 }
 
-impl TokenStreamExt for crate::proc_macro2::TokenStream {
-    fn respanned(&self, span: crate::proc_macro2::Span) -> Self {
+impl TokenStreamExt for TokenStream {
+    fn respanned(&self, span: Span) -> Self {
         self.clone().into_iter().map(|mut token| {
             token.set_span(span);
             token

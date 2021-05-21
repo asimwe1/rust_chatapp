@@ -1,14 +1,13 @@
-use devise::{syn, Spanned, SpanWrapped, Result, FromMeta};
+use devise::{Spanned, SpanWrapped, Result, FromMeta};
 use devise::ext::{SpanDiagnosticExt, TypeExt};
 use indexmap::{IndexSet, IndexMap};
+use proc_macro2::Span;
 
 use crate::proc_macro_ext::Diagnostics;
 use crate::http_codegen::{Method, MediaType};
 use crate::attribute::param::{Parameter, Dynamic, Guard};
 use crate::syn_ext::FnArgExt;
-
 use crate::name::Name;
-use crate::proc_macro2::Span;
 use crate::http::ext::IntoOwned;
 use crate::http::uri::{Origin, fmt};
 
