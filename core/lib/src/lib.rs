@@ -64,6 +64,7 @@
 //! | `tls`     | Support for [TLS] encrypted connections.                |
 //! | `json`    | Support for [JSON (de)serialization].                   |
 //! | `msgpack` | Support for [MessagePack (de)serialization].            |
+//! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
 //!
 //! Features can be selectively enabled in `Cargo.toml`:
 //!
@@ -74,6 +75,7 @@
 //!
 //! [JSON (de)serialization]: crate::serde::json
 //! [MessagePack (de)serialization]: crate::serde::msgpack
+//! [UUID value parsing and (de)serialization]: crate::serde::uuid
 //! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //!

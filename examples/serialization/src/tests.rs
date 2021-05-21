@@ -1,6 +1,6 @@
 use rocket::local::blocking::Client;
 use rocket::http::{Status, ContentType, Accept};
-use rocket::serde::{Serialize, Deserialize};
+use rocket::serde::{Serialize, Deserialize, uuid::Uuid};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -113,4 +113,26 @@ fn msgpack_post() {
 
     assert_eq!(res.status(), Status::Ok);
     assert_eq!(res.into_string().unwrap(), "Goodbye, world!");
+}
+
+#[test]
+fn uuid() {
+    let client = Client::tracked(super::rocket()).unwrap();
+
+    let pairs = &[
+        ("7f205202-7ba1-4c39-b2fc-3e630722bf9f", "We found: Lacy"),
+        ("4da34121-bc7d-4fc1-aee6-bf8de0795333", "We found: Bob"),
+        ("ad962969-4e3d-4de7-ac4a-2d86d6d10839", "We found: George"),
+        ("e18b3a5c-488f-4159-a240-2101e0da19fd",
+            "Missing person for UUID: e18b3a5c-488f-4159-a240-2101e0da19fd"),
+    ];
+
+    for (uuid, response) in pairs {
+        let uuid = Uuid::parse_str(uuid).unwrap();
+        let res = client.get(uri!(super::uuid::people(uuid))).dispatch();
+        assert_eq!(res.into_string().unwrap(), *response);
+    }
+
+    let res = client.get("/people/not-a-uuid").dispatch();
+    assert_eq!(res.status(), Status::NotFound);
 }

@@ -89,6 +89,7 @@ function test_core() {
     tls
     json
     msgpack
+    uuid
   )
 
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1

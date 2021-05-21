@@ -19,7 +19,6 @@
 //! * [serve*](serve) - Static File Serving
 //! * [handlebars_templates](templates) - Handlebars Templating
 //! * [tera_templates](templates) - Tera Templating
-//! * [uuid](uuid) - UUID (de)serialization
 //! * [${database}_pool](databases) - Database Configuration and Pooling
 //!
 //! The recommend way to include features from this crate via Rocket in your
@@ -42,7 +41,6 @@
 
 #[cfg(feature="serve")] pub mod serve;
 #[cfg(feature="templates")] pub mod templates;
-#[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
 // TODO.async: Migrate compression, reenable this, tests, and add to docs.
 //#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;

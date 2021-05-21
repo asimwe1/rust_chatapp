@@ -60,7 +60,7 @@ This directory contains projects showcasing Rocket's features.
 
   * **[`serialization`](./serialization)** - Showcases JSON and MessagePack
     (de)serialization support by implementing a CRUD-like message API in JSON
-    and a simply read/echo API in MessagePack.
+    and a simply read/echo API in MessagePack. Showcases UUID parsing support.
 
   * **[`state`](./state)** - Illustrates the use of request-local state and
     managed state. Uses request-local state to cache "expensive" per-request
@@ -80,6 +80,3 @@ This directory contains projects showcasing Rocket's features.
 
   * **[`tls`](./tls)** - Illustrates configuring TLS with a variety of key pair
     kinds.
-
-  * **[`uuid`](./uuid)** - Uses UUID support in `contrib`, converting between
-    `contrib::Uuid` type and the `uuid` crate `Uuid`.

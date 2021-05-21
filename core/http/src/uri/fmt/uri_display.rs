@@ -259,12 +259,13 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// use rocket::response::Redirect;
 ///
 /// impl UriDisplay<Path> for Name<'_> {
-///     // Delegates to the `UriDisplay` implementation for `str` via the call
-///     // to `write_value` to ensure that the written string is URI-safe. In
-///     // this case, the string will be percent encoded. Prefixes the inner
-///     // name with `name:`.
+///     // Writes the raw string `name:`, which is URI-safe, and then delegates
+///     // to the `UriDisplay` implementation for `str` which ensures that
+///     // string is written in a URI-safe manner. In this case, the string will
+///     // be percent encoded.
 ///     fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
-///         f.write_value(&format!("name:{}", self.0))
+///         f.write_raw("name:")?;
+///         UriDisplay::fmt(&self.0, f)
 ///     }
 /// }
 ///
@@ -407,6 +408,9 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
         }
     }
 }
+
+#[cfg(feature = "uuid")] impl_with_display!(_uuid::Uuid);
+#[cfg(feature = "uuid")] crate::impl_from_uri_param_identity!(_uuid::Uuid);
 
 // And finally, the `Ignorable` trait, which has sugar of `_` in the `uri!`
 // macro, which expands to a typecheck.

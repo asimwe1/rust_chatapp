@@ -16,3 +16,7 @@ pub mod json;
 #[cfg(feature = "msgpack")]
 #[cfg_attr(nightly, doc(cfg(feature = "msgpack")))]
 pub mod msgpack;
+
+#[cfg(feature = "uuid")]
+#[cfg_attr(nightly, doc(cfg(feature = "uuid")))]
+pub mod uuid;

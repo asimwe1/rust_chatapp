@@ -15,7 +15,6 @@ members = [
   "templating",
   "testing",
   "tls",
-  "uuid",
 
   "pastebin",
   "todo",
