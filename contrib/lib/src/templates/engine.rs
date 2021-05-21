@@ -117,17 +117,17 @@ impl Engines {
         None
     }
 
+    /// Returns iterator over template (name, engine_extension).
     pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
         #[cfg(all(feature = "tera_templates", feature = "handlebars_templates"))] {
-            self.tera.templates.keys()
-                .map(|name| (name.as_str(), Tera::EXT))
+            self.tera.get_template_names()
+                .map(|name| (name, Tera::EXT))
                 .chain(self.handlebars.get_templates().keys()
                     .map(|name| (name.as_str(), Handlebars::EXT)))
         }
 
         #[cfg(all(feature = "tera_templates", not(feature = "handlebars_templates")))] {
-            self.tera.templates.keys()
-                .map(|name| (name.as_str(), Tera::EXT))
+            self.tera.get_template_names().map(|name| (name, Tera::EXT))
         }
 
         #[cfg(all(feature = "handlebars_templates", not(feature = "tera_templates")))] {
