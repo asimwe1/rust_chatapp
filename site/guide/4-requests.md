@@ -154,13 +154,12 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 ! tip: Rocket makes it even _easier_ to serve static files!
 
   If you need to serve static files from your Rocket application, consider using
-  the [`StaticFiles`] custom handler from [`rocket_contrib`], which makes it as
-  simple as:
+  [`FileServer`], which makes it as simple as:
 
-  `rocket.mount("/public", StaticFiles::from("static/"))`
+  `rocket.mount("/public", FileServer::from("static/"))`
 
 [`rocket_contrib`]: @api/rocket_contrib/
-[`StaticFiles`]: @api/rocket_contrib/serve/struct.StaticFiles.html
+[`FileServer`]: @api/rocket/fs/struct.FileServer.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 
 ## Forwarding

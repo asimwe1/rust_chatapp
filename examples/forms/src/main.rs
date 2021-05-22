@@ -1,10 +1,10 @@
-#[macro_use]extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
 use rocket::data::TempFile;
+use rocket::fs::{FileServer, relative};
 
-use rocket_contrib::serve::{StaticFiles, crate_relative};
 use rocket_contrib::templates::Template;
 
 #[derive(Debug, FromForm)]
@@ -85,5 +85,5 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, submit])
         .attach(Template::fairing())
-        .mount("/", StaticFiles::from(crate_relative!("/static")))
+        .mount("/", FileServer::from(relative!("/static")))
 }

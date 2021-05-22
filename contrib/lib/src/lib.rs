@@ -16,7 +16,6 @@
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [serve*](serve) - Static File Serving
 //! * [handlebars_templates](templates) - Handlebars Templating
 //! * [tera_templates](templates) - Tera Templating
 //! * [${database}_pool](databases) - Database Configuration and Pooling
@@ -39,7 +38,6 @@
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket;
 
-#[cfg(feature="serve")] pub mod serve;
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="databases")] pub mod databases;
 // TODO.async: Migrate compression, reenable this, tests, and add to docs.

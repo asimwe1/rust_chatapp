@@ -20,10 +20,9 @@ databases = [
 ]
 
 # User-facing features.
-default = ["serve"]
+default = []
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
-serve = []
 compression = ["brotli_compression", "gzip_compression"]
 brotli_compression = ["brotli"]
 gzip_compression = ["flate2"]

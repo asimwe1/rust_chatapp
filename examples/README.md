@@ -67,8 +67,8 @@ This directory contains projects showcasing Rocket's features.
     operations. Uses managed state to implement a simple index hit counter. Also
     uses managed state to store, retrieve, and push/pop from a concurrent queue.
 
-  * **[`static-files`](./static-files)** - Uses `contrib` `StaticFiles` serve
-    static files. Also creates a `second` manual yet safe version.
+  * **[`static-files`](./static-files)** - Uses `FileServer` to serve static
+    files. Also creates a `second` manual yet safe version.
 
   * **[`templating`](./templating)** - Illustrates using `contrib` `templates`
     support with identical examples for handlebars and tera.

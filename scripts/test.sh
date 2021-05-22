@@ -62,7 +62,6 @@ function test_contrib() {
   FEATURES=(
     tera_templates
     handlebars_templates
-    serve
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool

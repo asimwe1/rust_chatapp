@@ -13,9 +13,9 @@ use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::Serialize;
 use rocket::form::Form;
+use rocket::fs::{FileServer, relative};
 
 use rocket_contrib::templates::Template;
-use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 use crate::task::{Task, Todo};
 
@@ -110,7 +110,7 @@ fn rocket() -> _ {
         .attach(DbConn::fairing())
         .attach(Template::fairing())
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
-        .mount("/", StaticFiles::from(crate_relative!("static")))
+        .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
 }

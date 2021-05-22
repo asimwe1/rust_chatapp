@@ -120,6 +120,7 @@ pub mod catcher;
 pub mod route;
 pub mod serde;
 pub mod shield;
+pub mod fs;
 
 // Reexport of HTTP everything.
 pub mod http {

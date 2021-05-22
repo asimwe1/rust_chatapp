@@ -1,4 +1,4 @@
-macro_rules! crate_relative {
+macro_rules! relative {
     ($path:expr) => {
         std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/", $path))
     };
@@ -9,8 +9,8 @@ fn tls_config_from_soruce() {
     use rocket::config::{Config, TlsConfig};
     use rocket::figment::Figment;
 
-    let cert_path = crate_relative!("examples/tls/private/cert.pem");
-    let key_path = crate_relative!("examples/tls/private/key.pem");
+    let cert_path = relative!("examples/tls/private/cert.pem");
+    let key_path = relative!("examples/tls/private/key.pem");
 
     let rocket_config = Config {
         tls: Some(TlsConfig::from_paths(cert_path, key_path)),
