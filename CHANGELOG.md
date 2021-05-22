@@ -1,3 +1,12 @@
+# Version 0.4.10 (May 21, 2021)
+
+## Core
+
+  * [[`3276b8`]] Removed used of `unsafe` in `Origin::parse_owned()`, fixing a
+    soundness issue.
+
+[`3276b8`]: https://github.com/SergioBenitez/Rocket/commit/3276b8
+
 # Version 0.4.9 (May 19, 2021)
 
 ## Core
