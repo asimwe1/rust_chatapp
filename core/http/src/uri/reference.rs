@@ -148,7 +148,8 @@ impl<'a> Reference<'a> {
         crate::parse::uri::reference_from_str(string)
     }
 
-    /// Parses the string `string` into a `Reference`. Never allocates.
+    /// Parses the string `string` into a `Reference`. Never allocates on
+    /// success. May allocate on error.
     ///
     /// This method should be used instead of [`Reference::parse()`] when the
     /// source URI is already a `String`. Returns an `Error` if `string` is not
@@ -167,35 +168,17 @@ impl<'a> Reference<'a> {
     /// assert_eq!(uri.fragment().unwrap(), "3");
     /// ```
     pub fn parse_owned(string: String) -> Result<Self, Error<'a>> {
-        // We create a copy of a pointer to `string` to escape the borrow
-        // checker. This is so that we can "move out of the borrow" later.
-        //
-        // For this to be correct and safe, we need to ensure that:
-        //
-        //  1. No `&mut` references to `string` are created after this line.
-        //  2. `string` isn't dropped while `copy_of_str` is live.
-        //
-        // These two facts can be easily verified. An `&mut` can't be created
-        // because `string` isn't `mut`. Then, `string` is clearly not dropped
-        // since it's passed in to `source`.
-        let copy_of_str = unsafe { &*(string.as_str() as *const str) };
-        let uri_ref = Reference::parse(copy_of_str)?;
+        let uri_ref = Reference::parse(&string).map_err(|e| e.into_owned())?;
         debug_assert!(uri_ref.source.is_some(), "UriRef parsed w/o source");
 
-        let uri_ref = Reference {
+        Ok(Reference {
             scheme: uri_ref.scheme.into_owned(),
             authority: uri_ref.authority.into_owned(),
             path: uri_ref.path.into_owned(),
             query: uri_ref.query.into_owned(),
             fragment: uri_ref.fragment.into_owned(),
-            // At this point, it's impossible for anything to be borrowing
-            // `string` except for `source`, even though Rust doesn't know it.
-            // Because we're replacing `source` here, there can't possibly be a
-            // borrow remaining, it's safe to "move out of the borrow".
             source: Some(Cow::Owned(string)),
-        };
-
-        Ok(uri_ref)
+        })
     }
 
     /// Returns the scheme. If `Some`, is non-empty.
