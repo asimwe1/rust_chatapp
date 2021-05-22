@@ -172,7 +172,8 @@ impl fmt::Display for Error {
 
 impl Drop for Error {
     fn drop(&mut self) {
-        if self.was_handled() {
+        // Don't panic if the message has been seen. Don't double-panic.
+        if self.was_handled() || std::thread::panicking() {
             return
         }
 
