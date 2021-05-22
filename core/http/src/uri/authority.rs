@@ -20,6 +20,21 @@ use crate::uri::{as_utf8_unchecked, error::Error};
 /// ```
 ///
 /// Only the host part of the URI is required.
+///
+/// ## Serde
+///
+/// For convience, `Authority` implements `Serialize` and `Deserialize`.
+/// Because `Authority` has a lifetime parameter, serde requires a borrow
+/// attribute for the derive macro to work. If you want to own the Uri,
+/// rather than borrow from the deserializer, use `'static`.
+///
+/// ```ignore
+/// #[derive(Deserialize)]
+/// struct Uris<'a> {
+///     #[serde(borrow)]
+///     authority: Authority<'a>,
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Authority<'a> {
     pub(crate) source: Option<Cow<'a, str>>,
@@ -107,6 +122,39 @@ impl<'a> Authority<'a> {
     /// ```
     pub fn parse(string: &'a str) -> Result<Authority<'a>, Error<'a>> {
         crate::parse::uri::authority_from_str(string)
+    }
+
+    /// Parses the string `string` into an `Authority`. Parsing will never allocate.
+    /// May allocate on error.
+    ///
+    /// This method should be used instead of [`Authority::parse()`] when
+    /// the source URI is already a `String`. Returns an `Error` if `string` is
+    /// not a valid authority URI.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::Authority;
+    ///
+    /// let source = format!("rocket.rs:8000");
+    /// let uri = Authority::parse_owned(source).expect("valid URI");
+    /// assert!(uri.user_info().is_none());
+    /// assert_eq!(uri.host(), "rocket.rs");
+    /// assert_eq!(uri.port(), Some(8000));
+    /// ```
+    pub fn parse_owned(string: String) -> Result<Authority<'static>, Error<'static>> {
+        let authority = Authority::parse(&string).map_err(|e| e.into_owned())?;
+        debug_assert!(authority.source.is_some(), "Origin source parsed w/o source");
+
+        let authority = Authority {
+            host: authority.host.into_owned(),
+            user_info: authority.user_info.into_owned(),
+            port: authority.port,
+            source: Some(Cow::Owned(string)),
+        };
+
+        Ok(authority)
     }
 
     /// Returns the user info part of the authority URI, if there is one.
@@ -205,5 +253,46 @@ impl<'a> TryFrom<&'a str> for Authority<'a> {
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         Authority::parse(value)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use std::fmt;
+
+    use super::Authority;
+    use _serde::{ser::{Serialize, Serializer}, de::{Deserialize, Deserializer, Error, Visitor}};
+
+    impl<'a> Serialize for Authority<'a> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct AuthorityVistor;
+
+    impl<'a> Visitor<'a> for AuthorityVistor {
+        type Value = Authority<'a>;
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "authority Uri")
+        }
+
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            Authority::parse_owned(v.to_string()).map_err(Error::custom)
+        }
+
+        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
+            Authority::parse_owned(v).map_err(Error::custom)
+        }
+
+        fn visit_borrowed_str<E: Error>(self, v: &'a str) -> Result<Self::Value, E> {
+            Authority::parse(v).map_err(Error::custom)
+        }
+    }
+
+    impl<'a, 'de: 'a> Deserialize<'de> for Authority<'a> {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(AuthorityVistor)
+        }
     }
 }

@@ -45,6 +45,21 @@ use crate::parse::{Extent, IndexedStr};
 /// Note that `uri!()` macro _always_ prefers the more specific URI variant to
 /// `Reference` when possible, as is demonstrated above for `absolute` and
 /// `origin`.
+///
+/// ## Serde
+///
+/// For convience, `Reference` implements `Serialize` and `Deserialize`.
+/// Because `Reference` has a lifetime parameter, serde requires a borrow
+/// attribute for the derive macro to work. If you want to own the Uri,
+/// rather than borrow from the deserializer, use `'static`.
+///
+/// ```ignore
+/// #[derive(Deserialize)]
+/// struct Uris<'a> {
+///     #[serde(borrow)]
+///     reference: Reference<'a>,
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Reference<'a> {
     source: Option<Cow<'a, str>>,
@@ -150,6 +165,8 @@ impl<'a> Reference<'a> {
 
     /// Parses the string `string` into a `Reference`. Never allocates on
     /// success. May allocate on error.
+    ///
+    /// TODO: Avoid allocation
     ///
     /// This method should be used instead of [`Reference::parse()`] when the
     /// source URI is already a `String`. Returns an `Error` if `string` is not
@@ -528,5 +545,46 @@ impl std::fmt::Display for Reference<'_> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use std::fmt;
+
+    use super::Reference;
+    use _serde::{ser::{Serialize, Serializer}, de::{Deserialize, Deserializer, Error, Visitor}};
+
+    impl<'a> Serialize for Reference<'a> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct ReferenceVistor;
+
+    impl<'a> Visitor<'a> for ReferenceVistor {
+        type Value = Reference<'a>;
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "reference Uri")
+        }
+
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            Reference::parse_owned(v.to_string()).map_err(Error::custom)
+        }
+
+        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
+            Reference::parse_owned(v).map_err(Error::custom)
+        }
+
+        fn visit_borrowed_str<E: Error>(self, v: &'a str) -> Result<Self::Value, E> {
+            Reference::parse(v).map_err(Error::custom)
+        }
+    }
+
+    impl<'a, 'de: 'a> Deserialize<'de> for Reference<'a> {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(ReferenceVistor)
+        }
     }
 }

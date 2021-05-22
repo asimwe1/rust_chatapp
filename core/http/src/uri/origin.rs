@@ -85,6 +85,21 @@ use crate::{RawStr, RawStrBuf};
 /// #     assert_eq!(abnormal.into_normalized(), expected);
 /// # }
 /// ```
+///
+/// ## Serde
+///
+/// For convience, `Origin` implements `Serialize` and `Deserialize`.
+/// Because `Origin` has a lifetime parameter, serde requires a borrow
+/// attribute for the derive macro to work. If you want to own the Uri,
+/// rather than borrow from the deserializer, use `'static`.
+///
+/// ```ignore
+/// #[derive(Deserialize)]
+/// struct Uris<'a> {
+///     #[serde(borrow)]
+///     origin: Origin<'a>,
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Origin<'a> {
     pub(crate) source: Option<Cow<'a, str>>,
@@ -483,6 +498,47 @@ impl std::fmt::Display for Origin<'_> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use std::fmt;
+
+    use super::Origin;
+    use _serde::{ser::{Serialize, Serializer}, de::{Deserialize, Deserializer, Error, Visitor}};
+
+    impl<'a> Serialize for Origin<'a> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct OriginVistor;
+
+    impl<'a> Visitor<'a> for OriginVistor {
+        type Value = Origin<'a>;
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "origin Uri")
+        }
+
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            Origin::parse_owned(v.to_string()).map_err(E::custom)
+        }
+
+        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
+            Origin::parse_owned(v).map_err(E::custom)
+        }
+
+        fn visit_borrowed_str<E: Error>(self, v: &'a str) -> Result<Self::Value, E> {
+            Origin::parse(v).map_err(E::custom)
+        }
+    }
+
+    impl<'a, 'de: 'a> Deserialize<'de> for Origin<'a> {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(OriginVistor)
+        }
     }
 }
 
