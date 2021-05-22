@@ -6,7 +6,7 @@ use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
 
-use crate::{Catcher, Config, Route, Shutdown, sentinel};
+use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
 use crate::router::Router;
 use crate::trip_wire::TripWire;
 use crate::fairing::{Fairing, Fairings};
@@ -151,10 +151,12 @@ impl Rocket<Build> {
     /// }
     /// ```
     pub fn custom<T: Provider>(provider: T) -> Self {
-        Rocket(Building {
+        let rocket: Rocket<Build> = Rocket(Building {
             figment: Figment::from(provider),
             ..Default::default()
-        })
+        });
+
+        rocket.attach(Shield::default())
     }
 
     /// Sets the configuration provider in `self` to `provider`.
@@ -397,6 +399,9 @@ impl Rocket<Build> {
 
     /// Attaches a fairing to this instance of Rocket. No fairings are eagerly
     /// excuted; fairings are executed at their appropriate time.
+    ///
+    /// If the attached fairing is _fungible_ and a fairing of the same name
+    /// already exists, this fairing replaces it.
     ///
     /// # Example
     ///

@@ -17,11 +17,6 @@
 //! detailed guide]. If you'd like pointers on getting started, see the
 //! [quickstart] or [getting started] chapters of the guide.
 //!
-//! You may also be interested in looking at the
-//! [`rocket_contrib`](../rocket_contrib) documentation, which contains
-//! automatic JSON (de)serialiazation, templating support, static file serving,
-//! and other useful features.
-//!
 //! [overview]: https://rocket.rs/master/overview
 //! [full, detailed guide]: https://rocket.rs/master/guide
 //! [quickstart]: https://rocket.rs/master/guide/quickstart
@@ -60,8 +55,8 @@
 //!
 //! ## Features
 //!
-//! To avoid unused dependencies, Rocket _feaure-gates_ functionalities, all of
-//! which are disabled-by-default:
+//! To avoid compiling unused dependencies, Rocket gates certain features, all
+//! of which are disabled by default:
 //!
 //! | Feature   | Description                                             |
 //! |-----------|---------------------------------------------------------|
@@ -122,6 +117,7 @@ pub mod error;
 pub mod catcher;
 pub mod route;
 pub mod serde;
+pub mod shield;
 
 // Reexport of HTTP everything.
 pub mod http {

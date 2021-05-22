@@ -63,15 +63,12 @@ function test_contrib() {
     tera_templates
     handlebars_templates
     serve
-    helmet
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool
     postgres_pool
     sqlite_pool
     memcache_pool
-    brotli_compression
-    gzip_compression
   )
 
   echo ":: Building and testing contrib [default]..."

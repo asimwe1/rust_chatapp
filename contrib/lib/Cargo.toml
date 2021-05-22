@@ -23,7 +23,6 @@ databases = [
 default = ["serve"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
-helmet = ["time"]
 serve = []
 compression = ["brotli_compression", "gzip_compression"]
 brotli_compression = ["brotli"]
@@ -65,9 +64,6 @@ rusqlite = { version = "0.24", optional = true }
 r2d2_sqlite = { version = "0.17", optional = true }
 memcache = { version = "0.15", optional = true }
 r2d2-memcache = { version = "0.6", optional = true }
-
-# SpaceHelmet dependencies
-time = { version = "0.2.9", optional = true }
 
 # Compression dependencies
 brotli = { version = "3.3", optional = true }

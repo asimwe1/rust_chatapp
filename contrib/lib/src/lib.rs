@@ -21,7 +21,6 @@
 //! * [tera_templates](templates) - Tera Templating
 //! * [uuid](uuid) - UUID (de)serialization
 //! * [${database}_pool](databases) - Database Configuration and Pooling
-//! * [helmet](helmet) - Fairing for Security and Privacy Headers
 //!
 //! The recommend way to include features from this crate via Rocket in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -45,7 +44,6 @@
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
-#[cfg(feature = "helmet")] pub mod helmet;
 // TODO.async: Migrate compression, reenable this, tests, and add to docs.
 //#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
 

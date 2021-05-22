@@ -155,8 +155,8 @@ impl<'h> HeaderMap<'h> {
     /// assert!(!map.contains("Accepts"));
     /// ```
     #[inline]
-    pub fn contains(&self, name: &str) -> bool {
-        self.headers.get(UncasedStr::new(name)).is_some()
+    pub fn contains<N: AsRef<str>>(&self, name: N) -> bool {
+        self.headers.get(UncasedStr::new(name.as_ref())).is_some()
     }
 
     /// Returns the number of _values_ stored in the map.
