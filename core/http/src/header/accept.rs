@@ -85,9 +85,10 @@ macro_rules! accept_constructor {
 impl Accept {
     /// Constructs a new `Accept` header from one or more media types.
     ///
-    /// The `items` parameter may be of type `QMediaType`, `&[QMediaType]`, or
-    /// `Vec<QMediaType>`. To prevent additional allocations, prefer to provide
-    /// inputs of type `QMediaType` and `Vec<QMediaType>`.
+    /// The `items` parameter may be of type `QMediaType`, `[QMediaType]`,
+    /// `&[QMediaType]` or `Vec<QMediaType>`. To prevent additional allocations,
+    /// prefer to provide inputs of type `QMediaType`, `[QMediaType]`, or
+    /// `Vec<QMediaType>`.
     ///
     /// # Example
     ///
@@ -100,8 +101,8 @@ impl Accept {
     /// let accept = Accept::new(json_then_html);
     /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
     ///
-    /// // Construct an `Accept` via an `&[QMediaType]`.
-    /// let accept = Accept::new(&[MediaType::JSON.into(), MediaType::HTML.into()]);
+    /// // Construct an `Accept` via an `[QMediaType]`.
+    /// let accept = Accept::new([MediaType::JSON.into(), MediaType::HTML.into()]);
     /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
     ///
     /// // Construct an `Accept` via a `QMediaType`.
