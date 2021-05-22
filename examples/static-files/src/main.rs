@@ -6,7 +6,7 @@ use rocket::fs::{FileServer, relative};
 // prefer to use `FileServer`!
 mod manual {
     use std::path::{PathBuf, Path};
-    use rocket::response::NamedFile;
+    use rocket::fs::NamedFile;
 
     #[rocket::get("/second/<path..>")]
     pub async fn second(path: PathBuf) -> Option<NamedFile> {

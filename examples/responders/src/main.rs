@@ -8,8 +8,8 @@ use std::{io, env};
 
 use rocket::tokio::fs;
 
-use rocket::data::{Capped, TempFile};
-use rocket::response::NamedFile;
+use rocket::data::Capped;
+use rocket::fs::{NamedFile, TempFile};
 
 // Upload your `big_file.dat` by POSTing it to /upload.
 // try `curl --data-binary @file.txt http://127.0.0.1:8000/stream/file`

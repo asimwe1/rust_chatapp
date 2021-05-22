@@ -129,7 +129,7 @@ use crate::http::uncased::AsUncased;
 /// [`Lenient<T>`]: crate::form::Lenient
 /// [`HashMap<K, V>`]: std::collections::HashMap
 /// [`BTreeMap<K, V>`]: std::collections::BTreeMap
-/// [`TempFile`]: crate::data::TempFile
+/// [`TempFile`]: crate::fs::TempFile
 /// [`Capped<C>`]: crate::data::Capped
 /// [`time::DateTime`]: time::PrimitiveDateTime
 /// [`IpAddr`]: std::net::IpAddr

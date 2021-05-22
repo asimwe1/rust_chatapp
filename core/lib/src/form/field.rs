@@ -1,7 +1,7 @@
-use crate::form::name::{NameView, FileName};
-use crate::form::error::{Error, ErrorKind, Entity};
+use crate::form::{name::NameView, error::{Error, ErrorKind, Entity}};
 use crate::http::{ContentType, RawStr};
 use crate::{Request, Data};
+use crate::fs::FileName;
 
 /// A form field with a string value.
 ///

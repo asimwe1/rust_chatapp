@@ -303,7 +303,7 @@ use rocket::response::Debug;
 
 #[get("/blocking_task")]
 async fn blocking_task() -> Result<Vec<u8>, Debug<io::Error>> {
-    // In a real app, use rocket::response::NamedFile or tokio::fs::File.
+    // In a real app, use rocket::fs::NamedFile or tokio::fs::File.
     let vec = spawn_blocking(|| std::fs::read("data.txt")).await
         .map_err(|e| io::Error::new(io::ErrorKind::Interrupted, e))??;
 

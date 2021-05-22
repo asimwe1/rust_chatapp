@@ -141,7 +141,7 @@ implemented in just 4 lines:
 # fn main() {}
 
 use std::path::{Path, PathBuf};
-use rocket::response::NamedFile;
+use rocket::fs::NamedFile;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Option<NamedFile> {
@@ -642,7 +642,7 @@ the be persisted. It makes accepting file uploads trivial:
 ```rust
 # #[macro_use] extern crate rocket;
 
-use rocket::data::TempFile;
+use rocket::fs::TempFile;
 
 #[post("/upload", format = "plain", data = "<file>")]
 async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -651,7 +651,7 @@ async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
 }
 ```
 
-[`TempFile`]: @api/rocket/data/struct.TempFile.html
+[`TempFile`]: @api/rocket/fs/struct.TempFile.html
 
 ### Streaming
 

@@ -8,8 +8,33 @@ use crate::request::Request;
 use crate::response::{self, Responder};
 use crate::http::ContentType;
 
-/// A file with an associated name; responds with the Content-Type based on the
-/// file extension.
+/// A [`Responder`] that sends a file with a Content-Type based on its name.
+///
+/// # Example
+///
+/// A simple static file server mimicking [`FileServer`]:
+///
+/// ```rust
+/// # use rocket::get;
+/// use std::path::{PathBuf, Path};
+///
+/// use rocket::fs::{NamedFile, relative};
+///
+/// #[get("/file/<path..>")]
+/// pub async fn second(path: PathBuf) -> Option<NamedFile> {
+///     let mut path = Path::new(relative!("static")).join(path);
+///     if path.is_dir() {
+///         path.push("index.html");
+///     }
+///
+///     NamedFile::open(path).await.ok()
+/// }
+/// ```
+///
+/// Always prefer to use [`FileServer`] which has more functionality and a
+/// pithier API.
+///
+/// [`FileServer`]: crate::fs::FileServer
 #[derive(Debug)]
 pub struct NamedFile(PathBuf, File);
 
@@ -26,7 +51,7 @@ impl NamedFile {
     ///
     /// ```rust
     /// # use rocket::get;
-    /// use rocket::response::NamedFile;
+    /// use rocket::fs::NamedFile;
     ///
     /// #[get("/")]
     /// async fn index() -> Option<NamedFile> {
@@ -47,7 +72,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::response::NamedFile;
+    /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
     /// let named_file = NamedFile::open("index.html").await?;
@@ -65,7 +90,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::response::NamedFile;
+    /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
     /// let mut named_file = NamedFile::open("index.html").await?;
@@ -83,7 +108,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::response::NamedFile;
+    /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
     /// let named_file = NamedFile::open("index.html").await?;
@@ -101,7 +126,7 @@ impl NamedFile {
     /// # Examples
     ///
     /// ```rust
-    /// use rocket::response::NamedFile;
+    /// use rocket::fs::NamedFile;
     ///
     /// # async fn demo_path() -> std::io::Result<()> {
     /// let file = NamedFile::open("foo.txt").await?;

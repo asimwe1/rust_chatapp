@@ -69,7 +69,7 @@ use crate::request::Request;
 ///
 ///     Responds with a streamed body containing the data in the `File`. No
 ///     `Content-Type` is set. To automatically have a `Content-Type` set based
-///     on the file's extension, use [`NamedFile`](crate::response::NamedFile).
+///     on the file's extension, use [`NamedFile`](crate::fs::NamedFile).
 ///
 ///   * **()**
 ///

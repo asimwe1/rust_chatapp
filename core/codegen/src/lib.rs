@@ -667,7 +667,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// # #[macro_use] extern crate rocket;
 /// # use std::fs::File;
 /// # use rocket::http::ContentType;
-/// # use rocket::response::NamedFile;
+/// # use rocket::fs::NamedFile;
 /// # type Other = usize;
 /// #
 /// #[derive(Responder)]
@@ -710,7 +710,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::http::ContentType;
-/// # use rocket::response::NamedFile;
+/// # use rocket::fs::NamedFile;
 /// # type Other = usize;
 /// # type InnerResponder = String;
 /// #

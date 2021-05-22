@@ -227,7 +227,7 @@ found and a `404` when a file is not found in just 4, idiomatic lines:
 # fn main() {}
 
 # use std::path::{Path, PathBuf};
-use rocket::response::NamedFile;
+use rocket::fs::NamedFile;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Option<NamedFile> {
@@ -252,7 +252,7 @@ follows:
 # fn main() {}
 
 # use std::path::{Path, PathBuf};
-use rocket::response::NamedFile;
+use rocket::fs::NamedFile;
 use rocket::response::status::NotFound;
 
 #[get("/<file..>")]

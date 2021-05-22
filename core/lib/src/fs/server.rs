@@ -2,8 +2,9 @@ use std::path::{PathBuf, Path};
 
 use crate::{Request, Data};
 use crate::http::{Method, uri::Segments, ext::IntoOwned};
-use crate::response::{NamedFile, Redirect};
 use crate::route::{Route, Handler, Outcome};
+use crate::response::Redirect;
+use crate::fs::NamedFile;
 
 /// Custom handler for serving static files.
 ///

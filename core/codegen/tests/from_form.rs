@@ -568,7 +568,7 @@ fn test_nested_multi() {
 fn test_multipart() {
     use rocket::http::ContentType;
     use rocket::local::blocking::Client;
-    use rocket::data::TempFile;
+    use rocket::fs::TempFile;
 
     #[derive(FromForm)]
     struct MyForm<'r> {

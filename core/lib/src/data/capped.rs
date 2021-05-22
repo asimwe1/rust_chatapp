@@ -41,7 +41,8 @@ impl std::ops::Deref for N {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::data::{Capped, TempFile};
+/// use rocket::data::Capped;
+/// use rocket::fs::TempFile;
 ///
 /// #[post("/upload", data = "<file>")]
 /// async fn upload(mut file: Capped<TempFile<'_>>) -> std::io::Result<()> {
@@ -58,7 +59,7 @@ impl std::ops::Deref for N {
 /// [`DataStream`]: crate::data::DataStream
 /// [`FromData`]: crate::data::FromData
 /// [`FromForm`]: crate::form::FromForm
-/// [`TempFile`]: crate::data::TempFile
+/// [`TempFile`]: crate::fs::TempFile
 // TODO: `Capped` not particularly usable outside Rocket due to coherence.
 #[derive(Debug, Copy, Clone)]
 pub struct Capped<T> {

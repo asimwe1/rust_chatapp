@@ -2,7 +2,7 @@
 
 use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
-use rocket::data::TempFile;
+use rocket::fs::TempFile;
 use rocket::fs::{FileServer, relative};
 
 use rocket_contrib::templates::Template;

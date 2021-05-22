@@ -67,7 +67,7 @@ use crate::http::uncased::Uncased;
 /// | `json`            | 1MiB    | [`Json`]     | JSON data and form payloads           |
 /// | `msgpack`         | 1MiB    | [`MsgPack`]  | MessagePack data and form payloads    |
 ///
-/// [`TempFile`]: crate::data::TempFile
+/// [`TempFile`]: crate::fs::TempFile
 /// [`Json`]: crate::serde::json::Json
 /// [`MsgPack`]: crate::serde::msgpack::MsgPack
 ///

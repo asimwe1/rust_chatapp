@@ -86,7 +86,7 @@ use std::fmt::Debug;
 use crate::data::ByteUnit;
 use rocket_http::ContentType;
 
-use crate::{data::TempFile, form::{Result, Error}};
+use crate::{fs::TempFile, form::{Result, Error}};
 
 crate::export! {
     /// A helper macro for custom validation error messages.
@@ -360,7 +360,8 @@ impl<L, T: Len<L>> Len<L> for Result<'_, T> {
 /// ```rust
 /// use rocket::http::ContentType;
 /// use rocket::form::{FromForm, FromFormField};
-/// use rocket::data::{TempFile, ToByteUnit};
+/// use rocket::data::ToByteUnit;
+/// use rocket::fs::TempFile;
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {
@@ -724,8 +725,9 @@ pub fn one_of<'v, V, I, R>(value: V, items: R) -> Result<'v, ()>
 ///
 /// ```rust
 /// use rocket::form::FromForm;
-/// use rocket::data::{ToByteUnit, TempFile};
+/// use rocket::data::ToByteUnit;
 /// use rocket::http::ContentType;
+/// use rocket::fs::TempFile;
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {

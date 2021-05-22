@@ -2,7 +2,7 @@ use ref_cast::RefCast;
 
 use crate::http::RawStr;
 
-/// A file name in a file attachment or multipart [`DataField`].
+/// A file name in a [`TempFile`] or multipart [`DataField`].
 ///
 /// A `Content-Disposition` header, either in a response or a multipart field,
 /// can optionally specify a `filename` directive as identifying information for
@@ -21,8 +21,9 @@ use crate::http::RawStr;
 /// may also prefer to avoid the value in the directive entirely by using a
 /// safe, application-generated name instead.
 ///
-/// [`TempFile::name()`]: crate::data::TempFile::name
+/// [`TempFile::name()`]: crate::fs::TempFile::name
 /// [`DataField`]: crate::form::DataField
+/// [`TempFile`]: crate::fs::TempFile
 #[repr(transparent)]
 #[derive(RefCast, Debug)]
 pub struct FileName(str);
@@ -33,7 +34,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::form::name::FileName;
+    /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
     /// assert_eq!(name.as_str(), Some("some-file"));
@@ -72,7 +73,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::form::name::FileName;
+    /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
     /// assert_eq!(name.as_str(), Some("some-file"));
@@ -177,7 +178,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::form::name::FileName;
+    /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
     /// assert_eq!(name.as_str(), Some("some-file"));
@@ -216,7 +217,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::form::name::FileName;
+    /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
     /// assert_eq!(name.dangerous_unsafe_unsanitized_raw(), "some-file.txt");

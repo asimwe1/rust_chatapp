@@ -1,23 +1,24 @@
 use std::{io, mem};
 use std::path::{PathBuf, Path};
 
+use crate::Request;
 use crate::http::{ContentType, Status};
 use crate::data::{FromData, Data, Capped, N, Limits};
-use crate::form::{FromFormField, ValueField, DataField, error::Errors, name::FileName};
+use crate::form::{FromFormField, ValueField, DataField, error::Errors};
 use crate::outcome::IntoOutcome;
-use crate::request::Request;
+use crate::fs::FileName;
 
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use tempfile::{NamedTempFile, TempPath};
 use either::Either;
 
-/// A file in temporary storage, deleted when dropped unless persisted.
+/// A data and form guard that streams data into a temporary file.
 ///
 /// `TempFile` is a data and form field (both value and data fields) guard that
 /// streams incoming data into file in a temporary location. The file is deleted
-/// when the `TempFile` handle is dropped. The file can be persisted with
-/// [`TempFile::persist_to()`].
+/// when the `TempFile` handle is dropped unless it is persisted with
+/// [`TempFile::persist_to()`] or copied with [`TempFile::copy_to()`].
 ///
 /// # Hazards
 ///
@@ -67,7 +68,7 @@ use either::Either;
 ///
 /// ```rust
 /// # use rocket::post;
-/// use rocket::data::TempFile;
+/// use rocket::fs::TempFile;
 ///
 /// #[post("/upload", data = "<file>")]
 /// async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -80,7 +81,7 @@ use either::Either;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::data::TempFile;
+/// use rocket::fs::TempFile;
 /// use rocket::form::Form;
 ///
 /// #[derive(FromForm)]
@@ -147,7 +148,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -216,7 +217,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -285,7 +286,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -319,7 +320,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// fn handler(file: TempFile<'_>) {
@@ -342,7 +343,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -381,7 +382,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -402,7 +403,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) {
@@ -424,7 +425,7 @@ impl<'v> TempFile<'v> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::data::TempFile;
+    /// use rocket::fs::TempFile;
     ///
     /// #[post("/", data = "<file>")]
     /// fn handle(file: TempFile<'_>) {
