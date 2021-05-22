@@ -54,20 +54,21 @@ example, the following snippet attached two fairings, `req_fairing` and
 fn rocket() -> _ {
     # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
     # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
-
     rocket::build()
         .attach(req_fairing)
         .attach(res_fairing)
 }
 ```
 
+Fairings are executed in the order in which they are attached: the first
+attached fairing has its callbacks executed before all others. A fairing can be
+attached any number of times. Except for [singleton fairings], all attached
+instances are polled at runtime. Fairing callbacks may not be commutative; the
+order in which fairings are attached may be significant.
+
+[singleton fairings]: @api/rocket/fairing/trait.Fairing.html#singletons
 [`attach`]: @api/rocket/struct.Rocket.html#method.attach
 [`Rocket`]: @api/rocket/struct.Rocket.html
-
-Fairings are executed in the order in which they are attached: the first
-attached fairing has its callbacks executed before all others. Because fairing
-callbacks may not be commutative, the order in which fairings are attached may
-be significant.
 
 ### Callbacks
 

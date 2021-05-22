@@ -38,14 +38,18 @@
 //! ## Ordering
 //!
 //! `Fairing`s are executed in the order in which they are attached: the first
-//! attached fairing has its callbacks executed before all others. Because
-//! fairing callbacks may not be commutative, the order in which fairings are
-//! attached may be significant. Because of this, it is important to communicate
-//! to the user every consequence of a fairing.
+//! attached fairing has its callbacks executed before all others. A fairing can
+//! be attached any number of times. Except for [singleton
+//! fairings](Fairing#singletons), all attached instances are polled at runtime.
+//! Fairing callbacks may not be commutative; the order in which fairings are
+//! attached may be significant. It is thus important to communicate specific
+//! fairing functionality clearly.
 //!
 //! Furthermore, a `Fairing` should take care to act locally so that the actions
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
+
+use std::any::Any;
 
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 
@@ -99,8 +103,8 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///
 /// There are four kinds of fairing callbacks: launch, liftoff, request, and
 /// response. A fairing can request any combination of these callbacks through
-/// the `kind` field of the `Info` structure returned from the `info` method.
-/// Rocket will only invoke the callbacks set in the `kind` field.
+/// the `kind` field of the [`Info`] structure returned from the `info` method.
+/// Rocket will only invoke the callbacks identified in the fairing's [`Kind`].
 ///
 /// The four callback kinds are as follows:
 ///
@@ -157,6 +161,16 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     `HEAD` requests to `GET` if there is no matching `HEAD` handler for that
 ///     request. Additionally, Rocket will automatically strip the body for
 ///     `HEAD` requests _after_ response fairings have run.
+///
+/// # Singletons
+///
+/// In general, any number of instances of a given fairing type can be attached
+/// to one instance of `Rocket`. If this is not desired, a fairing can request
+/// to be a singleton by specifying [`Kind::Singleton`]. Only the _last_
+/// attached instance of a singleton will be preserved at ignite-time. That is,
+/// an attached singleton instance will replace any previously attached
+/// instance. The [`Shield`](crate::shield::Shield) fairing is an example of a
+/// singleton fairing.
 ///
 /// # Implementing
 ///
@@ -373,7 +387,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///
 /// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
 #[crate::async_trait]
-pub trait Fairing: Send + Sync + 'static {
+pub trait Fairing: Send + Sync + Any + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this
     /// fairing. The `name` can be any arbitrary string. `Kind` must be an `or`d
     /// set of `Kind` variants.

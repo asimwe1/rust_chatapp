@@ -27,7 +27,7 @@ pub struct Info {
     /// The name of the fairing.
     pub name: &'static str,
     /// A set representing the callbacks the fairing wishes to receive.
-    pub kind: Kind
+    pub kind: Kind,
 }
 
 /// A bitset representing the kinds of callbacks a
@@ -45,6 +45,10 @@ pub struct Info {
 /// instance, to represent a fairing that is both an ignite and request fairing,
 /// use `Kind::Ignite | Kind::Request`. Similarly, to represent a fairing that
 /// is only an ignite fairing, use `Kind::Ignite`.
+///
+/// Additionally, a fairing can request to be treated as a
+/// [singleton](crate::fairing::Fairing#singletons) by specifying the
+/// `Singleton` kind.
 #[derive(Debug, Clone, Copy)]
 pub struct Kind(usize);
 
@@ -61,6 +65,10 @@ impl Kind {
 
     /// `Kind` flag representing a request for a 'response' callback.
     pub const Response: Kind = Kind(1 << 3);
+
+    /// `Kind` flag representing a
+    /// [singleton](crate::fairing::Fairing#singletons) fairing.
+    pub const Singleton: Kind = Kind(1 << 4);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the kinds in `other` are also in `self`.
@@ -132,6 +140,7 @@ impl std::fmt::Display for Kind {
         write("ignite", Kind::Ignite)?;
         write("liftoff", Kind::Liftoff)?;
         write("request", Kind::Request)?;
-        write("response", Kind::Response)
+        write("response", Kind::Response)?;
+        write("singleton", Kind::Singleton)
     }
 }
