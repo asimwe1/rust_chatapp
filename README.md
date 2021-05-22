@@ -61,7 +61,7 @@ example can be compiled and run with Cargo. For instance, the following sequence
 of commands builds and runs the `Hello, world!` example:
 
 ```sh
-cd examples/hello_world
+cd examples/hello
 cargo run
 ```
 

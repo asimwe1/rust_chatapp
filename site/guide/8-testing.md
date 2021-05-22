@@ -299,7 +299,7 @@ During compilation, you should see output like:
 
 ```rust,ignore
 note: emitting Rocket code generation debug output
-  --> examples/hello_world/src/main.rs:14:1
+  --> examples/hello/src/main.rs:14:1
    |
 14 | #[get("/world")]
    | ^^^^^^^^^^^^^^^^
