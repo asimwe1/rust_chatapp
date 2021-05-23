@@ -341,9 +341,9 @@ async fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
   The database engines supported by `#[database]` are *synchronous*. Normally,
   using such a database would block the thread of execution. To prevent this,
   the `run()` function automatically uses a thread pool so that database access
-  does not interfere with other in-flight requests. See [Cooperative
-  Multitasking](../overview/#cooperative-multitasking) for more information on
-  why this is necessary.
+  does not interfere with other in-flight requests. See
+  [Multitasking](../overview/#multitasking) for more information on why this is
+  necessary.
 
 If your application uses features of a database engine that are not available
 by default, for example support for `chrono` or `uuid`, you may enable those
