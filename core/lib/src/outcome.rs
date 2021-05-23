@@ -597,6 +597,61 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Converts `Outcome<S, E, F>` to `Result<S, E>` by identity mapping
+    /// `Success(S)` and `Failure(E)` to `Result<T, E>` and mapping `Forward(F)`
+    /// to `Result<T, E>` using `f`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    /// assert_eq!(x.ok_map_forward(|x| Ok(x as i32 + 1)), Ok(10));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Failure("hello");
+    /// assert_eq!(x.ok_map_forward(|x| Ok(x as i32 + 1)), Err("hello"));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Forward(0);
+    /// assert_eq!(x.ok_map_forward(|x| Ok(x as i32 + 1)), Ok(1));
+    /// ```
+    #[inline]
+    pub fn ok_map_forward<M>(self, f: M) -> Result<S, E>
+        where M: FnOnce(F) -> Result<S, E>
+    {
+        match self {
+            Outcome::Success(s) => Ok(s),
+            Outcome::Failure(e) => Err(e),
+            Outcome::Forward(v) => f(v),
+        }
+    }
+
+    /// Converts `Outcome<S, E, F>` to `Result<S, E>` by identity mapping
+    /// `Success(S)` and `Forward(F)` to `Result<T, F>` and mapping `Failure(E)`
+    /// to `Result<T, F>` using `f`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    /// assert_eq!(x.ok_map_failure(|s| Ok(123)), Ok(10));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Failure("hello");
+    /// assert_eq!(x.ok_map_failure(|s| Ok(123)), Ok(123));
+    ///
+    /// let x: Outcome<i32, &str, usize> = Forward(0);
+    /// assert_eq!(x.ok_map_failure(|s| Ok(123)), Err(0));
+    /// ```
+    #[inline]
+    pub fn ok_map_failure<M>(self, f: M) -> Result<S, F>
+        where M: FnOnce(E) -> Result<S, F>
+    {
+        match self {
+            Outcome::Success(s) => Ok(s),
+            Outcome::Failure(e) => f(e),
+            Outcome::Forward(v) => Err(v),
+        }
+    }
 
     #[inline]
     fn formatting(&self) -> (Color, &'static str) {
