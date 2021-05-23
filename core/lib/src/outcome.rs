@@ -165,10 +165,11 @@ impl<S, E, F> Outcome<S, E, F> {
     /// assert_eq!(x.unwrap(), 10);
     /// ```
     #[inline]
+    #[track_caller]
     pub fn unwrap(self) -> S {
         match self {
             Success(val) => val,
-            _ => panic!("Expected a successful outcome!")
+            _ => panic!("unwrapped a non-successful outcome")
         }
     }
 
@@ -188,10 +189,11 @@ impl<S, E, F> Outcome<S, E, F> {
     /// assert_eq!(x.expect("success value"), 10);
     /// ```
     #[inline]
+    #[track_caller]
     pub fn expect(self, message: &str) -> S {
         match self {
             Success(val) => val,
-            _ => panic!("Outcome::expect() failed: {}", message)
+            _ => panic!("unwrapped a non-successful outcome: {}", message)
         }
     }
 
@@ -417,6 +419,28 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Converts from `Outcome<S, E, F>` to `Outcome<&mut S, &mut E, &mut F>`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let mut x: Outcome<i32, &str, usize> = Success(10);
+    /// if let Success(val) = x.as_mut() {
+    ///     *val = 20;
+    /// }
+    ///
+    /// assert_eq!(x.unwrap(), 20);
+    /// ```
+    #[inline]
+    pub fn as_mut(&mut self) -> Outcome<&mut S, &mut E, &mut F> {
+        match *self {
+            Success(ref mut val) => Success(val),
+            Failure(ref mut val) => Failure(val),
+            Forward(ref mut val) => Forward(val),
+        }
+    }
+
     /// Maps the `Success` value using `f`. Maps an `Outcome<S, E, F>` to an
     /// `Outcome<T, E, F>` by applying the function `f` to the value of type `S`
     /// in `self` if `self` is an `Outcome::Success`.
@@ -483,10 +507,10 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps the `Success` value using `f()`, returning the `Outcome` from `f()`
-    /// or the original `self` if `self` is not `Success`. Maps an `Outcome<S,
-    /// E, F>` to an `Outcome<T, E, F>` by applying the function `f` to the
-    /// value of type `S` in `self` if `self` is an `Outcome::Success`.
+    /// Converts from `Outcome<S, E, F>` to `Outcome<T, E, F>` using `f` to map
+    /// `Success(S)` to `Success(T)`.
+    ///
+    /// If `self` is not `Success`, `self` is returned.
     ///
     /// # Examples
     ///
@@ -513,11 +537,10 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps the `Failure` value using `f()`, returning the `Outcome` from `f()`
-    /// or the original `self` if `self` is not `Failure`. Maps an `Outcome<S,
-    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
-    /// function `f` to the value of type `E` in `self` if `self` is an
-    /// `Outcome::Failure`.
+    /// Converts from `Outcome<S, E, F>` to `Outcome<S, T, F>` using `f` to map
+    /// `Failure(E)` to `Failure(T)`.
+    ///
+    /// If `self` is not `Failure`, `self` is returned.
     ///
     /// # Examples
     ///
@@ -544,10 +567,10 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Maps the `Forward` value using `f()`, returning the `Outcome` from `f()`
-    /// or the original `self` if `self` is not `Forward`. Maps an `Outcome<S,
-    /// E, F>` to an `Outcome<S, E, T>` by applying the function `f` to the
-    /// value of type `F` in `self` if `self` is an `Outcome::Forward`.
+    /// Converts from `Outcome<S, E, F>` to `Outcome<S, E, T>` using `f` to map
+    /// `Forward(F)` to `Forward(T)`.
+    ///
+    /// If `self` is not `Forward`, `self` is returned.
     ///
     /// # Examples
     ///
@@ -574,27 +597,6 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    /// Converts from `Outcome<S, E, F>` to `Outcome<&mut S, &mut E, &mut F>`.
-    ///
-    /// ```rust
-    /// # use rocket::outcome::Outcome;
-    /// # use rocket::outcome::Outcome::*;
-    /// #
-    /// let mut x: Outcome<i32, &str, usize> = Success(10);
-    /// if let Success(val) = x.as_mut() {
-    ///     *val = 20;
-    /// }
-    ///
-    /// assert_eq!(x.unwrap(), 20);
-    /// ```
-    #[inline]
-    pub fn as_mut(&mut self) -> Outcome<&mut S, &mut E, &mut F> {
-        match *self {
-            Success(ref mut val) => Success(val),
-            Failure(ref mut val) => Failure(val),
-            Forward(ref mut val) => Forward(val),
-        }
-    }
 
     #[inline]
     fn formatting(&self) -> (Color, &'static str) {
@@ -605,6 +607,7 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 }
+
 impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
     /// Pins a future that resolves to `self`, returning a
     /// [`BoxFuture`](crate::futures::future::BoxFuture) that resolves to
