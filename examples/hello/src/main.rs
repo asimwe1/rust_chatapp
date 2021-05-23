@@ -61,5 +61,4 @@ fn rocket() -> _ {
         .mount("/", routes![hello])
         .mount("/hello", routes![world, mir])
         .mount("/wave", routes![wave])
-        .attach(rocket::shield::Shield::new())
 }
