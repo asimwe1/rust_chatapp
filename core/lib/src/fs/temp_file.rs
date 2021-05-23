@@ -153,7 +153,7 @@ impl<'v> TempFile<'v> {
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
     ///     # assert!(file.path().is_none());
-    ///     # let some_path = std::env::temp_dir().join("some-file.txt");
+    ///     # let some_path = std::env::temp_dir().join("some-persist.txt");
     ///     file.persist_to(&some_path).await?;
     ///     assert_eq!(file.path(), Some(&*some_path));
     ///
@@ -291,7 +291,7 @@ impl<'v> TempFile<'v> {
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
     ///     # assert!(file.path().is_none());
-    ///     # let some_path = std::env::temp_dir().join("some-file.txt");
+    ///     # let some_path = std::env::temp_dir().join("some-copy.txt");
     ///     file.move_copy_to(&some_path).await?;
     ///     # assert_eq!(file.path(), Some(&*some_path));
     ///
@@ -348,7 +348,7 @@ impl<'v> TempFile<'v> {
     /// #[post("/", data = "<file>")]
     /// async fn handle(mut file: TempFile<'_>) -> std::io::Result<()> {
     ///     # assert!(file.path().is_none());
-    ///     # let some_path = std::env::temp_dir().join("some-file.txt");
+    ///     # let some_path = std::env::temp_dir().join("some-path.txt");
     ///     file.persist_to(&some_path).await?;
     ///     assert_eq!(file.path(), Some(&*some_path));
     ///
