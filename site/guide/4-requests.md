@@ -1521,10 +1521,11 @@ map! {
 
 ### Context
 
-The [`Contextual`] type acts as a proxy for any form type, recording all of the
-submitted form values and produced errors and associating them with their
-corresponding field name. `Contextual` is particularly useful to render a form
-with previously submitted values and render errors associated with a form input.
+The [`Contextual`] form guard acts as a proxy for any other form guard,
+recording all submitted form values and produced errors and associating them
+with their corresponding field name. `Contextual` is particularly useful for
+rendering forms with previously submitted values and errors associated with form
+input.
 
 To retrieve the context for a form, use `Form<Contextual<'_, T>>` as a data
 guard, where `T` implements `FromForm`. The `context` field contains the form's
@@ -1542,18 +1543,22 @@ fn submit(form: Form<Contextual<'_, T>>) {
         // The form parsed successfully. `value` is the `T`.
     }
 
-    // In all cases, `form.context` contains the `Context`.
     // We can retrieve raw field values and errors.
-    let raw_id_value = form.context.value("id");
-    let id_errors = form.context.errors("id");
+    let raw_id_value = form.context.field_value("id");
+    let id_errors = form.context.field_errors("id");
 }
 ```
 
+`Context` is nesting-aware for errors. When `Context` is queried for errors for
+a field named `foo.bar`, it returns errors for fields that are a prefix of
+`foo.bar`, namely `foo` and `foo.bar`. Similarly, if queried for errors for a
+field named `foo.bar.baz`, errors for field `foo`, `foo.bar`, and `foo.bar.baz`
+will be returned.
+
 `Context` serializes as a map, so it can be rendered in templates that require
-`Serialize` types. See
-[`Context`](@api/rocket/form/struct.Context.html#Serialization) for details
-about its serialization format. The [forms example], too, makes use of form
-contexts, as well as every other forms feature.
+`Serialize` types. See [`Context`] for details about its serialization format.
+The [forms example], too, makes use of form contexts, as well as every other
+forms feature.
 
 [`Contextual`]: @api/rocket/form/struct.Contextual.html
 [`Context`]: @api/rocket/form/struct.Context.html

@@ -7,6 +7,7 @@
 #![cfg_attr(nightly, feature(decl_macro))]
 
 #![warn(rust_2018_idioms)]
+#![warn(missing_docs)]
 
 //! # Rocket - Core API Documentation
 //!

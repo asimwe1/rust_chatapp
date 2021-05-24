@@ -67,6 +67,9 @@ fn index<'r>() -> Template {
     Template::render("index", &Context::default())
 }
 
+// NOTE: We use `Contextual` here because we want to collect all submitted form
+// fields to re-render forms with submitted values on error. If you have no such
+// need, do not use `Contextual`. Use the equivalent of `Form<Submit<'_>>`.
 #[post("/", data = "<form>")]
 fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>) -> (Status, Template) {
     let template = match form.value {

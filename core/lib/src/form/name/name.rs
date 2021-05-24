@@ -210,6 +210,12 @@ impl AsRef<Name> for RawStr {
     }
 }
 
+impl AsRef<Name> for Name {
+    fn as_ref(&self) -> &Name {
+        self
+    }
+}
+
 impl Eq for Name { }
 
 impl std::hash::Hash for Name {

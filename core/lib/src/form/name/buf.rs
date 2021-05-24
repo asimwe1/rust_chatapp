@@ -178,12 +178,6 @@ impl<N: AsRef<Name> + ?Sized> PartialEq<N> for NameBuf<'_> {
     }
 }
 
-impl PartialEq<Name> for NameBuf<'_> {
-    fn eq(&self, other: &Name) -> bool {
-        self.keys().eq(other.keys())
-    }
-}
-
 impl PartialEq<NameBuf<'_>> for Name {
     fn eq(&self, other: &NameBuf<'_>) -> bool {
         self.keys().eq(other.keys())
