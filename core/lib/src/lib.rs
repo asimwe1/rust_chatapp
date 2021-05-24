@@ -25,7 +25,7 @@
 //!
 //! ## Usage
 //!
-//! Depend on `rocket` in `Rocket.toml`:
+//! Depend on `rocket` in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
