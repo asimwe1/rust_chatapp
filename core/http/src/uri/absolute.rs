@@ -65,19 +65,28 @@ use crate::uri::{Authority, Path, Query, Data, Error, as_utf8_unchecked, fmt};
 /// # }
 /// ```
 ///
-/// ## Serde
+/// # (De)serialization
 ///
-/// For convience, `Absolute` implements `Serialize` and `Deserialize`.
-/// Because `Absolute` has a lifetime parameter, serde requires a borrow
-/// attribute for the derive macro to work. If you want to own the Uri,
-/// rather than borrow from the deserializer, use `'static`.
+/// `Absolute` is both `Serialize` and `Deserialize`:
 ///
-/// ```ignore
-/// #[derive(Deserialize)]
-/// struct Uris<'a> {
-///     #[serde(borrow)]
-///     absolute: Absolute<'a>,
+/// ```rust
+/// # #[cfg(feature = "serde")] mod serde {
+/// # use _serde as serde;
+/// use serde::{Serialize, Deserialize};
+/// use rocket::http::uri::Absolute;
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "_serde")]
+/// struct UriOwned {
+///     uri: Absolute<'static>,
 /// }
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "_serde")]
+/// struct UriBorrowed<'a> {
+///     uri: Absolute<'a>,
+/// }
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct Absolute<'a> {
@@ -130,14 +139,12 @@ impl<'a> Absolute<'a> {
         crate::parse::uri::absolute_from_str(string)
     }
 
-    /// Parses the string `string` into an `Absolute`. Parsing will never
-    /// May allocate on error.
+    /// Parses the string `string` into an `Absolute`. Allocates minimally on
+    /// success and error.
     ///
-    /// TODO: avoid allocation
-    ///
-    /// This method should be used instead of [`Absolute::parse()`] when
-    /// the source URI is already a `String`. Returns an `Error` if `string` is
-    /// not a valid absolute URI.
+    /// This method should be used instead of [`Absolute::parse()`] when the
+    /// source URI is already a `String`. Returns an `Error` if `string` is not
+    /// a valid absolute URI.
     ///
     /// # Example
     ///
@@ -151,9 +158,10 @@ impl<'a> Absolute<'a> {
     /// assert_eq!(uri.path(), "/foo/2/three");
     /// assert!(uri.query().is_none());
     /// ```
+    // TODO: Avoid all allocations.
     pub fn parse_owned(string: String) -> Result<Absolute<'static>, Error<'static>> {
         let absolute = Absolute::parse(&string).map_err(|e| e.into_owned())?;
-        debug_assert!(absolute.source.is_some(), "Origin source parsed w/o source");
+        debug_assert!(absolute.source.is_some(), "Absolute parsed w/o source");
 
         let absolute = Absolute {
             scheme: absolute.scheme.into_owned(),
@@ -513,43 +521,4 @@ impl std::fmt::Display for Absolute<'_> {
     }
 }
 
-#[cfg(feature = "serde")]
-mod serde {
-    use std::fmt;
-
-    use super::Absolute;
-    use _serde::{ser::{Serialize, Serializer}, de::{Deserialize, Deserializer, Error, Visitor}};
-
-    impl<'a> Serialize for Absolute<'a> {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(&self.to_string())
-        }
-    }
-
-    struct AbsoluteVistor;
-
-    impl<'a> Visitor<'a> for AbsoluteVistor {
-        type Value = Absolute<'a>;
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(formatter, "absolute Uri")
-        }
-
-        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
-            Absolute::parse_owned(v.to_string()).map_err(Error::custom)
-        }
-
-        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
-            Absolute::parse_owned(v).map_err(Error::custom)
-        }
-
-        fn visit_borrowed_str<E: Error>(self, v: &'a str) -> Result<Self::Value, E> {
-            Absolute::parse(v).map_err(Error::custom)
-        }
-    }
-
-    impl<'a, 'de: 'a> Deserialize<'de> for Absolute<'a> {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            deserializer.deserialize_str(AbsoluteVistor)
-        }
-    }
-}
+impl_serde!(Absolute<'a>, "an absolute-form URI");

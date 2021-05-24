@@ -86,19 +86,28 @@ use crate::{RawStr, RawStrBuf};
 /// # }
 /// ```
 ///
-/// ## Serde
+/// # (De)serialization
 ///
-/// For convience, `Origin` implements `Serialize` and `Deserialize`.
-/// Because `Origin` has a lifetime parameter, serde requires a borrow
-/// attribute for the derive macro to work. If you want to own the Uri,
-/// rather than borrow from the deserializer, use `'static`.
+/// `Origin` is both `Serialize` and `Deserialize`:
 ///
-/// ```ignore
-/// #[derive(Deserialize)]
-/// struct Uris<'a> {
-///     #[serde(borrow)]
-///     origin: Origin<'a>,
+/// ```rust
+/// # #[cfg(feature = "serde")] mod serde {
+/// # use _serde as serde;
+/// use serde::{Serialize, Deserialize};
+/// use rocket::http::uri::Origin;
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "_serde")]
+/// struct UriOwned {
+///     uri: Origin<'static>,
 /// }
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "_serde")]
+/// struct UriBorrowed<'a> {
+///     uri: Origin<'a>,
+/// }
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct Origin<'a> {
@@ -283,7 +292,7 @@ impl<'a> Origin<'a> {
     /// ```
     pub fn parse_owned(string: String) -> Result<Origin<'static>, Error<'static>> {
         let origin = Origin::parse(&string).map_err(|e| e.into_owned())?;
-        debug_assert!(origin.source.is_some(), "Origin source parsed w/o source");
+        debug_assert!(origin.source.is_some(), "Origin parsed w/o source");
 
         Ok(Origin {
             path: origin.path.into_owned(),
@@ -501,46 +510,7 @@ impl std::fmt::Display for Origin<'_> {
     }
 }
 
-#[cfg(feature = "serde")]
-mod serde {
-    use std::fmt;
-
-    use super::Origin;
-    use _serde::{ser::{Serialize, Serializer}, de::{Deserialize, Deserializer, Error, Visitor}};
-
-    impl<'a> Serialize for Origin<'a> {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(&self.to_string())
-        }
-    }
-
-    struct OriginVistor;
-
-    impl<'a> Visitor<'a> for OriginVistor {
-        type Value = Origin<'a>;
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(formatter, "origin Uri")
-        }
-
-        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
-            Origin::parse_owned(v.to_string()).map_err(E::custom)
-        }
-
-        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
-            Origin::parse_owned(v).map_err(E::custom)
-        }
-
-        fn visit_borrowed_str<E: Error>(self, v: &'a str) -> Result<Self::Value, E> {
-            Origin::parse(v).map_err(E::custom)
-        }
-    }
-
-    impl<'a, 'de: 'a> Deserialize<'de> for Origin<'a> {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            deserializer.deserialize_str(OriginVistor)
-        }
-    }
-}
+impl_serde!(Origin<'a>, "an origin-form URI");
 
 #[cfg(test)]
 mod tests {

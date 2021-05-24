@@ -35,12 +35,18 @@ pub fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
     // To resolve all ambiguities with preference, we might need to look at the
     // complete string twice: origin/ref, asterisk/ref, authority/absolute.
     switch! {
-        complete(|i| eat(i, b'*')) => Uri::Asterisk(Asterisk),
+        asterisk@complete(asterisk) => Uri::Asterisk(asterisk),
         origin@complete(origin) => Uri::Origin(origin),
         authority@complete(authority) => Uri::Authority(authority),
         absolute@complete(absolute) => Uri::Absolute(absolute),
         _ => Uri::Reference(reference()?)
     }
+}
+
+#[parser]
+pub fn asterisk<'a>(input: &mut RawInput<'a>) -> Result<'a, Asterisk> {
+    eat(b'*')?;
+    Asterisk
 }
 
 #[parser]

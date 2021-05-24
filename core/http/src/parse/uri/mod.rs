@@ -4,7 +4,7 @@ pub(crate) mod tables;
 
 #[cfg(test)] mod tests;
 
-use crate::uri::{Uri, Origin, Absolute, Authority, Reference};
+use crate::uri::{Uri, Origin, Absolute, Authority, Reference, Asterisk};
 
 use self::parser::*;
 
@@ -30,6 +30,11 @@ pub fn authority_from_str(s: &str) -> Result<Authority<'_>, Error<'_>> {
 #[inline]
 pub fn absolute_from_str(s: &str) -> Result<Absolute<'_>, Error<'_>> {
     Ok(parse!(absolute: RawInput::new(s.as_bytes()))?)
+}
+
+#[inline]
+pub fn asterisk_from_str(s: &str) -> Result<Asterisk, Error<'_>> {
+    Ok(parse!(asterisk: RawInput::new(s.as_bytes()))?)
 }
 
 #[inline]
