@@ -299,19 +299,57 @@ impl<'v> Context<'v> {
         self.status
     }
 
-    pub(crate) fn push_error(&mut self, e: Error<'v>) {
-        self.status = std::cmp::max(self.status, e.status());
-        match e.name {
+    /// Inject a single error `error` into the context.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::post;
+    /// # type T = String;
+    /// use rocket::http::Status;
+    /// use rocket::form::{Form, Contextual, Error};
+    ///
+    /// #[post("/submit", data = "<form>")]
+    /// fn submit(mut form: Form<Contextual<'_, T>>) {
+    ///     let error = Error::validation("a good error message")
+    ///         .with_name("field_name")
+    ///         .with_value("some field value");
+    ///
+    ///     form.context.push_error(error);
+    /// }
+    /// ```
+    pub fn push_error(&mut self, error: Error<'v>) {
+        self.status = std::cmp::max(self.status, error.status());
+        match error.name {
             Some(ref name) => match self.errors.get_mut(name) {
-                Some(errors) => errors.push(e),
-                None => { self.errors.insert(name.clone(), e.into()); },
+                Some(errors) => errors.push(error),
+                None => { self.errors.insert(name.clone(), error.into()); },
             }
-            None => self.form_errors.push(e)
+            None => self.form_errors.push(error)
         }
     }
 
-    pub(crate) fn push_errors(&mut self, errors: Errors<'v>) {
-        errors.into_iter().for_each(|e| self.push_error(e))
+    /// Inject all of the errors in `errors` into the context.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::post;
+    /// # type T = String;
+    /// use rocket::http::Status;
+    /// use rocket::form::{Form, Contextual, Error};
+    ///
+    /// #[post("/submit", data = "<form>")]
+    /// fn submit(mut form: Form<Contextual<'_, T>>) {
+    ///     let error = Error::validation("a good error message")
+    ///         .with_name("field_name")
+    ///         .with_value("some field value");
+    ///
+    ///     form.context.push_errors(vec![error]);
+    /// }
+    /// ```
+    pub fn push_errors<E: Into<Errors<'v>>>(&mut self, errors: E) {
+        errors.into().into_iter().for_each(|e| self.push_error(e))
     }
 }
 

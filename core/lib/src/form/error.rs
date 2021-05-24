@@ -74,19 +74,22 @@ pub struct Errors<'v>(Vec<Error<'v>>);
 ///
 /// # Contructing
 ///
-/// An `Error` can be constructed from anything that an [`ErrorKind`] can be
-/// constructed from. See [`ErrorKind`](ErrorKind#constructing).
+/// An `Error` can be constructed via [`Error::validation()`],
+/// [`Error::custom()`], or anything that an [`ErrorKind`] can be constructed
+/// from. See [`ErrorKind`](ErrorKind#constructing).
 ///
 /// ```rust
 /// use rocket::form::Error;
 ///
-/// fn at_most_10() -> Result<usize, Error<'static>> {
+/// fn at_most_10_not_even() -> Result<usize, Error<'static>> {
 ///     // Using `From<PartIntError> => ErrorKind::Int`.
 ///     let i: usize = "foo".parse()?;
 ///
 ///     if i > 10 {
 ///         // `From<(Option<isize>, Option<isize>)> => ErrorKind::OutOfRange`
 ///         return Err((None, Some(10isize)).into());
+///     } else if i % 2 == 0 {
+///         return Err(Error::validation("integer cannot be even"));
 ///     }
 ///
 ///     Ok(i)
