@@ -13,7 +13,6 @@
 //!      ```toml
 //!      [dependencies.rocket_dyn_templates]
 //!      version = "0.1.0-dev"
-//!      default-features = false
 //!      features = ["handlebars", "tera"]
 //!      ```
 //!
