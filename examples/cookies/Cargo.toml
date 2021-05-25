@@ -8,7 +8,6 @@ publish = false
 [dependencies]
 rocket = { path = "../../core/lib", features = ["secrets"] }
 
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
-features = ["handlebars_templates"]
+[dependencies.rocket_dyn_templates]
+path = "../../contrib/dyn_templates"
+features = ["handlebars"]

@@ -264,9 +264,8 @@ async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
 
 ## Rocket Responders
 
-Some of Rocket's best features are implemented through responders. You can find
-many of these responders in the [`response`] module and [`rocket_contrib`]
-library. Among these are:
+Some of Rocket's best features are implemented through responders. Among these
+are:
 
   * [`Content`] - Used to override the Content-Type of a response.
   * [`NamedFile`] - Streams a file to the client; automatically sets the
@@ -286,8 +285,8 @@ library. Among these are:
 [`Redirect`]: @api/rocket/response/struct.Redirect.html
 [`Stream`]: @api/rocket/response/struct.Stream.html
 [`Flash`]: @api/rocket/response/struct.Flash.html
-[`MsgPack`]: @api/rocket_contrib/msgpack/struct.MsgPack.html
-[`rocket_contrib`]: @api/rocket_contrib/
+[`MsgPack`]: @api/rocket/serde/msgpack/struct.MsgPack.html
+[`Template`]: @api/rocket_dyn_templates/struct.Template.html
 
 ### Async Streams
 
@@ -381,16 +380,16 @@ The [serialization example] provides further illustration.
 
 ## Templates
 
-Rocket includes built-in templating support that works largely through a
-[`Template`] responder in `rocket_contrib`. To render a template named "index",
-for instance, you might return a value of type `Template` as follows:
+Rocket has first-class templating support that works largely through a
+[`Template`] responder in the `rocket_dyn_templates` contrib library. To render
+a template named "index", for instance, you might return a value of type
+`Template` as follows:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# #[macro_use] extern crate rocket_contrib;
 # fn main() {}
 
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[get("/")]
 fn index() -> Template {
@@ -415,7 +414,7 @@ fairings. To attach the template fairing, simply call
 ```rust
 # #[macro_use] extern crate rocket;
 
-# use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[launch]
 fn rocket() -> _ {
@@ -450,7 +449,6 @@ including how to customize a template engine to add custom helpers and filters.
 The [templating example](@example/templating) uses both Tera and Handlebars
 templating to implement the same application.
 
-[`Template`]: @api/rocket_contrib/templates/struct.Template.html
 [configurable]: ../configuration/#extras
 
 ## Typed URIs

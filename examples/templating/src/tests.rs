@@ -2,7 +2,7 @@ use super::rocket;
 
 use rocket::http::{RawStr, Status, Method::*};
 use rocket::local::blocking::Client;
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 fn test_root(kind: &str) {
     // Check that the redirect works.

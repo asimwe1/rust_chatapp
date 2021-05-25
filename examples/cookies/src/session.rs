@@ -6,7 +6,7 @@ use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, CookieJar};
 use rocket::form::Form;
 
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[derive(FromForm)]
 struct Login<'r> {

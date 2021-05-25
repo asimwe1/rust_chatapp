@@ -4,7 +4,7 @@ use rocket::Request;
 use rocket::response::Redirect;
 use rocket::serde::Serialize;
 
-use rocket_contrib::templates::{Template, tera::Tera};
+use rocket_dyn_templates::{Template, tera::Tera};
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]

@@ -8,8 +8,7 @@ publish = false
 [dependencies]
 rocket = { path = "../../core/lib" }
 
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
 # in your application, you should enable only the template engine(s) used
-features = ["tera_templates", "handlebars_templates"]
+[dependencies.rocket_dyn_templates]
+path = "../../contrib/dyn_templates"
+features = ["tera", "handlebars"]

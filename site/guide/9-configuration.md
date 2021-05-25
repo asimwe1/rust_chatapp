@@ -85,9 +85,8 @@ bytes Rocket should accept for that type. Rocket can parse both integers
 By default, Rocket specifies a `32 KiB` limit for incoming forms. Since Rocket
 requires specifying a read limit whenever data is read, external data guards may
 also choose to have a configure limit via the `limits` parameter. The
-[`rocket_contrib::Json`] type, for instance, uses the `limits.json` parameter.
-
-[`rocket_contrib::Json`]: @api/rocket_contrib/json/struct.Json.html
+[`Json`](@api/rocket/serde/json/struct.Json.html) type, for instance, uses the
+`limits.json` parameter.
 
 ### TLS
 

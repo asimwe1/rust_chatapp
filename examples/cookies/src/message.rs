@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rocket::form::Form;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, CookieJar};
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[macro_export]
 macro_rules! message_uri {

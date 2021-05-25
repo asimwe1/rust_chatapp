@@ -69,29 +69,25 @@ You should see `Hello, world!` by visiting `http://localhost:8000`.
 
 ## Building and Testing
 
-### Core and Contrib
-
 The `core` directory contains the three core libraries: `lib`, `codegen`, and
-`http`. The `contrib` directory contains officially supported community
-contributions and similarly consists of `lib` and `codegen`.
+`http` published as `rocket`, `rocket_codegen` and `rocket_http`, respectively.
+The latter two are implementations details and are reexported from `rocket`.
 
-Public APIs are exposed via `lib` packages: `core/lib` is distributed as the
-`rocket` crate while `contrib/lib` is distributed as the `rocket_contrib` crate.
-The remaining crates are implementation details.
-
-### Library Testing
+### Testing
 
 Rocket's complete test suite can be run with `./scripts/test.sh` from the root
-of the source tree. The script builds and tests all libraries and examples. It
-accepts the following flags:
+of the source tree. The script builds and tests all libraries and examples in
+all configurations. It accepts the following flags:
 
-  * `--contrib`: tests each `contrib` feature individually
-  * `--core`: tests each `core` feature individually
-  * `--release`: runs the testing suite in `release` mode
+  * `--examples`: tests all examples in `examples/`
+  * `--contrib`: tests each `contrib` library and feature individually
+  * `--core`: tests each `core/lib` feature individually
+  * `--benchmarks`: runs all benchmarks
+  * `--all`: runs all tests in all configurations
 
 Additionally, a `+${toolchain}` flag, where `${toolchain}` is a valid `rustup`
 toolchain string, can be passed as the first parameter. The flag is forwarded to
-`cargo` commands.
+`cargo` commands. Any other extra parameters are passed directly to `cargo`.
 
 To test crates individually, simply run `cargo test --all-features` in the
 crate's directory.
@@ -99,10 +95,11 @@ crate's directory.
 ### Codegen Testing
 
 Code generation diagnostics are tested using [`trybuild`]; tests can be found in
-the `codegen/tests/ui-fail` directory of both `core` and `contrib`. Each test is
-symlinked into sibling `ui-fail-stable` and `ui-fail-nightly` directories which
-contain the expected error output for stable and nightly compilers,
-respectively.
+the `codegen/tests/ui-fail` directories of respective `codegen` crates. Each
+test is symlinked into sibling `ui-fail-stable` and `ui-fail-nightly`
+directories which contain the expected error output for stable and nightly
+compilers, respectively. To update codegen test UI output, run a codegen test
+suite with `TRYBUILD=overwrite` and inspect the `diff` of `.std*` files.
 
 [`trybuild`]: https://docs.rs/trybuild/1
 

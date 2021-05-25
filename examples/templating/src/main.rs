@@ -6,7 +6,7 @@ mod tera;
 #[cfg(test)] mod tests;
 
 use rocket::response::content::Html;
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[get("/")]
 fn index() -> Html<&'static str> {

@@ -51,10 +51,7 @@ use crate::http::uncased::Uncased;
 ///
 /// # Built-in Limits
 ///
-/// The following table details recognized built-in limits used by Rocket. Note
-/// that this table _does not_ include limits for types outside of Rocket's
-/// core. In particular, this does not include limits applicable to contrib
-/// types like `json` and `msgpack`.
+/// The following table details recognized built-in limits used by Rocket.
 ///
 /// | Limit Name        | Default | Type         | Description                           |
 /// |-------------------|---------|--------------|---------------------------------------|

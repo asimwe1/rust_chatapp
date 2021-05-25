@@ -46,8 +46,6 @@ BENCHMARKS_ROOT=$(relative "benchmarks") || exit $?
 CORE_LIB_ROOT=$(relative "core/lib") || exit $?
 CORE_CODEGEN_ROOT=$(relative "core/codegen") || exit $?
 CORE_HTTP_ROOT=$(relative "core/http") || exit $?
-CONTRIB_LIB_ROOT=$(relative "contrib/lib") || exit $?
-CONTRIB_CODEGEN_ROOT=$(relative "contrib/codegen") || exit $?
 GUIDE_TESTS_ROOT=$(relative "site/tests") || exit $?
 
 # Root of infrastructure directories.
@@ -78,8 +76,11 @@ ALL_PROJECT_DIRS=(
     "${CORE_HTTP_ROOT}"
     "${CORE_CODEGEN_ROOT}"
     "${CORE_LIB_ROOT}"
-    "${CONTRIB_CODEGEN_ROOT}"
-    "${CONTRIB_LIB_ROOT}"
+)
+
+CONTRIB_LIB_DIRS=(
+    "${CONTRIB_ROOT}/sync_db_pools"
+    "${CONTRIB_ROOT}/dyn_templates"
 )
 
 function print_environment() {
@@ -98,12 +99,11 @@ function print_environment() {
   echo "  CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
   echo "  CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
   echo "  CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
-  echo "  CONTRIB_LIB_ROOT: ${CONTRIB_LIB_ROOT}"
-  echo "  CONTRIB_CODEGEN_ROOT: ${CONTRIB_CODEGEN_ROOT}"
   echo "  GUIDE_TESTS_ROOT: ${GUIDE_TESTS_ROOT}"
   echo "  EXAMPLES_DIR: ${EXAMPLES_DIR}"
   echo "  DOC_DIR: ${DOC_DIR}"
   echo "  ALL_PROJECT_DIRS: ${ALL_PROJECT_DIRS[*]}"
+  echo "  CONTRIB_LIB_DIRS: ${CONTRIB_LIB_DIRS[*]}"
   echo "  date(): $(future_date)"
 }
 

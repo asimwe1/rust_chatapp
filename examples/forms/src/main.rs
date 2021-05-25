@@ -5,7 +5,7 @@ use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
 use rocket::fs::TempFile;
 use rocket::fs::{FileServer, relative};
 
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[derive(Debug, FromForm)]
 struct Password<'v> {

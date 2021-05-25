@@ -3,7 +3,7 @@ use rocket::fairing::AdHoc;
 use rocket::response::{Debug, status::Created};
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
-use rocket_contrib::databases::diesel;
+use rocket_sync_db_pools::diesel;
 
 use self::diesel::prelude::*;
 

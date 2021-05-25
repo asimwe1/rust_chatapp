@@ -59,9 +59,7 @@ function check_style() {
 }
 
 function test_contrib() {
-  FEATURES=(
-    tera_templates
-    handlebars_templates
+  SYNC_DB_POOLS_FEATURES=(
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool
@@ -70,16 +68,20 @@ function test_contrib() {
     memcache_pool
   )
 
-  echo ":: Building and testing contrib [default]..."
+  DYN_TEMPLATES_FEATURES=(
+    tera
+    handlebars
+  )
 
-  pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
-    $CARGO test $@
+  for feature in "${SYNC_DB_POOLS_FEATURES[@]}"; do
+    echo ":: Building and testing sync_db_pools [$feature]..."
+    $CARGO test -p rocket_sync_db_pools --no-default-features --features $feature $@
+  done
 
-    for feature in "${FEATURES[@]}"; do
-      echo ":: Building and testing contrib [${feature}]..."
-      $CARGO test --no-default-features --features "${feature}" $@
-    done
-  popd > /dev/null 2>&1
+  for feature in "${DYN_TEMPLATES_FEATURES[@]}"; do
+    echo ":: Building and testing dyn_templates [$feature]..."
+    $CARGO test -p rocket_dyn_templates --no-default-features --features $feature $@
+  done
 }
 
 function test_core() {
@@ -108,7 +110,7 @@ function test_examples() {
   pushd "${EXAMPLES_DIR}" > /dev/null 2>&1
     # Rust compiles Rocket once with the `secrets` feature enabled, so when run
     # in production, we need a secret key or tests will fail needlessly. We
-    # ensure in core that secret key failing/not failing works as expected.
+    # test in core that secret key failing/not failing works as expected.
     ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
       $CARGO test --all $@
   popd > /dev/null 2>&1
@@ -173,7 +175,7 @@ case $TEST_KIND in
     test_contrib $@ & contrib=$!
 
     failures=()
-    if ! wait $default ; then failures+=("ROOT WORKSPACE"); fi
+    if ! wait $default ; then failures+=("DEFAULT"); fi
     if ! wait $examples ; then failures+=("EXAMPLES"); fi
     if ! wait $core ; then failures+=("CORE"); fi
     if ! wait $contrib ; then failures+=("CONTRIB"); fi

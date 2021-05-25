@@ -73,7 +73,7 @@ is a built-in Rocket type that knows how to parse web forms into structures.
 Rocket will automatically attempt to parse the request body into the `Form` and
 call the `login` handler if parsing succeeds. Other built-in `FromData` types
 include [`Data`](@api/rocket/struct.Data.html),
-[`Json`](@api/rocket_contrib/json/struct.Json.html), and
+[`Json`](@api/rocket/serde/json/struct.Json.html), and
 [`Flash`](@api/rocket/response/struct.Flash.html).
 '''
 
@@ -119,7 +119,7 @@ the standard library types including `&str`, `String`, `File`, `Option`, and
 `Result`. Rocket also implements custom responders such as
 [Redirect](@api/rocket/response/struct.Redirect.html),
 [Flash](@api/rocket/response/struct.Flash.html), and
-[Template](@api/rocket_contrib/templates/struct.Template.html).
+[Template](@api/rocket_dyn_templates/struct.Template.html).
 
 The task of a `Responder` is to generate a
 [`Response`](@api/rocket/response/struct.Response.html), if possible.

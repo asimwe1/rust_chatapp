@@ -3,7 +3,7 @@ use rocket::fairing::AdHoc;
 use rocket::serde::{Serialize, Deserialize, json::Json};
 use rocket::response::{Debug, status::Created};
 
-use rocket_contrib::databases::rusqlite;
+use rocket_sync_db_pools::rusqlite;
 
 use self::rusqlite::params;
 

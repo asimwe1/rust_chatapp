@@ -15,7 +15,6 @@ version = "0.5.1"
 default-features = false
 features = ["runtime-tokio-rustls", "sqlite", "macros", "offline", "migrate"]
 
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
+[dependencies.rocket_sync_db_pools]
+path = "../../contrib/sync_db_pools/lib/"
 features = ["diesel_sqlite_pool", "sqlite_pool"]

@@ -158,7 +158,6 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 
   `rocket.mount("/public", FileServer::from("static/"))`
 
-[`rocket_contrib`]: @api/rocket_contrib/
 [`FileServer`]: @api/rocket/fs/struct.FileServer.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 

@@ -2,7 +2,7 @@ use rocket::Request;
 use rocket::response::Redirect;
 use rocket::serde::Serialize;
 
-use rocket_contrib::templates::{Template, handlebars};
+use rocket_dyn_templates::{Template, handlebars};
 
 use self::handlebars::{Handlebars, JsonRender};
 

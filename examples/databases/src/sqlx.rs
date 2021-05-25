@@ -67,7 +67,7 @@ async fn destroy(db: &State<Db>) -> Result<()> {
 }
 
 async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
-    use rocket_contrib::databases::Config;
+    use rocket_sync_db_pools::Config;
 
     let config = match Config::from("sqlx", &rocket) {
         Ok(config) => config,

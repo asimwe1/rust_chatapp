@@ -1,7 +1,7 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
-#[macro_use] extern crate rocket_contrib;
+#[macro_use] extern crate rocket_sync_db_pools;
 
 #[cfg(test)]
 mod tests;
@@ -15,7 +15,7 @@ use rocket::serde::Serialize;
 use rocket::form::Form;
 use rocket::fs::{FileServer, relative};
 
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 use crate::task::{Task, Todo};
 
