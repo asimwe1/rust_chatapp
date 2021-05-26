@@ -160,6 +160,7 @@ impl<'r, T: Deserialize<'r>> MsgPack<T> {
         Self::from_bytes(local_cache!(req, bytes))
     }
 }
+
 #[crate::async_trait]
 impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
     type Error = Error;

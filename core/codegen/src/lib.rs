@@ -758,29 +758,52 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 ///
 /// # Generics
 ///
-/// The derive accepts at most one type generic and at most one lifetime
+/// The derive accepts any number of type generics and at most one lifetime
 /// generic. If a type generic is present, the generated implementation will
-/// require a bound of `Responder` for the generic. As such, the generic should
-/// be used as a `Responder`:
+/// require a bound of `Responder<'r, 'o>` for each generic unless a
+/// `#[response(bound = ...)]` attribute as used:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
+/// use rocket::serde::Serialize;
+/// use rocket::serde::json::Json;
+/// use rocket::http::ContentType;
+/// use rocket::response::Responder;
+///
+/// // The bound `T: Responder` will be added to the generated implementation.
 /// #[derive(Responder)]
 /// #[response(status = 404, content_type = "html")]
 /// struct NotFoundHtml<T>(T);
+///
+/// // The bound `T: Serialize` will be added to the generated implementation.
+/// // This would fail to compile otherwise.
+/// #[derive(Responder)]
+/// #[response(bound = "T: Serialize", status = 404)]
+/// struct NotFoundJson<T>(Json<T>);
+///
+/// // The bounds `T: Serialize, E: Responder` will be added to the generated
+/// // implementation. This would fail to compile otherwise.
+/// #[derive(Responder)]
+/// #[response(bound = "T: Serialize, E: Responder<'r, 'o>")]
+/// enum MyResult<T, E> {
+///     Ok(Json<T>),
+///     #[response(status = 404)]
+///     Err(E, ContentType)
+/// }
 /// ```
 ///
-/// If a lifetime generic is present, it will be used as the second lifetime
-/// paramter `'o` parameter in `impl Responder<'r, 'o>`:
+/// If a lifetime generic is present, it will be replace with `'o` in the
+/// generated implementation `impl Responder<'r, 'o>`:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
+/// // Generates `impl<'r, 'o> Responder<'r, 'o> for NotFoundHtmlString<'o>`.
 /// #[derive(Responder)]
 /// #[response(status = 404, content_type = "html")]
-/// struct NotFoundHtmlString<'o>(&'o str);
+/// struct NotFoundHtmlString<'a>(&'a str);
 /// ```
 ///
-/// Both a type generic and lifetime generic may be used:
+/// Both type generics and lifetime generic may be used:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;

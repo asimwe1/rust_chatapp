@@ -47,8 +47,8 @@ fn context_type(input: Input<'_>) -> (TokenStream, Option<syn::WhereClause>) {
     }
 
     let span = input.ident().span();
-    gen.add_type_bound(&syn::parse_quote!(#_form::FromForm<#lifetime>));
-    gen.add_type_bound(&syn::TypeParamBound::from(lifetime));
+    gen.add_type_bound(syn::parse_quote!(#_form::FromForm<#lifetime>));
+    gen.add_type_bound(syn::TypeParamBound::from(lifetime));
     let (_, ty_gen, where_clause) = gen.split_for_impl();
     (quote_spanned!(span => FromFormGeneratedContext #ty_gen), where_clause.cloned())
 }

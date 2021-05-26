@@ -1,12 +1,17 @@
 use quote::ToTokens;
-use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
+use devise::{*, ext::{TypeExt, SpanDiagnosticExt, GenericsExt}};
 use proc_macro2::TokenStream;
+use syn::punctuated::Punctuated;
+use syn::parse::Parser;
 
 use crate::exports::*;
 use crate::http_codegen::{ContentType, Status};
 
+type WherePredicates = Punctuated<syn::WherePredicate, syn::Token![,]>;
+
 #[derive(Debug, Default, FromMeta)]
 struct ItemAttr {
+    bound: Option<SpanWrapped<String>>,
     content_type: Option<SpanWrapped<ContentType>>,
     status: Option<SpanWrapped<Status>>,
 }
@@ -17,18 +22,30 @@ struct FieldAttr {
 }
 
 pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
-    let impl_tokens = quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>);
+    let impl_tokens = quote!(impl<'r, 'o: 'r> ::rocket::response::Responder<'r, 'o>);
     DeriveGenerator::build_for(input, impl_tokens)
         .support(Support::Struct | Support::Enum | Support::Lifetime | Support::Type)
         .replace_generic(1, 0)
-        .type_bound(quote!(::rocket::response::Responder<'__r, '__o>))
+        .type_bound_mapper(MapperBuild::new()
+            .try_input_map(|_, input| {
+                ItemAttr::one_from_attrs("response", input.attrs())?
+                    .and_then(|attr| attr.bound)
+                    .map(|bound| {
+                        let span = bound.span;
+                        let bounds = WherePredicates::parse_terminated.parse_str(&bound)
+                            .map_err(|e| span.error(format!("invalid bound syntax: {}", e)))?;
+                        Ok(quote_respanned!(span => #bounds))
+                    })
+                    .unwrap_or_else(|| {
+                        let bound = quote!(::rocket::response::Responder<'r, 'o>);
+                        let preds = input.generics().parsed_bounded_types(bound)?;
+                        Ok(quote!(#preds))
+                    })
+            })
+        )
         .validator(ValidatorBuild::new()
             .input_validate(|_, i| match i.generics().lifetimes().count() > 1 {
                 true => Err(i.generics().span().error("only one lifetime is supported")),
-                false => Ok(())
-            })
-            .input_validate(|_, i| match i.generics().type_params().count() > 1 {
-                true => Err(i.generics().span().error("only one type generic is supported")),
                 false => Ok(())
             })
             .fields_validate(|_, fields| match fields.is_empty() {
@@ -38,7 +55,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
         )
         .inner_mapper(MapperBuild::new()
             .with_output(|_, output| quote! {
-                fn respond_to(self, __req: &'__r #Request<'_>) -> #_response::Result<'__o> {
+                fn respond_to(self, __req: &'r #Request<'_>) -> #_response::Result<'o> {
                     #output
                 }
             })
