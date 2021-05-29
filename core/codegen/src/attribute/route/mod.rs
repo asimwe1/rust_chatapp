@@ -75,7 +75,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
 
     #[allow(non_snake_case)]
     Some(quote! {
-        let mut _e = #_form::Errors::new();
+        let mut __e = #_form::Errors::new();
         #(let mut #ident = #init_expr;)*
 
         for _f in #__req.query_fields() {
@@ -93,15 +93,15 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
             let #ident = match #finalize_expr {
                 #_Ok(_v) => #_Some(_v),
                 #_Err(_err) => {
-                    _e.extend(_err.with_name(#_form::NameView::new(#name)));
+                    __e.extend(_err.with_name(#_form::NameView::new(#name)));
                     #_None
                 },
             };
         )*
 
-        if !_e.is_empty() {
+        if !__e.is_empty() {
             #_log::warn_!("query string failed to match declared route");
-            for _err in _e { #_log::warn_!("{}", _err); }
+            for _err in __e { #_log::warn_!("{}", _err); }
             return #Outcome::Forward(#__data);
         }
 
@@ -122,8 +122,8 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("`{}` request guard is forwarding.", stringify!(#ty));
                 return #Outcome::Forward(#__data);
             },
-            #Outcome::Failure((__c, _e)) => {
-                #_log::warn_!("`{}` request guard failed: {:?}.", stringify!(#ty), _e);
+            #Outcome::Failure((__c, __e)) => {
+                #_log::warn_!("`{}` request guard failed: {:?}.", stringify!(#ty), __e);
                 return #Outcome::Failure(__c);
             }
         };
@@ -185,8 +185,8 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("`{}` data guard is forwarding.", stringify!(#ty));
                 return #Outcome::Forward(__d);
             }
-            #Outcome::Failure((__c, _e)) => {
-                #_log::warn_!("`{}` data guard failed: {:?}.", stringify!(#ty), _e);
+            #Outcome::Failure((__c, __e)) => {
+                #_log::warn_!("`{}` data guard failed: {:?}.", stringify!(#ty), __e);
                 return #Outcome::Failure(__c);
             }
         };
