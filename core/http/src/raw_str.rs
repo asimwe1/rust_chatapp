@@ -902,12 +902,12 @@ impl From<RawStrBuf> for Cow<'_, RawStr> {
 }
 
 macro_rules! impl_partial {
-    ($A:ty : $B:ty) => (
+    ($A:ty : $B:ty as $T:ty) => (
         impl PartialEq<$A> for $B {
             #[inline(always)]
             fn eq(&self, other: &$A) -> bool {
-                let left: &str = self.as_ref();
-                let right: &str = other.as_ref();
+                let left: $T = self.as_ref();
+                let right: $T = other.as_ref();
                 left == right
             }
         }
@@ -915,12 +915,13 @@ macro_rules! impl_partial {
         impl PartialOrd<$A> for $B {
             #[inline(always)]
             fn partial_cmp(&self, other: &$A) -> Option<Ordering> {
-                let left: &str = self.as_ref();
-                let right: &str = other.as_ref();
+                let left: $T = self.as_ref();
+                let right: $T = other.as_ref();
                 left.partial_cmp(right)
             }
         }
-    )
+    );
+    ($A:ty : $B:ty) => (impl_partial!($A : $B as &str);)
 }
 
 impl_partial!(RawStr : &RawStr);
@@ -933,8 +934,12 @@ impl_partial!(&&str : RawStr);
 
 impl_partial!(Cow<'_, str> : RawStr);
 impl_partial!(Cow<'_, str> : &RawStr);
+impl_partial!(Cow<'_, RawStr> : RawStr as &RawStr);
+impl_partial!(Cow<'_, RawStr> : &RawStr as &RawStr);
 impl_partial!(RawStr : Cow<'_, str>);
 impl_partial!(&RawStr : Cow<'_, str>);
+impl_partial!(RawStr : Cow<'_, RawStr> as &RawStr);
+impl_partial!(&RawStr : Cow<'_, RawStr> as &RawStr);
 
 impl_partial!(String : RawStr);
 impl_partial!(String : &RawStr);
