@@ -33,7 +33,7 @@
 //!     // By defining another function...
 //!     #[field(validate = omits("password").map_err(pass_help))]
 //!     password: &'r str,
-//!     // or inline using the `msg` helper.
+//!     // or inline using the `msg` helper. `or_else` inverts the validator
 //!     #[field(validate = omits("password").or_else(msg!("please omit `password`")))]
 //!     password2: &'r str,
 //!     // You can even refer to the field in the message...
@@ -402,12 +402,12 @@ pub fn len<'v, V, L, R>(value: V, range: R) -> Result<'v, ()>
 ///
 /// At present, these are:
 ///
-/// | type                    | contains                   |
-/// |-------------------------|----------------------------|
-/// | `&str`, `String`        | `&str`, `char`             |
-/// | `Vec<T>`                | `T`, `&T`                  |
-/// | `Option<T>`             | `I` where `T: Contains<I>` |
-/// | [`form::Result<'_, T>`] | `I` where `T: Contains<I>` |
+/// | type                    | contains                                           |
+/// |-------------------------|----------------------------------------------------|
+/// | `&str`, `String`        | `&str`, `char`, `&[char]` `F: FnMut(char) -> bool` |
+/// | `Vec<T>`                | `T`, `&T`                                          |
+/// | `Option<T>`             | `I` where `T: Contains<I>`                         |
+/// | [`form::Result<'_, T>`] | `I` where `T: Contains<I>`                         |
 ///
 /// [`form::Result<'_, T>`]: crate::form::Result
 pub trait Contains<I> {
@@ -429,11 +429,31 @@ macro_rules! impl_contains {
     };
 }
 
+fn coerce<T, const N: usize>(slice: &[T; N]) -> &[T] {
+    &slice[..]
+}
+
 impl_contains!([] str [contains] &str [via] str);
 impl_contains!([] str [contains] char [via] str);
+impl_contains!([] str [contains] &[char] [via] str);
+impl_contains!([const N: usize] str [contains] &[char; N] [via] str [with] coerce);
 impl_contains!([] String [contains] &str [via] str);
 impl_contains!([] String [contains] char [via] str);
+impl_contains!([] String [contains] &[char] [via] str);
+impl_contains!([const N: usize] String [contains] &[char; N] [via] str [with] coerce);
 impl_contains!([T: PartialEq] Vec<T> [contains] &T [via] [T]);
+
+impl<F: FnMut(char) -> bool> Contains<F> for str {
+    fn contains(&self, f: F) -> bool {
+        <str>::contains(self, f)
+    }
+}
+
+impl<F: FnMut(char) -> bool> Contains<F> for String {
+    fn contains(&self, f: F) -> bool {
+        <str>::contains(self, f)
+    }
+}
 
 impl<T: PartialEq> Contains<T> for Vec<T> {
     fn contains(&self, item: T) -> bool {
@@ -461,14 +481,17 @@ impl<I, T: Contains<I> + ?Sized> Contains<I> for &T {
 
 /// Contains validator: succeeds when a value contains `item`.
 ///
-/// The value must implement [`Contains<I>`](Contains) where `I` is the type of
-/// the `item`. See [`Contains`] for supported types and items.
+/// This is the dual of [`omits()`]. The value must implement
+/// [`Contains<I>`](Contains) where `I` is the type of the `item`. See
+/// [`Contains`] for supported types and items.
 ///
 /// On failure, returns a validation error with the following message:
 ///
 /// ```text
 /// value is equal to an invalid value
 /// ```
+///
+/// If the collection is empty, this validator fails.
 ///
 /// # Example
 ///
@@ -485,8 +508,10 @@ impl<I, T: Contains<I> + ?Sized> Contains<I> for &T {
 ///     #[field(validate = contains(&self.best_pet))]
 ///     pets: Vec<Pet>,
 ///     #[field(validate = contains('/'))]
+///     #[field(validate = contains(&['/', ':']))]
 ///     license: &'r str,
 ///     #[field(validate = contains("@rust-lang.org"))]
+///     #[field(validate = contains(|c: char| c.to_ascii_lowercase() == 's'))]
 ///     rust_lang_email: &'r str,
 /// }
 /// ```
@@ -503,13 +528,15 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Debug contains validator: like [`contains()`] but mentions `item` in the
 /// error message.
 ///
-/// The is identical to [`contains()`] except that `item` must be `Debug + Copy`
-/// and the error message is as follows, where `$item` is the [`Debug`]
-/// representation of `item`:
+/// This is the dual of [`dbg_omits()`]. The is identical to [`contains()`]
+/// except that `item` must be `Debug + Copy` and the error message is as
+/// follows, where `$item` is the [`Debug`] representation of `item`:
 ///
 /// ```text
 /// values must contains $item
 /// ```
+///
+/// If the collection is empty, this validator fails.
 ///
 /// # Example
 ///
@@ -540,14 +567,17 @@ pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Omits validator: succeeds when a value _does not_ contains `item`.
 /// error message.
 ///
-/// The value must implement [`Contains<I>`](Contains) where `I` is the type of
-/// the `item`. See [`Contains`] for supported types and items.
+/// This is the dual of [`contains()`]. The value must implement
+/// [`Contains<I>`](Contains) where `I` is the type of the `item`. See
+/// [`Contains`] for supported types and items.
 ///
 /// On failure, returns a validation error with the following message:
 ///
 /// ```text
 /// value contains a disallowed item
 /// ```
+///
+/// If the collection is empty, this validator succeeds.
 ///
 /// # Example
 ///
@@ -580,13 +610,15 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Debug omits validator: like [`omits()`] but mentions `item` in the error
 /// message.
 ///
-/// The is identical to [`omits()`] except that `item` must be `Debug + Copy`
-/// and the error message is as follows, where `$item` is the [`Debug`]
-/// representation of `item`:
+/// This is the dual of [`dbg_contains()`]. The is identical to [`omits()`]
+/// except that `item` must be `Debug + Copy` and the error message is as
+/// follows, where `$item` is the [`Debug`] representation of `item`:
 ///
 /// ```text
 /// value cannot contain $item
 /// ```
+///
+/// If the collection is empty, this validator succeeds.
 ///
 /// # Example
 ///
