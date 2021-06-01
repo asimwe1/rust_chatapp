@@ -43,6 +43,7 @@ macro_rules! known_media_types {
         MOV (is_mov): "quicktime video", "video", "quicktime",
         MP4 (is_mp4): "MPEG4 Video", "video", "mp4",
         ZIP (is_zip): "ZIP archive", "application", "zip",
+        EventStream (is_event_stream): "SSE stream", "text", "event-stream",
     })
 }
 
