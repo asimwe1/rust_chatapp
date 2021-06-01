@@ -16,6 +16,12 @@ This directory contains projects showcasing Rocket's features.
     SQLite database driven by diesel. Runs migrations automatically at start-up.
     Uses tera to render templates.
 
+  * **[`chat`](./chat)**
+
+    A real-time, multi-room chat application using Server-Sent Events (SSE) and
+    JavaScript's `EventSource`. Supports automatic reconnection with exponential
+    backoff and live connection status.
+
 ## Feature Examples
 
   * **[`config`](./config)** - Illustrates how to extract values from a Rocket
