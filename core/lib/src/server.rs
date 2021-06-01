@@ -1,10 +1,11 @@
 use std::io;
 use std::sync::Arc;
+use std::time::Duration;
 
+use yansi::Paint;
+use tokio::sync::oneshot;
 use futures::stream::StreamExt;
 use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
-use tokio::sync::oneshot;
-use yansi::Paint;
 
 use crate::{Rocket, Orbit, Request, Response, Data, route};
 use crate::form::Form;
@@ -398,7 +399,7 @@ impl Rocket<Orbit> {
         let http1_keepalive = self.config.keep_alive != 0;
         let http2_keep_alive = match self.config.keep_alive {
             0 => None,
-            n => Some(std::time::Duration::from_secs(n as u64))
+            n => Some(Duration::from_secs(n as u64))
         };
 
         // Set up cancellable I/O from the given listener. Shutdown occurs when
@@ -406,7 +407,8 @@ impl Rocket<Orbit> {
         // notification or indirectly through an external signal which, when
         // received, results in triggering the notify.
         let shutdown = self.shutdown();
-        let external_shutdown = self.config.shutdown.collective_signal();
+        let sig_stream = self.config.shutdown.signal_stream();
+        let force_shutdown = self.config.shutdown.force;
         let grace = self.config.shutdown.grace as u64;
         let mercy = self.config.shutdown.mercy as u64;
 
@@ -430,15 +432,59 @@ impl Rocket<Orbit> {
             .with_graceful_shutdown(shutdown.clone())
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
 
-        tokio::pin!(server, external_shutdown);
-        let selecter = future::select(external_shutdown, server);
-        match selecter.await {
+        // Start a task that listens for external signals and notifies shutdown.
+        if let Some(mut stream) = sig_stream {
+            let shutdown = shutdown.clone();
+            tokio::spawn(async move {
+                while let Some(sig) = stream.next().await {
+                    if shutdown.0.tripped() {
+                        warn!("Received {}. Shutdown already in progress.", sig);
+                    } else {
+                        warn!("Received {}. Requesting shutdown.", sig);
+                    }
+
+                    shutdown.0.trip();
+                }
+            });
+        }
+
+        // Wait for a shutdown notification or for the server to somehow fail.
+        tokio::pin!(server);
+        match future::select(shutdown, server).await {
             future::Either::Left((_, server)) => {
-                // External signal received. Request shutdown, wait for server.
-                shutdown.notify();
+                // If a task has some runaway I/O, like an infinite loop, the
+                // runtime will block indefinitely when it is dropped. To
+                // subvert, we start a ticking process-exit time bomb here.
+                if force_shutdown {
+                    use std::thread;
+
+                    // Only a worker thread will have the specified thread name.
+                    tokio::task::spawn_blocking(move || {
+                        let this = thread::current();
+                        let is_rocket_runtime = this.name()
+                            .map_or(false, |s| s.starts_with("rocket-worker"));
+
+                        // We only hit our `exit()` if the process doesn't
+                        // otherwise exit since this `spawn()` won't block.
+                        thread::spawn(move || {
+                            thread::sleep(Duration::from_secs(grace + mercy));
+                            thread::sleep(Duration::from_millis(500));
+                            if is_rocket_runtime {
+                                error!("Server failed to shutdown cooperatively. Terminating.");
+                                std::process::exit(1);
+                            } else {
+                                warn!("Server failed to shutdown cooperatively.");
+                                warn_!("Server is executing inside of a custom runtime.");
+                                info_!("Rocket's runtime is `#[rocket::main]` or `#[launch]`.");
+                                warn_!("Refusing to terminate runaway custom runtime.");
+                            }
+                        });
+                    });
+                }
+
+                info!("Received shutdown request. Waiting for pending I/O...");
                 server.await
             }
-            // Internal shutdown or server error. Return the result.
             future::Either::Right((result, _)) => result,
         }
     }

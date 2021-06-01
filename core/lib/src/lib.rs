@@ -208,7 +208,8 @@ pub use async_trait::async_trait;
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
     tokio::runtime::Builder::new_multi_thread()
-        .thread_name("rocket-test-worker-thread")
+        // NOTE: graceful shutdown depends on the "rocket-worker" prefix.
+        .thread_name("rocket-worker-test-thread")
         .worker_threads(1)
         .enable_all()
         .build()
@@ -224,6 +225,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(Config::from(Config::figment()).workers)
+        // NOTE: graceful shutdown depends on the "rocket-worker" prefix.
         .thread_name("rocket-worker-thread")
         .enable_all()
         .build()
