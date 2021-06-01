@@ -831,34 +831,26 @@ impl<'r> Request<'r> {
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket<Orbit>,
-        h_method: hyper::Method,
-        h_headers: hyper::HeaderMap<hyper::HeaderValue>,
-        h_uri: &'r hyper::Uri,
-        h_addr: SocketAddr,
+        hyper: &'r hyper::RequestParts,
+        addr: SocketAddr
     ) -> Result<Request<'r>, Error<'r>> {
-        // Get a copy of the URI (only supports path-and-query) for later use.
-        let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
-            (None, None, Some(path_query)) => path_query,
-            _ => return Err(Error::InvalidUri(h_uri)),
-        };
-
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = match Method::from_hyp(&h_method) {
-            Some(method) => method,
-            None => return Err(Error::BadMethod(h_method))
-        };
+        let method = Method::from_hyp(&hyper.method)
+            .ok_or_else(|| Error::BadMethod(&hyper.method))?;
 
         // In debug, make sure we agree with Hyper. Otherwise, cross our fingers
         // and trust that it only gives us valid URIs like it's supposed to.
+        // TODO: Keep around not just the path/query, but the rest, if there?
+        let uri = hyper.uri.path_and_query().ok_or_else(|| Error::InvalidUri(&hyper.uri))?;
         debug_assert!(Origin::parse(uri.as_str()).is_ok());
         let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);
-        request.set_remote(h_addr);
+        request.set_remote(addr);
 
         // Set the request cookies, if they exist.
-        for header in h_headers.get_all("Cookie") {
+        for header in hyper.headers.get_all("Cookie") {
             let raw_str = match std::str::from_utf8(header.as_bytes()) {
                 Ok(string) => string,
                 Err(_) => continue
@@ -871,13 +863,19 @@ impl<'r> Request<'r> {
             }
         }
 
-        // Set the rest of the headers.
-        // This is rather unfortunate and slow.
-        for (name, value) in h_headers.iter() {
-            // FIXME: This is not totally correct since values needn't be UTF8.
-            let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
-            let header = Header::new(name.to_string(), value_str);
-            request.add_header(header);
+        // Set the rest of the headers. This is rather unfortunate and slow.
+        for (name, value) in hyper.headers.iter() {
+            // FIXME: This is rather unfortunate. Header values needn't be UTF8.
+            let value = match std::str::from_utf8(value.as_bytes()) {
+                Ok(value) => value,
+                Err(_) => {
+                    warn!("Header '{}' contains invalid UTF-8", name);
+                    warn_!("Rocket only supports UTF-8 header values. Dropping header.");
+                    continue;
+                }
+            };
+
+            request.add_header(Header::new(name.as_str(), value));
         }
 
         Ok(request)
@@ -888,7 +886,7 @@ impl<'r> Request<'r> {
 pub(crate) enum Error<'r> {
     InvalidUri(&'r hyper::Uri),
     UriParse(crate::http::uri::Error<'r>),
-    BadMethod(hyper::Method),
+    BadMethod(&'r hyper::Method),
 }
 
 impl fmt::Display for Error<'_> {

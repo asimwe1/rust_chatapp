@@ -63,7 +63,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 // `HyperResponse` type, this function does the actual response processing.
 async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
-    h_addr: std::net::SocketAddr,
+    addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
     // This future must return a hyper::Response, but the response body might
@@ -72,15 +72,9 @@ async fn hyper_service_fn(
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        // Get all of the information from Hyper.
+        // Convert a Hyper request into a Rocket request.
         let (h_parts, h_body) = hyp_req.into_parts();
-
-        // Convert the Hyper request into a Rocket request.
-        let req_res = Request::from_hyp(
-            &rocket, h_parts.method, h_parts.headers, &h_parts.uri, h_addr
-        );
-
-        let mut req = match req_res {
+        let mut req = match Request::from_hyp(&rocket, &h_parts, addr) {
             Ok(req) => req,
             Err(e) => {
                 error!("Bad incoming request: {}", e);
