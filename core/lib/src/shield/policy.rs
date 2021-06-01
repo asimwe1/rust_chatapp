@@ -238,7 +238,7 @@ impl Into<Header<'static>> for &ExpectCt {
 ///
 /// [mime sniffing]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types#MIME_sniffing
 /// [X-Content-Type-Options]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-/// [attacks]: https://shieldjs.github.io/docs/dont-sniff-mimetype/
+/// [attacks]: https://blog.mozilla.org/security/2016/08/26/mitigating-mime-confusion-attacks-in-firefox/
 pub enum NoSniff {
     /// Turns off mime sniffing.
     Enable,
