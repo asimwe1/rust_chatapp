@@ -35,6 +35,9 @@ use crate::form::prelude as form;
 
 use serde::{Serialize, Deserialize};
 
+#[doc(inline)]
+pub use serde_json::{from_str, from_slice};
+
 #[doc(hidden)]
 pub use serde_json;
 
