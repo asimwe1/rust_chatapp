@@ -784,3 +784,46 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 
     Err(Error::validation(msg))?
 }
+
+/// With validator: succeeds when an arbitrary function or closure does.
+///
+/// This is the most generic validator and, for readability, should only be used
+/// when a more case-specific option does not exist. It succeeds excactly when
+/// `f` returns `true` and fails otherwise.
+///
+/// On failure, returns a validation error with the message `msg`.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::form::{FromForm, FromFormField};
+///
+/// #[derive(PartialEq, FromFormField)]
+/// enum Pet { Cat, Dog }
+///
+/// #[derive(FromForm)]
+/// struct Foo {
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = contains(Pet::Dog))]
+///     #[field(validate = with(|pets| pets.iter().any(|p| *p == Pet::Dog), "missing dog"))]
+///     pets: Vec<Pet>,
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = eq(Pet::Dog))]
+///     #[field(validate = with(|p| *p == Pet::Dog, "expected a dog"))]
+///     dog: Pet,
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = contains(&self.dog))]
+///     #[field(validate = with(|pets| pets.iter().any(|p| p == &self.dog), "missing dog"))]
+///     one_dog_please: Vec<Pet>,
+/// }
+/// ```
+pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
+    where F: FnOnce(V) -> bool,
+          M: Into<Cow<'static, str>>
+{
+    if !f(value) {
+        Err(Error::validation(msg.into()))?
+    }
+
+    Ok(())
+}
