@@ -250,7 +250,10 @@ impl VisitMut for ValidationMutator<'_> {
         let (parent, field) = (self.parent, self.field);
         let form_field = match self.local {
             true => syn::parse2(quote_spanned!(field.span() => &#field)).unwrap(),
-            false => syn::parse2(quote_spanned!(field.span() => &#parent.#field)).unwrap(),
+            false => {
+                let parent = parent.clone().with_span(field.span());
+                syn::parse2(quote_spanned!(field.span() => &#parent.#field)).unwrap()
+            }
         };
 
         call.args.insert(0, form_field);
@@ -259,7 +262,7 @@ impl VisitMut for ValidationMutator<'_> {
 
     fn visit_ident_mut(&mut self, i: &mut syn::Ident) {
         if !self.local && i == "self" {
-            *i = self.parent.clone();
+            *i = self.parent.clone().with_span(i.span());
         }
     }
 
@@ -286,7 +289,7 @@ impl VisitMut for ValidationMutator<'_> {
 pub fn validators<'v>(
     field: Field<'v>,
     parent: &'v syn::Ident, // field ident (if local) or form ident (if !local)
-    local: bool,
+    local: bool, // whether to emit local or global (w/self) validations
 ) -> Result<impl Iterator<Item = syn::Expr> + 'v> {
     let exprs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
@@ -310,8 +313,8 @@ pub fn validators<'v>(
                 .join(field.ty.span())
                 .unwrap_or(field.ty.span());
 
-            let field_ident = field.ident().clone().with_span(field_span);
-            let mut v = ValidationMutator { parent, local, field: &field_ident, visited: false };
+            let field = &field.ident().clone().with_span(field_span);
+            let mut v = ValidationMutator { parent, local, field, visited: false };
             v.visit_expr_mut(&mut expr);
 
             let span = expr.key_span.unwrap_or(field_span);
