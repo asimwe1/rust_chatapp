@@ -223,10 +223,12 @@ crate::export! {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _typed_stream {
-    ($S:ident, $T:ty) => (
-        $crate::response::stream::$S<impl $crate::futures::stream::Stream<Item = $T>>
-    );
     ($S:ident, $($t:tt)*) => (
-        $crate::response::stream::$S::from($crate::response::stream::stream!($($t)*))
-    );
+        $crate::__typed_stream! {
+            $crate::response::stream::$S,
+            $crate::response::stream::stream,
+            $crate::futures::stream::Stream,
+            $($t)*
+        }
+    )
 }

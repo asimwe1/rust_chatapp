@@ -78,7 +78,6 @@ crate::export! {
     /// See [`struct@ByteStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! ByteStream {
-        ($T:ty) => ($crate::_typed_stream!(ByteStream, $T));
         ($($s:tt)*) => ($crate::_typed_stream!(ByteStream, $($s)*));
     }
 }

@@ -199,7 +199,6 @@ crate::export! {
     /// See [`struct@ReaderStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! ReaderStream {
-        ($T:ty) => ($crate::_typed_stream!(ReaderStream, $T));
         ($($s:tt)*) => ($crate::_typed_stream!(ReaderStream, $($s)*));
     }
 }

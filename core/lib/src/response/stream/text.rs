@@ -88,7 +88,6 @@ crate::export! {
     /// See [`struct@TextStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! TextStream {
-        ($T:ty) => ($crate::_typed_stream!(TextStream, $T));
         ($($s:tt)*) => ($crate::_typed_stream!(TextStream, $($s)*));
     }
 }

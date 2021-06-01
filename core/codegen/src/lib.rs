@@ -1345,23 +1345,30 @@ pub fn uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_macro(input))
 }
 
-#[doc(hidden)]
-#[proc_macro]
 /// Internal macro: `rocket_internal_uri!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_internal_macro(input))
 }
 
-#[doc(hidden)]
+/// Internal macro: `__typed_stream!`.
 #[proc_macro]
+#[doc(hidden)]
+pub fn __typed_stream(input: TokenStream) -> TokenStream {
+    emit!(bang::typed_stream(input))
+}
+
 /// Private Rocket internal macro: `internal_guide_tests!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
     emit!(bang::guide_tests_internal(input))
 }
 
-#[doc(hidden)]
-#[proc_macro]
 /// Private Rocket internal macro: `export!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn export(input: TokenStream) -> TokenStream {
     emit!(bang::export_internal(input))
 }

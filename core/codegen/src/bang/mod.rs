@@ -1,12 +1,13 @@
-use devise::Result;
-use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
-use syn::spanned::Spanned;
-use proc_macro2::TokenStream;
-
 mod uri;
 mod uri_parsing;
 mod test_guide;
 mod export;
+mod typed_stream;
+
+use devise::Result;
+use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
+use syn::spanned::Spanned;
+use proc_macro2::TokenStream;
 
 fn struct_maker_vec(
     input: proc_macro::TokenStream,
@@ -68,5 +69,10 @@ pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {
 
 pub fn export_internal(input: proc_macro::TokenStream) -> TokenStream {
     export::_macro(input)
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+}
+
+pub fn typed_stream(input: proc_macro::TokenStream) -> TokenStream {
+    typed_stream::_macro(input)
         .unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

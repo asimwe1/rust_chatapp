@@ -7,7 +7,7 @@
 
 use rocket::{Request, Rocket, Build};
 use rocket::local::blocking::Client;
-use rocket::http::{Status, ContentType};
+use rocket::http::Status;
 
 #[catch(404)] fn not_found_0() -> &'static str { "404-0" }
 #[catch(404)] fn not_found_1(_: &Request) -> &'static str { "404-1" }
