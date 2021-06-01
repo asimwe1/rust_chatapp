@@ -42,6 +42,7 @@
 //!   * [`struct@ReaderStream`] ([`ReaderStream!`]) - streams of `T: AsyncRead`
 //!   * [`struct@ByteStream`] ([`ByteStream!`]) - streams of `T: AsRef<[u8]>`
 //!   * [`struct@TextStream`] ([`TextStream!`]) - streams of `T: AsRef<str>`
+//!   * [`struct@EventStream`] ([`EventStream!`]) - Server-Sent [`Event`] stream
 //!
 //! Each type implements `Responder`; each macro can be invoked to generate a
 //! typed stream, exactly like [`stream!`] above. Additionally, each macro is
@@ -132,11 +133,16 @@ mod reader;
 mod bytes;
 mod text;
 mod one;
+mod sse;
+mod raw_sse;
+
+pub(crate) use self::raw_sse::*;
 
 pub use self::one::One;
 pub use self::text::TextStream;
 pub use self::bytes::ByteStream;
 pub use self::reader::ReaderStream;
+pub use self::sse::{Event, EventStream};
 
 crate::export! {
     /// Retrofitted support for [`Stream`]s with `yield`, `for await` syntax.
@@ -146,7 +152,7 @@ crate::export! {
     /// This macro takes any series of statements and expands them into an
     /// expression of type `impl Stream<Item = T>`, a stream that `yield`s
     /// elements of type `T`. It supports any Rust statement syntax with the
-    /// following additions:
+    /// following extensions:
     ///
     ///   * `yield expr`
     ///
@@ -158,6 +164,8 @@ crate::export! {
     ///      `await`s the next element in `stream`, binds it to `x`, and
     ///      executes the block with the binding. `stream` must implement
     ///      `Stream<Item = T>`; the type of `x` is `T`.
+    ///
+    ///   * `?` short-cicuits stream termination on `Err`
     ///
     /// # Examples
     ///
