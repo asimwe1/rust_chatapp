@@ -720,13 +720,13 @@ mod sse_tests {
         use futures::future::ready;
         use futures::stream::{once, iter, StreamExt};
 
-        // Set a heartbeat interval of 200ms. Send nothing for 500ms. We should
+        // Set a heartbeat interval of 250ms. Send nothing for 600ms. We should
         // get 2 or 3 heartbeats, the latter if one is sent eagerly.
-        let raw = stream!(time::sleep(Duration::from_millis(500)).await;)
+        let raw = stream!(time::sleep(Duration::from_millis(600)).await;)
             .map(|_| unreachable!());
 
         let string = EventStream::from(raw)
-            .heartbeat(Duration::from_millis(200))
+            .heartbeat(Duration::from_millis(250))
             .into_string();
 
         match string.as_str() {
