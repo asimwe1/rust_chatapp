@@ -172,7 +172,33 @@ struct Default0 {
 #[derive(FromForm)]
 struct Default1 {
     #[field(default = 1, default = 2)]
-    double_default: i32,
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default2 {
+    #[field(default = 1)]
+    #[field(default = 2)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default3 {
+    #[field(default = 1, default_with = None)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default4 {
+    #[field(default_with = None)]
+    #[field(default = 1)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default5 {
+    #[field(default_with = Some("hi"))]
+    no_conversion_from_with: String,
 }
 
 fn main() { }

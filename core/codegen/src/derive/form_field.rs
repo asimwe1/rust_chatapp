@@ -1,8 +1,8 @@
 use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 
-use syn::visit_mut::VisitMut;
-use syn::visit::Visit;
+use syn::{visit_mut::VisitMut, visit::Visit};
 use proc_macro2::{TokenStream, TokenTree, Span};
+use quote::{ToTokens, TokenStreamExt};
 
 use crate::syn_ext::IdentExt;
 use crate::name::Name;
@@ -17,7 +17,8 @@ pub enum FieldName {
 pub struct FieldAttr {
     pub name: Option<FieldName>,
     pub validate: Option<SpanWrapped<syn::Expr>>,
-    pub default: Option<SpanWrapped<syn::Expr>>,
+    pub default: Option<syn::Expr>,
+    pub default_with: Option<syn::Expr>,
 }
 
 impl FieldAttr {
@@ -127,7 +128,7 @@ impl std::ops::Deref for FieldName {
     }
 }
 
-impl quote::ToTokens for FieldName {
+impl ToTokens for FieldName {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         (self as &Name).to_tokens(tokens)
     }
@@ -208,7 +209,6 @@ struct ValidationMutator<'a> {
 
 impl ValidationMutator<'_> {
     fn visit_token_stream(&mut self, tt: TokenStream) -> TokenStream {
-        use quote::{ToTokens, TokenStreamExt};
         use TokenTree::*;
 
         let mut iter = tt.into_iter();
@@ -329,43 +329,62 @@ pub fn validators<'v>(
     Ok(exprs)
 }
 
-pub fn default<'v>(field: Field<'v>) -> Result<Option<syn::Expr>> {
-    let mut exprs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
-        .into_iter()
-        .filter_map(|a| a.default)
-        .map(move |expr| {
-            use syn::{Expr, Lit, ExprLit};
-            // As a result of calling `#expr.into()`, type inference fails for
-            // two common expressions: integer literals and the bare `None`. As
-            // a result, we cheat: if the syntax matches either of these two
-            // conditions, we provide the field type as a hint.
-            let is_int_lit = matches!(*expr, Expr::Lit(ExprLit { lit: Lit::Int(_), .. }));
-            let is_none = matches!(*expr, Expr::Path(ref e) if e.path.is_ident("None"));
-            let ty = field.stripped_ty();
-            let ty_hint = (is_int_lit || is_none)
-                .then(|| quote!(#ty))
-                .unwrap_or_else(|| quote!(_));
-            let opt_expr = if is_none {
-                quote_spanned!(expr.span => None)
-            } else if is_int_lit {
-                quote_spanned!(expr.span => Some(#expr))
-            } else {
-                quote_spanned!(expr.span => Some({ #expr }.into()))
-            };
-            syn::parse2(quote_spanned!(expr.span => {
-                let __default: Option<#ty_hint> = #opt_expr;
-                __default
-            })).unwrap()
-        });
+/// Take an $expr in `default = $expr` and turn it into a `Some($expr.into())`.
+///
+/// As a result of calling `into()`, type inference fails for two common
+/// expressions: integer literals and the bare `None`. As a result, we cheat: if
+/// the expr matches either condition, we pass them through unchanged.
+fn default_expr(expr: &syn::Expr) -> TokenStream {
+    use syn::{Expr, Lit, ExprLit};
 
-    let first: Option<syn::Expr> = exprs.next();
-    if let Some(expr) = exprs.next() {
-        return Err(expr.span()
-            .error("duplicate `default` form field attribute")
-            .help("form fields can have at most one `default`"));
+    if matches!(expr, Expr::Path(e) if e.path.is_ident("None")) {
+        quote!(#expr)
+    } else if matches!(expr, Expr::Lit(ExprLit { lit: Lit::Int(_), .. })) {
+        quote_spanned!(expr.span() => Some(#expr))
+    } else {
+        quote_spanned!(expr.span() => Some({ #expr }.into()))
+    }
+}
+
+pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
+    let attrs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?;
+
+    // Expressions in `default = `, except for `None`, are wrapped in `Some()`.
+    let mut expr = attrs.iter().filter_map(|a| a.default.as_ref()).map(default_expr);
+
+    // Expressions in `default_with` are passed through directly.
+    let mut expr_with = attrs.iter()
+        .filter_map(|a| a.default_with.as_ref())
+        .map(|e| e.to_token_stream());
+
+    // Pull the first `default` and `default_with` expressions.
+    let (default, default_with) = (expr.next(), expr_with.next());
+
+    // If there are any more of either, emit an error.
+    if let (Some(e), _) | (_, Some(e)) = (expr.next(), expr_with.next()) {
+        return Err(e.span()
+            .error("duplicate default field expression")
+            .help("at most one `default` or `default_with` is allowed"));
     }
 
-    Ok(first)
+    // Emit the final expression of type `Option<#ty>` unless both `default` and
+    // `default_with` were provided in which case we error.
+    let ty = field.stripped_ty();
+    match (default, default_with) {
+        (Some(e1), Some(e2)) => {
+            return Err(e1.span()
+                .error("duplicate default expressions")
+                .help("only one of `default` or `default_with` must be used")
+                .span_note(e2.span(), "other default expression is here"));
+        },
+        (Some(e), None) | (None, Some(e)) => {
+            Ok(Some(quote_spanned!(e.span() => {
+                let __default: Option<#ty> = #e;
+                __default
+            })))
+        },
+        (None, None) => Ok(None)
+    }
 }
 
 pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(

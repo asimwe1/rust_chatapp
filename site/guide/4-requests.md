@@ -810,8 +810,35 @@ struct MyForm<'v> {
 # rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
+The default can be overridden or unset using the `#[field(default = expr)` field
+attribute. If `expr` is not literally `None`, the parameter sets the default
+value of the field to be `expr.into()`. If `expr` _is_ `None`, the parameter
+_unsets_ the default value of the field, if any.
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    // Set the default value to be `"hello"`.
+    //
+    // Note how an `&str` is automatically converted into a `String`.
+    #[field(default = "hello")]
+    greeting: String,
+    // Remove the default value of `false`, requiring all parses of `MyForm`
+    // to contain an `is_friendly` field.
+    #[field(default = None)]
+    is_friendly: bool,
+}
+```
+
+See the [`FromForm` derive] documentation for full details on the `default`
+attribute parameter as well documentation on the more expressive `default_with`
+parameter option.
+
 [`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 [`form::Result`]: @api/rocket/form/type.Result.html
+[`FromForm` derive]: @api/rocket/derive.FromForm.html
 
 ### Field Renaming
 
@@ -955,47 +982,6 @@ fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
 If a field's validation doesn't depend on other fields (validation is _local_),
 it is validated prior to those fields that do. For `CreditCard`, `cvv` and
 `expiration` will be validated prior to `number`.
-
-### Defaults
-
-The [`FromForm`] trait allows types to specify a default value if one isn't
-provided in a submitted form. This includes types such as `bool`, useful for
-checkboxes, and `Option<T>`. Additionally, `FromForm` is implemented for
-`Result<T, Errors<'_>>` where the error value is [`Errors<'_>`]. All of these
-types can be used just like any other form field:
-
-```rust
-# use rocket::form::FromForm;
-use rocket::form::Errors;
-
-#[derive(FromForm)]
-struct MyForm<'v> {
-    maybe_string: Option<String>,
-    ok_or_error: Result<Vec<String>, Errors<'v>>,
-    here: bool,
-}
-
-# rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
-```
-
-Additionally, this default may be overridden when usng the `FromForm` derive
-macro. The default specified in the macro is applied both in `Lenient` and
-`Strict` mode. Furthermore, in `Lenient` mode, it takes precendence over the
-default specified by the `FromForm` trait implementation of the field.
-
-```rust
-# use rocket::form::FromForm;
-
-#[derive(FromForm)]
-struct MyForm {
-    #[field(default = "hello")]
-    greet: String, // <String as FromForm> does not provide a default, so we set one here
-    #[field(default = true)]
-    is_friendly: bool, // The default for bool is `false`, but we override it here
-}
-```
-
-[`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 
 ### Collections
 
