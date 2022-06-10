@@ -1,3 +1,7 @@
++++
+summary = "Rocket's structured middleware"
++++
+
 # Fairings
 
 Fairings are Rocket's approach to structured middleware. With fairings, your
@@ -36,7 +40,7 @@ that can be used to solve problems in a clean, composable, and robust manner.
   fairing to record timing and usage statistics or to enforce global security
   policies.
 
-[`Fairing`]: @api/rocket/fairing/trait.Fairing.html
+[`Fairing`]: @api/master/rocket/fairing/trait.Fairing.html
 [request guard]: ../requests/#request-guards
 [request guards]: ../requests/#request-guards
 [data guards]: ../requests/#body-data
@@ -66,9 +70,9 @@ attached any number of times. Except for [singleton fairings], all attached
 instances are polled at runtime. Fairing callbacks may not be commutative; the
 order in which fairings are attached may be significant.
 
-[singleton fairings]: @api/rocket/fairing/trait.Fairing.html#singletons
-[`attach`]: @api/rocket/struct.Rocket.html#method.attach
-[`Rocket`]: @api/rocket/struct.Rocket.html
+[singleton fairings]: @api/master/rocket/fairing/trait.Fairing.html#singletons
+[`attach`]: @api/master/rocket/struct.Rocket.html#method.attach
+[`Rocket`]: @api/master/rocket/struct.Rocket.html
 
 ### Callbacks
 
@@ -114,8 +118,8 @@ events is briefly described below and in details in the [`Fairing`] trait docs:
     requests. All registered shutdown fairings are run concurrently; resolution
     of all fairings is awaited before resuming shutdown.
 
-[ignition]: @api/rocket/struct.Rocket.html#method.ignite
-[shutdown is triggered]: @api/rocket/config/struct.Shutdown.html#triggers
+[ignition]: @api/master/rocket/struct.Rocket.html#method.ignite
+[shutdown is triggered]: @api/master/rocket/config/struct.Shutdown.html#triggers
 
 ## Implementing
 
@@ -127,13 +131,13 @@ fairing and determine the set of callbacks the fairing is registering for. A
 [`on_liftoff`], [`on_request`], [`on_response`], and [`on_shutdown`]. Each
 callback has a default implementation that does absolutely nothing.
 
-[`Info`]: @api/rocket/fairing/struct.Info.html
-[`info`]: @api/rocket/fairing/trait.Fairing.html#tymethod.info
-[`on_ignite`]: @api/rocket/fairing/trait.Fairing.html#method.on_ignite
-[`on_liftoff`]: @api/rocket/fairing/trait.Fairing.html#method.on_liftoff
-[`on_request`]: @api/rocket/fairing/trait.Fairing.html#method.on_request
-[`on_response`]: @api/rocket/fairing/trait.Fairing.html#method.on_response
-[`on_shutdown`]: @api/rocket/fairing/trait.Fairing.html#method.on_shutdown
+[`Info`]: @api/master/rocket/fairing/struct.Info.html
+[`info`]: @api/master/rocket/fairing/trait.Fairing.html#tymethod.info
+[`on_ignite`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_ignite
+[`on_liftoff`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_liftoff
+[`on_request`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_request
+[`on_response`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_response
+[`on_shutdown`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_shutdown
 
 ### Requirements
 
@@ -210,7 +214,7 @@ impl Fairing for Counter {
 ```
 
 The complete example can be found in the [`Fairing`
-documentation](@api/rocket/fairing/trait.Fairing.html#example).
+documentation](@api/master/rocket/fairing/trait.Fairing.html#example).
 
 ## Ad-Hoc Fairings
 
@@ -241,4 +245,4 @@ rocket::build()
     })));
 ```
 
-[`AdHoc`]: @api/rocket/fairing/struct.AdHoc.html
+[`AdHoc`]: @api/master/rocket/fairing/struct.AdHoc.html

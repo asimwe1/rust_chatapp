@@ -1,3 +1,7 @@
++++
+summary = "handling request and body data: control-flow, parsing, validation"
++++
+
 # Requests
 
 Together, a [`route`] attribute and function signature specify what must be true
@@ -29,7 +33,7 @@ validations. Rocket's code generation takes care of actually validating the
 properties. This section describes how to ask Rocket to validate against all of
 these properties and more.
 
-[`route`]: @api/rocket/attr.route.html
+[`route`]: @api/master/rocket/attr.route.html
 
 ## Methods
 
@@ -64,7 +68,7 @@ request contains a body of `Content-Type: application/x-www-form-urlencoded` and
 the form's **first** field has the name `_method` and a valid HTTP method name
 as its value (such as `"PUT"`), that field's value is used as the method for the
 incoming request.  This allows Rocket applications to submit non-`POST` forms.
-The [todo example](@example/todo/static/index.html.tera#L47) makes use of this
+The [todo example](@git/master/examples/todo/static/index.html.tera#L47) makes use of this
 feature to submit `PUT` and `DELETE` requests from a web form.
 
 ## Dynamic Paths
@@ -109,8 +113,8 @@ fn hello(name: &str, age: u8, cool: bool) -> String {
 }
 ```
 
-[`FromParam`]: @api/rocket/request/trait.FromParam.html
-[`FromParam` API docs]: @api/rocket/request/trait.FromParam.html
+[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
+[`FromParam` API docs]: @api/master/rocket/request/trait.FromParam.html
 
 ### Multiple Segments
 
@@ -156,10 +160,21 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
   If you need to serve static files from your Rocket application, consider using
   [`FileServer`], which makes it as simple as:
 
-  `rocket.mount("/public", FileServer::from("static/"))`
+  ```rust
+  # #[macro_use] extern crate rocket;
 
-[`FileServer`]: @api/rocket/fs/struct.FileServer.html
-[`FromSegments`]: @api/rocket/request/trait.FromSegments.html
+  use rocket::fs::FileServer;
+
+  #[launch]
+  fn rocket() -> _ {
+      rocket::build()
+           // serve files from `/www/static` at path `/public`
+          .mount("/public", FileServer::from("/www/static"))
+  }
+  ```
+
+[`FileServer`]: @api/master/rocket/fs/struct.FileServer.html
+[`FromSegments`]: @api/master/rocket/request/trait.FromSegments.html
 
 ### Ignored Segments
 
@@ -188,7 +203,7 @@ fn everything() -> &'static str {
 }
 
 # // Ensure there are no collisions.
-# rocket_guide_tests::client(routes![foo_bar, everything]);
+# rocket_docs_tests::client(routes![foo_bar, everything]);
 ```
 
 ## Forwarding
@@ -317,9 +332,9 @@ fn foo_bar() { }
 
 #[get("/<_..>")]
 fn everything() { }
-
+#
 # // Ensure there are no collisions.
-# rocket_guide_tests::client(routes![foo_bar, everything]);
+# rocket_docs_tests::client(routes![foo_bar, everything]);
 ```
 
 Default ranking ensures that `foo_bar`, with a "partial" path color, has higher
@@ -363,8 +378,8 @@ short-circuiting; if one guard fails, the remaining are not attempted. To learn
 more about request guards and implementing them, see the [`FromRequest`]
 documentation.
 
-[`FromRequest`]: @api/rocket/request/trait.FromRequest.html
-[`CookieJar`]: @api/rocket/http/struct.CookieJar.html
+[`FromRequest`]: @api/master/rocket/request/trait.FromRequest.html
+[`CookieJar`]: @api/master/rocket/http/struct.CookieJar.html
 
 ### Custom Guards
 
@@ -567,8 +582,8 @@ fn login(cert: Option<Result<mtls::Certificate, mtls::Error>>) {
 }
 ```
 
-[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
-[`mtls::Error`]: @api/rocket/mtls/enum.Error.html
+[`mtls::Certificate`]: @api/master/rocket/mtls/struct.Certificate.html
+[`mtls::Error`]: @api/master/rocket/mtls/enum.Error.html
 
 ## Cookies
 
@@ -593,7 +608,7 @@ be set and removed using the `CookieJar` guard. The [cookies example] on GitHub
 illustrates further use of the `CookieJar` type to get and set cookies, while
 the [`CookieJar`] documentation contains complete usage information.
 
-[cookies example]: @example/cookies
+[cookies example]: @git/master/examples/cookies
 
 ### Private Cookies
 
@@ -641,7 +656,7 @@ fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
 }
 ```
 
-[`CookieJar::add()`]: @api/rocket/http/struct.CookieJar.html#method.add
+[`CookieJar::add()`]: @api/master/rocket/http/struct.CookieJar.html#method.add
 
 ### Secret Key
 
@@ -656,12 +671,13 @@ Generating a string suitable for use as a `secret_key` configuration value is
 usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
 can be generated with the command `openssl rand -base64 32`.
 
-For more information on configuration, see the [Configuration](../configuration)
-section of the guide.
+For more information on configuration, see the [Configuration] section of the
+guide.
 
-[`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
-[`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
-[`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
+[`get_private`]: @api/master/rocket/http/struct.CookieJar.html#method.get_private
+[`add_private`]: @api/master/rocket/http/struct.CookieJar.html#method.add_private
+[`remove_private`]: @api/master/rocket/http/struct.CookieJar.html#method.remove_private
+[Configuration]: ../configuration/
 
 ## Format
 
@@ -718,7 +734,7 @@ header will match `user`. If instead the route had been declared as `post`,
 Rocket would match the `format` against the `Content-Type` header of the
 incoming response.
 
-[`ContentType::parse_flexible()`]: @api/rocket/http/struct.ContentType.html#method.parse_flexible
+[`ContentType::parse_flexible()`]: @api/master/rocket/http/struct.ContentType.html#method.parse_flexible
 
 ## Body Data
 
@@ -738,11 +754,11 @@ fn new(input: T) { /* .. */ }
 
 Any type that implements [`FromData`] is also known as _a data guard_.
 
-[`FromData`]: @api/rocket/data/trait.FromData.html
+[`FromData`]: @api/master/rocket/data/trait.FromData.html
 
 ### JSON
 
-The [`Json<T>`](@api/rocket/serde/json/struct.Json.html) guard deserializes body
+The [`Json<T>`](@api/master/rocket/serde/json/struct.Json.html) guard deserializes body
 data as JSON. The only condition is that the generic type `T` implements the
 `Deserialize` trait from [`serde`](https://serde.rs).
 
@@ -771,26 +787,26 @@ fn new(task: Json<Task<'_>>) { /* .. */ }
   you'd like to avoid this extra annotation, you must depend on `serde` directly
   via your crate's `Cargo.toml`:
 
-  `
+  ```toml
   serde = { version = "1.0", features = ["derive"] }
-  `
+  ```
 
   We always use the extra annotation in the guide, but you may prefer the
   alternative.
 
-See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
+See the [JSON example](@git/master/examples/serialization/src/json.rs) on GitHub for a
 complete example.
 
 ! note: JSON support requires enabling Rocket's `json` feature flag.
 
   Rocket intentionally places JSON support, as well support for other data
   formats and features, behind feature flags. See [the api
-  docs](@api/rocket/#features) for a list of available features. The `json`
+  docs](@api/master/rocket/#features) for a list of available features. The `json`
   feature can be enabled in the `Cargo.toml`:
 
-  `
+  ```toml
   rocket = { version = "0.6.0-dev", features = ["json"] }
-  `
+  ```
 
 ### Temporary Files
 
@@ -809,13 +825,13 @@ async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
 }
 ```
 
-[`TempFile`]: @api/rocket/fs/enum.TempFile.html
+[`TempFile`]: @api/master/rocket/fs/enum.TempFile.html
 
 ### Streaming
 
 Sometimes you just want to handle incoming data directly. For example, you might
 want to stream the incoming data to some sink. Rocket makes this as simple as
-possible via the [`Data`](@api/rocket/data/struct.Data.html) type:
+possible via the [`Data`](@api/master/rocket/data/struct.Data.html) type:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -842,9 +858,9 @@ response is returned. The handler above is complete. It really is that simple!
 ! note: Rocket requires setting limits when reading incoming data.
 
   To aid in preventing DoS attacks, Rocket requires you to specify, as a
-  [`ByteUnit`](@api/rocket/data/struct.ByteUnit.html), the amount of data you're
+  [`ByteUnit`](@api/master/rocket/data/struct.ByteUnit.html), the amount of data you're
   willing to accept from the client when `open`ing a data stream. The
-  [`ToByteUnit`](@api/rocket/data/trait.ToByteUnit.html) trait makes specifying
+  [`ToByteUnit`](@api/master/rocket/data/trait.ToByteUnit.html) trait makes specifying
   such a value as idiomatic as `128.kibibytes()`.
 
 ## Forms
@@ -915,9 +931,9 @@ struct Upload<'r> {
 fn upload_form(upload: Form<Upload<'_>>) { /* .. */ }
 ```
 
-[`Form`]: @api/rocket/form/struct.Form.html
-[`FromForm`]: @api/rocket/form/trait.FromForm.html
-[`FromFormField`]: @api/rocket/form/trait.FromFormField.html
+[`Form`]: @api/master/rocket/form/struct.Form.html
+[`FromForm`]: @api/master/rocket/form/trait.FromForm.html
+[`FromFormField`]: @api/master/rocket/form/trait.FromFormField.html
 
 ### Parsing Strategy
 
@@ -966,8 +982,8 @@ lenient. `Form` is lenient by default, so a `Form<Lenient<T>>` is redundant, but
 `Lenient` can be used to overwrite a strict parse as lenient:
 `Option<Lenient<T>>`.
 
-[`Form<Strict<T>>`]: @api/rocket/form/struct.Strict.html
-[`Lenient`]: @api/rocket/form/struct.Lenient.html
+[`Form<Strict<T>>`]: @api/master/rocket/form/struct.Strict.html
+[`Lenient`]: @api/master/rocket/form/struct.Lenient.html
 
 ### Defaults
 
@@ -990,8 +1006,7 @@ struct MyForm<'v> {
     ok_or_error: form::Result<'v, Vec<&'v str>>,
     here_or_false: bool,
 }
-
-# rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
+# rocket_docs_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
 The default can be overridden or unset using the `#[field(default = expr)]`
@@ -1020,9 +1035,9 @@ See the [`FromForm` derive] documentation for full details on the `default`
 attribute parameter as well documentation on the more expressive `default_with`
 parameter option.
 
-[`Errors<'_>`]: @api/rocket/form/struct.Errors.html
-[`form::Result`]: @api/rocket/form/type.Result.html
-[`FromForm` derive]: @api/rocket/derive.FromForm.html
+[`Errors<'_>`]: @api/master/rocket/form/struct.Errors.html
+[`form::Result`]: @api/master/rocket/form/type.Result.html
+[`FromForm` derive]: @api/master/rocket/derive.FromForm.html
 
 ### Field Renaming
 
@@ -1126,10 +1141,10 @@ struct Password<'r> {
 }
 ```
 
-[`form::validate`]: @api/rocket/form/validate/index.html
-[`form::validate::range`]: @api/rocket/form/validate/fn.range.html
-[`form::Result`]: @api/rocket/form/type.Result.html
-[`Errors<'_>`]: @api/rocket/form/error/struct.Errors.html
+[`form::validate`]: @api/master/rocket/form/validate/index.html
+[`form::validate::range`]: @api/master/rocket/form/validate/fn.range.html
+[`form::Result`]: @api/master/rocket/form/type.Result.html
+[`Errors<'_>`]: @api/master/rocket/form/error/struct.Errors.html
 
 In reality, the expression after `validate =` can be _any_ expression as long as
 it evaluates to a value of type `Result<(), Errors<'_>>` (aliased by
@@ -1201,7 +1216,7 @@ use std::str::FromStr;
 struct Token<'r>(&'r str);
 ```
 
-[`try_with`]: @api/rocket/form/validate/fn.try_with.html
+[`try_with`]: @api/master/rocket/form/validate/fn.try_with.html
 
 ### Collections
 
@@ -1267,7 +1282,7 @@ Such a form, URL-encoded, may look like:
 
 ```rust
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
 # #[derive(FromForm, Debug, PartialEq)] struct Person { name: String }
 # #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
@@ -1298,7 +1313,7 @@ place of or in addition to `.`:
 
 ```rust
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
 # #[derive(FromForm, Debug, PartialEq)] struct Person { name: String }
 # #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
@@ -1354,7 +1369,7 @@ Consider the following examples.
 
 ```rust
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, PartialEq, Debug)] struct MyForm { numbers: Vec<usize>, }
 // These form strings...
 # assert_form_parses! { MyForm,
@@ -1423,7 +1438,7 @@ Examples include:
 
 ```rust
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{assert_form_parses, assert_not_form_parses};
+# use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { name: String, pets: Vec<Pet>, }
 # #[derive(FromForm, Debug, PartialEq)] struct Pet { name: String, good_pet: bool, }
 // These form strings...
@@ -1463,7 +1478,7 @@ The rules are exactly the same.
 
 ```rust
 # use rocket::form::FromForm;
-# use rocket_guide_tests::assert_form_parses;
+# use rocket_docs_tests::assert_form_parses;
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { v: Vec<Vec<usize>>, }
 # assert_form_parses! { MyForm,
 "v=1&v=2&v=3" => MyForm { v: vec![vec![1], vec![2], vec![3]] },
@@ -1506,7 +1521,7 @@ As an example, the following are equivalent and all parse to `{ "a" => 1, "b" =>
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{map, assert_form_parses};
+# use rocket_docs_tests::{map, assert_form_parses};
 #
 # #[derive(Debug, PartialEq, FromForm)]
 # struct MyForm {
@@ -1561,7 +1576,7 @@ Examples include:
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{map, assert_form_parses};
+# use rocket_docs_tests::{map, assert_form_parses};
 #
 
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { ids: HashMap<usize, Person>, }
@@ -1636,7 +1651,7 @@ Examples include:
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{map, assert_form_parses};
+# use rocket_docs_tests::{map, assert_form_parses};
 #
 
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { m: HashMap<Person, Pet>, }
@@ -1728,7 +1743,7 @@ Where we have the following symbolic keys:
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
-# use rocket_guide_tests::{map, bmap, assert_form_parses};
+# use rocket_docs_tests::{map, bmap, assert_form_parses};
 # #[derive(FromForm, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 # struct Person { name: String, age: usize }
 
@@ -1806,9 +1821,9 @@ will be returned.
 The [forms example], too, makes use of form contexts, as well as every other
 forms feature.
 
-[`Contextual`]: @api/rocket/form/struct.Contextual.html
-[`Context`]: @api/rocket/form/struct.Context.html
-[forms example]: @example/forms
+[`Contextual`]: @api/master/rocket/form/struct.Contextual.html
+[`Context`]: @api/master/rocket/form/struct.Context.html
+[forms example]: @git/master/examples/forms
 
 ## Query Strings
 
@@ -1851,15 +1866,15 @@ fn cats() -> &'static str {
 }
 
 // The following GET requests match `cats`. `%E2%99%A5` is encoded `♥`.
-# let status = rocket_guide_tests::client(routes![cats]).get(
+# let status = rocket_docs_tests::client(routes![cats]).get(
 "/?cat=%E2%99%A5&hello"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
-# let status = rocket_guide_tests::client(routes![cats]).get(
+# let status = rocket_docs_tests::client(routes![cats]).get(
 "/?hello&cat=%E2%99%A5"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
-# let status = rocket_guide_tests::client(routes![cats]).get(
+# let status = rocket_docs_tests::client(routes![cats]).get(
 "/?dogs=amazing&hello&there&cat=%E2%99%A5"
 # ).dispatch().status();
 # assert_eq!(status, rocket::http::Status::Ok);
@@ -1906,7 +1921,7 @@ fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>
 }
 
 // A request with these query segments matches as above.
-# let status = rocket_guide_tests::client(routes![hello]).get("/?\
+# let status = rocket_docs_tests::client(routes![hello]).get("/?\
 name=George&\
 color=red&\
 color=green&\
@@ -1948,7 +1963,7 @@ fn user(id: usize, user: User<'_>) {
 }
 
 // A request with these query segments matches as above.
-# let status = rocket_guide_tests::client(routes![user]).get("/?\
+# let status = rocket_docs_tests::client(routes![user]).get("/?\
 hello&\
 name=Bob+Smith&\
 id=1337&\
@@ -2110,13 +2125,13 @@ Rocket provides a built-in default catcher. It produces HTML or JSON, depending
 on the value of the `Accept` header. As such, custom catchers only need to be
 registered for custom error handling.
 
-The [error handling example](@example/error-handling) illustrates catcher use in
+The [error handling example](@git/master/examples/error-handling) illustrates catcher use in
 full, while the [`Catcher`] API documentation provides further details.
 
-[`catch`]: @api/rocket/attr.catch.html
-[`register()`]: @api/rocket/struct.Rocket.html#method.register
-[`mount()`]: @api/rocket/struct.Rocket.html#method.mount
-[`catchers!`]: @api/rocket/macro.catchers.html
-[`&Request`]: @api/rocket/struct.Request.html
-[`Status`]: @api/rocket/http/struct.Status.html
-[`Catcher`]: @api/rocket/catcher/struct.Catcher.html
+[`catch`]: @api/master/rocket/attr.catch.html
+[`register()`]: @api/master/rocket/struct.Rocket.html#method.register
+[`mount()`]: @api/master/rocket/struct.Rocket.html#method.mount
+[`catchers!`]: @api/master/rocket/macro.catchers.html
+[`&Request`]: @api/master/rocket/struct.Request.html
+[`Status`]: @api/master/rocket/http/struct.Status.html
+[`Catcher`]: @api/master/rocket/catcher/struct.Catcher.html

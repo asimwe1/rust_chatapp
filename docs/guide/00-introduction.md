@@ -1,3 +1,7 @@
++++
+summary = "introduces Rocket and its philosophy"
++++
+
 # Introduction
 
 Rocket is a web framework for Rust. If you'd like, you can think of Rocket as

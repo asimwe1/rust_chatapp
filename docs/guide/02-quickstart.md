@@ -1,9 +1,13 @@
++++
+summary = "the minimal steps to running your first Rocket application"
++++
+
 # Quickstart
 
 Before you can start writing a Rocket application, you'll need to install the
 Rust toolchain. We recommend using [rustup](https://rustup.rs/). If you don't
-have Rust installed and would like extra guidance doing so, see the [getting
-started](../getting-started) section.
+have Rust installed and would like extra guidance doing so, see [Getting
+Started].
 
 ## Running Examples
 
@@ -28,4 +32,4 @@ with `cargo run`.
   libraries. When copying the examples for your own use, you should modify the
   `Cargo.toml` files as explained in the [Getting Started] guide.
 
-[Getting Started]: ../getting-started
+[Getting Started]: ../getting-started/

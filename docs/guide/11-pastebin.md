@@ -1,3 +1,7 @@
++++
+summary = "step-by-step guide to creating a pastebin with Rocket"
++++
+
 # Pastebin Tutorial
 
 This section of the guide is a tutorial intended to demonstrate how real-world
@@ -109,9 +113,9 @@ string with the specified contents. Rocket will take the string and return it as
 the body of a fully formed HTTP response with `Content-Type: text/plain`. You
 can read more about how Rocket formulates responses in the [responses section]
 of the guide or at the [API documentation for the Responder
-trait](@api/rocket/response/trait.Responder.html).
+trait](@api/master/rocket/response/trait.Responder.html).
 
-[responses section]: ../responses
+[responses section]: ../responses/
 
 Remember that routes first need to be mounted before Rocket dispatches requests
 to them. To mount the `index` route, modify the main function so that it reads:
@@ -249,7 +253,7 @@ Here's a first take at implementing the `retrieve` route. The route below takes
 in an `<id>` as a dynamic path element. The handler uses the `id` to construct a
 path to the paste inside `upload/`, and then attempts to open the file at that
 path, optionally returning the `File` if it exists. Rocket treats a `None`
-[Responder](@api/rocket/response/trait.Responder.html#provided-implementations)
+[Responder](@api/master/rocket/response/trait.Responder.html#provided-implementations)
 as a **404** error, which is exactly what we want to return when the requested
 paste doesn't exist.
 
@@ -297,8 +301,9 @@ opened. For instance, imagine that you later decide that a special file
 user issues a `GET` request to `/_credentials.txt`, the server will read and
 return the `upload/_credentials.txt` file, leaking the sensitive information.
 This is a big problem; it's known as the [full path disclosure
-attack](https://www.owasp.org/index.php/Full_Path_Disclosure), and Rocket
-provides the tools to prevent this and other kinds of attacks from happening.
+attack](https://owasp.org/www-community/attacks/Full_Path_Disclosure), and
+Rocket provides the tools to prevent this and other kinds of attacks from
+happening.
 
 ### The Solution
 
@@ -315,7 +320,7 @@ paste IDs, `PasteId`, so we'll simply need to implement `FromParam` for
 
 Here's the `FromParam` implementation for `PasteId` in `src/paste_id.rs`:
 
-[`FromParam`]: @api/rocket/request/trait.FromParam.html
+[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
 
 ```rust
 use rocket::request::FromParam;
@@ -404,7 +409,7 @@ async fn upload(paste: Data<'_>) -> std::io::Result<String> {
 }
 ```
 
-[`Data`]: @api/rocket/data/struct.Data.html
+[`Data`]: @api/master/rocket/data/struct.Data.html
 [data guard]: ../requests/#body-data
 
 Your code should:
@@ -467,14 +472,14 @@ We note the following Rocket APIs being used in our implementation:
   * The [`UriDisplayPath`] derive, allowing `PasteId` to be used in [`uri!`].
   * The [`uri!`] macro to crate type-safe, URL-safe URIs.
 
-[`Data::open()`]: @api/rocket/data/struct.Data.html#method.open
-[`Data`]: @api/rocket/data/struct.Data.html
-[`DataStream`]: @api/rocket/data/struct.DataStream.html
-[`DataStream::into_file()`]: @api/rocket/data/struct.DataStream.html#method.into_file
-[`uri!`]: @api/rocket/macro.uri.html
-[`kibibytes()`]: @api/rocket/data/trait.ToByteUnit.html#tymethod.kibibytes
-[`ToByteUnit`]: @api/rocket/data/trait.ToByteUnit.html
-[`UriDisplayPath`]: @api/rocket/derive.UriDisplayPath.html
+[`Data::open()`]: @api/master/rocket/data/struct.Data.html#method.open
+[`Data`]: @api/master/rocket/data/struct.Data.html
+[`DataStream`]: @api/master/rocket/data/enum.DataStream.html
+[`DataStream::into_file()`]: @api/master/rocket/data/enum.DataStream.html#method.into_file
+[`uri!`]: @api/master/rocket/macro.uri.html
+[`kibibytes()`]: @api/master/rocket/data/trait.ToByteUnit.html#method.kibibytes
+[`ToByteUnit`]: @api/master/rocket/data/trait.ToByteUnit.html
+[`UriDisplayPath`]: @api/master/rocket/derive.UriDisplayPath.html
 
 Ensure that the route is mounted at the root path:
 
@@ -536,10 +541,10 @@ through some of them to get a better feel for Rocket. Here are some ideas:
   * Add a new route, `GET /<id>/<lang>` that syntax highlights the paste with ID
     `<id>` for language `<lang>`. If `<lang>` is not a known language, do no
     highlighting. Possibly validate `<lang>` with `FromParam`.
-  * Use the [`local` module](@api/rocket/local/) to write unit tests for your
+  * Use the [`local` module](@api/master/rocket/local/) to write unit tests for your
     pastebin.
   * Dispatch a thread before `launch`ing Rocket in `main` that periodically
     cleans up idling old pastes in `upload/`.
 
 You can find the full source code for the [completed pastebin tutorial on
-GitHub](@example/pastebin).
+GitHub](@git/master/examples/pastebin).

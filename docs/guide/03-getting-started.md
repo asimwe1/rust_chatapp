@@ -1,3 +1,7 @@
++++
+summary = "a gentle introduction to running your first Rocket application"
++++
+
 # Getting Started
 
 Let's create and run our first Rocket application. We'll ensure we have a
@@ -19,7 +23,7 @@ the command:
 rustup default stable
 ```
 
-! note: You may prefer to develop using the _nightly_ channel.
+! note: You may prefer to develop using the `nightly` channel.
 
   The nightly Rust toolchain enables certain improved developer experiences,
   such as better compile-time diagnostics, when developing with Rocket. You may
@@ -52,12 +56,9 @@ rocket = "0.6.0-dev"
   development version of Rocket, you'll need to point `Cargo.toml` to a Rocket
   git repository. For example, with `######` replaced with a git commit hash:
 
-  `
-  [dependencies]
-  `
-  `
+  ```toml
   rocket = { git = "https://github.com/rwf2/Rocket", rev = "######" }
-  `
+  ```
 
 Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
 program, reproduced below:

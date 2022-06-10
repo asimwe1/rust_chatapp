@@ -1,3 +1,23 @@
++++
+summary = "answers to frequently asked questions about Rocket and its usage"
++++
+
+{% macro faq(id) %}
+<details id="{{ id }}">
+<summary>
+<a class="anchor" href="#{{ id }}" title="anchor">#</a>
+{% endmacro %}
+
+{% macro answer() %}
+</summary>
+<div class="content">
+{% endmacro %}
+
+{% macro endfaq() %}
+</div>
+</details>
+{% endmacro %}
+
 # FAQ
 
 Below you'll find a collection of commonly asked questions and answers. If you
@@ -8,12 +28,9 @@ discussion thread].
 
 ## About Rocket
 
-<details id="monolithic">
-<summary>
+{{ faq("monolithic") }}
 Is Rocket a monolithic framework like Rails? Or is it more like Flask?
-<a class="headerlink" href="#monolithic" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Neither!
 
@@ -38,13 +55,13 @@ Unlike other frameworks, Rocket makes it its mission to help you avoid security
 and correctness blunders. It does this by including, out-of-the-box:
 
   * A flexible, type-based [configuration](../configuration/) system.
-  * [Security and privacy headers](@api/rocket/shield/) by default.
-  * Zero-Copy RFC compliant [URI parsers](@api/rocket/http/uri).
-  * Safe, [typed URIs](@api/rocket/macro.uri.html) with compile-time checking.
-  * [Compile-time and launch-time route checking](@api/rocket/attr.route.html).
-  * A [testing framework](@api/rocket/local) with sync and `async` variants.
+  * [Security and privacy headers](@api/master/rocket/shield/) by default.
+  * Zero-Copy RFC compliant [URI parsers](@api/master/rocket/http/uri).
+  * Safe, [typed URIs](@api/master/rocket/macro.uri.html) with compile-time checking.
+  * [Compile-time and launch-time route checking](@api/master/rocket/attr.route.html).
+  * A [testing framework](@api/master/rocket/local) with sync and `async` variants.
   * Safe, exclusive access to fully decoded HTTP values.
-  * Mandatory [data limits](@api/rocket/data/struct.Limits.html) to prevent
+  * Mandatory [data limits](@api/master/rocket/data/struct.Limits.html) to prevent
     trivial DoS attacks.
 
 Of course, this functionality comes at a compile-time cost (but notably, _not_
@@ -66,40 +83,26 @@ time can be further reduced by using faster linkers like `lld`. We think the
 trade-off is worth it. Rocket will never compromise security, correctness, or
 usability to "win" at benchmarks of any sort.
 
-</div>
-</details>
+[`rocket_dyn_templates`]: @api/master/rocket_dyn_templates/
+[`rocket_db_pools`]: @api/master/rocket_db_pools/
+{{ endfaq() }}
 
-[`rocket_dyn_templates`]: @api/rocket_dyn_templates
-[`rocket_db_pools`]: @api/rocket_db_pools
 
-<details id="compact">
-<summary>
+{{ faq("compact") }}
 I want a small and compact web framework. Is Rocket it?
-<a class="headerlink" href="#compact" title="permalink">#</a>
-</summary>
-<div class="content">
-
+{{ answer() }}
 We think so! See ["Is Rocket a monolithic framework like Rails?"](#monolithic)
-</div>
-</details>
+{{ endfaq() }}
 
-<details id="complete">
-<summary>
+{{ faq("complete") }}
 I want a web framework with all the bells and whistles. Is Rocket it?
-<a class="headerlink" href="#complete" title="permalink">#</a>
-</summary>
-<div class="content">
-
+{{ answer() }}
 We think so! See ["Is Rocket a monolithic framework like Rails?"](#monolithic)
-</div>
-</details>
+{{ endfaq() }}
 
-<details id="in-prod">
-<summary>
+{{ faq("in-prod") }}
 Can I use Rocket in production? Should I? It's only v0.x!
-<a class="headerlink" href="#in-prod" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 We **enthusiastically** recommend using Rocket in production, with the following
 non-exhaustive list of caveats:
@@ -137,15 +140,11 @@ Furthermore, we backport _all_ security and correctness patches to the previous
 major release (`0.{x-1}.y`), so your application remains secure if you need time
 to upgrade.
 
-</div>
-</details>
+{{ endfaq() }}
 
-<details id="performance">
-<summary>
+{{ faq("performance") }}
 Is Rocket slow? Is Rocket fast?
-<a class="headerlink" href="#performance" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Rocket is pretty fast.
 
@@ -184,18 +183,13 @@ zero-copy parsing and deserialization.
 <small>* A common mistake is to pit against Rocket's "Hello, world!" without
 normalizing for response size, especially security headers.</small>
 
-</div>
-</details>
-
 [managed state]: ../state/#managed-state
 [request-local state]: ../state/#request-local-state
+{{ endfaq() }}
 
-<details id="showcase">
-<summary>
+{{ faq("showcase") }}
 What are some examples of "big" apps written in Rocket?
-<a class="headerlink" href="#showcase" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Here are some notable projects and websites in Rocket we're aware of:
 
@@ -213,20 +207,16 @@ you'd like to see here!
 [Conduit]: https://conduit.rs/
 [Rust-Lang.org]: https://www.rust-lang.org/
 [Plume]: https://github.com/Plume-org/Plume
-[Hagrid]: https://gitlab.com/hagrid-keyserver/hagrid/
+[Hagrid]: https://gitlab.com/keys.openpgp.org/hagrid
 [SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/sourcegraph/tree/main/docker-images/syntax-highlighter
 [Let us know]: https://github.com/rwf2/Rocket/discussions/categories/show-and-tell
 [Revolt]: https://github.com/revoltchat/backend
+{{ endfaq() }}
 
-</div>
-</details>
 
-<details id="releases">
-<summary>
+{{ faq("releases") }}
 When will version `$y` be released? Why does it take so long?
-<a class="headerlink" href="#releases" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Rocket represents an ecosystem-wide effort to create a web framework that
 enables writing web applications with unparalleled security, performance, and
@@ -242,14 +232,14 @@ For example, work for Rocket v0.5 included:
   * [Reporting multiple](https://github.com/bikeshedder/deadpool/issues/114)
     [correctness issues](https://github.com/bikeshedder/deadpool/issues/113) in `deadpool`.
   * [Fixing a major usability issue in `async-stream`.](https://github.com/tokio-rs/async-stream/pull/57)
-  * [Creating a brand new configuration library.](https://github.com/rwf2/Figment)
+  * [Creating a brand new configuration library.](https://github.com/SergioBenitez/Figment)
   * [Updating](https://github.com/rousan/multer-rs/pull/21),
     [fixing](https://github.com/rousan/multer-rs/pull/29), and
     [maintaining](https://github.com/rousan/multer-rs/commit/2758e778e6aa2785b737c82fe45e58026bea2f01) `multer`.
   * [Significantly improving `async_trait` correctness and usability.](https://github.com/dtolnay/async-trait/pull/143)
-  * [Porting `Pattern` APIs to stable.](https://github.com/rwf2/stable-pattern)
-  * [Porting macro diagnostics to stable.](https://github.com/rwf2/proc-macro2-diagnostics)
-  * [Creating a brand new byte unit library.](https://github.com/rwf2/ubyte)
+  * [Porting `Pattern` APIs to stable.](https://github.com/SergioBenitez/stable-pattern)
+  * [Porting macro diagnostics to stable.](https://github.com/SergioBenitez/proc-macro2-diagnostics)
+  * [Creating a brand new byte unit library.](https://github.com/SergioBenitez/ubyte)
   * [Fixing a bug in `rustc`'s `libtest`.](https://github.com/rust-lang/rust/pull/78227)
 
 A version of Rocket is released whenever it is feature-complete and exceeds
@@ -259,21 +249,17 @@ a release if these properties are not readily evident.
 
 We know it can be frustrating, but we hope you'll agree that Rocket is worth the
 wait.
-
-</div>
-</details>
+{{ endfaq() }}
 
 ## How To
 
-<details id="web-sockets">
-<summary>
+{{ faq("web-sockets") }}
 Can I, and if so how, do I use WebSockets?
-<a class="headerlink" href="#web-sockets" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 You can! WebSocket support is provided by the officially maintained
-[`rocket_ws`](@api/rocket_ws) crate. You'll find all the docs you need there.
+[`rocket_ws`](@api/master/rocket_ws/) crate. You'll find all the docs you need
+there.
 
 Rocket _also_ supports [Server-Sent Events], which allows for real-time
 _unidirectional_ communication from the server to the client. The protocol is a
@@ -281,19 +267,20 @@ bit simpler, and you may find SSE sufficient for your use-case. For instance,
 the [chat example] uses SSE to implement a real-time, multiroom chat
 application.
 
-</div>
-</details>
+That being said, Rocket _does_ suport [Server-Sent Events], which allows for
+real-time _unidirectional_ communication from the server to the client. This is
+often sufficient for many of the applications that WebSockets are typically used
+for. For instance, the [chat example] uses SSE to implement a real-time,
+multiroom chat application.
 
 [working on it]: https://github.com/rwf2/Rocket/issues/90
-[Server-Sent Events]: @api/rocket/response/stream/struct.EventStream.html
-[chat example]: @example/chat
+[Server-Sent Events]: @api/master/rocket/response/stream/struct.EventStream.html
+[chat example]: @git/master/examples/chat
+{{ endfaq() }}
 
-<details id="global-state">
-<summary>
+{{ faq("global-state") }}
 Should I use global state via something like `lazy_static!`?
-<a class="headerlink" href="#global-state" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 No. Rocket's [managed state] provides a better alternative.
 
@@ -305,17 +292,13 @@ numerous. They include:
     state.
   * The inability to know the state a route accesses by looking at its
     signature.
-</div>
-</details>
 
 [managed state]: ../state/#managed-state
+{{ endfaq() }}
 
-<details id="file-uploads">
-<summary>
+{{ faq("file-uploads") }}
 How do I handle file uploads? What is this "multipart" in my stream?
-<a class="headerlink" href="#file-uploads" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 For a quick example on how to handle file uploads, see [multipart forms]. The
 gist is: use `Form<TempFile>` as a data guard.
@@ -325,24 +308,20 @@ The raw stream, as seen by [`Data`] for example, thus contains the necessary
 metadata to encode the form. Rocket's [`Form`] data guard can parse these form
 submissions into any type that implements [`FromForm`]. This includes types like
 [`TempFile`] which streams the decoded data to disk for persistence.
-</div>
-</details>
 
 [multipart]: https://datatracker.ietf.org/doc/html/rfc7578
 [multipart forms]: ../requests/#multipart
-[`DataField`]: @api/rocket/form/struct.DataField.html
-[`TempFile`]: @api/rocket/fs/enum.TempFile.html
-[`DataField`]: @api/rocket/data/struct.Data.html
-[`Form`]: @api/rocket/form/struct.Form.html
-[`FromForm`]: @api/rocket/form/trait.FromForm.html
-[`Data`]: @api/rocket/struct.Data.html
+[`DataField`]: @api/master/rocket/form/struct.DataField.html
+[`TempFile`]: @api/master/rocket/fs/enum.TempFile.html
+[`DataField`]: @api/master/rocket/data/struct.Data.html
+[`Form`]: @api/master/rocket/form/struct.Form.html
+[`FromForm`]: @api/master/rocket/form/trait.FromForm.html
+[`Data`]: @api/master/rocket/struct.Data.html
+{{ endfaq() }}
 
-<details id="raw-request">
-<summary>
+{{ faq("raw-request") }}
 How do I get an `&Request` in a handler?
-<a class="headerlink" href="#raw-request" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 You don't!
 
@@ -364,22 +343,18 @@ out-of-the-box, and you can implement your own, too. See the following:
   * Data Guards: [`FromData`]
   * Form Guards: [`FromForm`]
   * Request Guards: [`FromRequest`]
-</div>
-</details>
 
 [philosophy]: ../introduction/#foreword
-[`FromParam`]: @api/rocket/request/trait.FromParam.html
-[`FromSegments`]: @api/rocket/request/trait.FromSegments.html
-[`FromData`]: @api/rocket/data/trait.FromData.html
-[`FromForm`]: @api/rocket/form/trait.FromForm.html
-[`FromRequest`]: @api/rocket/request/trait.FromRequest.html
+[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
+[`FromSegments`]: @api/master/rocket/request/trait.FromSegments.html
+[`FromData`]: @api/master/rocket/data/trait.FromData.html
+[`FromForm`]: @api/master/rocket/form/trait.FromForm.html
+[`FromRequest`]: @api/master/rocket/request/trait.FromRequest.html
+{{ endfaq() }}
 
-<details id="response-headers">
-<summary>
+{{ faq("response-headers") }}
 How do I add a header to a response?
-<a class="headerlink" href="#response-headers" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 That depends on the header!
 
@@ -404,7 +379,7 @@ details setting a custom `Content-Type` or overriding an existing one.
 **Everything Else**
 
 To add a custom header, you'll need a custom [`Responder`]. Not to worry!
-[`Responder` can be derived](@api/rocket/derive.Responder.html) in almost all
+[`Responder` can be derived](@api/master/rocket/derive.Responder.html) in almost all
 cases. If a type for the header you want to add already exists, you can directly
 derive `Responder` for a struct that contains the header value, which adds the
 header to the response:
@@ -461,21 +436,16 @@ impl<'r> Responder<'r, 'static> for Person {
 }
 ```
 
-</div>
-</details>
+[`Responder`]: @api/master/rocket/response/trait.Responder.html
+[`content`]: @api/master/rocket/response/content/index.html
+[`status`]: @api/master/rocket/response/status/index.html
+[`Header`]: @api/master/rocket/http/struct.Header.html
+[`Json`]: @api/master/rocket/serde/json/struct.Json.html
+{{ endfaq() }}
 
-[`Responder`]: @api/rocket/response/trait.Responder.html
-[`content`]: @api/rocket/response/content/index.html
-[`status`]: @api/rocket/response/status/index.html
-[`Header`]: @api/rocket/http/struct.Header.html
-[`Json`]: @api/rocket/serde/json/struct.Json.html
-
-<details id="multiple-responses">
-<summary>
+{{ faq("multiple-responses") }}
 How do I make one handler return different responses or status codes?
-<a class="headerlink" href="#multiple-responses" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 If you're returning _two_ different responses, use a `Result<T, E>` or an
 [`Either<A, B>`].
@@ -498,18 +468,13 @@ enum Error<'r, T> {
 }
 ```
 
-</div>
-</details>
-
 [`Either<A, B>`]: https://docs.rs/either/1/either/enum.Either.html
-[derive a custom `Responder`]: @api/rocket/derive.Responder.html
+[derive a custom `Responder`]: @api/master/rocket/derive.Responder.html
+{{ endfaq() }}
 
-<details id="automatic-reload">
-<summary>
+{{ faq("automatic-reload") }}
 How do I make Rocket reload automatically when I change source code?
-<a class="headerlink" href="#automatic-reload" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 In debug mode, Rocket automatically reloads templates for you. So if all you
 need is live template reloading, Rocket's got you covered.
@@ -523,20 +488,16 @@ cargo watch -x run
 ```
 
 To only restart on successful compilations, see [this note].
-</div>
-</details>
 
 [`cargo-watch`]: https://github.com/watchexec/cargo-watch
 [`watchexec`]: https://github.com/watchexec/watchexec
 [`entr`]: http://eradman.com/entrproject/
 [this note]: https://github.com/watchexec/cargo-watch/tree/b75ce2c260874dea480f4accfd46ab28709ec56a#restarting-an-application-only-if-the-buildcheck-succeeds
+{{ endfaq() }}
 
-<details id="external-managed-state">
-<summary>
+{{ faq("external-managed-state") }}
 How do I access managed state outside of a Rocket-related context?
-<a class="headerlink" href="#external-managed-state" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Use an `Arc`, like this:
 
@@ -558,15 +519,11 @@ fn rocket() -> _ {
 }
 ```
 
-</div>
-</details>
+{{ endfaq() }}
 
-<details id="internal-server">
-<summary>
+{{ faq("internal-server") }}
 How do I make Rocket a _part_ of my application as opposed to the whole thing?
-<a class="headerlink" href="#internal-server" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Use the `#[main]` attribute and manually call [`launch()`]:
 
@@ -585,19 +542,14 @@ async fn main() {
 The cost to using the attribute is imperceptible and guarantees compatibility
 with Rocket's async I/O.
 
-</div>
-</details>
-
-[`launch()`]: @api/rocket/struct.Rocket.html#method.launch
+[`launch()`]: @api/master/rocket/struct.Rocket.html#method.launch
+{{ endfaq() }}
 
 ## Debugging
 
-<details id="broken-example">
-<summary>
+{{ faq("broken-example") }}
 Is example `foo` broken? It doesn't work for me.
-<a class="headerlink" href="#broken-example" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 Almost certainly not.
 
@@ -612,27 +564,23 @@ Common mistakes when running examples include:
   * Looking at outdated examples on StackOverflow or Google. Check the
     date/version!
   * Not configuring the correct dependencies. See the example's `Cargo.toml`!
-</div>
-</details>
+{{ endfaq() }}
 
-<details id="unsat-bound">
-<summary>
+{{ faq("unsat-bound") }}
 The trait bound `rocket::Responder` (`FromRequest`, etc.) is not satisfied.
-<a class="headerlink" href="#unsat-bound" title="permalink">#</a>
-</summary>
-<div class="content">
+{{ answer() }}
 
 If you're fairly certain a type implements a given Rocket trait but still get an
 error like:
 
 ```rust,ignore
 error[E0277]: the trait bound `Foo: Responder<'_, '_>` is not satisfied
- --> src\main.rs:4:20
-  |
+--> src\main.rs:4:20
+|
 4 | fn foo() -> Foo
-  |             ^^^ the trait `Responder<'_, '_>` is not implemented for `Foo`
-  |
-  = note: required by `respond_to`
+|             ^^^ the trait `Responder<'_, '_>` is not implemented for `Foo`
+|
+= note: required by `respond_to`
 ```
 
 ...then you're almost certainly depending, perhaps transitively, on _two
@@ -658,6 +606,4 @@ implement the trait from the other library (since it is considered to be a
 _different_, _distinct_ library). In other words, you can _never_ mix two
 different published versions of Rocket, a published version and a `git` version,
 or two instances from different `git` revisions.
-
-</div>
-</details>
+{{ endfaq() }}

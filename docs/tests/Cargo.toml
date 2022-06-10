@@ -1,5 +1,5 @@
 [package]
-name = "rocket_guide_tests"
+name = "rocket_docs_tests"
 version = "0.6.0-dev"
 workspace = "../../"
 edition = "2021"
@@ -10,8 +10,9 @@ rocket = { path = "../../core/lib", features = ["secrets"] }
 
 [dev-dependencies]
 rocket = { path = "../../core/lib", features = ["secrets", "json", "mtls"] }
-rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }
+tokio = { version = "1", features = ["macros", "io-std"] }
+rand = "0.8"
 
 [dev-dependencies.rocket_dyn_templates]
 path = "../../contrib/dyn_templates"

@@ -1,3 +1,7 @@
++++
+summary = "an overview of Rocket's core concepts"
++++
+
 # Overview
 
 Rocket provides primitives to build web servers and applications with Rust:
@@ -75,7 +79,7 @@ incoming `GET` requests. Instead of `#[get]`, we could have used `#[post]` or
 `#[put]` for other HTTP methods, or `#[catch]` for serving [custom error
 pages](../requests/#error-catchers). Additionally, other route parameters may be
 necessary when building more interesting applications. The
-[Requests](../requests) chapter, which follows this one, has further details on
+[Requests](../requests/) chapter, which follows this one, has further details on
 routing and error handling.
 
 ! note: We prefer `#[macro_use]`, but you may prefer explicit imports.
@@ -192,9 +196,9 @@ as we expected.
 ! note: This and other examples are on GitHub.
 
   An expanded version of this example's complete crate, ready to `cargo run`,
-  can be found on [GitHub](@example/hello). You can find dozens of other
+  can be found on [GitHub](@git/master/examples/hello). You can find dozens of other
   complete examples, spanning all of Rocket's features, in the [GitHub examples
-  directory](@example/).
+  directory](@git/master/examples/).
 
 The second approach uses the `#[rocket::main]` route attribute.
 `#[rocket::main]` _also_ generates a `main` function that sets up an async
@@ -223,8 +227,8 @@ async fn main() -> Result<(), rocket::Error> {
 is desired, or when the return value of [`launch()`] is to be inspected. The
 [error handling example] for instance, inspects the return value.
 
-[`launch()`]: @api/rocket/struct.Rocket.html#method.launch
-[error handling example]: @example/error-handling
+[`launch()`]: @api/master/rocket/struct.Rocket.html#method.launch
+[error handling example]: @git/master/examples/error-handling
 
 ## Futures and Async
 
@@ -251,17 +255,17 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 `async` tag.
 
 [`Future`]: @std/future/trait.Future.html
-[`Data`]: @api/rocket/struct.Data.html
-[`DataStream`]: @api/rocket/data/struct.DataStream.html
-[Routes]: ../requests
-[Error Catchers]: ../requests#error-catchers
-[`FromData`]: ../requests#body-data
-[`FromRequest`]: ../requests#request-guards
+[`Data`]: @api/master/rocket/struct.Data.html
+[`DataStream`]: @api/master/rocket/data/enum.DataStream.html
+[Routes]: ../requests/
+[Error Catchers]: ../requests/#error-catchers
+[`FromData`]: ../requests/#body-data
+[`FromRequest`]: ../requests/#request-guards
 
 ! note
 
-  Rocket uses the tokio runtime. The runtime is started for you if you use
-  `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
+  Rocket uses the tokio runtime. The runtime is started for you if you
+  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
   instance on a custom-built runtime by not using _either_ attribute.
 
 ### Async Routes

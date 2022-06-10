@@ -35,10 +35,8 @@ popd > /dev/null 2>&1
 echo ":::: Generating redirects..."
 REDIRECTS="
 /               /v0.5/rocket/                                302!
-/v0.4           https://docs.rs/rocket/0.4/rocket/
-/v0.4/:crate/*  https://docs.rs/:crate/0.4/:crate/:splat
+/rocket/        /v0.5/rocket/                                302!
 /:v             /:v/rocket/
-/v0.5/*         https://v0-5--rocket-docs.netlify.app/:splat 200
 /:v/*           https://:v--rocket-docs.netlify.app/:splat   200
 "
 

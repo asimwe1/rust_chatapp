@@ -1,3 +1,7 @@
++++
+summary = "managing application state and connecting to databases"
++++
+
 # State
 
 Many web applications have a need to maintain state. This can be as simple as
@@ -27,10 +31,11 @@ The process for using managed state is simple:
   ensuring that the type of values you store in managed state implement `Send` +
   `Sync`.
 
+
 ### Adding State
 
 To instruct Rocket to manage state for your application, call the
-[`manage`](@api/rocket/struct.Rocket.html#method.manage) method
+[`manage`](@api/master/rocket/struct.Rocket.html#method.manage) method
 on an instance of `Rocket`. For example, to ask Rocket to manage a `HitCount`
 structure with an internal `AtomicUsize` with an initial value of `0`, we can
 write the following:
@@ -63,7 +68,7 @@ rocket::build()
 ### Retrieving State
 
 State that is being managed by Rocket can be retrieved via the
-[`&State`](@api/rocket/struct.State.html) type: a [request
+[`&State`](@api/master/rocket/struct.State.html) type: a [request
 guard](../requests/#request-guards) for managed state. To use the request guard,
 add a `&State<T>` type to any request handler, where `T` is the type of the
 managed state. For example, we can retrieve and respond with the current
@@ -104,14 +109,14 @@ fn state(hit_count: &State<HitCount>, config: &State<Config>) { /* .. */ }
   If you request a `&State<T>` for a `T` that is not `managed`, Rocket will
   refuse to start your application. This prevents what would have been an
   unmanaged state runtime error. Unmanaged state is detected at runtime through
-  [_sentinels_](@api/rocket/trait.Sentinel.html), so there are limitations. If a
+  [_sentinels_](@api/master/rocket/trait.Sentinel.html), so there are limitations. If a
   limitation is hit, Rocket still won't call the offending route. Instead,
   Rocket will log an error message and return a **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
-example on GitHub](@example/state) and learn more about the [`manage`
-method](@api/rocket/struct.Rocket.html#method.manage) and [`State`
-type](@api/rocket/struct.State.html) in the API docs.
+example on GitHub](@git/master/examples/state) and learn more about the [`manage`
+method](@api/master/rocket/struct.Rocket.html#method.manage) and [`State`
+type](@api/master/rocket/struct.State.html) in the API docs.
 
 ### Within Guards
 
@@ -148,8 +153,8 @@ impl<'r> FromRequest<'r> for Item<'r> {
 }
 ```
 
-[`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
-[`Rocket::state()`]: @api/rocket/struct.Rocket.html#method.state
+[`Request::guard()`]: @api/master/rocket/struct.Request.html#method.guard
+[`Rocket::state()`]: @api/master/rocket/struct.Rocket.html#method.state
 
 ## Request-Local State
 
@@ -211,8 +216,8 @@ which uses request-local state to cache expensive authentication and
 authorization computations, and the [`Fairing`] documentation, which uses
 request-local state to implement request timing.
 
-[`FromRequest` request-local state]: @api/rocket/request/trait.FromRequest.html#request-local-state
-[`Fairing`]: @api/rocket/fairing/trait.Fairing.html#request-local-state
+[`FromRequest` request-local state]: @api/master/rocket/request/trait.FromRequest.html#request-local-state
+[`Fairing`]: @api/master/rocket/fairing/trait.Fairing.html#request-local-state
 
 ## Databases
 
@@ -220,7 +225,7 @@ Rocket includes built-in, ORM-agnostic support for databases via
 [`rocket_db_pools`]. The library simplifies accessing one or more databases via
 connection pools: data structures that maintain active database connections for
 use in the application. Database configuration occurs via Rocket's regular
-[configuration](../configuration) mechanisms.
+[configuration](../configuration/) mechanisms.
 
 Connecting your Rocket application to a database using `rocket_db_pools` happens
 in three simple steps:
@@ -277,13 +282,13 @@ in three simple steps:
 
 For complete usage details, see [`rocket_db_pools`].
 
-[`rocket_db_pools`]: @api/rocket_db_pools/index.html
-[supported database driver list]: @api/rocket_db_pools/index.html#supported-drivers
-[database driver features]: @api/rocket_db_pools/index.html#supported-drivers
-[`Pool`]: @api/rocket_db_pools/index.html#supported-drivers
-[Configure]: @api/rocket_db_pools/index.html#configuration
-[Derive `Database`]: @api/rocket_db_pools/derive.Database.html
-[`Connection<$Type>`]: @api/rocket_db_pools/struct.Connection.html
+[`rocket_db_pools`]: @api/master/rocket_db_pools/index.html
+[supported database driver list]: @api/master/rocket_db_pools/index.html#supported-drivers
+[database driver features]: @api/master/rocket_db_pools/index.html#supported-drivers
+[`Pool`]: @api/master/rocket_db_pools/index.html#supported-drivers
+[Configure]: @api/master/rocket_db_pools/index.html#configuration
+[Derive `Database`]: @api/master/rocket_db_pools/derive.Database.html
+[`Connection<$Type>`]: @api/master/rocket_db_pools/struct.Connection.html
 
 ### Driver Features
 
@@ -311,13 +316,13 @@ ORMs like [Diesel] via the [`rocket_sync_db_pools`] library, which you may wish
 to explore. Usage is similar, but not identical, to `rocket_db_pools`. See the
 crate docs for complete usage details.
 
-[`rocket_sync_db_pools`]: @api/rocket_sync_db_pools/index.html
+[`rocket_sync_db_pools`]: @api/master/rocket_sync_db_pools/index.html
 [diesel]: https://diesel.rs/
 
 ### Examples
 
 For examples of CRUD-like "blog" JSON APIs backed by a SQLite database driven by
 each of `sqlx`, `diesel`, and `rusqlite`, with migrations run automatically for
-the former two drivers, see the [databases example](@example/databases). The
+the former two drivers, see the [databases example](@git/master/examples/databases). The
 `sqlx` example uses `rocket_db_pools` while the `diesel` and `rusqlite` examples
 use `rocket_sync_db_pools`.

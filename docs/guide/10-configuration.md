@@ -1,3 +1,7 @@
++++
+summary = "overview and customization of Rocket application configuration"
++++
+
 # Configuration
 
 Rocket's configuration system is flexible. Based on [Figment](@figment), it
@@ -40,8 +44,8 @@ values:
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
 parameters are only read from the [default provider](#default-provider).</small>
 
-[client's real IP]: @api/rocket/request/struct.Request.html#method.real_ip
-[client to proxy protocol]: @api/rocket/request/struct.Request.html#method.proxy_proto
+[client's real IP]: @api/master/rocket/request/struct.Request.html#method.real_ip
+[client to proxy protocol]: @api/master/rocket/request/struct.Request.html#method.proxy_proto
 
 ### Profiles
 
@@ -61,20 +65,20 @@ profile supplant any values with the same name in any profile.
 
 [`Provider`]: @figment/trait.Provider.html
 [`Profile`]: @figment/struct.Profile.html
-[`Config`]: @api/rocket/struct.Config.html
-[`Config::figment()`]: @api/rocket/struct.Config.html#method.figment
+[`Config`]: @api/master/rocket/struct.Config.html
+[`Config::figment()`]: @api/master/rocket/struct.Config.html#method.figment
 [`Toml`]: @figment/providers/struct.Toml.html
 [`Json`]: @figment/providers/struct.Json.html
 [`Figment`]: @figment/struct.Figment.html
-[`Deserialize`]: @api/rocket/serde/trait.Deserialize.html
-[`LogLevel`]: @api/rocket/config/enum.LogLevel.html
-[`Limits`]: @api/rocket/data/struct.Limits.html
-[`Limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
-[`SecretKey`]: @api/rocket/config/struct.SecretKey.html
-[`CliColors`]: @api/rocket/config/enum.CliColors.html
-[`TlsConfig`]: @api/rocket/config/struct.TlsConfig.html
-[`Shutdown`]: @api/rocket/config/struct.Shutdown.html
-[`Shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields
+[`Deserialize`]: @api/master/rocket/serde/trait.Deserialize.html
+[`LogLevel`]: @api/master/rocket/config/enum.LogLevel.html
+[`Limits`]: @api/master/rocket/data/struct.Limits.html
+[`Limits::default()`]: @api/master/rocket/data/struct.Limits.html#impl-Default-for-Limits
+[`SecretKey`]: @api/master/rocket/config/struct.SecretKey.html
+[`CliColors`]: @api/master/rocket/config/enum.CliColors.html
+[`TlsConfig`]: @api/master/rocket/tls/struct.TlsConfig.html
+[`Shutdown`]: @api/master/rocket/config/struct.Shutdown.html
+[`Shutdown::default()`]: @api/master/rocket/config/struct.Shutdown.html#fields
 
 ## Default Provider
 
@@ -99,7 +103,7 @@ As a result of `Config::figment()`, without any effort, Rocket can be configured
 via a `Rocket.toml` file and/or via environment variables, the latter of which
 take precedence over the former.
 
-[`Config::default()`]: @api/rocket/struct.Config.html#method.default
+[`Config::default()`]: @api/master/rocket/struct.Config.html#method.default
 
 ### Rocket.toml
 
@@ -231,7 +235,7 @@ bytes Rocket should accept for that type. Rocket can parse both integers
 By default, Rocket specifies a `32 KiB` limit for incoming forms. Since Rocket
 requires specifying a read limit whenever data is read, external data guards may
 also choose to have a configure limit via the `limits` parameter. The
-[`Json`](@api/rocket/serde/json/struct.Json.html) type, for instance, uses the
+[`Json`](@api/master/rocket/serde/json/struct.Json.html) type, for instance, uses the
 `limits.json` parameter.
 
 ### TLS
@@ -267,8 +271,8 @@ The `tls` parameter is expected to be a dictionary that deserializes into a
 | `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites].         |
 | `mutual`                     | no        | A map with [mutual TLS] configuration.                        |
 
-[`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
-[prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order
+[`CipherSuite`]: @api/master/rocket/tls/enum.CipherSuite.html
+[prefer server cipher suites]: @api/master/rocket/tls/struct.TlsConfig.html#method.with_preferred_server_cipher_order
 [mutual TLS]: #mutual-tls
 
 When specified via TOML or other serialized formats, each [`CipherSuite`] is
@@ -331,8 +335,8 @@ The `tls.mutual` parameter is expected to be a dictionary that deserializes into
 | `ca_certs`  | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.          |
 | `mandatory` | no        | Boolean controlling whether the client _must_ authenticate. |
 
-[`MutualTls`]: @api/rocket/config/struct.MutualTls.html
-[`mtls`]: @api/rocket/mtls/index.html
+[`MtlsConfig`]: @api/master/rocket/mtls/struct.MtlsConfig.html
+[`mtls`]: @api/master/rocket/mtls/index.html
 
 Rocket reports if TLS and/or mTLS are enabled at launch time:
 
@@ -355,13 +359,14 @@ fn auth(cert: Certificate<'_>) {
 }
 ```
 
-The [TLS example](@example/tls) illustrates a fully configured TLS server with
+The [TLS example](@git/master/examples/tls) illustrates a fully configured TLS server with
 mutual TLS.
 
-! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
-  suitable for production use.
+! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3.
 
-[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
+  This may not be suitable for production use requiring legacy support.
+
+[`mtls::Certificate`]: @api/master/rocket/mtls/struct.Certificate.html
 
 ### Proxied TLS
 
@@ -385,10 +390,10 @@ via a TOML file:
 proxy_proto_header = "X-Forwarded-Proto"
 ```
 
-[`Request::proxy_proto()`]: @api/rocket/request/struct.Request.html#method.proxy_proto
-[`ProxyProto`]: @api/rocket/http/enum.ProxyProto.html
-[`CookieJar`]: @api/rocket/http/struct.CookieJar.html
-[`Request::context_is_likely_secure()`]: @api/rocket/request/struct.Request.html#method.context_is_likely_secure
+[`Request::proxy_proto()`]: @api/master/rocket/request/struct.Request.html#method.proxy_proto
+[`ProxyProto`]: @api/master/rocket/http/enum.ProxyProto.html
+[`CookieJar`]: @api/master/rocket/http/struct.CookieJar.html
+[`Request::context_is_likely_secure()`]: @api/master/rocket/request/struct.Request.html#method.context_is_likely_secure
 
 ### Workers
 
@@ -412,8 +417,8 @@ required such as when performing file system I/O via [`TempFile`] or wrapping
 synchronous work via [`rocket_sync_db_pools`].
 
 [`spawn_blocking`]: @tokio/task/fn.spawn_blocking.html
-[`TempFile`]: @api/rocket/fs/enum.TempFile.html
-[`rocket_sync_db_pools`]: @api/rocket_sync_db_pools/index.html
+[`TempFile`]: @api/master/rocket/fs/enum.TempFile.html
+[`rocket_sync_db_pools`]: @api/master/rocket_sync_db_pools/index.html
 
 ## Extracting Values
 
@@ -481,7 +486,7 @@ fn rocket() -> _ {
 }
 ```
 
-[`Rocket::figment()`]: @api/rocket/struct.Rocket.html#method.figment
+[`Rocket::figment()`]: @api/master/rocket/struct.Rocket.html#method.figment
 
 ## Custom Providers
 
@@ -567,5 +572,5 @@ that if values like `port` and `address` are configured in `Config`, `App.toml`
 or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.
 
-[`rocket::custom()`]: @api/rocket/fn.custom.html
-[`rocket::build()`]: @api/rocket/fn.custom.html
+[`rocket::custom()`]: @api/master/rocket/fn.custom.html
+[`rocket::build()`]: @api/master/rocket/fn.custom.html
