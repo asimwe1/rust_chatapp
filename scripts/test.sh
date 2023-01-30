@@ -34,7 +34,7 @@ function check_versions_match() {
 function check_style() {
   # Ensure there are no tabs in any file.
   local tab=$(printf '\t')
-  local matches=$(git grep -E -I -n "${tab}" "${PROJECT_ROOT}" | grep -v 'LICENSE')
+  local matches=$(git grep -PIn "${tab}" "${PROJECT_ROOT}" | grep -v 'LICENSE')
   if ! [ -z "${matches}" ]; then
     echo "Tab characters were found in the following:"
     echo "${matches}"
@@ -43,7 +43,7 @@ function check_style() {
 
   # Ensure non-comment lines are under 100 characters.
   local n=100
-  local matches=$(git grep -P -I -n "(?=^..{$n,}$)(?!^\s*\/\/[\/!].*$).*" '*.rs')
+  local matches=$(git grep -PIn "(?=^..{$n,}$)(?!^\s*\/\/[\/!].*$).*" '*.rs')
   if ! [ -z "${matches}" ]; then
     echo "Lines longer than $n characters were found in the following:"
     echo "${matches}"
@@ -51,7 +51,7 @@ function check_style() {
   fi
 
   # Ensure there's no trailing whitespace.
-  local matches=$(git grep -E -I -n "\s+$" "${PROJECT_ROOT}" | grep -v -F '.stderr:')
+  local matches=$(git grep -PIn "\s+$" "${PROJECT_ROOT}" | grep -v -F '.stderr:')
   if ! [ -z "${matches}" ]; then
     echo "Trailing whitespace was found in the following:"
     echo "${matches}"
