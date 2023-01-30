@@ -8,10 +8,12 @@ env:
 jobs:
   test:
     name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
+    runs-on: ${{ matrix.platform.distro }}
 
     strategy:
       fail-fast: false
       matrix:
+        fallible: [false]
         platform:
           - { name: Linux, distro: ubuntu-latest, toolchain: stable }
           - { name: Windows, distro: windows-latest, toolchain: stable }
@@ -26,8 +28,12 @@ jobs:
             test: { name: Core, flag: "--core" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
-
-    runs-on: ${{ matrix.platform.distro }}
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
 
     steps:
       - name: Checkout Sources
@@ -80,5 +86,6 @@ jobs:
           key: ${{ matrix.test.name }}
 
       - name: Run Tests
+        continue-on-error: ${{ matrix.fallible }}
         run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash
