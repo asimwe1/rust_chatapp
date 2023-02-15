@@ -4,6 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use is_terminal::IsTerminal;
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 use yansi::Paint;
 
@@ -178,7 +179,7 @@ pub(crate) fn init(config: &crate::Config) {
     // Set Rocket-logger specific settings only if Rocket's logger is set.
     if ROCKET_LOGGER_SET.load(Ordering::Acquire) {
         // Rocket logs to stdout, so disable coloring if it's not a TTY.
-        if !atty::is(atty::Stream::Stdout) {
+        if !std::io::stdout().is_terminal() {
             Paint::disable();
         }
 
