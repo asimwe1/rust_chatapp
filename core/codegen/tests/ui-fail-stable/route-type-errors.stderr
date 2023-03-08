@@ -76,8 +76,8 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
              Capped<&'r RawStr>
              Capped<&'r [u8]>
              Capped<&'r str>
-             Capped<Cow<'impl0, str>>
-             Capped<TempFile<'impl0>>
+             Capped<Cow<'_, str>>
+             Capped<TempFile<'_>>
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
