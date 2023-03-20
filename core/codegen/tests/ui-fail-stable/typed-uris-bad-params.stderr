@@ -272,13 +272,13 @@ error: route expects 1 parameter but 0 were supplied
 21 |     uri!(has_one);
    |          ^^^^^^^
 
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
    |                                     ^^^^^^ expected enum `Infallible`, found `&str`
 
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }

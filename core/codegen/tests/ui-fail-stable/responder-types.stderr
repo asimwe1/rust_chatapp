@@ -36,7 +36,7 @@ note: required by a bound in `rocket::Response::<'r>::set_header`
   --> $WORKSPACE/core/lib/src/response/response.rs
    |
    |     pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
-   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `rocket::Response::<'r>::set_header`
+   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `Response::<'r>::set_header`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:16:5
@@ -76,7 +76,7 @@ note: required by a bound in `rocket::Response::<'r>::set_header`
   --> $WORKSPACE/core/lib/src/response/response.rs
    |
    |     pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
-   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `rocket::Response::<'r>::set_header`
+   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `Response::<'r>::set_header`
 
 error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:24:5
@@ -99,7 +99,7 @@ note: required by a bound in `rocket::Response::<'r>::set_header`
   --> $WORKSPACE/core/lib/src/response/response.rs
    |
    |     pub fn set_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) -> bool {
-   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `rocket::Response::<'r>::set_header`
+   |                                  ^^^^^^^^^^^^^^^^ required by this bound in `Response::<'r>::set_header`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:28:13
@@ -121,4 +121,4 @@ note: required by a bound in `route::handler::<impl Outcome<rocket::Response<'o>
   --> $WORKSPACE/core/lib/src/route/handler.rs
    |
    |     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
-   |                    ^^^^^^^^^^^^^^^^^ required by this bound in `route::handler::<impl Outcome<rocket::Response<'o>, Status, rocket::Data<'o>>>::from`
+   |                    ^^^^^^^^^^^^^^^^^ required by this bound in `route::handler::<impl Outcome<Response<'o>, Status, Data<'o>>>::from`
