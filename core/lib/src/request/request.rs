@@ -307,9 +307,10 @@ impl<'r> Request<'r> {
     ///
     /// Because it is common for proxies to forward connections for clients, the
     /// remote address may contain information about the proxy instead of the
-    /// client. For this reason, proxies typically set the "X-Real-IP" header
-    /// with the client's true IP. To extract this IP from the request, use the
-    /// [`real_ip()`] or [`client_ip()`] methods.
+    /// client. For this reason, proxies typically set a "X-Real-IP" header
+    /// [`ip_header`](rocket::Config::ip_header) with the client's true IP. To
+    /// extract this IP from the request, use the [`real_ip()`] or
+    /// [`client_ip()`] methods.
     ///
     /// [`real_ip()`]: #method.real_ip
     /// [`client_ip()`]: #method.client_ip
@@ -356,8 +357,9 @@ impl<'r> Request<'r> {
         self.connection.remote = Some(address);
     }
 
-    /// Returns the IP address in the "X-Real-IP" header of the request if such
-    /// a header exists and contains a valid IP address.
+    /// Returns the IP address of the configured
+    /// [`ip_header`](rocket::Config::ip_header) of the request if such a header
+    /// is configured, exists and contains a valid IP address.
     ///
     /// # Example
     ///
@@ -369,25 +371,40 @@ impl<'r> Request<'r> {
     /// # let req = c.get("/");
     /// assert_eq!(req.real_ip(), None);
     ///
+    /// // `ip_header` defaults to `X-Real-IP`.
     /// let req = req.header(Header::new("X-Real-IP", "127.0.0.1"));
     /// assert_eq!(req.real_ip(), Some(Ipv4Addr::LOCALHOST.into()));
     /// ```
     pub fn real_ip(&self) -> Option<IpAddr> {
+        let ip_header = self.rocket().config.ip_header.as_ref()?.as_str();
         self.headers()
-            .get_one("X-Real-IP")
+            .get_one(ip_header)
             .and_then(|ip| {
                 ip.parse()
-                    .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
+                    .map_err(|_| warn_!("'{}' header is malformed: {}", ip_header, ip))
                     .ok()
             })
     }
 
     /// Attempts to return the client's IP address by first inspecting the
-    /// "X-Real-IP" header and then using the remote connection's IP address.
+    /// [`ip_header`](rocket::Config::ip_header) and then using the remote
+    /// connection's IP address. Note that the built-in `IpAddr` request guard
+    /// can be used to retrieve the same information in a handler:
     ///
-    /// If the "X-Real-IP" header exists and contains a valid IP address, that
-    /// address is returned. Otherwise, if the address of the remote connection
-    /// is known, that address is returned. Otherwise, `None` is returned.
+    /// ```rust
+    /// # use rocket::get;
+    /// use std::net::IpAddr;
+    ///
+    /// #[get("/")]
+    /// fn get_ip(client_ip: IpAddr) { /* ... */ }
+    ///
+    /// #[get("/")]
+    /// fn try_get_ip(client_ip: Option<IpAddr>) { /* ... */ }
+    /// ````
+    ///
+    /// If the `ip_header` exists and contains a valid IP address, that address
+    /// is returned. Otherwise, if the address of the remote connection is
+    /// known, that address is returned. Otherwise, `None` is returned.
     ///
     /// # Example
     ///
@@ -405,7 +422,7 @@ impl<'r> Request<'r> {
     /// request.set_remote("127.0.0.1:8000".parse().unwrap());
     /// assert_eq!(request.client_ip(), Some("127.0.0.1".parse().unwrap()));
     ///
-    /// // now with an X-Real-IP header
+    /// // now with an X-Real-IP header, the default value for `ip_header`.
     /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
     /// assert_eq!(request.client_ip(), Some("8.8.8.8".parse().unwrap()));
     /// ```

@@ -114,6 +114,7 @@
 mod ident;
 mod config;
 mod shutdown;
+mod ip_header;
 
 #[cfg(feature = "tls")]
 mod tls;

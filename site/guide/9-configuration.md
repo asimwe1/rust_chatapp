@@ -24,6 +24,7 @@ values:
 | `workers`*      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
 | `max_blocking`* | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
 | `ident`         | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
+| `ip_header`     | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
 | `keep_alive`    | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
 | `log_level`     | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
 | `cli_colors`    | `bool`            | Whether to use colors and emoji when logging.   | `true`                  |
@@ -36,6 +37,8 @@ values:
 
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
 parameters are only read from the [default provider](#default-provider).</small>
+
+[client's real IP]: @api/rocket/request/struct.Request.html#method.real_ip
 
 ### Profiles
 
@@ -127,6 +130,7 @@ port = 9001
 [release]
 port = 9999
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+ip_header = false
 ```
 
 The following is a `Rocket.toml` file with all configuration options set for
@@ -142,6 +146,7 @@ workers = 16
 max_blocking = 512
 keep_alive = 5
 ident = "Rocket"
+ip_header = "X-Real-IP" # set to `false` to disable
 log_level = "normal"
 temp_dir = "/tmp"
 cli_colors = true

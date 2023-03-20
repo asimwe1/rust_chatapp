@@ -8,6 +8,7 @@ use yansi::Paint;
 
 use crate::config::{LogLevel, Shutdown, Ident};
 use crate::request::{self, Request, FromRequest};
+use crate::http::uncased::Uncased;
 use crate::data::Limits;
 
 #[cfg(feature = "tls")]
@@ -78,6 +79,18 @@ pub struct Config {
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
     pub ident: Ident,
+    /// The name of a header, whose value is typically set by an intermediary
+    /// server or proxy, which contains the real IP address of the connecting
+    /// client. Used internally and by [`Request::client_ip()`] and
+    /// [`Request::real_ip()`].
+    ///
+    /// To disable using any header for this purpose, set this value to `false`.
+    /// Deserialization semantics are identical to those of [`Ident`] except
+    /// that the value must syntactically be a valid HTTP header name.
+    ///
+    /// **(default: `"X-Real-IP"`)**
+    #[serde(deserialize_with = "crate::config::ip_header::deserialize")]
+    pub ip_header: Option<Uncased<'static>>,
     /// Streaming read size limits. **(default: [`Limits::default()`])**
     pub limits: Limits,
     /// Directory to store temporary files in. **(default:
@@ -174,6 +187,7 @@ impl Config {
             workers: num_cpus::get(),
             max_blocking: 512,
             ident: Ident::default(),
+            ip_header: Some(Uncased::from_borrowed("X-Real-IP")),
             limits: Limits::default(),
             temp_dir: std::env::temp_dir().into(),
             keep_alive: 5,
@@ -363,6 +377,12 @@ impl Config {
         launch_meta_!("workers: {}", bold(self.workers));
         launch_meta_!("max blocking threads: {}", bold(self.max_blocking));
         launch_meta_!("ident: {}", bold(&self.ident));
+
+        match self.ip_header {
+            Some(ref name) => launch_meta_!("IP header: {}", bold(name)),
+            None => launch_meta_!("IP header: {}", bold("disabled"))
+        }
+
         launch_meta_!("limits: {}", bold(&self.limits));
         launch_meta_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
         launch_meta_!("http/2: {}", bold(cfg!(feature = "http2")));

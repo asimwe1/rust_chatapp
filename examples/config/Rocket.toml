@@ -11,6 +11,7 @@ msgpack = "2 MiB"
 key = "a default app-key"
 extra = false
 ident = "Rocket"
+ip_header = "CF-Connecting-IP"
 
 [debug]
 address = "127.0.0.1"
