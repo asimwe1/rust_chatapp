@@ -530,7 +530,11 @@ impl Rocket<Build> {
                 config.secret_key = crate::config::SecretKey::generate()
                     .unwrap_or_else(crate::config::SecretKey::zero);
             }
-        };
+        } else if config.known_secret_key_used() {
+            warn!("The configured `secret_key` is exposed and insecure.");
+            warn_!("The configured key is publicly published and thus insecure.");
+            warn_!("Try generating a new key with `head -c64 /dev/urandom | base64`.");
+        }
 
         // Initialize the router; check for collisions.
         let mut router = Router::new();

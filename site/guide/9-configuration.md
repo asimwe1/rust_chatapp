@@ -126,11 +126,12 @@ limits = { json = "10MiB" }
 port = 9001
 
 ## set only when compiled in release mode, i.e, `cargo build --release`
-## don't use this secret_key! generate your own and keep it private!
 [release]
 port = 9999
-secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 ip_header = false
+# NOTE: Don't (!) use this key! Generate your own and keep it private!
+#       e.g. via `head -c64 /dev/urandom | base64`
+secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 ```
 
 The following is a `Rocket.toml` file with all configuration options set for
@@ -150,8 +151,9 @@ ip_header = "X-Real-IP" # set to `false` to disable
 log_level = "normal"
 temp_dir = "/tmp"
 cli_colors = true
-## NOTE: Don't (!) use this key! Generate your own!
-secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+# NOTE: Don't (!) use this key! Generate your own and keep it private!
+#       e.g. via `head -c64 /dev/urandom | base64`
+secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 
 [default.limits]
 form = "64 kB"

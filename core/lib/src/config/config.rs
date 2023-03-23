@@ -364,6 +364,18 @@ impl Config {
         #[cfg(not(feature = "mtls"))] { false }
     }
 
+    #[cfg(feature = "secrets")]
+    pub(crate) fn known_secret_key_used(&self) -> bool {
+        const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
+            "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+        ];
+
+        KNOWN_SECRET_KEYS.iter().any(|&key_str| {
+            let value = figment::value::Value::from(key_str);
+            self.secret_key == value.deserialize().expect("known key is valid")
+        })
+    }
+
     pub(crate) fn pretty_print(&self, figment: &Figment) {
         use crate::log::PaintExt;
 
