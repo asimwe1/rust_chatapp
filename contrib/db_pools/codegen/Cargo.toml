@@ -14,7 +14,7 @@ rust-version = "1.56"
 proc-macro = true
 
 [dependencies]
-devise = "0.3"
+devise = "0.4"
 quote = "1"
 
 [dev-dependencies]

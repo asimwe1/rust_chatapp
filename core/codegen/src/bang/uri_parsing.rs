@@ -163,7 +163,7 @@ impl Parse for Args {
         }
 
         // Parse arguments. Ensure both types of args were not used at once.
-        let args: Punctuated<Arg, Token![,]> = input.parse_terminated(Arg::parse)?;
+        let args = input.parse_terminated(Arg::parse, Token![,])?;
         let mut first_is_named = None;
         for arg in &args {
             if let Some(first_is_named) = first_is_named {
@@ -314,7 +314,7 @@ impl Parse for InternalUriParams {
 
         let content;
         syn::parenthesized!(content in input);
-        let fn_args: Punctuated<FnArg, Token![,]> = content.parse_terminated(FnArg::parse)?;
+        let fn_args = content.parse_terminated(FnArg::parse, Token![,])?;
         let fn_args = fn_args.into_iter().collect();
 
         input.parse::<Token![,]>()?;

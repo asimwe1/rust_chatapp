@@ -39,7 +39,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
         .validator(ValidatorBuild::new()
             .enum_validate(|_, data| {
                 if data.variants().count() == 0 {
-                    Err(data.brace_token.span.error(NO_EMPTY_ENUMS))
+                    Err(data.brace_token.span.join().error(NO_EMPTY_ENUMS))
                 } else {
                     Ok(())
                 }

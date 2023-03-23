@@ -73,7 +73,7 @@ fn context_type(input: Input<'_>) -> Result<(TokenStream, syn::Generics)> {
 
     let lifetime = syn::parse_quote!('r);
     if !gen.replace_lifetime(0, &lifetime) {
-        gen.insert_lifetime(syn::LifetimeDef::new(lifetime.clone()));
+        gen.insert_lifetime(syn::LifetimeParam::new(lifetime.clone()));
     }
 
     gen.add_where_predicates(generic_bounds(input)?);

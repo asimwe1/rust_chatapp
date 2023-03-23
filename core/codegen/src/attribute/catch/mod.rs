@@ -23,7 +23,7 @@ pub fn _catch(
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {
-        return Err(catch.function.sig.paren_token.span
+        return Err(catch.function.sig.paren_token.span.join()
             .error("invalid number of arguments: must be zero, one, or two")
             .help("catchers optionally take `&Request` or `Status, &Request`"));
     }

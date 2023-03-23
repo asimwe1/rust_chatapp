@@ -1,4 +1,4 @@
-error: expected identifier
+error: expected identifier, found keyword `_`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:63:18
    |
 63 |     uri!(ignored(_ = 10));
