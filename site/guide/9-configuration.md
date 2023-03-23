@@ -246,20 +246,20 @@ Security). To enable TLS support:
 
    ```toml,ignore
    [default.tls]
-   key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.
+   key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 or SEC1 key.
    certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
    ```
 
 The `tls` parameter is expected to be a dictionary that deserializes into a
 [`TlsConfig`] structure:
 
-| key                          | required  | type                                                  |
-|------------------------------|-----------|-------------------------------------------------------|
-| `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.     |
-| `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
-| `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
-| `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites]. |
-| `mutual`                     | no        | A map with [mutual TLS] configuration.                |
+| key                          | required  | type                                                          |
+|------------------------------|-----------|---------------------------------------------------------------|
+| `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 or SEC1 key.     |
+| `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.            |
+| `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                          |
+| `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites].         |
+| `mutual`                     | no        | A map with [mutual TLS] configuration.                        |
 
 [`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
 [prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order

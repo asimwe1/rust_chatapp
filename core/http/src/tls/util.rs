@@ -20,12 +20,13 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
     let private_keys_fn = loop {
         header.clear();
         if reader.read_line(&mut header)? == 0 {
-            return Err(err("failed to find key header; supported formats are: RSA, PKCS8"));
+            return Err(err("failed to find key header; supported formats are: RSA, PKCS8, SEC1"));
         }
 
         break match header.trim_end() {
             "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
             "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
+            "-----BEGIN EC PRIVATE KEY-----" => rustls_pemfile::ec_private_keys,
             _ => continue,
         };
     };

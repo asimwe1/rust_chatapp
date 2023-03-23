@@ -10,9 +10,10 @@ use indexmap::IndexSet;
 ///
 ///     Both `certs` and `key` can be configured as a path or as raw bytes.
 ///     `certs` must be a DER-encoded X.509 TLS certificate chain, while `key`
-///     must be a DER-encoded ASN.1 key in either PKCS#8 or PKCS#1 format.
-///     When a path is configured in a file, such as `Rocket.toml`, relative
-///     paths are interpreted as relative to the source file's directory.
+///     must be a DER-encoded ASN.1 key in either PKCS#8, PKCS#1, or SEC1
+///     format. When a path is configured in a file, such as `Rocket.toml`,
+///     relative paths are interpreted as relative to the source file's
+///     directory.
 ///
 ///   * `ciphers`
 ///
