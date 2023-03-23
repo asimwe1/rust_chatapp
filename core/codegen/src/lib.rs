@@ -1061,9 +1061,9 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_path(input))
 }
 
-/// Generates a [`Vec`] of [`Route`]s from a set of route paths.
+/// Generates a `Vec` of [`Route`]s from a set of route paths.
 ///
-/// The `routes!` macro expands a list of route paths into a [`Vec`] of their
+/// The `routes!` macro expands a list of route paths into a `Vec` of their
 /// corresponding [`Route`] structures. For example, given the following routes:
 ///
 /// ```rust
@@ -1117,9 +1117,9 @@ pub fn routes(input: TokenStream) -> TokenStream {
     emit!(bang::routes_macro(input))
 }
 
-/// Generates a [`Vec`] of [`Catcher`]s from a set of catcher paths.
+/// Generates a `Vec` of [`Catcher`]s from a set of catcher paths.
 ///
-/// The `catchers!` macro expands a list of catcher paths into a [`Vec`] of
+/// The `catchers!` macro expands a list of catcher paths into a `Vec` of
 /// their corresponding [`Catcher`] structures. For example, given the following
 /// catchers:
 ///

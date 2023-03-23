@@ -308,7 +308,7 @@ impl<'r> Request<'r> {
     /// Because it is common for proxies to forward connections for clients, the
     /// remote address may contain information about the proxy instead of the
     /// client. For this reason, proxies typically set a "X-Real-IP" header
-    /// [`ip_header`](rocket::Config::ip_header) with the client's true IP. To
+    /// [`ip_header`](crate::Config::ip_header) with the client's true IP. To
     /// extract this IP from the request, use the [`real_ip()`] or
     /// [`client_ip()`] methods.
     ///
@@ -358,7 +358,7 @@ impl<'r> Request<'r> {
     }
 
     /// Returns the IP address of the configured
-    /// [`ip_header`](rocket::Config::ip_header) of the request if such a header
+    /// [`ip_header`](crate::Config::ip_header) of the request if such a header
     /// is configured, exists and contains a valid IP address.
     ///
     /// # Example
@@ -387,7 +387,7 @@ impl<'r> Request<'r> {
     }
 
     /// Attempts to return the client's IP address by first inspecting the
-    /// [`ip_header`](rocket::Config::ip_header) and then using the remote
+    /// [`ip_header`](crate::Config::ip_header) and then using the remote
     /// connection's IP address. Note that the built-in `IpAddr` request guard
     /// can be used to retrieve the same information in a handler:
     ///
