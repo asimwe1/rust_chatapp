@@ -1,4 +1,4 @@
-# Version 0.5.0-rc.3 (Mar 22, 2023)
+# Version 0.5.0-rc.3 (Mar 23, 2023)
 
 ## Major Features and Improvements
 
@@ -17,6 +17,8 @@
     The method returns an opaque reference to a type that can be used to retrieve pooled connections
     outside of a request handling context.
 
+  * Raw binary form field data can be retrieved using the `&[u8]` form guard.
+
   * Data guards are now eligible [sentinels].
 
 ## General Improvements
@@ -29,6 +31,10 @@
   * Added [`Metadata::render()`] in [`rocket_dyn_templates`] for direct template rendering.
   * Rocket salvages more information from malformed requests for error catchers.
   * The `cookie` `secure` feature is now properly conditionally enabled.
+  * Data before encapsulation boundaries in TLS keys is allowed and ignored.
+  * Support for TLS keys in SEC1 format was added.
+  * Rocket now warns when a known secret key is configured.
+  * A panic that could occur on shutdown in `rocket_sync_db_pools` was fixed.
 
 ### Known Media Types
 
@@ -44,6 +50,7 @@
 
   * Implemented `Responder` for `Box<T: Responder + Sized>`.
   * Implemented `FromForm` for `Arc<T>`.
+  * Implemented `Fairing` for `Arc<dyn Fairing>`.
 
 ### Updated Dependencies
 
@@ -55,11 +62,12 @@
   * Updated `deadpool-redis` to `0.11`.
   * Updated `normpath` from to `1`.
   * Updated `cookie` to `0.17`.
+  * Replaced `atty` with `is-terminal`.
 
 ## Infrastructure
 
   * UI tests are now allowed to fail by the CI to avoid false negatives.
-  * Fixed many typos, errors, and broken links throughout documentation and examples.
+  * Fixed many typos, errors, and broken links throughout docs and examples.
   * The GitHub CI workflow was updated to use maintained actions.
 
 [`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
