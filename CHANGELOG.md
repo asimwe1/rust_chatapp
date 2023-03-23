@@ -1,3 +1,73 @@
+# Version 0.5.0-rc.3 (Mar 22, 2023)
+
+## Major Features and Improvements
+
+  * Added a [`max_blocking`] configuration parameter.
+
+    The parameter sets a limit on the number of threads used by blocking tasks.
+
+  * Added an [`ip_header`] "real IP" header configuration parameter.
+
+    The parameter allows modifying the header that Rocket attempts to use to retrieve the "real IP"
+    address of the client via `Request` methods like [`Request::client_ip()`]. Additionally, the
+    change allows disabling the use of any such header entirely.
+
+  * A [`pool()`] method is emitted by [`rocket_sync_db_pools`] for code-generated pools.
+
+    The method returns an opaque reference to a type that can be used to retrieve pooled connections
+    outside of a request handling context.
+
+  * Data guards are now eligible [sentinels].
+
+## General Improvements
+
+  * Final launch messages are now _always_ logged, irrespective of profile.
+  * Only functions that return `Rocket<Build>` are now `#[must_use]`, not all `Rocket<P>`.
+  * Fixed mismatched form field names in errors under certain conditions in [`FromForm`] derive.
+  * The [`FromForm`] derive now collects _all_ errors that occur.
+  * Data pools are now gracefully shutdown in [`rocket_sync_db_pools`].
+  * Added [`Metadata::render()`] in [`rocket_dyn_templates`] for direct template rendering.
+  * Rocket salvages more information from malformed requests for error catchers.
+  * The `cookie` `secure` feature is now properly conditionally enabled.
+
+### Known Media Types
+
+  - Added `MP3`: `audio/mpeg`.
+  - Added `CBZ`: `application/vnd.comicbook+zip`, extension `.cbz`.
+  - Added `CBR`: `application/vnd.comicbook-rar`, extension `.cbr`.
+  - Added `RAR`: `application/vnd.rar`, extension `.rar`.
+  - Added `EPUB`: `application/epub+zip`, extension `.epub`.
+  - Added `OPF`: `application/oebps-package+xml`, extension `.opf`.
+  - Added `XHTML`: `application/xhtml+xml`, extension `.xhtml`.
+
+### Trait Implementations
+
+  * Implemented `Responder` for `Box<T: Responder + Sized>`.
+  * Implemented `FromForm` for `Arc<T>`.
+
+### Updated Dependencies
+
+  * Updated `syn` to `2`.
+  * Updated `diesel` to `2.0`.
+  * Updated `sqlx` to `0.6`.
+  * Updated `notify` to `5.0`.
+  * Updated `criterion` to `0.4`.
+  * Updated `deadpool-redis` to `0.11`.
+  * Updated `normpath` from to `1`.
+  * Updated `cookie` to `0.17`.
+
+## Infrastructure
+
+  * UI tests are now allowed to fail by the CI to avoid false negatives.
+  * Fixed many typos, errors, and broken links throughout documentation and examples.
+  * The GitHub CI workflow was updated to use maintained actions.
+
+[`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
+[`pool()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
+[`Request::client_ip()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.client_ip
+[`max_blocking`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.max_blocking
+[`ip_header`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.ip_header
+
 # Version 0.5.0-rc.2 (May 09, 2022)
 
 ## Major Features and Improvements
