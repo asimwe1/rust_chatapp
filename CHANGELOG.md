@@ -2168,7 +2168,7 @@ the Rocket APIs. They are summarized through the following API changes:
   * Added `FromData` conversion trait and default implementation.
   * `FromData` is used to automatically derive the `data` parameter.
   * `Responder`s are now final: they cannot forward to other requests.
-  * `Responser`s may only forward to catchers.
+  * `Responder`s may only forward to catchers.
 
 ## Breaking
 
