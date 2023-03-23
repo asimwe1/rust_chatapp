@@ -1005,7 +1005,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// used. In the example above, the field `MyStruct::kind` is rendered with a
 /// name of `type`.
 ///
-/// The attribute can slso be applied to variants of C-like enums; it may only
+/// The attribute can also be applied to variants of C-like enums; it may only
 /// contain `value` and looks as follows:
 ///
 /// ```rust

@@ -46,7 +46,7 @@ use crate::config::SecretKey;
 ///   * **Metadata**
 ///
 ///     This provider is named `Rocket Config`. It does not specify a
-///     [`Source`](figment::Source) and uses default interpolatation.
+///     [`Source`](figment::Source) and uses default interpolation.
 ///
 ///   * **Data**
 ///

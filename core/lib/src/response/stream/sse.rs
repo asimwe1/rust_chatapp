@@ -279,7 +279,7 @@ impl Event {
     ///
     /// // The two below are equivalent.
     /// let event = Event::comment("bye").with_data("goodbye");
-    /// let event = Event::data("goodbyte").with_comment("bye");
+    /// let event = Event::data("goodbye").with_comment("bye");
     /// ```
     pub fn with_data<T: Into<Cow<'static, str>>>(mut self, data: T) -> Self {
         self.data = Some(data.into());
@@ -298,7 +298,7 @@ impl Event {
     ///
     /// // The two below are equivalent.
     /// let event = Event::comment("bye").with_data("goodbye");
-    /// let event = Event::data("goodbyte").with_comment("bye");
+    /// let event = Event::data("goodbye").with_comment("bye");
     /// ```
     pub fn with_comment<T: Into<Cow<'static, str>>>(mut self, data: T) -> Self {
         self.comment = Some(data.into());

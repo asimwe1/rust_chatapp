@@ -435,7 +435,7 @@ impl Rocket<Build> {
         let type_name = std::any::type_name::<T>();
         if !self.state.set(state) {
             error!("state for type '{}' is already being managed", type_name);
-            panic!("aborting due to duplicately managed state");
+            panic!("aborting due to duplicated managed state");
         }
 
         self
