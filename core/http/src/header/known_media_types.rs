@@ -9,7 +9,7 @@ macro_rules! known_media_types {
         JSON (is_json): "JSON", "application", "json",
         MsgPack (is_msgpack): "MsgPack", "application", "msgpack",
         Form (is_form): "forms", "application", "x-www-form-urlencoded",
-        JavaScript (is_javascript): "JavaScript", "application", "javascript",
+        JavaScript (is_javascript): "JavaScript", "text", "javascript",
         CSS (is_css): "CSS", "text", "css" ; "charset" => "utf-8",
         FormData (is_form_data): "multipart form data", "multipart", "form-data",
         XML (is_xml): "XML", "text", "xml" ; "charset" => "utf-8",
