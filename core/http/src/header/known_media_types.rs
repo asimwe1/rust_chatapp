@@ -65,6 +65,7 @@ macro_rules! known_extensions {
         "xhtml" => XHTML,
         "csv" => CSV,
         "js" => JavaScript,
+        "mjs" => JavaScript,
         "css" => CSS,
         "json" => JSON,
         "png" => PNG,
