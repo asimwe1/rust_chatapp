@@ -39,6 +39,22 @@ jobs:
       - name: Checkout Sources
         uses: actions/checkout@v2
 
+      - name: Free Disk Space
+        if: matrix.platform.name == 'Linux'
+        run: |
+            echo "Freeing up disk space on Linux CI"
+            df -h
+            sudo rm -rf /usr/share/dotnet/
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /usr/local/graalvm/
+            sudo rm -rf /usr/local/.ghcup/
+            sudo rm -rf /usr/local/share/powershell
+            sudo rm -rf /usr/local/share/chromium
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /usr/local/lib/node_modules
+            df -h
+
       - name: Install Native Dependencies (macOS)
         if: matrix.platform.name == 'macOS'
         run: |
