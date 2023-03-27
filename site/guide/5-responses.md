@@ -167,6 +167,7 @@ use rocket::http::{Header, ContentType};
 #[response(status = 500, content_type = "json")]
 struct MyResponder {
     inner: OtherResponder,
+    // Override the Content-Type declared above.
     header: ContentType,
     more: Header<'static>,
     #[response(ignore)]
@@ -184,14 +185,55 @@ For the example above, Rocket generates a `Responder` implementation that:
 Note that the _first_ field is used as the inner responder while all remaining
 fields (unless ignored with `#[response(ignore)]`) are added as headers to the
 response. The optional `#[response]` attribute can be used to customize the
-status and content-type of the response. Because `ContentType` and `Status` are
-themselves headers, you can also dynamically set the content-type and status by
-simply including fields of these types.
+status and content-type of the response. Because `ContentType` is itself a
+header, you can also dynamically set a content-type by simply including a field
+of type [`ContentType`]. To set an HTTP status dynamically, leverage the
+`(Status, R: Responder)` responder:
 
-For more on using the `Responder` derive, see the [`Responder` derive]
-documentation.
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::http::{Header, Status};
+# type OtherResponder = ();
+
+#[derive(Responder)]
+#[response(content_type = "json")]
+struct MyResponder {
+    inner: (Status, OtherResponder),
+    some_header: Header<'static>,
+}
+```
+
+You can also use derive `Responder` for `enum`s, allowing dynamic selection of a
+responder:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::http::{ContentType, Header, Status};
+use rocket::fs::NamedFile;
+
+#[derive(Responder)]
+enum Error {
+    #[response(status = 500, content_type = "json")]
+    A(String),
+    #[response(status = 404)]
+    B(NamedFile, ContentType),
+    C {
+        inner: (Status, Option<String>),
+        header: ContentType,
+    }
+}
+```
+
+For more on using the `Responder` derive, including details on how to use the
+derive to define generic responders, see the [`Responder` derive] documentation.
 
 [`Responder` derive]: @api/rocket/derive.Responder.html
+[`ContentType`]: @api/rocket/http/struct.ContentType.html
 
 ## Implementations
 
