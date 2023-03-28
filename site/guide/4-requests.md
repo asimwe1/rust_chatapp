@@ -486,6 +486,83 @@ authorization failure message is displayed. Finally, if a user isn't signed in,
 the `admin_panel_redirect` route is attempted. Since this route has no guards,
 it always succeeds. The user is redirected to a log in page.
 
+### Fallible Guards
+
+A failing or forwarding guard can be "caught" in handler, preventing it from
+failing or forwarding, via the `Option<T>` and `Result<T, E>` guards. When a
+guard `T` fails or forwards, `Option<T>` will be `None`. If a guard `T` fails
+with error `E`, `Result<T, E>` will be `Err(E)`.
+
+As an example, for the `User` guard above, instead of allowing the guard to
+forward in `admin_panel_user`, we might want to detect it and handle it
+dynamically:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type Template = ();
+# type AdminUser = rocket::http::Method;
+# type User = rocket::http::Method;
+# #[get("/login")]
+# fn login() -> Template { /* .. */ }
+
+use rocket::response::Redirect;
+
+#[get("/admin", rank = 2)]
+fn admin_panel_user(user: Option<User>) -> Result<&'static str, Redirect> {
+    let user = user.ok_or_else(|| Redirect::to(uri!(login)))?;
+    Ok("Sorry, you must be an administrator to access this page.")
+}
+```
+
+If the `User` guard forwards or fails, the `Option` will be `None`. If it
+succeeds, it will be `Some(User)`.
+
+For guards that may fail (and not just forward), the `Result<T, E>` guard allows
+retrieving the error type `E` on failure. As an example, when the
+[`mtls::Certificate`] type fails, it reports the reason in an [`mtls::Error`]
+type. The value can be retrieved in a handler by using a `Result<Certificate,
+Error>` guard:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::mtls;
+
+#[get("/login")]
+fn login(cert: Result<mtls::Certificate, mtls::Error>) {
+    match cert {
+        Ok(cert) => { /* guard succeeded! value in `cert` */ },
+        Err(e) => { /* guard failed. error in `e` */ },
+    }
+}
+```
+
+It's important to note that `Result<T, E>` forwards if `T` forwards. You can,
+however, chain both catching responders to determine if a guard `T` forwards or
+fails, and retrieve the error if it fails, with `Option<Result<T, E>>`:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::mtls;
+
+#[get("/login")]
+fn login(cert: Option<Result<mtls::Certificate, mtls::Error>>) {
+    match cert {
+        Some(Ok(cert)) => { /* guard succeeded! value in `cert` */ },
+        Some(Err(e)) => { /* guard failed. error in `e` */ },
+        None => { /* guard forwarded */ },
+    }
+}
+```
+
+[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
+[`mtls::Error`]: @api/rocket/mtls/enum.Error.html
+
 ## Cookies
 
 A reference to a [`CookieJar`] is an important, built-in request guard: it
@@ -532,8 +609,8 @@ rocket = { version = "=0.5.0-rc.3", features = ["secrets"] }
 
 The API for retrieving, adding, and removing private cookies is identical except
 that most methods are suffixed with `_private`. These methods are:
-[`get_private`], [`get_pending`], [`add_private`], and [`remove_private`]. An
-example of their usage is below:
+[`get_private`], [`add_private`], and [`remove_private`]. An example of their
+usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
