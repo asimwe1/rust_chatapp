@@ -14,8 +14,9 @@ use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
 use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
+use crate::data::IoHandler;
 
-use crate::http::{hyper, Method, Status, Header};
+use crate::http::{hyper, uncased, Method, Status, Header};
 use crate::http::private::{TcpListener, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
@@ -71,9 +72,10 @@ async fn hyper_service_fn(
     // sends the response metadata (and a body channel) prior.
     let (tx, rx) = oneshot::channel();
 
+    debug!("Received request: {:#?}", hyp_req);
     tokio::spawn(async move {
-        // Upgrade before do any other; we handle errors below
-        let hyp_upgraded = hyper::upgrade::on(&mut hyp_req);
+        // We move the request next, so get the upgrade future now.
+        let pending_upgrade = hyper::upgrade::on(&mut hyp_req);
 
         // Convert a Hyper request into a Rocket request.
         let (h_parts, mut h_body) = hyp_req.into_parts();
@@ -83,36 +85,9 @@ async fn hyper_service_fn(
                 let mut data = Data::from(&mut h_body);
                 let token = rocket.preprocess_request(&mut req, &mut data).await;
                 let mut response = rocket.dispatch(token, &req, data).await;
-
-                if response.status() == Status::SwitchingProtocols {
-                    let may_upgrade = response.take_upgrade();
-                    match may_upgrade {
-                        Some(upgrade) => {
-
-                            // send the finishing response; needed so that hyper can upgrade the request
-                            rocket.send_response(response, tx).await;
-
-                            match hyp_upgraded.await {
-                                Ok(hyp_upgraded) => {
-                                    // let the upgrade take the upgraded hyper request
-                                    let fu = upgrade.start(hyp_upgraded);
-                                    fu.await;
-                                }
-                                Err(e) => {
-                                    error_!("Failed to upgrade request: {e}");
-                                    // NOTE: we *should* send a response here but since we send one earlier AND upgraded the request,
-                                    //       this cannot be done easily at this point...
-                                    // let response = rocket.handle_error(Status::InternalServerError, &req).await;
-                                    // rocket.send_response(response, tx).await;
-                                }
-                            }
-                        }
-                        None => {
-                            error_!("Status is 101 switching protocols, but response dosn't hold a upgrade");
-                            let response = rocket.handle_error(Status::InternalServerError, &req).await;
-                            rocket.send_response(response, tx).await;
-                        }
-                    }
+                let upgrade = response.take_upgrade(req.headers().get("upgrade"));
+                if let Some((proto, handler)) = upgrade {
+                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx).await;
                 } else {
                     rocket.send_response(response, tx).await;
                 }
@@ -179,6 +154,7 @@ impl Rocket<Orbit> {
         let hyp_response = hyp_res.body(hyp_body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
+        debug!("sending response: {:#?}", hyp_response);
         tx.send(hyp_response).map_err(|_| {
             let msg = "client disconnect before response started";
             io::Error::new(io::ErrorKind::BrokenPipe, msg)
@@ -192,6 +168,34 @@ impl Rocket<Orbit> {
         }
 
         Ok(())
+    }
+
+    async fn handle_upgrade<'r>(
+        &self,
+        mut response: Response<'r>,
+        protocol: uncased::Uncased<'r>,
+        mut io_handler: Box<dyn IoHandler + 'r>,
+        pending_upgrade: hyper::upgrade::OnUpgrade,
+        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+    ) {
+        info_!("Upgrading connection to {}.", Paint::white(&protocol));
+        response.set_status(Status::SwitchingProtocols);
+        response.set_raw_header("Connection", "Upgrade");
+        response.set_raw_header("Upgrade", protocol.into_cow());
+        self.send_response(response, tx).await;
+
+        match pending_upgrade.await {
+            Ok(io_stream) => {
+                info_!("Upgrade successful.");
+                if let Err(e) = io_handler.io(io_stream.into()).await {
+                    error!("Upgraded I/O handler failed: {}", e);
+                }
+            },
+            Err(e) => {
+                warn!("Response indicated upgrade, but upgrade failed.");
+                warn_!("Upgrade error: {}", e);
+            }
+        }
     }
 
     /// Preprocess the request for Rocket things. Currently, this means:
