@@ -15,6 +15,7 @@ members = [
   "templating",
   "testing",
   "tls",
+  "upgrade",
 
   "pastebin",
   "todo",
