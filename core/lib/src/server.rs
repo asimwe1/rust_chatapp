@@ -173,22 +173,26 @@ impl Rocket<Orbit> {
     async fn handle_upgrade<'r>(
         &self,
         mut response: Response<'r>,
-        protocol: uncased::Uncased<'r>,
+        proto: uncased::Uncased<'r>,
         mut io_handler: Box<dyn IoHandler + 'r>,
         pending_upgrade: hyper::upgrade::OnUpgrade,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {
-        info_!("Upgrading connection to {}.", Paint::white(&protocol));
+        info_!("Upgrading connection to {}.", Paint::white(&proto).bold());
         response.set_status(Status::SwitchingProtocols);
         response.set_raw_header("Connection", "Upgrade");
-        response.set_raw_header("Upgrade", protocol.into_cow());
+        response.set_raw_header("Upgrade", proto.clone().into_cow());
         self.send_response(response, tx).await;
 
         match pending_upgrade.await {
             Ok(io_stream) => {
                 info_!("Upgrade successful.");
                 if let Err(e) = io_handler.io(io_stream.into()).await {
-                    error!("Upgraded I/O handler failed: {}", e);
+                    if e.kind() == io::ErrorKind::BrokenPipe {
+                        warn!("Upgraded {} I/O handler was closed.", proto);
+                    } else {
+                        error!("Upgraded {} I/O handler failed: {}", proto, e);
+                    }
                 }
             },
             Err(e) => {
