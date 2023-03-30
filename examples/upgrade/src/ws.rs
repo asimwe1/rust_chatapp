@@ -25,8 +25,12 @@ impl<'r> FromRequest<'r> for WebSocket {
         use rocket::http::uncased::eq;
 
         let headers = req.headers();
-        let is_upgrade = headers.get_one("Connection").map_or(false, |c| eq(c, "upgrade"));
-        let is_ws = headers.get("Upgrade").any(|p| eq(p, "websocket"));
+        let is_upgrade = headers.get("Connection")
+            .any(|h| h.split(',').any(|v| eq(v.trim(), "upgrade")));
+
+        let is_ws = headers.get("Upgrade")
+            .any(|h| h.split(',').any(|v| eq(v.trim(), "websocket")));
+
         let is_ws_13 = headers.get_one("Sec-WebSocket-Version").map_or(false, |v| v == "13");
         let key = headers.get_one("Sec-WebSocket-Key").map(|k| derive_accept_key(k.as_bytes()));
         match key {

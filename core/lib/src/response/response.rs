@@ -794,11 +794,29 @@ impl<'r> Response<'r> {
         &self.body
     }
 
+    /// Returns `Ok(Some(_))` if `self` contains a suitable handler for any of
+    /// the comma-separated protocols any of the strings in `I`. Returns
+    /// `Ok(None)` if `self` doesn't support any kind of upgrade. Returns
+    /// `Err(_)` if `protocols` is non-empty but no match was found in `self`.
     pub(crate) fn take_upgrade<I: Iterator<Item = &'r str>>(
         &mut self,
-        mut protocols: I
-    ) -> Option<(Uncased<'r>, Box<dyn IoHandler + 'r>)> {
-        protocols.find_map(|p| self.upgrade.remove_entry(p.as_uncased()))
+        protocols: I
+    ) -> Result<Option<(Uncased<'r>, Box<dyn IoHandler + 'r>)>, ()> {
+        if self.upgrade.is_empty() {
+            return Ok(None);
+        }
+
+        let mut protocols = protocols.peekable();
+        let have_protocols = protocols.peek().is_some();
+        let found = protocols
+            .flat_map(|v| v.split(',').map(str::trim))
+            .find_map(|p| self.upgrade.remove_entry(p.as_uncased()));
+
+        match found {
+            Some(handler) => Ok(Some(handler)),
+            None if have_protocols => Err(()),
+            None => Ok(None)
+        }
     }
 
     /// Returns the [`IoHandler`] for the protocol `proto`.

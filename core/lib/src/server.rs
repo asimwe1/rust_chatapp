@@ -86,9 +86,14 @@ async fn hyper_service_fn(
                 let token = rocket.preprocess_request(&mut req, &mut data).await;
                 let mut response = rocket.dispatch(token, &req, data).await;
                 let upgrade = response.take_upgrade(req.headers().get("upgrade"));
-                if let Some((proto, handler)) = upgrade {
+                if let Ok(Some((proto, handler))) = upgrade {
                     rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx).await;
                 } else {
+                    if upgrade.is_err() {
+                        warn_!("Request wants upgrade but no I/O handler matched.");
+                        info_!("Request is not being upgraded.");
+                    }
+
                     rocket.send_response(response, tx).await;
                 }
             },
