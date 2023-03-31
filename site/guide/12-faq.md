@@ -208,6 +208,7 @@ Here are some notable projects and websites in Rocket we're aware of:
   * [Plume] - Federated Blogging Engine
   * [Hagrid] - OpenPGP KeyServer ([keys.openpgp.org](https://keys.openpgp.org/))
   * [SourceGraph Syntax Highlighter] - Syntax Highlighting API
+  * [Revolt] - Open source user-first chat platform
 
 [Let us know] if you have a notable, public facing application written in Rocket
 you'd like to see here!
@@ -219,6 +220,7 @@ you'd like to see here!
 [Hagrid]: https://gitlab.com/hagrid-keyserver/hagrid/
 [SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/sourcegraph/tree/main/docker-images/syntax-highlighter
 [Let us know]: https://github.com/SergioBenitez/Rocket/discussions/categories/show-and-tell
+[Revolt]: https://github.com/revoltchat/backend
 
 </div>
 </details>
