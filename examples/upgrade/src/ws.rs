@@ -132,11 +132,12 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
 
 #[macro_export]
 macro_rules! Stream {
+    () => (Stream!['static]);
     ($l:lifetime) => (
         $crate::ws::MessageStream<$l, impl rocket::futures::Stream<
             Item = $crate::ws::Result<$crate::ws::Message>
         > + $l>
-    )
+    );
 }
 
 #[macro_export]

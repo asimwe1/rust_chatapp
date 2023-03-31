@@ -17,7 +17,7 @@ fn echo_manual<'r>(ws: ws::WebSocket) -> ws::Channel<'r> {
 }
 
 #[get("/echo")]
-fn echo_stream<'r>(ws: ws::WebSocket) -> ws::Stream!['r] {
+fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
     ws::stream! { ws =>
         for await message in ws {
             yield message?;
