@@ -62,7 +62,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///   * The certificates are active and not yet expired.
 ///   * The client's certificate chain was signed by the CA identified by the
 ///     configured `ca_certs` and with respect to SNI, if any. See [module level
-///     docs](self) for configuration details.
+///     docs](crate::mtls) for configuration details.
 ///
 /// If the client does not present certificates, the guard _forwards_.
 ///

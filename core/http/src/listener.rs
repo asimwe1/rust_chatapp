@@ -31,6 +31,12 @@ pub struct CertificateData(pub Vec<u8>);
 #[derive(Clone, Default)]
 pub struct Certificates(Arc<Storage<Vec<CertificateData>>>);
 
+impl From<Vec<CertificateData>> for Certificates {
+    fn from(value: Vec<CertificateData>) -> Self {
+        Certificates(Arc::new(value.into()))
+    }
+}
+
 impl Certificates {
     /// Set the the raw certificate chain data. Only the first call actually
     /// sets the data; the remaining do nothing.
