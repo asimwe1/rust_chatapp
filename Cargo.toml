@@ -8,5 +8,6 @@ members = [
   "contrib/sync_db_pools/codegen/",
   "contrib/sync_db_pools/lib/",
   "contrib/dyn_templates/",
+  "contrib/ws/",
   "site/tests",
 ]

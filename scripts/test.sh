@@ -98,6 +98,10 @@ function test_contrib() {
     handlebars
   )
 
+  WS_FEATURES=(
+    tungstenite
+  )
+
   for feature in "${DB_POOLS_FEATURES[@]}"; do
     echo ":: Building and testing db_pools [$feature]..."
     $CARGO test -p rocket_db_pools --no-default-features --features $feature $@
@@ -111,6 +115,11 @@ function test_contrib() {
   for feature in "${DYN_TEMPLATES_FEATURES[@]}"; do
     echo ":: Building and testing dyn_templates [$feature]..."
     $CARGO test -p rocket_dyn_templates --no-default-features --features $feature $@
+  done
+
+  for feature in "${WS_FEATURES[@]}"; do
+    echo ":: Building and testing ws [$feature]..."
+    $CARGO test -p rocket_ws --no-default-features --features $feature $@
   done
 }
 

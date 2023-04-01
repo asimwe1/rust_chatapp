@@ -7,4 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-tokio-tungstenite = "0.18"
+ws = { package = "rocket_ws", path = "../../contrib/ws" }

@@ -3,8 +3,6 @@
 use rocket::fs::{self, FileServer};
 use rocket::futures::{SinkExt, StreamExt};
 
-mod ws;
-
 #[get("/echo/manual")]
 fn echo_manual<'r>(ws: ws::WebSocket) -> ws::Channel<'r> {
     ws.channel(move |mut stream| Box::pin(async move {
@@ -18,7 +16,8 @@ fn echo_manual<'r>(ws: ws::WebSocket) -> ws::Channel<'r> {
 
 #[get("/echo")]
 fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-    ws::stream! { ws =>
+    let ws = ws.config(ws::Config { max_send_queue: Some(5), ..Default::default() });
+    ws::Stream! { ws =>
         for await message in ws {
             yield message?;
         }
