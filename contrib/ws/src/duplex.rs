@@ -16,8 +16,7 @@ use crate::result::{Result, Error};
 ///
 /// ```rust
 /// # use rocket::get;
-/// use rocket_ws as ws;
-///
+/// # use rocket_ws as ws;
 /// use rocket::futures::{SinkExt, StreamExt};
 ///
 /// #[get("/echo/manual")]
@@ -30,7 +29,7 @@ use crate::result::{Result, Error};
 ///         Ok(())
 ///     }))
 /// }
-/// ````
+/// ```
 ///
 /// [`StreamExt`]: rocket::futures::StreamExt
 /// [`SinkExt`]: rocket::futures::SinkExt

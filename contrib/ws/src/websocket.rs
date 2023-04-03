@@ -10,8 +10,25 @@ use crate::{Config, Message};
 use crate::stream::DuplexStream;
 use crate::result::{Result, Error};
 
-/// A request guard that identifies WebSocket requests. Converts into a
-/// [`Channel`] or [`MessageStream`].
+/// A request guard identifying WebSocket requests. Converts into a [`Channel`]
+/// or [`MessageStream`].
+///
+/// For example usage, see the [crate docs](crate#usage).
+///
+/// ## Details
+///
+/// This is the entrypoint to the library. Every WebSocket response _must_
+/// initiate via the `WebSocket` request guard. The guard identifies valid
+/// WebSocket connection requests and, if the request is valid, succeeds to be
+/// converted into a streaming WebSocket response via [`Stream!`],
+/// [`WebSocket::channel()`], or [`WebSocket::stream()`]. The connection can be
+/// configured via [`WebSocket::config()`]; see [`Config`] for details on
+/// configuring a connection.
+///
+/// ### Forwarding
+///
+/// If the incoming request is not a valid WebSocket request, the guard
+/// forwards. The guard never fails.
 pub struct WebSocket {
     config: Config,
     key: String,
@@ -22,17 +39,119 @@ impl WebSocket {
         WebSocket { config: Config::default(), key }
     }
 
+    /// Change the default connection configuration to `config`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::get;
+    /// # use rocket_ws as ws;
+    /// #
+    /// #[get("/echo")]
+    /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ///     let ws = ws.config(ws::Config {
+    ///         max_send_queue: Some(5),
+    ///         ..Default::default()
+    ///     });
+    ///
+    ///     ws::Stream! { ws =>
+    ///         for await message in ws {
+    ///             yield message?;
+    ///         }
+    ///     }
+    /// }
+    /// ```
     pub fn config(mut self, config: Config) -> Self {
         self.config = config;
         self
     }
 
+    /// Create a read/write channel to the client and call `handler` with it.
+    ///
+    /// This method takes a `FnMut`, `handler`, that consumes a read/write
+    /// WebSocket channel, [`DuplexStream`] to the client. See [`DuplexStream`]
+    /// for details on how to make use of the channel.
+    ///
+    /// The `handler` must return a `Box`ed and `Pin`ned future: calling
+    /// [`Box::pin()`] with a future does just this as is the preferred
+    /// mechanism to create a `Box<Pin<Future>>`. The future must return a
+    /// [`Result<()>`](crate::result::Result). The WebSocket connection is
+    /// closed successfully if the future returns `Ok` and with an error if
+    /// the future returns `Err`.
+    ///
+    /// # Lifetimes
+    ///
+    /// The `Channel` may borrow from the request. If it does, the lifetime
+    /// should be specified as something other than `'static`. Otherwise, the
+    /// `'static` lifetime should be used.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::get;
+    /// # use rocket_ws as ws;
+    /// use rocket::futures::{SinkExt, StreamExt};
+    ///
+    /// #[get("/hello/<name>")]
+    /// fn hello(ws: ws::WebSocket, name: &str) -> ws::Channel<'_> {
+    ///     ws.channel(move |mut stream| Box::pin(async move {
+    ///         let message = format!("Hello, {}!", name);
+    ///         let _ = stream.send(message.into()).await;
+    ///         Ok(())
+    ///     }))
+    /// }
+    ///
+    /// #[get("/echo")]
+    /// fn echo(ws: ws::WebSocket) -> ws::Channel<'static> {
+    ///     ws.channel(move |mut stream| Box::pin(async move {
+    ///         while let Some(message) = stream.next().await {
+    ///             let _ = stream.send(message?).await;
+    ///         }
+    ///
+    ///         Ok(())
+    ///     }))
+    /// }
+    /// ```
     pub fn channel<'r, F: Send + 'r>(self, handler: F) -> Channel<'r>
         where F: FnMut(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r
     {
         Channel { ws: self, handler: Box::new(handler), }
     }
 
+    /// Create a stream that consumes client [`Message`]s and emits its own.
+    ///
+    /// This method takes a `FnMut` `stream` that consumes a read-only stream
+    /// and returns a stream of [`Message`]s. While the returned stream can be
+    /// constructed in any manner, the [`Stream!`] macro is the preferred
+    /// method. In any case, the stream must be `Send`.
+    ///
+    /// The returned stream must emit items of type `Result<Message>`. Items
+    /// that are `Ok(Message)` are sent to the client while items of type
+    /// `Err(Error)` result in the connection being closed and the remainder of
+    /// the stream discarded.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::get;
+    /// # use rocket_ws as ws;
+    ///
+    /// // Use `Stream!`, which internally calls `WebSocket::stream()`.
+    /// #[get("/echo?stream")]
+    /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ///     ws::Stream! { ws =>
+    ///         for await message in ws {
+    ///             yield message?;
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// // Use a raw stream.
+    /// #[get("/echo?compose")]
+    /// fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ///     ws.stream(|io| io)
+    /// }
+    /// ```
     pub fn stream<'r, F, S>(self, stream: F) -> MessageStream<'r, S>
         where F: FnMut(SplitStream<DuplexStream>) -> S + Send + 'r,
               S: futures::Stream<Item = Result<Message>> + Send + 'r
@@ -42,6 +161,8 @@ impl WebSocket {
 }
 
 /// A streaming channel, returned by [`WebSocket::channel()`].
+///
+/// `Channel` has no methods or functionality beyond its trait implementations.
 pub struct Channel<'r> {
     ws: WebSocket,
     handler: Box<dyn FnMut(DuplexStream) -> BoxFuture<'r, Result<()>> + Send + 'r>,
@@ -50,9 +171,9 @@ pub struct Channel<'r> {
 /// A [`Stream`](futures::Stream) of [`Message`]s, returned by
 /// [`WebSocket::stream()`], used via [`Stream!`].
 ///
-/// This type is not typically used directly. Instead, it is used via the
+/// This type should not be used directly. Instead, it is used via the
 /// [`Stream!`] macro, which expands to both the type itself and an expression
-/// which evaluates to this type.
+/// which evaluates to this type. See [`Stream!`] for details.
 // TODO: Get rid of this or `Channel` via a single `enum`.
 pub struct MessageStream<'r, S> {
     ws: WebSocket,
