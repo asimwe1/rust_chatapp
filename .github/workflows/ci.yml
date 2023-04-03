@@ -34,12 +34,14 @@ jobs:
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
             test: { name: UI, flag: "--ui" }
             fallible: true
+          - platform: { name: Windows }
+            working-directory: "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
 
     steps:
       - name: Checkout Sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Free Disk Space
+      - name: Free Disk Space (Linux)
         if: matrix.platform.name == 'Linux'
         run: |
             echo "Freeing up disk space on Linux CI"
@@ -100,7 +102,16 @@ jobs:
         with:
           key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
+      # Don't run out of disk space on Windows. C: has much much space than D:.
+      - name: Switch Disk (Windows)
+        if: matrix.platform.name == 'Windows'
+        run: |
+          Get-PSDrive
+          cp D:\a C:\ -Recurse
+          Get-PSDrive
+
       - name: Run Tests
         continue-on-error: ${{ matrix.fallible }}
+        working-directory: ${{ matrix.working-directory || github.workspace }}
         run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash
