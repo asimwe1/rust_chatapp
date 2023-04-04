@@ -1,6 +1,7 @@
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use std::pin::Pin;
 
 use yansi::Paint;
 use tokio::sync::oneshot;
@@ -179,7 +180,7 @@ impl Rocket<Orbit> {
         &self,
         mut response: Response<'r>,
         proto: uncased::Uncased<'r>,
-        mut io_handler: Box<dyn IoHandler + 'r>,
+        io_handler: Pin<Box<dyn IoHandler + 'r>>,
         pending_upgrade: hyper::upgrade::OnUpgrade,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {

@@ -1,4 +1,5 @@
 use std::io;
+use std::pin::Pin;
 
 use rocket::data::{IoHandler, IoStream};
 use rocket::futures::{self, StreamExt, SinkExt, future::BoxFuture, stream::SplitStream};
@@ -68,7 +69,7 @@ impl WebSocket {
 
     /// Create a read/write channel to the client and call `handler` with it.
     ///
-    /// This method takes a `FnMut`, `handler`, that consumes a read/write
+    /// This method takes a `FnOnce`, `handler`, that consumes a read/write
     /// WebSocket channel, [`DuplexStream`] to the client. See [`DuplexStream`]
     /// for details on how to make use of the channel.
     ///
@@ -113,14 +114,14 @@ impl WebSocket {
     /// }
     /// ```
     pub fn channel<'r, F: Send + 'r>(self, handler: F) -> Channel<'r>
-        where F: FnMut(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r
+        where F: FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r
     {
         Channel { ws: self, handler: Box::new(handler), }
     }
 
     /// Create a stream that consumes client [`Message`]s and emits its own.
     ///
-    /// This method takes a `FnMut` `stream` that consumes a read-only stream
+    /// This method takes a `FnOnce` `stream` that consumes a read-only stream
     /// and returns a stream of [`Message`]s. While the returned stream can be
     /// constructed in any manner, the [`Stream!`] macro is the preferred
     /// method. In any case, the stream must be `Send`.
@@ -153,7 +154,7 @@ impl WebSocket {
     /// }
     /// ```
     pub fn stream<'r, F, S>(self, stream: F) -> MessageStream<'r, S>
-        where F: FnMut(SplitStream<DuplexStream>) -> S + Send + 'r,
+        where F: FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r,
               S: futures::Stream<Item = Result<Message>> + Send + 'r
     {
         MessageStream { ws: self, handler: Box::new(stream), }
@@ -165,7 +166,7 @@ impl WebSocket {
 /// `Channel` has no methods or functionality beyond its trait implementations.
 pub struct Channel<'r> {
     ws: WebSocket,
-    handler: Box<dyn FnMut(DuplexStream) -> BoxFuture<'r, Result<()>> + Send + 'r>,
+    handler: Box<dyn FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + Send + 'r>,
 }
 
 /// A [`Stream`](futures::Stream) of [`Message`]s, returned by
@@ -177,7 +178,7 @@ pub struct Channel<'r> {
 // TODO: Get rid of this or `Channel` via a single `enum`.
 pub struct MessageStream<'r, S> {
     ws: WebSocket,
-    handler: Box<dyn FnMut(SplitStream<DuplexStream>) -> S + Send + 'r>
+    handler: Box<dyn FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r>
 }
 
 #[rocket::async_trait]
@@ -228,8 +229,9 @@ impl<'r, 'o: 'r, S> Responder<'r, 'o> for MessageStream<'o, S>
 
 #[rocket::async_trait]
 impl IoHandler for Channel<'_> {
-    async fn io(&mut self, io: IoStream) -> io::Result<()> {
-        let result = (self.handler)(DuplexStream::new(io, self.ws.config).await).await;
+    async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+        let channel = Pin::into_inner(self);
+        let result = (channel.handler)(DuplexStream::new(io, channel.ws.config).await).await;
         handle_result(result).map(|_| ())
     }
 }
@@ -238,9 +240,10 @@ impl IoHandler for Channel<'_> {
 impl<'r, S> IoHandler for MessageStream<'r, S>
     where S: futures::Stream<Item = Result<Message>> + Send + 'r
 {
-    async fn io(&mut self, io: IoStream) -> io::Result<()> {
-        let (mut sink, stream) = DuplexStream::new(io, self.ws.config).await.split();
-        let mut stream = std::pin::pin!((self.handler)(stream));
+    async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+        let (mut sink, source) = DuplexStream::new(io, self.ws.config).await.split();
+        let handler = Pin::into_inner(self).handler;
+        let mut stream = std::pin::pin!((handler)(source));
         while let Some(msg) = stream.next().await {
             let result = match msg {
                 Ok(msg) => sink.send(msg).await,

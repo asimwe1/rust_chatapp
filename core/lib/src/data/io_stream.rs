@@ -42,6 +42,8 @@ enum IoStreamKind {
 /// to the client.
 ///
 /// ```rust
+/// use std::pin::Pin;
+///
 /// use rocket::tokio::io;
 /// use rocket::data::{IoHandler, IoStream};
 ///
@@ -49,7 +51,7 @@ enum IoStreamKind {
 ///
 /// #[rocket::async_trait]
 /// impl IoHandler for EchoHandler {
-///     async fn io(&mut self, io: IoStream) -> io::Result<()> {
+///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
 ///         let (mut reader, mut writer) = io::split(io);
 ///         io::copy(&mut reader, &mut writer).await?;
 ///         Ok(())
@@ -66,7 +68,7 @@ enum IoStreamKind {
 #[crate::async_trait]
 pub trait IoHandler: Send {
     /// Performs the raw I/O.
-    async fn io(&mut self, io: IoStream) -> io::Result<()>;
+    async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()>;
 }
 
 #[doc(hidden)]

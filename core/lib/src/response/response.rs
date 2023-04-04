@@ -1,6 +1,7 @@
 use std::{fmt, str};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::pin::Pin;
 
 use tokio::io::{AsyncRead, AsyncSeek};
 
@@ -276,6 +277,8 @@ impl<'r> Builder<'r> {
     /// # Example
     ///
     /// ```rust
+    /// use std::pin::Pin;
+    ///
     /// use rocket::Response;
     /// use rocket::data::{IoHandler, IoStream};
     /// use rocket::tokio::io;
@@ -284,7 +287,7 @@ impl<'r> Builder<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(&mut self, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -485,7 +488,7 @@ pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
     body: Body<'r>,
-    upgrade: HashMap<Uncased<'r>, Box<dyn IoHandler + 'r>>,
+    upgrade: HashMap<Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>>,
 }
 
 impl<'r> Response<'r> {
@@ -801,7 +804,7 @@ impl<'r> Response<'r> {
     pub(crate) fn take_upgrade<I: Iterator<Item = &'r str>>(
         &mut self,
         protocols: I
-    ) -> Result<Option<(Uncased<'r>, Box<dyn IoHandler + 'r>)>, ()> {
+    ) -> Result<Option<(Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>)>, ()> {
         if self.upgrade.is_empty() {
             return Ok(None);
         }
@@ -826,6 +829,8 @@ impl<'r> Response<'r> {
     /// [`upgrade()`](Builder::upgrade()). Otherwise returns `None`.
     ///
     /// ```rust
+    /// use std::pin::Pin;
+    ///
     /// use rocket::Response;
     /// use rocket::data::{IoHandler, IoStream};
     /// use rocket::tokio::io;
@@ -834,7 +839,7 @@ impl<'r> Response<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(&mut self, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -849,8 +854,8 @@ impl<'r> Response<'r> {
     /// assert!(response.upgrade("raw-echo").is_some());
     /// # })
     /// ```
-    pub fn upgrade(&mut self, proto: &str) -> Option<&mut (dyn IoHandler + 'r)> {
-        self.upgrade.get_mut(proto.as_uncased()).map(|h| &mut **h)
+    pub fn upgrade(&mut self, proto: &str) -> Option<Pin<&mut (dyn IoHandler + 'r)>> {
+        self.upgrade.get_mut(proto.as_uncased()).map(|h| h.as_mut())
     }
 
     /// Returns a mutable borrow of the body of `self`, if there is one. A
@@ -957,6 +962,8 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// use std::pin::Pin;
+    ///
     /// use rocket::Response;
     /// use rocket::data::{IoHandler, IoStream};
     /// use rocket::tokio::io;
@@ -965,7 +972,7 @@ impl<'r> Response<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(&mut self, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -983,7 +990,7 @@ impl<'r> Response<'r> {
     pub fn add_upgrade<N, H>(&mut self, protocol: N, handler: H)
         where N: Into<Uncased<'r>>, H: IoHandler + 'r
     {
-        self.upgrade.insert(protocol.into(), Box::new(handler));
+        self.upgrade.insert(protocol.into(), Box::pin(handler));
     }
 
     /// Sets the body's maximum chunk size to `size` bytes.
