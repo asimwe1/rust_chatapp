@@ -1,6 +1,5 @@
-use std::sync::Mutex;
-
 use futures::future::{Future, BoxFuture, FutureExt};
+use parking_lot::Mutex;
 
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Kind, Info, Result};
@@ -47,7 +46,7 @@ impl<F: ?Sized> Once<F> {
 
     #[track_caller]
     fn take(&self) -> Box<F> {
-        self.0.lock().expect("Once::lock()").take().expect("Once::take() called once")
+        self.0.lock().take().expect("Once::take() called once")
     }
 }
 
