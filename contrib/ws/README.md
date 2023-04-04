@@ -21,15 +21,15 @@ This crate provides WebSocket support for Rocket via integration with Rocket's
 
    2. Use it!
 
-     ```rust
-     #[get("/echo")]
-     fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-         ws::stream! { ws =>
-             for await message in ws {
-                 yield message?;
-             }
-         }
-     }
-     ```
+      ```rust
+      #[get("/echo")]
+      fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+          ws::stream! { ws =>
+              for await message in ws {
+                  yield message?;
+              }
+          }
+      }
+      ```
 
 See the [crate docs] for full details.
