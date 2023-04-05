@@ -279,6 +279,8 @@ impl<'a> CookieJar<'a> {
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -298,7 +300,7 @@ impl<'a> CookieJar<'a> {
     /// }
     /// ```
     pub fn add(&self, mut cookie: Cookie<'static>) {
-        Self::set_defaults(&mut cookie);
+        Self::set_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, false));
     }
 
@@ -316,8 +318,9 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    /// These defaults ensure maximum usability and security. For additional
-    /// security, you may wish to set the `secure` flag.
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set. These
+    /// defaults ensure maximum usability and security. For additional security,
+    /// you may wish to set the `secure` flag.
     ///
     /// # Example
     ///
@@ -333,7 +336,7 @@ impl<'a> CookieJar<'a> {
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn add_private(&self, mut cookie: Cookie<'static>) {
-        Self::set_private_defaults(&mut cookie);
+        Self::set_private_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, true));
     }
 
@@ -473,13 +476,18 @@ impl<'a> CookieJar<'a> {
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///
-    fn set_defaults(cookie: &mut Cookie<'static>) {
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
+    fn set_defaults(config: &Config, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
 
         if cookie.same_site().is_none() {
             cookie.set_same_site(SameSite::Strict);
+        }
+
+        if cookie.secure().is_none() && config.tls_enabled() {
+            cookie.set_secure(true);
         }
     }
 
@@ -492,9 +500,10 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    fn set_private_defaults(cookie: &mut Cookie<'static>) {
+    fn set_private_defaults(config: &Config, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
@@ -509,6 +518,10 @@ impl<'a> CookieJar<'a> {
 
         if cookie.expires().is_none() {
             cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
+        }
+
+        if cookie.secure().is_none() && config.tls_enabled() {
+            cookie.set_secure(true);
         }
     }
 }
