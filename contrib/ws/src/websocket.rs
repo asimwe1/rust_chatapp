@@ -21,10 +21,11 @@ use crate::result::{Result, Error};
 /// This is the entrypoint to the library. Every WebSocket response _must_
 /// initiate via the `WebSocket` request guard. The guard identifies valid
 /// WebSocket connection requests and, if the request is valid, succeeds to be
-/// converted into a streaming WebSocket response via [`Stream!`],
-/// [`WebSocket::channel()`], or [`WebSocket::stream()`]. The connection can be
-/// configured via [`WebSocket::config()`]; see [`Config`] for details on
-/// configuring a connection.
+/// converted into a streaming WebSocket response via
+/// [`Stream!`](crate::Stream!), [`WebSocket::channel()`], or
+/// [`WebSocket::stream()`]. The connection can be configured via
+/// [`WebSocket::config()`]; see [`Config`] for details on configuring a
+/// connection.
 ///
 /// ### Forwarding
 ///
@@ -123,8 +124,8 @@ impl WebSocket {
     ///
     /// This method takes a `FnOnce` `stream` that consumes a read-only stream
     /// and returns a stream of [`Message`]s. While the returned stream can be
-    /// constructed in any manner, the [`Stream!`] macro is the preferred
-    /// method. In any case, the stream must be `Send`.
+    /// constructed in any manner, the [`Stream!`](crate::Stream!) macro is the
+    /// preferred method. In any case, the stream must be `Send`.
     ///
     /// The returned stream must emit items of type `Result<Message>`. Items
     /// that are `Ok(Message)` are sent to the client while items of type
@@ -175,6 +176,8 @@ pub struct Channel<'r> {
 /// This type should not be used directly. Instead, it is used via the
 /// [`Stream!`] macro, which expands to both the type itself and an expression
 /// which evaluates to this type. See [`Stream!`] for details.
+///
+/// [`Stream!`]: crate::Stream!
 // TODO: Get rid of this or `Channel` via a single `enum`.
 pub struct MessageStream<'r, S> {
     ws: WebSocket,
