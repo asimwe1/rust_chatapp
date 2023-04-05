@@ -112,7 +112,7 @@ macro_rules! media_types {
         docify!([
             Returns @code{true} if the @[top-level] and sublevel types of
             @code{self} are the same as those of @{"`MediaType::"}! $name
-            @{"`"}!.
+            @{"`"}!, i.e @{"`"} @{$t}! @[/]! @{$s}! $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
         ];
             #[inline(always)]
             pub fn $check(&self) -> bool {
