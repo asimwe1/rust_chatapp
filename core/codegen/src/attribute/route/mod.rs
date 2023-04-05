@@ -324,6 +324,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
     // Gather info about the function.
     let (vis, handler_fn) = (&route.handler.vis, &route.handler);
+    let deprecated = handler_fn.attrs.iter().find(|a| a.path().is_ident("deprecated"));
     let handler_fn_name = &handler_fn.sig.ident;
     let internal_uri_macro = internal_uri_macro_decl(&route);
     let responder_outcome = responder_outcome_expr(&route);
@@ -337,13 +338,13 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #handler_fn
 
         #[doc(hidden)]
-        #[allow(non_camel_case_types)]
+        #[allow(nonstandard_style)]
         /// Rocket code generated proxy structure.
-        #vis struct #handler_fn_name {  }
+        #deprecated #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementations.
+        #[allow(nonstandard_style, deprecated)]
         impl #handler_fn_name {
-            #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
                 fn monomorphized_function<'__r>(
                     #__req: &'__r #Request<'_>,
