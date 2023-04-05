@@ -43,7 +43,7 @@ use rocket::response::status;
 
 #[post("/<id>")]
 fn new(id: usize) -> status::Accepted<String> {
-    status::Accepted(Some(format!("id: '{}'", id)))
+    status::Accepted(format!("id: '{}'", id))
 }
 ```
 
