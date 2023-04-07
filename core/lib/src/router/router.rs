@@ -185,6 +185,7 @@ mod test {
         assert!(rankless_route_collisions(&["/<_..>", "/<_>"]));
         assert!(rankless_route_collisions(&["/<_>/b", "/a/b"]));
         assert!(rankless_route_collisions(&["/", "/<foo..>"]));
+        assert!(rankless_route_collisions(&["/<_>", "/"]));
     }
 
     #[test]
@@ -232,13 +233,13 @@ mod test {
         assert!(!rankless_route_collisions(&["/a/b", "/a/b/c"]));
         assert!(!rankless_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
         assert!(!rankless_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
-        assert!(!rankless_route_collisions(&["/<_>", "/"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/a"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/<_>"]));
     }
 
     #[test]
     fn test_no_collision_when_ranked() {
+        assert!(!default_rank_route_collisions(&["/<_>", "/"]));
         assert!(!default_rank_route_collisions(&["/<a>", "/hello"]));
         assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
         assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
@@ -298,6 +299,7 @@ mod test {
         assert!(route(&router, Get, "/hello").is_some());
 
         let router = router_with_routes(&["/<a>"]);
+        assert!(route(&router, Get, "/").is_some());
         assert!(route(&router, Get, "/hello").is_some());
         assert!(route(&router, Get, "/hi").is_some());
         assert!(route(&router, Get, "/bobbbbbbbbbby").is_some());
@@ -307,6 +309,7 @@ mod test {
         assert!(route(&router, Get, "/hello/hi").is_some());
         assert!(route(&router, Get, "/i/a").is_some());
         assert!(route(&router, Get, "/jdlk/asdij").is_some());
+        assert!(route(&router, Get, "/a/").is_some());
 
         let mut router = Router::new();
         router.add_route(Route::new(Put, "/hello", dummy_handler));
@@ -347,7 +350,6 @@ mod test {
         assert!(route(&router, Put, "/hello").is_none());
         assert!(route(&router, Post, "/hello").is_none());
         assert!(route(&router, Options, "/hello").is_none());
-        assert!(route(&router, Get, "/").is_none());
         assert!(route(&router, Get, "/hello/").is_none());
         assert!(route(&router, Get, "/hello/there/").is_none());
         assert!(route(&router, Get, "/hello/there/").is_none());
@@ -355,7 +357,6 @@ mod test {
         let router = router_with_routes(&["/<a>/<b>"]);
         assert!(route(&router, Get, "/a/b/c").is_none());
         assert!(route(&router, Get, "/a").is_none());
-        assert!(route(&router, Get, "/a/").is_none());
         assert!(route(&router, Get, "/a/b/c/d").is_none());
         assert!(route(&router, Get, "/a/b/").is_none());
         assert!(route(&router, Put, "/hello/hi").is_none());

@@ -74,10 +74,6 @@ fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    // FIXME: Check docs corresponding to normalization/matching/colliding.
-    // FUZZ: If rand_req1.matches(foo) && rand_req2.matches(bar) =>
-    // rand_req1.collides_with(rand_req2)
-
     rocket::build()
         .mount("/", routes![hello])
         .mount("/hello", routes![world, mir])

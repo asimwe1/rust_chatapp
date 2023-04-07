@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::path::PathBuf;
 
+use crate::error::Empty;
 use crate::http::uri::{Segments, error::PathError, fmt::Path};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
@@ -184,20 +185,27 @@ pub trait FromParam<'a>: Sized {
 }
 
 impl<'a> FromParam<'a> for &'a str {
-    type Error = std::convert::Infallible;
+    type Error = Empty;
 
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<&'a str, Self::Error> {
+        if param.is_empty() {
+            return Err(Empty);
+        }
+
         Ok(param)
     }
 }
 
 impl<'a> FromParam<'a> for String {
-    type Error = std::convert::Infallible;
+    type Error = Empty;
 
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
-        // TODO: Tell the user they're being inefficient?
+        if param.is_empty() {
+            return Err(Empty);
+        }
+
         Ok(param.to_string())
     }
 }

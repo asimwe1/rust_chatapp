@@ -19,7 +19,9 @@ impl Collide for Route {
     ///   * If route doesn't specify a format, it gets requests for any format.
     ///
     /// Because query parsing is lenient, and dynamic query parameters can be
-    /// missing, queries do not impact whether two routes collide.
+    /// missing, the particularities of a query string do not impact whether two
+    /// routes collide. The query effects the route's color, however, which
+    /// effects its rank.
     fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
@@ -64,9 +66,7 @@ impl Collide for RouteUri<'_> {
 
 impl Collide for Segment {
     fn collides_with(&self, other: &Self) -> bool {
-        self.dynamic && !other.value.is_empty()
-            || other.dynamic && !self.value.is_empty()
-            || self.value == other.value
+        self.dynamic || other.dynamic || self.value == other.value
     }
 }
 
@@ -136,7 +136,6 @@ mod tests {
 
     #[test]
     fn non_collisions() {
-        assert_no_collision!("/<a>", "/");
         assert_no_collision!("/a", "/b");
         assert_no_collision!("/a/b", "/a");
         assert_no_collision!("/a/b", "/a/c");
@@ -152,7 +151,6 @@ mod tests {
 
         assert_no_collision!("/hello", "/hello/");
         assert_no_collision!("/hello/there", "/hello/there/");
-        assert_no_collision!("/hello/<a>", "/hello/");
 
         assert_no_collision!("/a?<b>", "/b");
         assert_no_collision!("/a/b", "/a?<b>");
@@ -194,6 +192,8 @@ mod tests {
         assert_no_collision!("/a", "/aaa");
         assert_no_collision!("/", "/a");
 
+        assert_no_collision!(ranked "/<a>", "/");
+        assert_no_collision!(ranked "/hello/<a>", "/hello/");
         assert_no_collision!(ranked "/", "/?a");
         assert_no_collision!(ranked "/", "/?<a>");
         assert_no_collision!(ranked "/a/<b>", "/a/<b>?d");
@@ -201,9 +201,11 @@ mod tests {
 
     #[test]
     fn collisions() {
+        assert_collision!("/<a>", "/");
         assert_collision!("/a", "/a");
         assert_collision!("/hello", "/hello");
         assert_collision!("/hello/there/how/ar", "/hello/there/how/ar");
+        assert_collision!("/hello/<a>", "/hello/");
 
         assert_collision!("/<a>", "/<b>");
         assert_collision!("/<a>", "/b");

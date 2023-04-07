@@ -32,9 +32,6 @@ impl Catcher {
     ///  * It is a default catcher _or_ has a code of `status`.
     ///  * Its base is a prefix of the normalized/decoded `req.path()`.
     pub(crate) fn matches(&self, status: Status, req: &Request<'_>) -> bool {
-        dbg!(self.base.path().segments());
-        dbg!(req.uri().path().segments());
-
         self.code.map_or(true, |code| code == status.code)
             && self.base.path().segments().prefix_of(req.uri().path().segments())
     }
@@ -68,10 +65,6 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     for (route_seg, req_seg) in route_segments.iter().zip(req_segments.clone()) {
         if route_seg.dynamic_trail {
             return true;
-        }
-
-        if route_seg.dynamic && req_seg.is_empty() {
-            return false;
         }
 
         if !route_seg.dynamic && route_seg.value != req_seg {
@@ -161,6 +154,8 @@ mod tests {
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?c=foo&<c..>"));
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?d=z&<c..>"));
 
+        assert!(req_matches_route("/", "/<foo>"));
+        assert!(req_matches_route("/a", "/<foo>"));
         assert!(req_matches_route("/a", "/a"));
         assert!(req_matches_route("/a/", "/a/"));
 

@@ -127,8 +127,6 @@ impl<'a> RouteUri<'a> {
             .into_normalized()
             .into_owned();
 
-        dbg!(&base, &origin, &compiled_uri, &uri);
-
         let source = uri.to_string().into();
         let metadata = Metadata::from(&base, &uri);
 

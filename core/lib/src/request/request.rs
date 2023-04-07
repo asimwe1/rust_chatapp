@@ -802,6 +802,8 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
+    /// use rocket::error::Empty;
+    ///
     /// assert_eq!(get("/a/b/c").param(0), Some(Ok("a")));
     /// assert_eq!(get("/a/b/c").param(1), Some(Ok("b")));
     /// assert_eq!(get("/a/b/c").param(2), Some(Ok("c")));
@@ -811,7 +813,7 @@ impl<'r> Request<'r> {
     /// assert!(get("/1/b/3").param::<usize>(1).unwrap().is_err());
     /// assert_eq!(get("/1/b/3").param(2), Some(Ok(3)));
     ///
-    /// assert_eq!(get("/").param::<&str>(0), None);
+    /// assert_eq!(get("/").param::<&str>(0), Some(Err(Empty)));
     /// ```
     #[inline]
     pub fn param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
@@ -940,7 +942,7 @@ impl<'r> Request<'r> {
     /// codegen.
     #[inline]
     pub fn routed_segment(&self, n: usize) -> Option<&str> {
-        self.routed_segments(0..).get(n).filter(|p| !p.is_empty())
+        self.routed_segments(0..).get(n)
     }
 
     /// Get the segments beginning at the `n`th, 0-indexed, after the mount

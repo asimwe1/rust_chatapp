@@ -285,10 +285,10 @@ error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `Infallible`, found `&str`
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `Empty`, found `&str`
 
 error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found `Infallible`
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found `Empty`

@@ -98,6 +98,10 @@ pub enum ErrorKind {
     ),
 }
 
+/// An error that occurs when a value was unexpectedly empty.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Empty;
+
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
         Error::new(kind)
@@ -259,3 +263,17 @@ impl Drop for Error {
         }
     }
 }
+
+impl fmt::Debug for Empty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("empty parameter")
+    }
+}
+
+impl fmt::Display for Empty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("empty parameter")
+    }
+}
+
+impl StdError for Empty { }
