@@ -77,9 +77,11 @@ impl FromMeta for RouteUri {
                     .help("expected URI in origin form: \"/path/<param>\"")
             })?;
 
-        if !origin.is_normalized() {
-            let normalized = origin.clone().into_normalized();
+        if !origin.is_normalized_nontrailing() {
+            let normalized = origin.clone().into_normalized_nontrailing();
             let span = origin.path().find("//")
+                .or_else(|| origin.has_trailing_slash()
+                    .then_some(origin.path().len() - 1))
                 .or_else(|| origin.query()
                     .and_then(|q| q.find("&&"))
                     .map(|i| origin.path().len() + 1 + i))

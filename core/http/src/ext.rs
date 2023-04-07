@@ -126,7 +126,6 @@ impl<A: IntoOwned, B: IntoOwned> IntoOwned for (A, B) {
     }
 }
 
-
 impl<B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'_, B> {
     type Owned = Cow<'static, B>;
 
@@ -149,6 +148,7 @@ macro_rules! impl_into_owned_self {
     )*)
 }
 
+impl_into_owned_self!(bool);
 impl_into_owned_self!(u8, u16, u32, u64, usize);
 impl_into_owned_self!(i8, i16, i32, i64, isize);
 

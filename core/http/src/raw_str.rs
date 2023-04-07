@@ -180,6 +180,11 @@ impl RawStr {
     /// ```
     #[inline(always)]
     pub fn percent_decode(&self) -> Result<Cow<'_, str>, Utf8Error> {
+        // don't let `percent-encoding` return a random empty string
+        if self.is_empty() {
+            return Ok(self.as_str().into());
+        }
+
         self._percent_decode().decode_utf8()
     }
 
@@ -213,6 +218,11 @@ impl RawStr {
     /// ```
     #[inline(always)]
     pub fn percent_decode_lossy(&self) -> Cow<'_, str> {
+        // don't let `percent-encoding` return a random empty string
+        if self.is_empty() {
+            return self.as_str().into();
+        }
+
         self._percent_decode().decode_utf8_lossy()
     }
 
@@ -658,7 +668,6 @@ impl RawStr {
         pat.is_suffix_of(self.as_str())
     }
 
-
     /// Returns the byte index of the first character of this string slice that
     /// matches the pattern.
     ///
@@ -710,8 +719,9 @@ impl RawStr {
     /// assert_eq!(v, ["Mary", "had", "a", "little", "lamb"]);
     /// ```
     #[inline]
-    pub fn split<'a, P>(&'a self, pat: P) -> impl Iterator<Item = &'a RawStr>
-        where P: Pattern<'a>
+    pub fn split<'a, P>(&'a self, pat: P) -> impl DoubleEndedIterator<Item = &'a RawStr>
+        where P: Pattern<'a>,
+              <P as stable_pattern::Pattern<'a>>::Searcher: stable_pattern::DoubleEndedSearcher<'a>
     {
         let split: Split<'_, P> = Split(SplitInternal {
             start: 0,
@@ -835,6 +845,28 @@ impl RawStr {
         where P: Pattern<'a>,<P as Pattern<'a>>::Searcher: ReverseSearcher<'a>,
     {
         suffix.strip_suffix_of(self.as_str()).map(RawStr::new)
+    }
+
+    /// Returns a string slice with leading and trailing whitespace removed.
+    ///
+    /// 'Whitespace' is defined according to the terms of the Unicode Derived
+    /// Core Property `White_Space`, which includes newlines.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// let s = RawStr::new("\n Hello\tworld\t\n");
+    ///
+    /// assert_eq!("Hello\tworld", s.trim());
+    /// ```
+    #[inline]
+    pub fn trim(&self) -> &RawStr {
+        RawStr::new(self.as_str().trim_matches(|c: char| c.is_whitespace()))
     }
 
     /// Parses this string slice into another type.

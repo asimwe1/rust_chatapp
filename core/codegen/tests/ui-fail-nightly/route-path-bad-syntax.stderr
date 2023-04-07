@@ -240,3 +240,27 @@ warning: `segment` starts with `<` but does not end with `>`
     |         ^^^^^^^^
     |
     = help: perhaps you meant the dynamic parameter `<name>`?
+
+error: route URIs cannot contain empty segments
+   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:107:10
+    |
+107 | #[get("/a/")]
+    |          ^^
+    |
+    = note: expected "/a", found "/a/"
+
+error: route URIs cannot contain empty segments
+   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:110:12
+    |
+110 | #[get("/a/b/")]
+    |            ^^
+    |
+    = note: expected "/a/b", found "/a/b/"
+
+error: route URIs cannot contain empty segments
+   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:113:14
+    |
+113 | #[get("/a/b/c/")]
+    |              ^^
+    |
+    = note: expected "/a/b/c", found "/a/b/c/"

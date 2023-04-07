@@ -14,7 +14,7 @@ macro_rules! assert_uri_eq {
             let actual = $uri;
             let expected = rocket::http::uri::Uri::parse_any($expected).expect("valid URI");
             if actual != expected {
-                panic!("URI mismatch: got {}, expected {}\nGot) {:?}\nExpected) {:?}",
+                panic!("\nURI mismatch: got {}, expected {}\nGot) {:?}\nExpected) {:?}\n",
                     actual, expected, actual, expected);
             }
         )+
@@ -186,6 +186,7 @@ fn check_simple_named() {
 fn check_route_prefix_suffix() {
     assert_uri_eq! {
         uri!(index) => "/",
+        uri!("/") => "/",
         uri!("/", index) => "/",
         uri!("/hi", index) => "/hi",
         uri!("/", simple3(10)) => "/?id=10",
@@ -194,21 +195,33 @@ fn check_route_prefix_suffix() {
         uri!("/mount", simple(id = 23)) => "/mount/23",
         uri!("/another", simple(100)) => "/another/100",
         uri!("/another", simple(id = 23)) => "/another/23",
+        uri!("/foo") => "/foo",
+        uri!("/foo/") => "/foo/",
+        uri!("/foo///") => "/foo/",
+        uri!("/foo/bar/") => "/foo/bar/",
+        uri!("/foo/", index) => "/foo/",
+        uri!("/foo", index) => "/foo",
     }
 
     assert_uri_eq! {
         uri!("http://rocket.rs", index) => "http://rocket.rs",
-        uri!("http://rocket.rs/", index) => "http://rocket.rs",
-        uri!("http://rocket.rs", index) => "http://rocket.rs",
+        uri!("http://rocket.rs/", index) => "http://rocket.rs/",
+        uri!("http://rocket.rs/foo", index) => "http://rocket.rs/foo",
+        uri!("http://rocket.rs/foo/", index) => "http://rocket.rs/foo/",
         uri!("http://", index) => "http://",
         uri!("ftp:", index) => "ftp:/",
     }
 
     assert_uri_eq! {
         uri!("http://rocket.rs", index, "?foo") => "http://rocket.rs?foo",
-        uri!("http://rocket.rs/", index, "#bar") => "http://rocket.rs#bar",
+        uri!("http://rocket.rs", index, "?") => "http://rocket.rs?",
+        uri!("http://rocket.rs", index, "#") => "http://rocket.rs#",
+        uri!("http://rocket.rs/", index, "?") => "http://rocket.rs/?",
+        uri!("http://rocket.rs/", index, "#") => "http://rocket.rs/#",
+        uri!("http://rocket.rs", index, "#bar") => "http://rocket.rs#bar",
+        uri!("http://rocket.rs/", index, "#bar") => "http://rocket.rs/#bar",
         uri!("http://rocket.rs", index, "?bar#baz") => "http://rocket.rs?bar#baz",
-        uri!("http://rocket.rs/", index, "?bar#baz") => "http://rocket.rs?bar#baz",
+        uri!("http://rocket.rs/", index, "?bar#baz") => "http://rocket.rs/?bar#baz",
         uri!("http://", index, "?foo") => "http://?foo",
         uri!("http://rocket.rs", simple3(id = 100), "?foo") => "http://rocket.rs?id=100",
         uri!("http://rocket.rs", simple3(id = 100), "?foo#bar") => "http://rocket.rs?id=100#bar",
@@ -239,8 +252,8 @@ fn check_route_prefix_suffix() {
     let dyn_abs = uri!("http://rocket.rs?foo");
     assert_uri_eq! {
         uri!(_, index, dyn_abs.clone()) => "/?foo",
-        uri!("http://rocket.rs/", index, dyn_abs.clone()) => "http://rocket.rs?foo",
         uri!("http://rocket.rs", index, dyn_abs.clone()) => "http://rocket.rs?foo",
+        uri!("http://rocket.rs/", index, dyn_abs.clone()) => "http://rocket.rs/?foo",
         uri!("http://", index, dyn_abs.clone()) => "http://?foo",
         uri!(_, simple3(id = 123), dyn_abs) => "/?id=123",
     }
@@ -248,8 +261,8 @@ fn check_route_prefix_suffix() {
     let dyn_ref = uri!("?foo#bar");
     assert_uri_eq! {
         uri!(_, index, dyn_ref.clone()) => "/?foo#bar",
-        uri!("http://rocket.rs/", index, dyn_ref.clone()) => "http://rocket.rs?foo#bar",
         uri!("http://rocket.rs", index, dyn_ref.clone()) => "http://rocket.rs?foo#bar",
+        uri!("http://rocket.rs/", index, dyn_ref.clone()) => "http://rocket.rs/?foo#bar",
         uri!("http://", index, dyn_ref.clone()) => "http://?foo#bar",
         uri!(_, simple3(id = 123), dyn_ref) => "/?id=123#bar",
     }

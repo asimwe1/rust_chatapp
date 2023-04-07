@@ -579,9 +579,9 @@ fn log_items<T, I, B, O>(e: &str, t: &str, items: I, base: B, origin: O)
     }
 
     items.sort_by_key(|i| origin(i).path().as_str().chars().count());
-    items.sort_by_key(|i| origin(i).path().segments().len());
+    items.sort_by_key(|i| origin(i).path().segments().count());
     items.sort_by_key(|i| base(i).path().as_str().chars().count());
-    items.sort_by_key(|i| base(i).path().segments().len());
+    items.sort_by_key(|i| base(i).path().segments().count());
     items.iter().for_each(|i| launch_meta_!("{}", i));
 }
 
@@ -794,9 +794,9 @@ impl<P: Phase> Rocket<P> {
     ///     .register("/", catchers![just_500, some_default]);
     ///
     /// assert_eq!(rocket.catchers().count(), 3);
-    /// assert!(rocket.catchers().any(|c| c.code == Some(404) && c.base == "/foo"));
-    /// assert!(rocket.catchers().any(|c| c.code == Some(500) && c.base == "/"));
-    /// assert!(rocket.catchers().any(|c| c.code == None && c.base == "/"));
+    /// assert!(rocket.catchers().any(|c| c.code == Some(404) && c.base() == "/foo"));
+    /// assert!(rocket.catchers().any(|c| c.code == Some(500) && c.base() == "/"));
+    /// assert!(rocket.catchers().any(|c| c.code == None && c.base() == "/"));
     /// ```
     pub fn catchers(&self) -> impl Iterator<Item = &Catcher> {
         match self.0.as_state_ref() {

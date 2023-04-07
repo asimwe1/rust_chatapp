@@ -935,11 +935,12 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Get the `n`th path segment, 0-indexed, after the mount point for the
-    /// currently matched route, as a string, if it exists. Used by codegen.
+    /// Get the `n`th non-empty path segment, 0-indexed, after the mount point
+    /// for the currently matched route, as a string, if it exists. Used by
+    /// codegen.
     #[inline]
     pub fn routed_segment(&self, n: usize) -> Option<&str> {
-        self.routed_segments(0..).get(n)
+        self.routed_segments(0..).get(n).filter(|p| !p.is_empty())
     }
 
     /// Get the segments beginning at the `n`th, 0-indexed, after the mount
@@ -947,9 +948,10 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_, Path> {
         let mount_segments = self.route()
-            .map(|r| r.uri.metadata.base_segs.len())
+            .map(|r| r.uri.metadata.base_len)
             .unwrap_or(0);
 
+        trace!("requesting {}.. ({}..) from {}", n.start, mount_segments, self);
         self.uri().path().segments().skip(mount_segments + n.start)
     }
 

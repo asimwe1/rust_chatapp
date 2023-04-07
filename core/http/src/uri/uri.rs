@@ -467,3 +467,35 @@ macro_rules! impl_base_traits {
         }
     }
 }
+
+mod tests {
+    #[test]
+    fn normalization() {
+        fn normalize(uri: &str) -> String {
+            use crate::uri::Uri;
+
+            match Uri::parse_any(uri).unwrap() {
+                Uri::Origin(uri) => uri.into_normalized().to_string(),
+                Uri::Absolute(uri) => uri.into_normalized().to_string(),
+                Uri::Reference(uri) => uri.into_normalized().to_string(),
+                uri => uri.to_string(),
+            }
+        }
+
+        assert_eq!(normalize("/#"), "/#");
+
+        assert_eq!(normalize("/"), "/");
+        assert_eq!(normalize("//"), "/");
+        assert_eq!(normalize("//////a/"), "/a/");
+        assert_eq!(normalize("//ab"), "/ab");
+        assert_eq!(normalize("//a"), "/a");
+        assert_eq!(normalize("/a/b///c"), "/a/b/c");
+        assert_eq!(normalize("/a/b///c/"), "/a/b/c/");
+        assert_eq!(normalize("/a///b/c/d///"), "/a/b/c/d/");
+
+        assert_eq!(normalize("/?"), "/?");
+        assert_eq!(normalize("/?foo"), "/?foo");
+        assert_eq!(normalize("/a/?"), "/a/?");
+        assert_eq!(normalize("/a/?foo"), "/a/?foo");
+    }
+}

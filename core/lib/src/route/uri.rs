@@ -62,7 +62,7 @@ pub struct RouteUri<'a> {
     /// The URI _without_ the `base` mount point.
     pub unmounted_origin: Origin<'a>,
     /// The URI _with_ the base mount point. This is the canonical route URI.
-    pub origin: Origin<'a>,
+    pub uri: Origin<'a>,
     /// Cached metadata about this URI.
     pub(crate) metadata: Metadata,
 }
@@ -79,10 +79,10 @@ pub(crate) enum Color {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Metadata {
-    /// Segments in the base.
-    pub base_segs: Vec<Segment>,
-    /// Segments in the path, including base.
-    pub path_segs: Vec<Segment>,
+    /// Segments in the route URI, including base.
+    pub uri_segments: Vec<Segment>,
+    /// Numbers of segments in `uri_segments` that belong to the base.
+    pub base_len: usize,
     /// `(name, value)` of the query segments that are static.
     pub static_query_fields: Vec<(String, String)>,
     /// The "color" of the route path.
@@ -90,7 +90,7 @@ pub(crate) struct Metadata {
     /// The "color" of the route query, if there is query.
     pub query_color: Option<Color>,
     /// Whether the path has a `<trailing..>` parameter.
-    pub trailing_path: bool,
+    pub dynamic_trail: bool,
 }
 
 type Result<T, E = uri::Error<'static>> = std::result::Result<T, E>;
@@ -103,25 +103,36 @@ impl<'a> RouteUri<'a> {
     pub(crate) fn try_new(base: &str, uri: &str) -> Result<RouteUri<'static>> {
         let mut base = Origin::parse(base)
             .map_err(|e| e.into_owned())?
-            .into_normalized()
+            .into_normalized_nontrailing()
             .into_owned();
 
         base.clear_query();
 
-        let unmounted_origin = Origin::parse_route(uri)
+        let origin = Origin::parse_route(uri)
             .map_err(|e| e.into_owned())?
             .into_normalized()
             .into_owned();
 
-        let origin = Origin::parse_route(&format!("{}/{}", base, unmounted_origin))
+        let compiled_uri = match base.path().as_str() {
+            "/" => origin.to_string(),
+            base => match (origin.path().as_str(), origin.query()) {
+                ("/", None) => base.to_string(),
+                ("/", Some(q)) => format!("{}?{}", base, q),
+                _ => format!("{}{}", base, origin),
+            }
+        };
+
+        let uri = Origin::parse_route(&compiled_uri)
             .map_err(|e| e.into_owned())?
             .into_normalized()
             .into_owned();
 
-        let source = origin.to_string().into();
-        let metadata = Metadata::from(&base, &origin);
+        dbg!(&base, &origin, &compiled_uri, &uri);
 
-        Ok(RouteUri { source, base, unmounted_origin, origin, metadata })
+        let source = uri.to_string().into();
+        let metadata = Metadata::from(&base, &uri);
+
+        Ok(RouteUri { source, base, unmounted_origin: origin, uri, metadata })
     }
 
     /// Create a new `RouteUri`.
@@ -167,7 +178,7 @@ impl<'a> RouteUri<'a> {
     /// ```
     #[inline(always)]
     pub fn path(&self) -> &str {
-        self.origin.path().as_str()
+        self.uri.path().as_str()
     }
 
     /// The query part of this route URI, if there is one.
@@ -184,7 +195,7 @@ impl<'a> RouteUri<'a> {
     ///
     /// // Normalization clears the empty '?'.
     /// let index = Route::new(Method::Get, "/foo/bar?", handler);
-    /// assert!(index.uri.query().is_none());
+    /// assert_eq!(index.uri.query().unwrap(), "");
     ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(index.uri.query().unwrap(), "a=1");
@@ -194,7 +205,7 @@ impl<'a> RouteUri<'a> {
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<&str> {
-        self.origin.query().map(|q| q.as_str())
+        self.uri.query().map(|q| q.as_str())
     }
 
     /// The full URI as an `&str`.
@@ -247,16 +258,13 @@ impl<'a> RouteUri<'a> {
 }
 
 impl Metadata {
-    fn from(base: &Origin<'_>, origin: &Origin<'_>) -> Self {
-        let base_segs = base.path().raw_segments()
+    fn from(base: &Origin<'_>, uri: &Origin<'_>) -> Self {
+        let uri_segments = uri.path()
+            .raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let path_segs = origin.path().raw_segments()
-            .map(Segment::from)
-            .collect::<Vec<_>>();
-
-        let query_segs = origin.query()
+        let query_segs = uri.query()
             .map(|q| q.raw_segments().map(Segment::from).collect::<Vec<_>>())
             .unwrap_or_default();
 
@@ -265,8 +273,8 @@ impl Metadata {
             .map(|f| (f.name.source().to_string(), f.value.to_string()))
             .collect();
 
-        let static_path = path_segs.iter().all(|s| !s.dynamic);
-        let wild_path = !path_segs.is_empty() && path_segs.iter().all(|s| s.dynamic);
+        let static_path = uri_segments.iter().all(|s| !s.dynamic);
+        let wild_path = !uri_segments.is_empty() && uri_segments.iter().all(|s| s.dynamic);
         let path_color = match (static_path, wild_path) {
             (true, _) => Color::Static,
             (_, true) => Color::Wild,
@@ -283,11 +291,13 @@ impl Metadata {
             }
         });
 
-        let trailing_path = path_segs.last().map_or(false, |p| p.trailing);
+        let dynamic_trail = uri_segments.last().map_or(false, |p| p.dynamic_trail);
+        let segments = base.path().segments();
+        let num_empty = segments.clone().filter(|s| s.is_empty()).count();
+        let base_len = segments.num() - num_empty;
 
         Metadata {
-            base_segs, path_segs, static_query_fields, path_color, query_color,
-            trailing_path,
+            uri_segments, base_len, static_query_fields, path_color, query_color, dynamic_trail
         }
     }
 }
@@ -296,13 +306,13 @@ impl<'a> std::ops::Deref for RouteUri<'a> {
     type Target = Origin<'a>;
 
     fn deref(&self) -> &Self::Target {
-        &self.origin
+        &self.uri
     }
 }
 
 impl fmt::Display for RouteUri<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.origin.fmt(f)
+        self.uri.fmt(f)
     }
 }
 
@@ -311,14 +321,14 @@ impl fmt::Debug for RouteUri<'_> {
         f.debug_struct("RouteUri")
             .field("base", &self.base)
             .field("unmounted_origin", &self.unmounted_origin)
-            .field("origin", &self.origin)
+            .field("origin", &self.uri)
             .field("metadata", &self.metadata)
             .finish()
     }
 }
 
 impl<'a, 'b> PartialEq<Origin<'b>> for RouteUri<'a> {
-    fn eq(&self, other: &Origin<'b>) -> bool { &self.origin == other }
+    fn eq(&self, other: &Origin<'b>) -> bool { &self.uri == other }
 }
 
 impl PartialEq<str> for RouteUri<'_> {

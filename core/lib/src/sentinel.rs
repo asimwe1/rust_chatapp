@@ -263,7 +263,7 @@ use crate::{Rocket, Ignite};
 ///             return true;
 ///         }
 ///
-///         if !rocket.catchers().any(|c| c.code == Some(400) && c.base == "/") {
+///         if !rocket.catchers().any(|c| c.code == Some(400) && c.base() == "/") {
 ///             return true;
 ///         }
 ///

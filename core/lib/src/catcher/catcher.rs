@@ -107,14 +107,25 @@ pub struct Catcher {
     /// The name of this catcher, if one was given.
     pub name: Option<Cow<'static, str>>,
 
-    /// The mount point.
-    pub base: uri::Origin<'static>,
-
     /// The HTTP status to match against if this route is not `default`.
     pub code: Option<u16>,
 
     /// The catcher's associated error handler.
     pub handler: Box<dyn Handler>,
+
+    /// The mount point.
+    pub(crate) base: uri::Origin<'static>,
+
+    /// The catcher's calculated rank.
+    ///
+    /// This is [base.segments().len() | base.chars().len()].
+    pub(crate) rank: u64,
+}
+
+fn compute_rank(base: &uri::Origin<'_>) -> u64 {
+    let major = u32::MAX - base.path().segments().num() as u32;
+    let minor = u32::MAX - base.path().as_str().chars().count() as u32;
+    ((major as u64) << 32) | (minor as u64)
 }
 
 impl Catcher {
@@ -166,8 +177,34 @@ impl Catcher {
             name: None,
             base: uri::Origin::ROOT,
             handler: Box::new(handler),
-            code,
+            rank: compute_rank(&uri::Origin::ROOT),
+            code
         }
+    }
+
+    /// Returns the mount point (base) of the catcher, which defaults to `/`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::Request;
+    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::response::Responder;
+    /// use rocket::http::Status;
+    ///
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    ///    let res = (status, format!("404: {}", req.uri()));
+    ///    Box::pin(async move { res.respond_to(req) })
+    /// }
+    ///
+    /// let catcher = Catcher::new(404, handle_404);
+    /// assert_eq!(catcher.base().path(), "/");
+    ///
+    /// let catcher = catcher.map_base(|base| format!("/foo/bar/{}", base)).unwrap();
+    /// assert_eq!(catcher.base().path(), "/foo/bar");
+    /// ```
+    pub fn base(&self) -> &uri::Origin<'_> {
+        &self.base
     }
 
     /// Maps the `base` of this catcher using `mapper`, returning a new
@@ -192,13 +229,13 @@ impl Catcher {
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
-    /// assert_eq!(catcher.base.path(), "/");
+    /// assert_eq!(catcher.base().path(), "/");
     ///
     /// let catcher = catcher.map_base(|_| format!("/bar")).unwrap();
-    /// assert_eq!(catcher.base.path(), "/bar");
+    /// assert_eq!(catcher.base().path(), "/bar");
     ///
     /// let catcher = catcher.map_base(|base| format!("/foo{}", base)).unwrap();
-    /// assert_eq!(catcher.base.path(), "/foo/bar");
+    /// assert_eq!(catcher.base().path(), "/foo/bar");
     ///
     /// let catcher = catcher.map_base(|base| format!("/foo ? {}", base));
     /// assert!(catcher.is_err());
@@ -209,8 +246,10 @@ impl Catcher {
     ) -> std::result::Result<Self, uri::Error<'static>>
         where F: FnOnce(uri::Origin<'a>) -> String
     {
-        self.base = uri::Origin::parse_owned(mapper(self.base))?.into_normalized();
+        let new_base = uri::Origin::parse_owned(mapper(self.base))?;
+        self.base = new_base.into_normalized_nontrailing();
         self.base.clear_query();
+        self.rank = compute_rank(&self.base);
         Ok(self)
     }
 }
@@ -254,9 +293,7 @@ impl fmt::Display for Catcher {
             write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
         }
 
-        if self.base.path() != "/" {
-            write!(f, "{} ", Paint::green(self.base.path()))?;
-        }
+        write!(f, "{} ", Paint::green(self.base.path()))?;
 
         match self.code {
             Some(code) => write!(f, "{}", Paint::blue(code)),
@@ -271,6 +308,7 @@ impl fmt::Debug for Catcher {
             .field("name", &self.name)
             .field("base", &self.base)
             .field("code", &self.code)
+            .field("rank", &self.rank)
             .finish()
     }
 }

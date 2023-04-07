@@ -158,7 +158,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
                     #_Err(__error) => return #parse_error,
                 },
                 #_None => {
-                    #_log::error_!("Internal invariant broken: dyn param not found.");
+                    #_log::error_!("Internal invariant broken: dyn param {} not found.", #i);
                     #_log::error_!("Please report this to the Rocket issue tracker.");
                     #_log::error_!("https://github.com/SergioBenitez/Rocket/issues");
                     return #Outcome::Forward(#__data);
