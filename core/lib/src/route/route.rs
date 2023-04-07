@@ -290,6 +290,12 @@ impl Route {
         self.uri = RouteUri::try_new(&base, &self.uri.unmounted_origin.to_string())?;
         Ok(self)
     }
+
+    /// Returns `true` if `self` collides with `other`.
+    #[doc(hidden)]
+    pub fn collides_with(&self, other: &Route) -> bool {
+        crate::router::Collide::collides_with(self, other)
+    }
 }
 
 impl fmt::Display for Route {

@@ -100,7 +100,9 @@ impl<'a> RouteUri<'a> {
     ///
     /// This is a fallible variant of [`RouteUri::new`] which returns an `Err`
     /// if `base` or `uri` cannot be parsed as [`Origin`]s.
-    pub(crate) fn try_new(base: &str, uri: &str) -> Result<RouteUri<'static>> {
+    /// INTERNAL!
+    #[doc(hidden)]
+    pub fn try_new(base: &str, uri: &str) -> Result<RouteUri<'static>> {
         let mut base = Origin::parse(base)
             .map_err(|e| e.into_owned())?
             .into_normalized_nontrailing()

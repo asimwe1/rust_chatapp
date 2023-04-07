@@ -17,7 +17,8 @@ impl Route {
     ///   * All static components in the route's query string are also in the
     ///     request query string, though in any position. If there is no query
     ///     in the route, requests with/without queries match.
-    pub(crate) fn matches(&self, req: &Request<'_>) -> bool {
+    #[doc(hidden)]
+    pub fn matches(&self, req: &Request<'_>) -> bool {
         self.method == req.method()
             && paths_match(self, req)
             && queries_match(self, req)
