@@ -200,8 +200,15 @@ impl<'a> FromParam<'a> for &'a str {
 impl<'a> FromParam<'a> for String {
     type Error = Empty;
 
+    #[track_caller]
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
+        #[cfg(debug_assertions)] {
+            let loc = std::panic::Location::caller();
+            warn_!("Note: Using `String` as a parameter type is inefficient. Use `&str` instead.");
+            info_!("`String` is used a parameter guard in {}:{}.", loc.file(), loc.line());
+        }
+
         if param.is_empty() {
             return Err(Empty);
         }
