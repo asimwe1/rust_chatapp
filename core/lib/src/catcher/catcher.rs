@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io::Cursor;
 
+use crate::http::uri::Path;
 use crate::response::Response;
 use crate::request::Request;
 use crate::http::{Status, ContentType, uri};
@@ -198,13 +199,13 @@ impl Catcher {
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
-    /// assert_eq!(catcher.base().path(), "/");
+    /// assert_eq!(catcher.base(), "/");
     ///
     /// let catcher = catcher.map_base(|base| format!("/foo/bar/{}", base)).unwrap();
-    /// assert_eq!(catcher.base().path(), "/foo/bar");
+    /// assert_eq!(catcher.base(), "/foo/bar");
     /// ```
-    pub fn base(&self) -> &uri::Origin<'_> {
-        &self.base
+    pub fn base(&self) -> Path<'_> {
+        self.base.path()
     }
 
     /// Maps the `base` of this catcher using `mapper`, returning a new
@@ -229,13 +230,13 @@ impl Catcher {
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
-    /// assert_eq!(catcher.base().path(), "/");
+    /// assert_eq!(catcher.base(), "/");
     ///
     /// let catcher = catcher.map_base(|_| format!("/bar")).unwrap();
-    /// assert_eq!(catcher.base().path(), "/bar");
+    /// assert_eq!(catcher.base(), "/bar");
     ///
     /// let catcher = catcher.map_base(|base| format!("/foo{}", base)).unwrap();
-    /// assert_eq!(catcher.base().path(), "/foo/bar");
+    /// assert_eq!(catcher.base(), "/foo/bar");
     ///
     /// let catcher = catcher.map_base(|base| format!("/foo ? {}", base));
     /// assert!(catcher.is_err());
