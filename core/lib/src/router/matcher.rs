@@ -43,20 +43,14 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.uri.metadata.uri_segments;
     let req_segments = req.uri().path().segments();
 
-    // requests with longer paths only match if we have dynamic trail (<a..>).
-    if req_segments.num() > route_segments.len() {
-        if !route.uri.metadata.dynamic_trail {
-            return false;
-        }
+    // A route can never have more segments than a request. Recall that a
+    // trailing slash is considering a segment, albeit empty.
+    if route_segments.len() > req_segments.num() {
+        return false;
     }
 
-    // The last route segment can be trailing (`/<..>`), which is allowed to be
-    // empty in the request. That is, we want to match `GET /a` to `/a/<b..>`.
-    if route_segments.len() > req_segments.num() {
-        if route_segments.len() != req_segments.num() + 1 {
-            return false;
-        }
-
+    // requests with longer paths only match if we have dynamic trail (<a..>).
+    if req_segments.num() > route_segments.len() {
         if !route.uri.metadata.dynamic_trail {
             return false;
         }
@@ -151,7 +145,6 @@ mod tests {
         assert!(req_matches_route("/a/b?c", "/a/b?<c>"));
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?<c>"));
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?<c..>"));
-
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?c=foo&<c..>"));
         assert!(req_matches_route("/a/b?c=foo&d=z", "/a/b?d=z&<c..>"));
 
@@ -169,10 +162,18 @@ mod tests {
         assert!(!req_matches_route("/a/", "/a"));
         assert!(!req_matches_route("/a/b", "/a/b/"));
 
+        assert!(!req_matches_route("/a", "/<a>/"));
+        assert!(!req_matches_route("/a/", "/<a>"));
+        assert!(!req_matches_route("/a/b", "/<a>/b/"));
+        assert!(!req_matches_route("/a/b", "/<a>/<b>/"));
+
         assert!(!req_matches_route("/a/b/c", "/a/b?<c>"));
         assert!(!req_matches_route("/a?b=c", "/a/b?<c>"));
         assert!(!req_matches_route("/?b=c", "/a/b?<c>"));
         assert!(!req_matches_route("/?b=c", "/a?<c>"));
+
+        assert!(!req_matches_route("/a/", "/<a>/<b>/<c..>"));
+        assert!(!req_matches_route("/a/b", "/<a>/<b>/<c..>"));
 
         assert!(!req_matches_route("/a/b?c=foo&d=z", "/a/b?a=b&<c..>"));
         assert!(!req_matches_route("/a/b?c=foo&d=z", "/a/b?d=b&<c..>"));

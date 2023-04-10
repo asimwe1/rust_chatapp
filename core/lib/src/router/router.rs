@@ -170,13 +170,7 @@ mod test {
         assert!(rankless_route_collisions(&["/", "/<a..>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/<a..>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/<_..>"]));
-        assert!(rankless_route_collisions(&["/<_>", "/a/<_..>"]));
-        assert!(rankless_route_collisions(&["/foo", "/foo/<_..>"]));
         assert!(rankless_route_collisions(&["/foo/bar/baz", "/foo/<_..>"]));
-        assert!(rankless_route_collisions(&["/a/d/<b..>", "/a/d"]));
-        assert!(rankless_route_collisions(&["/a/<_..>", "/<_>"]));
-        assert!(rankless_route_collisions(&["/a/<_..>", "/a"]));
-        assert!(rankless_route_collisions(&["/<a>", "/a/<a..>"]));
 
         assert!(rankless_route_collisions(&["/<_>", "/<_>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/b"]));
@@ -235,6 +229,13 @@ mod test {
         assert!(!rankless_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/a"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/<_>"]));
+        assert!(!rankless_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
+        assert!(!rankless_route_collisions(&["/<_>", "/a/<_..>"]));
+        assert!(!rankless_route_collisions(&["/foo", "/foo/<_..>"]));
+        assert!(!rankless_route_collisions(&["/a/<_..>", "/<_>"]));
+        assert!(!rankless_route_collisions(&["/a/<_..>", "/a"]));
+        assert!(!rankless_route_collisions(&["/<a>", "/a/<a..>"]));
+        assert!(!rankless_route_collisions(&["/a/d/<b..>", "/a/d"]));
     }
 
     #[test]
@@ -259,11 +260,11 @@ mod test {
         assert!(!default_rank_route_collisions(&["/<a..>", "/hello"]));
         assert!(!default_rank_route_collisions(&["/<a>", "/a/<path..>"]));
         assert!(!default_rank_route_collisions(&["/a/<b>/c", "/<d>/<c..>"]));
+        assert!(!default_rank_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
     }
 
     #[test]
     fn test_collision_when_ranked() {
-        assert!(default_rank_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
         assert!(default_rank_route_collisions(&["/<a>/b", "/a/<b>"]));
     }
 
@@ -329,7 +330,7 @@ mod test {
         assert!(route(&router, Get, "/a/b/c/d/e/f").is_some());
 
         let router = router_with_routes(&["/foo/<a..>"]);
-        assert!(route(&router, Get, "/foo").is_some());
+        assert!(route(&router, Get, "/foo").is_none());
         assert!(route(&router, Get, "/foo/").is_some());
         assert!(route(&router, Get, "/foo///bar").is_some());
     }
@@ -497,9 +498,9 @@ mod test {
         );
 
         assert_ranked_routing!(
-            to: "/hi",
+            to: "/hi/",
             with: [(1, "/hi/<foo..>"), (0, "/hi/<foo>")],
-            expect: (1, "/hi/<foo..>")
+            expect: (0, "/hi/<foo>"), (1, "/hi/<foo..>")
         );
     }
 

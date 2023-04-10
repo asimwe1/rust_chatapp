@@ -242,6 +242,84 @@ impl AdHoc {
             Ok(rocket.manage(app_config))
         })
     }
+
+    /// Constructs an `AdHoc` request fairing that strips trailing slashes from
+    /// all URIs in all incoming requests.
+    ///
+    /// The fairing returned by this method is intended largely for applications
+    /// that migrated from Rocket v0.4 to Rocket v0.5. In Rocket v0.4, requests
+    /// with a trailing slash in the URI were treated as if the trailing slash
+    /// were not present. For example, the request URI `/foo/` would match the
+    /// route `/<a>` with `a = foo`. If the application depended on this
+    /// behavior, say by using URIs with previously innocuous trailing slashes
+    /// in an external application, requests will not be routed as expected.
+    ///
+    /// This fairing resolves this issue by stripping a trailing slash, if any,
+    /// in all incoming URIs. When it does so, it logs a warning. It is
+    /// recommended to use this fairing as a stop-gap measure instead of a
+    /// permanent resolution, if possible.
+    //
+    /// # Example
+    ///
+    /// With the fairing attached, request URIs have a trailing slash stripped:
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::local::blocking::Client;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[get("/<param>")]
+    /// fn foo(param: &str) -> &str {
+    ///     param
+    /// }
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    ///         .mount("/", routes![foo])
+    ///         .attach(AdHoc::uri_normalizer())
+    /// }
+    ///
+    /// # let client = Client::debug(rocket()).unwrap();
+    /// let response = client.get("/bar/").dispatch();
+    /// assert_eq!(response.into_string().unwrap(), "bar");
+    /// ```
+    ///
+    /// Without it, request URIs are unchanged and routed normally:
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::local::blocking::Client;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[get("/<param>")]
+    /// fn foo(param: &str) -> &str {
+    ///     param
+    /// }
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build().mount("/", routes![foo])
+    /// }
+    ///
+    /// # let client = Client::debug(rocket()).unwrap();
+    /// let response = client.get("/bar/").dispatch();
+    /// assert!(response.status().class().is_client_error());
+    ///
+    /// let response = client.get("/bar").dispatch();
+    /// assert_eq!(response.into_string().unwrap(), "bar");
+    /// ```
+    #[deprecated(since = "0.6", note = "routing from Rocket v0.5 is now standard")]
+    pub fn uri_normalizer() -> AdHoc {
+        AdHoc::on_request("URI Normalizer", |req, _| Box::pin(async move {
+            if !req.uri().is_normalized_nontrailing() {
+                let normal = req.uri().clone().into_normalized_nontrailing();
+                warn!("Incoming request URI was normalized for compatibility.");
+                info_!("{} -> {}", req.uri(), normal);
+                req.set_uri(normal);
+            }
+        }))
+    }
 }
 
 #[crate::async_trait]

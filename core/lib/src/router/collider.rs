@@ -57,10 +57,7 @@ impl Collide for RouteUri<'_> {
             }
         }
 
-        // Check for `/a/<a..>` vs. `/a`, which should collide.
-        a_segments.get(b_segments.len()).map_or(false, |s| s.dynamic_trail)
-            || b_segments.get(a_segments.len()).map_or(false, |s| s.dynamic_trail)
-            || a_segments.len() == b_segments.len()
+        a_segments.len() == b_segments.len()
     }
 }
 
@@ -192,7 +189,23 @@ mod tests {
         assert_no_collision!("/a", "/aaa");
         assert_no_collision!("/", "/a");
 
+        assert_no_collision!("/foo", "/foo/");
+        assert_no_collision!("/foo/bar", "/foo/");
+        assert_no_collision!("/foo/bar", "/foo/bar/");
+        assert_no_collision!("/foo/<a>", "/foo/<a>/");
+        assert_no_collision!("/foo/<a>", "/<b>/<a>/");
+        assert_no_collision!("/<b>/<a>", "/<b>/<a>/");
+        assert_no_collision!("/a/", "/<a>/<b>/<c..>");
+
+        assert_no_collision!("/a", "/a/<a..>");
+        assert_no_collision!("/<a>", "/a/<a..>");
+        assert_no_collision!("/a/b", "/<a>/<b>/<c..>");
+        assert_no_collision!("/a/<b>", "/<a>/<b>/<c..>");
+        assert_no_collision!("/<a>/b", "/<a>/<b>/<c..>");
+        assert_no_collision!("/hi/<a..>", "/hi");
+
         assert_no_collision!(ranked "/<a>", "/");
+        assert_no_collision!(ranked "/a/", "/<a>/");
         assert_no_collision!(ranked "/hello/<a>", "/hello/");
         assert_no_collision!(ranked "/", "/?a");
         assert_no_collision!(ranked "/", "/?<a>");
@@ -227,10 +240,9 @@ mod tests {
         assert_collision!("/<a..>", "/foo");
 
         assert_collision!("/", "/<a..>");
-        assert_collision!("/a", "/a/<a..>");
         assert_collision!("/a/", "/a/<a..>");
         assert_collision!("/<a>/", "/a/<a..>");
-        assert_collision!("/<a>", "/a/<a..>");
+        assert_collision!("/<a>/bar/", "/a/<a..>");
 
         assert_collision!("/<a>", "/b");
         assert_collision!("/hello/<name>", "/hello/bob");
@@ -244,7 +256,6 @@ mod tests {
         assert_collision!("/", "/<_..>");
         assert_collision!("/a/b/<a..>", "/a/<b..>");
         assert_collision!("/a/b/<a..>", "/a/<b>/<b..>");
-        assert_collision!("/hi/<a..>", "/hi");
         assert_collision!("/hi/<a..>", "/hi/");
         assert_collision!("/<a..>", "//////");
 

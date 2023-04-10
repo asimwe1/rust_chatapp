@@ -41,7 +41,7 @@ error: route URIs cannot contain empty segments
    |       ^^^^^^^^^
 
 error: route URIs cannot contain empty segments
-         --- note: expected "/a/b", found "/a/b//"
+         --- note: expected "/a/b/", found "/a/b//"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:23:7
    |
 23 | #[get("/a/b//")]
@@ -180,24 +180,3 @@ error: parameters cannot be empty
    |
 93 | #[get("/<>")]
    |       ^^^^^
-
-error: route URIs cannot contain empty segments
-         --- note: expected "/a", found "/a/"
-   --> tests/ui-fail-stable/route-path-bad-syntax.rs:107:7
-    |
-107 | #[get("/a/")]
-    |       ^^^^^
-
-error: route URIs cannot contain empty segments
-         --- note: expected "/a/b", found "/a/b/"
-   --> tests/ui-fail-stable/route-path-bad-syntax.rs:110:7
-    |
-110 | #[get("/a/b/")]
-    |       ^^^^^^^
-
-error: route URIs cannot contain empty segments
-         --- note: expected "/a/b/c", found "/a/b/c/"
-   --> tests/ui-fail-stable/route-path-bad-syntax.rs:113:7
-    |
-113 | #[get("/a/b/c/")]
-    |       ^^^^^^^^^
