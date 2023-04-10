@@ -4,37 +4,137 @@ use crate::http::Status;
 use crate::route::Color;
 
 impl Route {
-    /// Determines if this route matches against the given request.
+    /// Returns `true` if `self` matches `request`.
     ///
-    /// This means that:
+    /// A [_match_](Route#routing) occurs when:
     ///
     ///   * The route's method matches that of the incoming request.
-    ///   * The route's format (if any) matches that of the incoming request.
-    ///     - If route specifies format, it only gets requests for that format.
-    ///     - If route doesn't specify format, it gets requests for any format.
-    ///   * All static components in the route's path match the corresponding
-    ///     components in the same position in the incoming request.
-    ///   * All static components in the route's query string are also in the
-    ///     request query string, though in any position. If there is no query
-    ///     in the route, requests with/without queries match.
-    #[doc(hidden)]
-    pub fn matches(&self, req: &Request<'_>) -> bool {
-        self.method == req.method()
-            && paths_match(self, req)
-            && queries_match(self, req)
-            && formats_match(self, req)
+    ///   * Either the route has no format _or_:
+    ///     - If the route's method supports a payload, the request's
+    ///       `Content-Type` is [fully specified] and [collides with] the
+    ///       route's format.
+    ///     - If the route's method does not support a payload, the request
+    ///       either has no `Accept` header or it [collides with] with the
+    ///       route's format.
+    ///   * All static segments in the route's URI match the corresponding
+    ///     components in the same position in the incoming request URI.
+    ///   * The route URI has no query part _or_ all static segments in the
+    ///     route's query string are in the request query string, though in any
+    ///     position.
+    ///
+    /// [fully specified]: crate::http::MediaType::specificity()
+    /// [collides with]: Route::collides_with()
+    ///
+    /// For a request to be routed to a particular route, that route must both
+    /// `match` _and_ have the highest precedence among all matching routes for
+    /// that request. In other words, a `match` is a necessary but insufficient
+    /// condition to determine if a route will handle a particular request.
+    ///
+    /// The precedence of a route is determined by its rank. Routes with lower
+    /// ranks have higher precedence. [By default](Route#default-ranking), more
+    /// specific routes are assigned a lower ranking.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::local::blocking::Client;
+    /// # use rocket::route::dummy_handler as handler;
+    ///
+    /// // This route handles GET requests to `/<hello>`.
+    /// let a = Route::new(Method::Get, "/<hello>", handler);
+    ///
+    /// // This route handles GET requests to `/здрасти`.
+    /// let b = Route::new(Method::Get, "/здрасти", handler);
+    ///
+    /// # let client = Client::debug(rocket::build()).unwrap();
+    /// // Let's say `request` is `GET /hello`. The request matches only `a`:
+    /// let request = client.get("/hello");
+    /// # let request = request.inner();
+    /// assert!(a.matches(&request));
+    /// assert!(!b.matches(&request));
+    ///
+    /// // Now `request` is `GET /здрасти`. It matches both `a` and `b`:
+    /// let request = client.get("/здрасти");
+    /// # let request = request.inner();
+    /// assert!(a.matches(&request));
+    /// assert!(b.matches(&request));
+    ///
+    /// // But `b` is more specific, so it has lower rank (higher precedence)
+    /// // by default, so Rocket would route the request to `b`, not `a`.
+    /// assert!(b.rank < a.rank);
+    /// ```
+    pub fn matches(&self, request: &Request<'_>) -> bool {
+        self.method == request.method()
+            && paths_match(self, request)
+            && queries_match(self, request)
+            && formats_match(self, request)
     }
 }
 
 impl Catcher {
-    /// Determines if this catcher is responsible for handling the error with
-    /// `status` that occurred during request `req`. A catcher matches if:
+    /// Returns `true` if `self` matches errors with `status` that occured
+    /// during `request`.
     ///
-    ///  * It is a default catcher _or_ has a code of `status`.
-    ///  * Its base is a prefix of the normalized/decoded `req.path()`.
-    pub(crate) fn matches(&self, status: Status, req: &Request<'_>) -> bool {
+    /// A [_match_](Catcher#routing) between a `Catcher` and a (`Status`,
+    /// `&Request`) pair occurs when:
+    ///
+    ///   * The catcher has the same [code](Catcher::code) as
+    ///     [`status`](Status::code) _or_ is `default`.
+    ///   * The catcher's [base](Catcher::base()) is a prefix of the `request`'s
+    ///     [normalized](crate::http::uri::Origin#normalization) URI.
+    ///
+    /// For an error arising from a request to be routed to a particular
+    /// catcher, that catcher must both `match` _and_ have higher precedence
+    /// than any other catcher that matches. In other words, a `match` is a
+    /// necessary but insufficient condition to determine if a catcher will
+    /// handle a particular error.
+    ///
+    /// The precedence of a catcher is determined by:
+    ///
+    ///   1. The number of _complete_ segments in the catcher's `base`.
+    ///   2. Whether the catcher is `default` or not.
+    ///
+    /// Non-default routes, and routes with more complete segments in their
+    /// base, have higher precedence.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Catcher;
+    /// use rocket::http::Status;
+    /// # use rocket::local::blocking::Client;
+    /// # use rocket::catcher::dummy_handler as handler;
+    ///
+    /// // This catcher handles 404 errors with a base of `/`.
+    /// let a = Catcher::new(404, handler);
+    ///
+    /// // This catcher handles 404 errors with a base of `/bar`.
+    /// let b = a.clone().map_base(|_| format!("/bar")).unwrap();
+    ///
+    /// # let client = Client::debug(rocket::build()).unwrap();
+    /// // Let's say `request` is `GET /` that 404s. The error matches only `a`:
+    /// let request = client.get("/");
+    /// # let request = request.inner();
+    /// assert!(a.matches(Status::NotFound, &request));
+    /// assert!(!b.matches(Status::NotFound, &request));
+    ///
+    /// // Now `request` is a 404 `GET /bar`. The error matches `a` and `b`:
+    /// let request = client.get("/bar");
+    /// # let request = request.inner();
+    /// assert!(a.matches(Status::NotFound, &request));
+    /// assert!(b.matches(Status::NotFound, &request));
+    ///
+    /// // Note that because `b`'s base' has more complete segments that `a's,
+    /// // Rocket would route the error to `b`, not `a`, even though both match.
+    /// let a_count = a.base().segments().filter(|s| !s.is_empty()).count();
+    /// let b_count = b.base().segments().filter(|s| !s.is_empty()).count();
+    /// assert!(b_count > a_count);
+    /// ```
+    pub fn matches(&self, status: Status, request: &Request<'_>) -> bool {
         self.code.map_or(true, |code| code == status.code)
-            && self.base.path().segments().prefix_of(req.uri().path().segments())
+            && self.base().segments().prefix_of(request.uri().path().segments())
     }
 }
 

@@ -38,33 +38,22 @@ use crate::sentinel::Sentry;
 ///
 /// # Routing
 ///
-/// A request _matches_ a route _iff_:
+/// A request is _routed_ to a route if it has the highest precedence (lowest
+/// rank) among all routes that [match](Route::matches()) the request. See
+/// [`Route::matches()`] for details on what it means for a request to match.
 ///
-///   * The route's method matches that of the incoming request.
-///   * The route's format (if any) matches that of the incoming request.
-///     - If route specifies a format, it only matches requests for that format.
-///     - If route doesn't specify a format, it matches requests for any format.
-///     - A route's `format` matches against the `Accept` header in the request
-///       when the route's method [`supports_payload()`] and `Content-Type`
-///       header otherwise.
-///     - Non-specific `Accept` header components (`*`) match anything.
-///   * All static components in the route's path match the corresponding
-///     components in the same position in the incoming request.
-///   * All static components in the route's query string are also in the
-///     request query string, though in any position. If there is no query
-///     in the route, requests with and without queries match.
+/// Note that a single request _may_ be routed to multiple routes if a route
+/// forwards. If a route fails, the request is instead routed to the highest
+/// precedence [`Catcher`](crate::Catcher).
 ///
-/// Rocket routes requests to matching routes.
+/// ## Collisions
 ///
-/// [`supports_payload()`]: Method::supports_payload()
-///
-/// # Collisions
-///
-/// Two routes are said to _collide_ if there exists a request that matches both
-/// routes. Colliding routes present a routing ambiguity and are thus disallowed
-/// by Rocket. Because routes can be constructed dynamically, collision checking
-/// is done at [`ignite`](crate::Rocket::ignite()) time, after it becomes
-/// statically impossible to add any more routes to an instance of `Rocket`.
+/// Two routes are said to [collide](Route::collides_with()) if there exists a
+/// request that matches both routes. Colliding routes present a routing
+/// ambiguity and are thus disallowed by Rocket. Because routes can be
+/// constructed dynamically, collision checking is done at
+/// [`ignite`](crate::Rocket::ignite()) time, after it becomes statically
+/// impossible to add any more routes to an instance of `Rocket`.
 ///
 /// Note that because query parsing is always lenient -- extra and missing query
 /// parameters are allowed -- queries do not directly impact whether two routes
@@ -299,12 +288,6 @@ impl Route {
         let base = mapper(self.uri.base);
         self.uri = RouteUri::try_new(&base, &self.uri.unmounted_origin.to_string())?;
         Ok(self)
-    }
-
-    /// Returns `true` if `self` collides with `other`.
-    #[doc(hidden)]
-    pub fn collides_with(&self, other: &Route) -> bool {
-        crate::router::Collide::collides_with(self, other)
     }
 }
 

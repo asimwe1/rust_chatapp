@@ -7,22 +7,86 @@ pub trait Collide<T = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
 
-impl Collide for Route {
-    /// Determines if two routes can match against some request. That is, if two
-    /// routes `collide`, there exists a request that can match against both
-    /// routes.
+impl Route {
+    /// Returns `true` if `self` collides with `other`.
     ///
-    /// This implementation is used at initialization to check if two user
-    /// routes collide before launching. Format collisions works like this:
+    /// A [_collision_](Route#collisions) between two routes occurs when there
+    /// exists a request that could [match](Route::matches()) either route. That
+    /// is, a routing ambiguity would ensue if both routes were made available
+    /// to the router.
     ///
-    ///   * If route specifies a format, it only gets requests for that format.
-    ///   * If route doesn't specify a format, it gets requests for any format.
+    /// Specifically, a collision occurs when two routes `a` and `b`:
     ///
-    /// Because query parsing is lenient, and dynamic query parameters can be
-    /// missing, the particularities of a query string do not impact whether two
-    /// routes collide. The query effects the route's color, however, which
-    /// effects its rank.
-    fn collides_with(&self, other: &Route) -> bool {
+    ///  * Have the same [method](Route::method).
+    ///  * Have the same [rank](Route#default-ranking).
+    ///  * The routes' methods don't support a payload _or_ the routes'
+    ///    methods support a payload and the formats overlap. Formats overlap
+    ///    when:
+    ///    - The top-level type of either is `*` or the top-level types are
+    ///      equivalent.
+    ///    - The sub-level type of either is `*` or the sub-level types are
+    ///      equivalent.
+    ///  * Have overlapping route URIs. This means that either:
+    ///    - The URIs have the same number of segments `n`, and for `i` in
+    ///      `0..n`, either `a.uri[i]` is dynamic _or_ `b.uri[i]` is dynamic
+    ///      _or_ they're both static with the same value.
+    ///    - One URI has fewer segments _and_ ends with a trailing dynamic
+    ///      parameter _and_ the preceeding segments in both routes match the
+    ///      conditions above.
+    ///
+    /// Collisions are symmetric: for any routes `a` and `b`,
+    /// `a.collides_with(b) => b.collides_with(a)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::{Method, MediaType};
+    /// # use rocket::route::dummy_handler as handler;
+    ///
+    /// // Two routes with the same method, rank, URI, and formats collide.
+    /// let a = Route::new(Method::Get, "/", handler);
+    /// let b = Route::new(Method::Get, "/", handler);
+    /// assert!(a.collides_with(&b));
+    ///
+    /// // Two routes with the same method, rank, URI, and overlapping formats.
+    /// let mut a = Route::new(Method::Post, "/", handler);
+    /// a.format = Some(MediaType::new("*", "custom"));
+    /// let mut b = Route::new(Method::Post, "/", handler);
+    /// b.format = Some(MediaType::new("text", "*"));
+    /// assert!(a.collides_with(&b));
+    ///
+    /// // Two routes with different ranks don't collide.
+    /// let a = Route::ranked(1, Method::Get, "/", handler);
+    /// let b = Route::ranked(2, Method::Get, "/", handler);
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // Two routes with different methods don't collide.
+    /// let a = Route::new(Method::Put, "/", handler);
+    /// let b = Route::new(Method::Post, "/", handler);
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // Two routes with non-overlapping URIs do not collide.
+    /// let a = Route::new(Method::Get, "/foo", handler);
+    /// let b = Route::new(Method::Get, "/bar/<baz>", handler);
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // Two payload-supporting routes with non-overlapping formats.
+    /// let mut a = Route::new(Method::Post, "/", handler);
+    /// a.format = Some(MediaType::HTML);
+    /// let mut b = Route::new(Method::Post, "/", handler);
+    /// b.format = Some(MediaType::JSON);
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // Two non payload-supporting routes with non-overlapping formats
+    /// // collide. A request with `Accept: */*` matches both.
+    /// let mut a = Route::new(Method::Get, "/", handler);
+    /// a.format = Some(MediaType::HTML);
+    /// let mut b = Route::new(Method::Get, "/", handler);
+    /// b.format = Some(MediaType::JSON);
+    /// assert!(a.collides_with(&b));
+    /// ```
+    pub fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
             && self.uri.collides_with(&other.uri)
@@ -30,16 +94,68 @@ impl Collide for Route {
     }
 }
 
-impl Collide for Catcher {
-    /// Determines if two catchers are in conflict: there exists a request for
-    /// which there exist no rule to determine _which_ of the two catchers to
-    /// use. This means that the catchers:
+impl Catcher {
+    /// Returns `true` if `self` collides with `other`.
     ///
-    ///  * Have the same base.
-    ///  * Have the same status code or are both defaults.
+    /// A [_collision_](Catcher#collisions) between two catchers occurs when
+    /// there exists a request and ensuing error that could
+    /// [match](Catcher::matches()) both catchers. That is, a routing ambiguity
+    /// would ensue if both catchers were made available to the router.
+    ///
+    /// Specifically, a collision occurs when two catchers:
+    ///
+    ///  * Have the same [base](Catcher::base()).
+    ///  * Have the same status [code](Catcher::code) or are both `default`.
+    ///
+    /// Collisions are symmetric: for any catchers `a` and `b`,
+    /// `a.collides_with(b) => b.collides_with(a)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Catcher;
+    /// # use rocket::catcher::dummy_handler as handler;
+    ///
+    /// // Two catchers with the same status code and base collide.
+    /// let a = Catcher::new(404, handler).map_base(|_| format!("/foo")).unwrap();
+    /// let b = Catcher::new(404, handler).map_base(|_| format!("/foo")).unwrap();
+    /// assert!(a.collides_with(&b));
+    ///
+    /// // Two catchers with a different base _do not_ collide.
+    /// let a = Catcher::new(404, handler);
+    /// let b = a.clone().map_base(|_| format!("/bar")).unwrap();
+    /// assert_eq!(a.base(), "/");
+    /// assert_eq!(b.base(), "/bar");
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // Two catchers with a different codes _do not_ collide.
+    /// let a = Catcher::new(404, handler);
+    /// let b = Catcher::new(500, handler);
+    /// assert_eq!(a.base(), "/");
+    /// assert_eq!(b.base(), "/");
+    /// assert!(!a.collides_with(&b));
+    ///
+    /// // A catcher _with_ a status code and one _without_ do not collide.
+    /// let a = Catcher::new(404, handler);
+    /// let b = Catcher::new(None, handler);
+    /// assert!(!a.collides_with(&b));
+    /// ```
+    pub fn collides_with(&self, other: &Self) -> bool {
+        self.code == other.code && self.base().segments().eq(other.base().segments())
+    }
+}
+
+impl Collide for Route {
+    #[inline(always)]
+    fn collides_with(&self, other: &Route) -> bool {
+        Route::collides_with(&self, other)
+    }
+}
+
+impl Collide for Catcher {
+    #[inline(always)]
     fn collides_with(&self, other: &Self) -> bool {
-        self.code == other.code
-            && self.base.path().segments().eq(other.base.path().segments())
+        Catcher::collides_with(&self, other)
     }
 }
 
@@ -75,17 +191,17 @@ impl Collide for MediaType {
 }
 
 fn formats_collide(route: &Route, other: &Route) -> bool {
-    // When matching against the `Accept` header, the client can always provide
-    // a media type that will cause a collision through non-specificity, i.e,
-    // `*/*` matches everything.
-    if !route.method.supports_payload() {
+    // If the routes' method doesn't support a payload, then format matching
+    // considers the `Accept` header. The client can always provide a media type
+    // that will cause a collision through non-specificity, i.e, `*/*`.
+    if !route.method.supports_payload() && !other.method.supports_payload() {
         return true;
     }
 
-    // When matching against the `Content-Type` header, we'll only consider
-    // requests as having a `Content-Type` if they're fully specified. If a
-    // route doesn't have a `format`, it accepts all `Content-Type`s. If a
-    // request doesn't have a format, it only matches routes without a format.
+    // Payload supporting methods match against `Content-Type`. We only
+    // consider requests as having a `Content-Type` if they're fully
+    // specified. A route without a `format` accepts all `Content-Type`s. A
+    // request without a format only matches routes without a format.
     match (route.format.as_ref(), other.format.as_ref()) {
         (Some(a), Some(b)) => a.collides_with(b),
         _ => true

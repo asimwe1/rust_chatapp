@@ -32,16 +32,21 @@ use yansi::Paint;
 ///
 /// # Routing
 ///
-/// An error arising from a particular request _matches_ a catcher _iff_:
+/// If a route fails by returning a failure [`Outcome`], Rocket routes the
+/// erroring request to the highest precedence catcher among all the catchers
+/// that [match](Catcher::matches()). See [`Catcher::matches()`] for details on
+/// matching. Precedence is determined by the catcher's _base_, which is
+/// provided as the first argument to [`Rocket::register()`]. Catchers with more
+/// non-empty segments have a higher precedence.
 ///
-///  * It is a default catcher _or_ has a status code matching the error code.
-///  * Its base is a prefix of the normalized/decoded request URI path.
+/// Rocket provides [built-in defaults](#built-in-default), but _default_
+/// catchers can also be registered. A _default_ catcher is a catcher with no
+/// explicit status code: `None`.
 ///
-/// A _default_ catcher is a catcher with no explicit status code: `None`. The
-/// catcher's _base_ is provided as the first argument to
-/// [`Rocket::register()`](crate::Rocket::register()).
+/// [`Outcome`]: crate::request::Outcome
+/// [`Rocket::register()`]: crate::Rocket::register()
 ///
-/// # Collisions
+/// ## Collisions
 ///
 /// Two catchers are said to _collide_ if there exists an error that matches
 /// both catchers. Colliding catchers present a routing ambiguity and are thus
@@ -50,7 +55,7 @@ use yansi::Paint;
 /// after it becomes statically impossible to register any more catchers on an
 /// instance of `Rocket`.
 ///
-/// ### Built-In Default
+/// ## Built-In Default
 ///
 /// Rocket's provides a built-in default catcher that can handle all errors. It
 /// produces HTML or JSON, depending on the value of the `Accept` header. As
@@ -119,14 +124,8 @@ pub struct Catcher {
 
     /// The catcher's calculated rank.
     ///
-    /// This is [base.segments().len() | base.chars().len()].
-    pub(crate) rank: u64,
-}
-
-fn compute_rank(base: &uri::Origin<'_>) -> u64 {
-    let major = u32::MAX - base.path().segments().num() as u32;
-    let minor = u32::MAX - base.path().as_str().chars().count() as u32;
-    ((major as u64) << 32) | (minor as u64)
+    /// This is -(number of nonempty segments in base).
+    pub(crate) rank: isize,
 }
 
 impl Catcher {
@@ -178,7 +177,7 @@ impl Catcher {
             name: None,
             base: uri::Origin::ROOT,
             handler: Box::new(handler),
-            rank: compute_rank(&uri::Origin::ROOT),
+            rank: 0,
             code
         }
     }
@@ -250,7 +249,7 @@ impl Catcher {
         let new_base = uri::Origin::parse_owned(mapper(self.base))?;
         self.base = new_base.into_normalized_nontrailing();
         self.base.clear_query();
-        self.rank = compute_rank(&self.base);
+        self.rank = -1 * (self.base().segments().filter(|s| !s.is_empty()).count() as isize);
         Ok(self)
     }
 }
