@@ -548,7 +548,7 @@ impl<'a> Origin<'a> {
 
 impl_serde!(Origin<'a>, "an origin-form URI");
 
-impl_traits!(Origin, path, query);
+impl_traits!(Origin [parse_route], path, query);
 
 impl std::fmt::Display for Origin<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

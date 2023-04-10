@@ -26,8 +26,8 @@ impl std::fmt::Debug for ArbitraryRouteData<'_> {
         f.debug_struct("ArbitraryRouteData")
             .field("method", &self.method.0)
             .field("base", &self.uri.0.base())
-            .field("path", &self.uri.0.unmounted_origin.to_string())
-            .field("uri", &self.uri.0.uri.to_string())
+            .field("unmounted", &self.uri.0.unmounted().to_string())
+            .field("uri", &self.uri.0.to_string())
             .field("format", &self.format.as_ref().map(|v| v.0.to_string()))
             .finish()
     }
@@ -59,7 +59,7 @@ impl<'c, 'a: 'c> ArbitraryRequestData<'a> {
 
 impl<'a> ArbitraryRouteData<'a> {
     fn into_route(self) -> Route {
-        let mut r = Route::ranked(0, self.method.0, self.uri.0.as_str(), dummy_handler);
+        let mut r = Route::ranked(0, self.method.0, &self.uri.0.to_string(), dummy_handler);
         r.format = self.format.map(|f| f.0);
         r
     }

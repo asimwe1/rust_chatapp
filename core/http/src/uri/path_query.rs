@@ -416,6 +416,12 @@ macro_rules! impl_traits {
             }
         }
 
+        impl AsRef<std::ffi::OsStr> for $T<'_> {
+            fn as_ref(&self) -> &std::ffi::OsStr {
+                self.raw().as_ref()
+            }
+        }
+
         impl std::fmt::Display for $T<'_> {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.raw())

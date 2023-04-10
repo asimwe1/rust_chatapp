@@ -1009,6 +1009,13 @@ impl AsRef<str> for RawStr {
     }
 }
 
+impl AsRef<std::ffi::OsStr> for RawStr {
+    #[inline(always)]
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.as_str().as_ref()
+    }
+}
+
 impl AsRef<RawStr> for str {
     #[inline(always)]
     fn as_ref(&self) -> &RawStr {

@@ -200,6 +200,11 @@ impl Route {
     ///
     /// Panics if `path` is not a valid Rocket route URI.
     ///
+    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
+    /// normalized, that is, does not contain any empty segments except for an
+    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
+    /// allowed to contain any UTF-8 characters.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -207,7 +212,7 @@ impl Route {
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
     ///
-    /// // this is a rank 1 route matching requests to `GET /`
+    /// // this is a route matching requests to `GET /`
     /// let index = Route::new(Method::Get, "/", handler);
     /// assert_eq!(index.rank, -9);
     /// assert_eq!(index.method, Method::Get);
@@ -225,6 +230,11 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid Rocket route URI.
+    ///
+    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
+    /// normalized, that is, does not contain any empty segments except for an
+    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
+    /// allowed to contain any UTF-8 characters.
     ///
     /// # Example
     ///
@@ -275,12 +285,12 @@ impl Route {
     ///
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
     /// assert_eq!(index.uri.base(), "/");
-    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
+    /// assert_eq!(index.uri.unmounted().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/foo/bar");
     ///
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
     /// assert_eq!(index.uri.base(), "/boo");
-    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
+    /// assert_eq!(index.uri.unmounted().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
@@ -309,7 +319,7 @@ impl fmt::Display for Route {
             write!(f, "{}", Paint::blue(self.uri.base()).underline())?;
         }
 
-        write!(f, "{}", Paint::blue(&self.uri.unmounted_origin))?;
+        write!(f, "{}", Paint::blue(&self.uri.unmounted()))?;
 
         if self.rank > 1 {
             write!(f, " [{}]", Paint::default(&self.rank).bold())?;

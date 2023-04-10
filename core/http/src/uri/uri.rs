@@ -391,7 +391,10 @@ macro_rules! impl_serde {
 /// Implements traits from `impl_base_traits` and IntoOwned for a URI.
 macro_rules! impl_traits {
     ($T:ident, $($field:ident),* $(,)?) => {
-        impl_base_traits!($T, $($field),*);
+        impl_traits!($T [parse], $($field),*);
+    };
+    ($T:ident [$partial_eq_parse:ident], $($field:ident),* $(,)?) => {
+        impl_base_traits!($T [$partial_eq_parse], $($field),*);
 
         impl crate::ext::IntoOwned for $T<'_> {
             type Owned = $T<'static>;
@@ -409,6 +412,9 @@ macro_rules! impl_traits {
 /// Implements PartialEq, Eq, Hash, and TryFrom.
 macro_rules! impl_base_traits {
     ($T:ident, $($field:ident),* $(,)?) => {
+        impl_base_traits!($T [parse], $($field),*);
+    };
+    ($T:ident [$partial_eq_parse:ident], $($field:ident),* $(,)?) => {
         impl std::convert::TryFrom<String> for $T<'static> {
             type Error = Error<'static>;
 
@@ -442,7 +448,7 @@ macro_rules! impl_base_traits {
 
         impl PartialEq<str> for $T<'_> {
             fn eq(&self, string: &str) -> bool {
-                $T::parse(string).map_or(false, |v| &v == self)
+                $T::$partial_eq_parse(string).map_or(false, |v| &v == self)
             }
         }
 
