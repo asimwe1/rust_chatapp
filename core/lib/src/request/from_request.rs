@@ -142,7 +142,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///     Extracts the [`Route`] from the request if one is available. When used
 ///     as a request guard in a route handler, this will always succeed. Outside
 ///     of a route handler, a route may not be available, and the request is
-///     forwarded with a 500 status.
+///     forwarded with a 500 Internal Server Error status.
 ///
 ///     For more information on when an `&Route` is available, see
 ///     [`Request::route()`].
@@ -165,19 +165,19 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///
 ///     Extracts the [`ContentType`] from the incoming request via
 ///     [`Request::content_type()`]. If the request didn't specify a
-///     Content-Type, the request is forwarded.
+///     Content-Type, the request is forwarded with a 404 Not Found status.
 ///
 ///   * **IpAddr**
 ///
 ///     Extracts the client ip address of the incoming request as an [`IpAddr`]
 ///     via [`Request::client_ip()`]. If the client's IP address is not known,
-///     the request is forwarded.
+///     the request is forwarded with a 404 Not Found status.
 ///
 ///   * **SocketAddr**
 ///
 ///     Extracts the remote address of the incoming request as a [`SocketAddr`]
 ///     via [`Request::remote()`]. If the remote address is not known, the
-///     request is forwarded.
+///     request is forwarded with a 404 Not Found status.
 ///
 ///   * **Option&lt;T>** _where_ **T: FromRequest**
 ///
@@ -193,7 +193,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///     `FromRequest` implementation. If derivation is a `Success`, the value is
 ///     returned in `Ok`. If the derivation is a `Failure`, the error value is
 ///     returned in `Err`. If the derivation is a `Forward`, the request is
-///     forwarded.
+///     forwarded with the same status code as the original forward.
 ///
 /// [`Config`]: crate::config::Config
 ///
@@ -503,7 +503,7 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
         match T::from_request(request).await {
             Success(val) => Success(Ok(val)),
             Failure((_, e)) => Success(Err(e)),
-            Forward(_) => Forward(Status::NotFound),
+            Forward(status) => Forward(status),
         }
     }
 }
@@ -517,5 +517,14 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
         }
+    }
+}
+
+#[crate::async_trait]
+impl<'r, T: FromRequest<'r>> FromRequest<'r> for Outcome<T, T::Error> {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        Success(T::from_request(request).await)
     }
 }

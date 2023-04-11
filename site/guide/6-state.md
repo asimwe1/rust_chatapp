@@ -141,13 +141,12 @@ impl<'r> FromRequest<'r> for Item<'r> {
         // Or alternatively, using `Rocket::state()`:
         let outcome = request.rocket().state::<MyConfig>()
             .map(|my_config| Item(&my_config.user_val))
-            .or_forward(Status::NotFound);
+            .or_forward(Status::InternalServerError);
 
         outcome
     }
 }
 ```
-
 
 [`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
 [`Rocket::state()`]: @api/rocket/struct.Rocket.html#method.state

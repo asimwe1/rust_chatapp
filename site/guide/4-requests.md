@@ -206,9 +206,10 @@ fn hello(name: &str, age: u8, cool: bool) { /* ... */ }
 
 What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? When a parameter
 type mismatch occurs, Rocket _forwards_ the request to the next matching route,
-if there is any. This continues until a route doesn't forward the request or
-there are no remaining routes to try. When there are no remaining routes, a
-customizable **404 error** is returned.
+if there is any. This continues until a route succeeds or fails, or there are no
+other matching routes to try. When there are no remaining routes, the [error
+catcher](#error-catchers) associated with the status set by the last forwarding
+guard is called.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
 ranking from -12 to -1, detailed in the next section, but a route's rank can also
@@ -436,13 +437,14 @@ We start with two request guards:
 
     The `FromRequest` implementation for `User` checks that a cookie identifies
     a user and returns a `User` value if so. If no user can be authenticated,
-    the guard forwards.
+    the guard forwards with a 401 Unauthorized status.
 
   * `AdminUser`: A user authenticated as an administrator.
 
     The `FromRequest` implementation for `AdminUser` checks that a cookie
     identifies an _administrative_ user and returns an `AdminUser` value if so.
-    If no user can be authenticated, the guard forwards.
+    If no user can be authenticated, the guard forwards with a 401 Unauthorized
+    status.
 
 We now use these two guards in combination with forwarding to implement the
 following three routes, each leading to an administrative control panel at

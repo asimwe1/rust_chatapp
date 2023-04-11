@@ -64,7 +64,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///     configured `ca_certs` and with respect to SNI, if any. See [module level
 ///     docs](crate::mtls) for configuration details.
 ///
-/// If the client does not present certificates, the guard _forwards_.
+/// If the client does not present certificates, the guard _forwards_ with a
+/// status of 401 Unauthorized.
 ///
 /// If the certificate chain fails to validate or verify, the guard _fails_ with
 /// the respective [`Error`].
@@ -81,6 +82,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// use rocket::mtls::{self, bigint::BigUint, Certificate};
 /// use rocket::request::{Request, FromRequest, Outcome};
 /// use rocket::outcome::try_outcome;
+/// use rocket::http::Status;
 ///
 /// // The serial number for the certificate issued to the admin.
 /// const ADMIN_SERIAL: &str = "65828378108300243895479600452308786010218223563";
@@ -97,7 +99,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::Unauthorized)
 ///         }
 ///     }
 /// }

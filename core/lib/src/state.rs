@@ -80,7 +80,7 @@ use crate::http::Status;
 ///         // Or alternatively, using `Rocket::state()`:
 ///         let outcome = request.rocket().state::<MyConfig>()
 ///             .map(|my_config| Item(&my_config.user_val))
-///             .or_forward(Status::NotFound);
+///             .or_forward(Status::InternalServerError);
 ///
 ///         outcome
 ///     }

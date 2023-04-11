@@ -221,8 +221,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Forward` is
-    /// returned.
+    /// the response. If the responder returns `Err`, an outcome of `Forward`
+    /// with a status of `404 Not Found` is returned.
     ///
     /// # Example
     ///
