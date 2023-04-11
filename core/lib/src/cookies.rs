@@ -101,8 +101,8 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "secrets")] {
 /// use rocket::http::Status;
-/// use rocket::outcome::IntoOutcome;
 /// use rocket::request::{self, Request, FromRequest};
+/// use rocket::outcome::IntoOutcome;
 ///
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
@@ -116,7 +116,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 ///             .get_private("user_id")
 ///             .and_then(|c| c.value().parse().ok())
 ///             .map(|id| User(id))
-///             .or_forward(())
+///             .or_forward(Status::Unauthorized)
 ///     }
 /// }
 /// # }

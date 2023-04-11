@@ -4,8 +4,8 @@ use std::pin::Pin;
 use rocket::data::{IoHandler, IoStream};
 use rocket::futures::{self, StreamExt, SinkExt, future::BoxFuture, stream::SplitStream};
 use rocket::response::{self, Responder, Response};
-use rocket::request::{FromRequest, Outcome};
-use rocket::request::Request;
+use rocket::request::{FromRequest, Request, Outcome};
+use rocket::http::Status;
 
 use crate::{Config, Message};
 use crate::stream::DuplexStream;
@@ -203,7 +203,7 @@ impl<'r> FromRequest<'r> for WebSocket {
         let key = headers.get_one("Sec-WebSocket-Key").map(|k| derive_accept_key(k.as_bytes()));
         match key {
             Some(key) if is_upgrade && is_ws && is_13 => Outcome::Success(WebSocket::new(key)),
-            Some(_) | None => Outcome::Forward(())
+            Some(_) | None => Outcome::Forward(Status::NotFound)
         }
     }
 }
