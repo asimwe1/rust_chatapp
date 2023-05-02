@@ -52,6 +52,7 @@ macro_rules! known_media_types {
         EPUB (is_epub): "EPUB", "application", "epub+zip",
         EventStream (is_event_stream): "SSE stream", "text", "event-stream",
         Markdown (is_markdown): "markdown text", "text", "markdown" ; "charset" => "utf-8",
+        EXE (is_exe): "executable", "application", "vnd.microsoft.portable-executable",
     })
 }
 
@@ -95,6 +96,8 @@ macro_rules! known_extensions {
         "aac" => AAC,
         "ics" => Calendar,
         "bin" => Binary,
+        "iso" => Binary,
+        "dmg" => Binary,
         "mpg" => MPEG,
         "mpeg" => MPEG,
         "tar" => TAR,
@@ -109,6 +112,7 @@ macro_rules! known_extensions {
         "epub" => EPUB,
         "md" => Markdown,
         "markdown" => Markdown,
+        "exe" => EXE,
     })
 }
 
