@@ -110,7 +110,6 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
     ts
 }
 
-#[allow(non_snake_case)]
 pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
     let uri_display = DeriveGenerator::build_for(input.clone(), quote!(impl #P_URI_DISPLAY))
         .support(Support::TupleStruct | Support::Type | Support::Lifetime)

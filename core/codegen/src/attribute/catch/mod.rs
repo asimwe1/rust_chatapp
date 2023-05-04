@@ -20,6 +20,7 @@ pub fn _catch(
     let user_catcher_fn_name = &catch.function.sig.ident;
     let vis = &catch.function.vis;
     let status_code = Optional(catch.status.map(|s| s.code));
+    let deprecated = catch.function.attrs.iter().find(|a| a.path().is_ident("deprecated"));
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {
@@ -57,11 +58,12 @@ pub fn _catch(
         #user_catcher_fn
 
         #[doc(hidden)]
-        #[allow(non_camel_case_types)]
+        #[allow(nonstandard_style)]
         /// Rocket code generated proxy structure.
-        #vis struct #user_catcher_fn_name {  }
+        #deprecated #vis struct #user_catcher_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementations.
+        #[allow(nonstandard_style, deprecated, clippy::style)]
         impl #user_catcher_fn_name {
             fn into_info(self) -> #_catcher::StaticInfo {
                 fn monomorphized_function<'__r>(

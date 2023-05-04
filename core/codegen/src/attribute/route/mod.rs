@@ -343,7 +343,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #deprecated #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementations.
-        #[allow(nonstandard_style, deprecated)]
+        #[allow(nonstandard_style, deprecated, clippy::style)]
         impl #handler_fn_name {
             fn into_info(self) -> #_route::StaticInfo {
                 fn monomorphized_function<'__r>(
