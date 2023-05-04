@@ -2,6 +2,7 @@ use std::fmt;
 use std::io::Cursor;
 
 use crate::http::uri::Path;
+use crate::http::ext::IntoOwned;
 use crate::response::Response;
 use crate::request::Request;
 use crate::http::{Status, ContentType, uri};
@@ -207,8 +208,57 @@ impl Catcher {
         self.base.path()
     }
 
+    /// Prefix `base` to the current `base` in `self.`
+    ///
+    /// If the the current base is `/`, then the base is replaced by `base`.
+    /// Otherwise, `base` is prefixed to the existing `base`.
+    ///
+    /// ```rust
+    /// use rocket::request::Request;
+    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::response::Responder;
+    /// use rocket::http::Status;
+    /// # use rocket::uri;
+    ///
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    ///    let res = (status, format!("404: {}", req.uri()));
+    ///    Box::pin(async move { res.respond_to(req) })
+    /// }
+    ///
+    /// let catcher = Catcher::new(404, handle_404);
+    /// assert_eq!(catcher.base(), "/");
+    ///
+    /// // Since the base is `/`, rebasing replaces the base.
+    /// let rebased = catcher.rebase(uri!("/boo"));
+    /// assert_eq!(rebased.base(), "/boo");
+    ///
+    /// // Now every rebase prefixes.
+    /// let rebased = rebased.rebase(uri!("/base"));
+    /// assert_eq!(rebased.base(), "/base/boo");
+    ///
+    /// // Note that trailing slashes have no effect and are thus removed:
+    /// let catcher = Catcher::new(404, handle_404);
+    /// let rebased = catcher.rebase(uri!("/boo/"));
+    /// assert_eq!(rebased.base(), "/boo");
+    /// ```
+    pub fn rebase(mut self, mut base: uri::Origin<'_>) -> Self {
+        self.base = if self.base.path() == "/" {
+            base.clear_query();
+            base.into_normalized_nontrailing().into_owned()
+        } else {
+            uri::Origin::parse_owned(format!("{}{}", base.path(), self.base))
+                .expect("catcher rebase: {new}{old} is valid origin URI")
+                .into_normalized_nontrailing()
+        };
+
+        self.rank = -1 * (self.base().segments().filter(|s| !s.is_empty()).count() as isize);
+        self
+    }
+
     /// Maps the `base` of this catcher using `mapper`, returning a new
     /// `Catcher` with the returned base.
+    ///
+    /// **Note:** Prefer to use [`Catcher::rebase()`] whenever possible!
     ///
     /// `mapper` is called with the current base. The returned `String` is used
     /// as the new base if it is a valid URI. If the returned base URI contains
@@ -240,10 +290,7 @@ impl Catcher {
     /// let catcher = catcher.map_base(|base| format!("/foo ? {}", base));
     /// assert!(catcher.is_err());
     /// ```
-    pub fn map_base<'a, F>(
-        mut self,
-        mapper: F
-    ) -> std::result::Result<Self, uri::Error<'static>>
+    pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
         where F: FnOnce(uri::Origin<'a>) -> String
     {
         let new_base = uri::Origin::parse_owned(mapper(self.base))?;

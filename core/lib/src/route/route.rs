@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::From;
 use std::borrow::Cow;
 
 use yansi::Paint;
@@ -257,8 +256,47 @@ impl Route {
         }
     }
 
+    /// Prefix `base` to any existing mount point base in `self`.
+    ///
+    /// If the the current mount point base is `/`, then the base is replaced by
+    /// `base`. Otherwise, `base` is prefixed to the existing `base`.
+    ///
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
+    ///
+    /// // The default base is `/`.
+    /// let index = Route::new(Method::Get, "/foo/bar", handler);
+    ///
+    /// // Since the base is `/`, rebasing replaces the base.
+    /// let rebased = index.rebase(uri!("/boo"));
+    /// assert_eq!(rebased.uri.base(), "/boo");
+    ///
+    /// // Now every rebase prefixes.
+    /// let rebased = rebased.rebase(uri!("/base"));
+    /// assert_eq!(rebased.uri.base(), "/base/boo");
+    ///
+    /// // Note that trailing slashes are preserved:
+    /// let index = Route::new(Method::Get, "/foo", handler);
+    /// let rebased = index.rebase(uri!("/boo/"));
+    /// assert_eq!(rebased.uri.base(), "/boo/");
+    /// ```
+    pub fn rebase(mut self, base: uri::Origin<'_>) -> Self {
+        let new_base = match self.uri.base().as_str() {
+            "/" => base.path().to_string(),
+            _ => format!("{}{}", base.path(), self.uri.base()),
+        };
+
+        self.uri = RouteUri::new(&new_base, &self.uri.unmounted_origin.to_string());
+        self
+    }
+
     /// Maps the `base` of this route using `mapper`, returning a new `Route`
     /// with the returned base.
+    ///
+    /// **Note:** Prefer to use [`Route::rebase()`] whenever possible!
     ///
     /// `mapper` is called with the current base. The returned `String` is used
     /// as the new base if it is a valid URI. If the returned base URI contains
@@ -269,18 +307,28 @@ impl Route {
     ///
     /// ```rust
     /// use rocket::Route;
-    /// use rocket::http::{Method, uri::Origin};
+    /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
     /// assert_eq!(index.uri.base(), "/");
     /// assert_eq!(index.uri.unmounted().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/foo/bar");
     ///
-    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.base(), "/boo");
-    /// assert_eq!(index.uri.unmounted().path(), "/foo/bar");
-    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
+    /// # let old_index = index;
+    /// # let index = old_index.clone();
+    /// let mapped = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// assert_eq!(mapped.uri.base(), "/boo/");
+    /// assert_eq!(mapped.uri.unmounted().path(), "/foo/bar");
+    /// assert_eq!(mapped.uri.path(), "/boo/foo/bar");
+    ///
+    /// // Note that this produces different `base` results than `rebase`!
+    /// # let index = old_index.clone();
+    /// let rebased = index.rebase(uri!("/boo"));
+    /// assert_eq!(rebased.uri.base(), "/boo");
+    /// assert_eq!(rebased.uri.unmounted().path(), "/foo/bar");
+    /// assert_eq!(rebased.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
         where F: FnOnce(uri::Origin<'a>) -> String
@@ -298,11 +346,7 @@ impl fmt::Display for Route {
         }
 
         write!(f, "{} ", Paint::green(&self.method))?;
-        if self.uri.base() != "/" {
-            write!(f, "{}", Paint::blue(self.uri.base()).underline())?;
-        }
-
-        write!(f, "{}", Paint::blue(&self.uri.unmounted()))?;
+        self.uri.color_fmt(f)?;
 
         if self.rank > 1 {
             write!(f, " [{}]", Paint::default(&self.rank).bold())?;

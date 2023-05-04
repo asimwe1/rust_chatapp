@@ -98,7 +98,7 @@ impl<'a> RouteUri<'a> {
     /// Panics if  `base` or `uri` cannot be parsed as `Origin`s.
     #[track_caller]
     pub(crate) fn new(base: &str, uri: &str) -> RouteUri<'static> {
-        Self::try_new(base, uri).expect("Expected valid URIs")
+        Self::try_new(base, uri).expect("expected valid route URIs")
     }
 
     /// Creates a new `RouteUri` from a `base` mount point and a route `uri`.
@@ -110,7 +110,7 @@ impl<'a> RouteUri<'a> {
     pub fn try_new(base: &str, uri: &str) -> Result<RouteUri<'static>> {
         let mut base = Origin::parse(base)
             .map_err(|e| e.into_owned())?
-            .into_normalized_nontrailing()
+            .into_normalized()
             .into_owned();
 
         base.clear_query();
@@ -120,16 +120,17 @@ impl<'a> RouteUri<'a> {
             .into_normalized()
             .into_owned();
 
-        let compiled_uri = match base.path().as_str() {
-            "/" => origin.to_string(),
-            base => match (origin.path().as_str(), origin.query()) {
-                ("/", None) => base.to_string(),
-                ("/", Some(q)) => format!("{}?{}", base, q),
-                _ => format!("{}{}", base, origin),
+        // Distinguish for routes `/` with bases of `/foo/` and `/foo`. The
+        // latter base, without a trailing slash, should combine as `/foo`.
+        let route_uri = match origin.path().as_str() {
+            "/" if !base.has_trailing_slash() => match origin.query() {
+                Some(query) => format!("{}?{}", base, query),
+                None => base.to_string(),
             }
+            _ => format!("{}{}", base, origin),
         };
 
-        let uri = Origin::parse_route(&compiled_uri)
+        let uri = Origin::parse_route(&route_uri)
             .map_err(|e| e.into_owned())?
             .into_normalized()
             .into_owned();
@@ -171,12 +172,16 @@ impl<'a> RouteUri<'a> {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
     ///
     /// let route = Route::new(Method::Get, "/foo/bar?a=1", handler);
     /// assert_eq!(route.uri.base(), "/");
     ///
-    /// let route = route.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// let route = route.rebase(uri!("/boo"));
     /// assert_eq!(route.uri.base(), "/boo");
+    ///
+    /// let route = route.rebase(uri!("/foo"));
+    /// assert_eq!(route.uri.base(), "/foo/boo");
     /// ```
     #[inline(always)]
     pub fn base(&self) -> Path<'_> {
@@ -191,9 +196,10 @@ impl<'a> RouteUri<'a> {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
     ///
     /// let route = Route::new(Method::Get, "/foo/bar?a=1", handler);
-    /// let route = route.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// let route = route.rebase(uri!("/boo"));
     ///
     /// assert_eq!(route.uri, "/boo/foo/bar?a=1");
     /// assert_eq!(route.uri.base(), "/boo");
@@ -231,6 +237,23 @@ impl<'a> RouteUri<'a> {
 
         // We subtract `3` because `raw_path` is never `0`: 0b0100 = 4 - 3 = 1.
         -((raw_weight as isize) - 3)
+    }
+
+    pub(crate) fn color_fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use yansi::Paint;
+
+        let (path, base, unmounted) = (self.uri.path(), self.base(), self.unmounted().path());
+        let unmounted_part = path.strip_prefix(base.as_str())
+            .map(|raw| raw.as_str())
+            .unwrap_or(unmounted.as_str());
+
+        write!(f, "{}", Paint::blue(self.base()).underline())?;
+        write!(f, "{}", Paint::blue(unmounted_part))?;
+        if let Some(q) = self.unmounted().query() {
+            write!(f, "?{}", Paint::green(q))?;
+        }
+
+        Ok(())
     }
 }
 
@@ -289,7 +312,7 @@ impl<'a> std::ops::Deref for RouteUri<'a> {
 
 impl fmt::Display for RouteUri<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner().fmt(f)
+        self.uri.fmt(f)
     }
 }
 
@@ -303,4 +326,47 @@ impl PartialEq<str> for RouteUri<'_> {
 
 impl PartialEq<&str> for RouteUri<'_> {
     fn eq(&self, other: &&str) -> bool { self.inner() == *other }
+}
+
+#[cfg(test)]
+mod tests {
+    macro_rules! assert_uri_equality {
+        ($base:expr, $path:expr => $ebase:expr, $epath:expr, $efull:expr) => {
+            let uri = super::RouteUri::new($base, $path);
+            assert_eq!(uri, $efull, "complete URI mismatch. expected {}, got {}", $efull, uri);
+            assert_eq!(uri.base(), $ebase, "expected base {}, got {}", $ebase, uri.base());
+            assert_eq!(uri.unmounted(), $epath, "expected unmounted {}, got {}", $epath,
+                uri.unmounted());
+        };
+    }
+
+    #[test]
+    fn test_route_uri_composition() {
+        assert_uri_equality!("/", "/" => "/", "/", "/");
+        assert_uri_equality!("/", "/foo" => "/", "/foo", "/foo");
+        assert_uri_equality!("/", "/foo/bar" => "/", "/foo/bar", "/foo/bar");
+        assert_uri_equality!("/", "/foo/" => "/", "/foo/", "/foo/");
+        assert_uri_equality!("/", "/foo/bar/" => "/", "/foo/bar/", "/foo/bar/");
+
+        assert_uri_equality!("/foo", "/" => "/foo", "/", "/foo");
+        assert_uri_equality!("/foo", "/bar" => "/foo", "/bar", "/foo/bar");
+        assert_uri_equality!("/foo", "/bar/" => "/foo", "/bar/", "/foo/bar/");
+        assert_uri_equality!("/foo", "/?baz" => "/foo", "/?baz", "/foo?baz");
+        assert_uri_equality!("/foo", "/bar?baz" => "/foo", "/bar?baz", "/foo/bar?baz");
+        assert_uri_equality!("/foo", "/bar/?baz" => "/foo", "/bar/?baz", "/foo/bar/?baz");
+
+        assert_uri_equality!("/foo/", "/" => "/foo/", "/", "/foo/");
+        assert_uri_equality!("/foo/", "/bar" => "/foo/", "/bar", "/foo/bar");
+        assert_uri_equality!("/foo/", "/bar/" => "/foo/", "/bar/", "/foo/bar/");
+        assert_uri_equality!("/foo/", "/?baz" => "/foo/", "/?baz", "/foo/?baz");
+        assert_uri_equality!("/foo/", "/bar?baz" => "/foo/", "/bar?baz", "/foo/bar?baz");
+        assert_uri_equality!("/foo/", "/bar/?baz" => "/foo/", "/bar/?baz", "/foo/bar/?baz");
+
+        assert_uri_equality!("/foo?baz", "/" => "/foo", "/", "/foo");
+        assert_uri_equality!("/foo?baz", "/bar" => "/foo", "/bar", "/foo/bar");
+        assert_uri_equality!("/foo?baz", "/bar/" => "/foo", "/bar/", "/foo/bar/");
+        assert_uri_equality!("/foo/?baz", "/" => "/foo/", "/", "/foo/");
+        assert_uri_equality!("/foo/?baz", "/bar" => "/foo/", "/bar", "/foo/bar");
+        assert_uri_equality!("/foo/?baz", "/bar/" => "/foo/", "/bar/", "/foo/bar/");
+    }
 }

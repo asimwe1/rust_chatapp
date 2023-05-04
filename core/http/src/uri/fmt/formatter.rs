@@ -437,15 +437,23 @@ impl<'a> ValidRoutePrefix for Origin<'a> {
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 
+        // Avoid a double `//` to start.
         if prefix.path() == "/" {
-            // Avoid a double `//` to start.
             return Origin::new(path, query);
-        } else if path == "/" {
-            // Appending path to `/` is a no-op, but append any query.
+        }
+
+        // Avoid allocating if the `path` would result in just the prefix.
+        if path == "/" {
             prefix.set_query(query);
             return prefix;
         }
 
+        // Avoid a `//` resulting from joining.
+        if prefix.has_trailing_slash() && path.starts_with('/') {
+            return Origin::new(format!("{}{}", prefix.path(), &path[1..]), query);
+        }
+
+        // Join normally.
         Origin::new(format!("{}{}", prefix.path(), path), query)
     }
 }
@@ -458,12 +466,11 @@ impl<'a> ValidRoutePrefix for Absolute<'a> {
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 
-        if prefix.authority().is_some() {
-            // The prefix is normalized. Appending a `/` is a no-op.
-            if path == "/" {
-                prefix.set_query(query);
-                return prefix;
-            }
+        // Distinguish for routes `/` with bases of `/foo/` and `/foo`. The
+        // latter base, without a trailing slash, should combine as `/foo`.
+        if path == "/" {
+            prefix.set_query(query);
+            return prefix;
         }
 
         // In these cases, appending `path` would be a no-op or worse.
@@ -473,11 +480,7 @@ impl<'a> ValidRoutePrefix for Absolute<'a> {
             return prefix;
         }
 
-        if path == "/" {
-            prefix.set_query(query);
-            return prefix;
-        }
-
+        // Create the combined URI.
         prefix.set_path(format!("{}{}", prefix.path(), path));
         prefix.set_query(query);
         prefix

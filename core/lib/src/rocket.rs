@@ -12,7 +12,7 @@ use crate::trip_wire::TripWire;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, State};
-use crate::http::uri::{self, Origin};
+use crate::http::uri::Origin;
 use crate::http::ext::IntoOwned;
 use crate::error::{Error, ErrorKind};
 use crate::log::PaintExt;
@@ -246,7 +246,7 @@ impl Rocket<Build> {
     fn load<'a, B, T, F, M>(mut self, kind: &str, base: B, items: Vec<T>, m: M, f: F) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
-              M: Fn(&Origin<'a>, T) -> Result<T, uri::Error<'static>>,
+              M: Fn(&Origin<'a>, T) -> T,
               F: Fn(&mut Self, T),
               T: Clone + fmt::Display,
     {
@@ -266,42 +266,65 @@ impl Rocket<Build> {
         }
 
         for unmounted_item in items {
-            let item = match m(&base, unmounted_item.clone()) {
-                Ok(item) => item,
-                Err(e) => {
-                    error!("malformed URI in {} {}", kind, unmounted_item);
-                    error_!("{}", e);
-                    info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
-                    panic!("aborting due to invalid {} URI", kind);
-                }
-            };
-
-            f(&mut self, item)
+            f(&mut self, m(&base, unmounted_item.clone()))
         }
 
         self
     }
 
-    /// Mounts all of the routes in the supplied vector at the given `base`
-    /// path. Mounting a route with path `path` at path `base` makes the route
-    /// available at `base/path`.
+    /// Mounts all of the `routes` at the given `base` mount point.
+    ///
+    /// A route _mounted_ at `base` has an effective URI of `base/route`, where
+    /// `route` is the route URI. In other words, `base` is added as a prefix to
+    /// the route's URI. The URI resulting from joining the `base` URI and the
+    /// route URI is called the route's _effective URI_, as this is the URI used
+    /// for request matching during routing.
+    ///
+    /// A `base` URI is not allowed to have a query part. If a `base` _does_
+    /// have a query part, it is ignored when producing the effective URI.
+    ///
+    /// A `base` may have an optional trailing slash. A route with a URI path of
+    /// `/` (and any optional query) mounted at a `base` has an effective URI
+    /// equal to the `base` (plus any optional query). That is, if the base has
+    /// a trailing slash, the effective URI path has a trailing slash, and
+    /// otherwise it does not. Routes with URI paths other than `/` are not
+    /// effected by trailing slashes in their corresponding mount point.
+    ///
+    /// As concrete examples, consider the following table:
+    ///
+    /// | mount point | route URI | effective URI |
+    /// |-------------|-----------|---------------|
+    /// | `/`         | `/foo`    | `/foo`        |
+    /// | `/`         | `/foo/`   | `/foo/`       |
+    /// | `/foo`      | `/`       | `/foo`        |
+    /// | `/foo`      | `/?bar`   | `/foo?bar`    |
+    /// | `/foo`      | `/bar`    | `/foo/bar`    |
+    /// | `/foo`      | `/bar/`   | `/foo/bar/`   |
+    /// | `/foo/`     | `/`       | `/foo/`       |
+    /// | `/foo/`     | `/bar`    | `/foo/bar`    |
+    /// | `/foo/`     | `/?bar`   | `/foo/?bar`   |
+    /// | `/foo/bar`  | `/`       | `/foo/bar`    |
+    /// | `/foo/bar/` | `/`       | `/foo/bar/`   |
+    /// | `/foo/?bar` | `/`       | `/foo/`       |
+    /// | `/foo/?bar` | `/baz`    | `/foo/baz`    |
+    /// | `/foo/?bar` | `/baz/`   | `/foo/baz/`   |
     ///
     /// # Panics
     ///
     /// Panics if either:
-    ///   * the `base` mount point is not a valid static path: a valid origin
-    ///     URI without dynamic parameters.
     ///
-    ///   * any route's URI is not a valid origin URI.
+    ///   * the `base` mount point is not a valid origin URI without dynamic
+    ///     parameters
     ///
-    ///     **Note:** _This kind of panic is guaranteed not to occur if the routes
-    ///     were generated using Rocket's code generation._
+    ///   * any route URI is not a valid origin URI. (**Note:** _This kind of
+    ///     panic is guaranteed not to occur if the routes were generated using
+    ///     Rocket's code generation._)
     ///
     /// # Examples
     ///
     /// Use the `routes!` macro to mount routes created using the code
-    /// generation facilities. Requests to the `/hello/world` URI will be
-    /// dispatched to the `hi` route.
+    /// generation facilities. Requests to both `/world` and `/hello/world` URI
+    /// will be dispatched to the `hi` route.
     ///
     /// ```rust,no_run
     /// # #[macro_use] extern crate rocket;
@@ -313,7 +336,9 @@ impl Rocket<Build> {
     ///
     /// #[launch]
     /// fn rocket() -> _ {
-    ///     rocket::build().mount("/hello", routes![hi])
+    ///     rocket::build()
+    ///         .mount("/", routes![hi])
+    ///         .mount("/hello", routes![hi])
     /// }
     /// ```
     ///
@@ -344,7 +369,7 @@ impl Rocket<Build> {
               R: Into<Vec<Route>>
     {
         self.load("route", base, routes.into(),
-            |base, route| route.map_base(|old| format!("{}{}", base, old)),
+            |base, route| route.rebase(base.clone()),
             |r, route| r.0.routes.push(route))
     }
 
@@ -383,7 +408,7 @@ impl Rocket<Build> {
               C: Into<Vec<Catcher>>
     {
         self.load("catcher", base, catchers.into(),
-            |base, catcher| catcher.map_base(|old| format!("{}{}", base, old)),
+            |base, catcher| catcher.rebase(base.clone()),
             |r, catcher| r.0.catchers.push(catcher))
     }
 
