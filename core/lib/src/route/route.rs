@@ -278,6 +278,10 @@ impl Route {
     /// let rebased = rebased.rebase(uri!("/base"));
     /// assert_eq!(rebased.uri.base(), "/base/boo");
     ///
+    /// // Rebasing to `/` does nothing.
+    /// let rebased = rebased.rebase(uri!("/"));
+    /// assert_eq!(rebased.uri.base(), "/base/boo");
+    ///
     /// // Note that trailing slashes are preserved:
     /// let index = Route::new(Method::Get, "/foo", handler);
     /// let rebased = index.rebase(uri!("/boo/"));

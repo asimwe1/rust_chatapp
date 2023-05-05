@@ -1,6 +1,7 @@
 use futures::future::{Future, BoxFuture, FutureExt};
 use parking_lot::Mutex;
 
+use crate::route::RouteUri;
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Kind, Info, Result};
 
@@ -309,16 +310,91 @@ impl AdHoc {
     /// let response = client.get("/bar").dispatch();
     /// assert_eq!(response.into_string().unwrap(), "bar");
     /// ```
-    #[deprecated(since = "0.6", note = "routing from Rocket v0.5 is now standard")]
-    pub fn uri_normalizer() -> AdHoc {
-        AdHoc::on_request("URI Normalizer", |req, _| Box::pin(async move {
-            if !req.uri().is_normalized_nontrailing() {
-                let normal = req.uri().clone().into_normalized_nontrailing();
-                warn!("Incoming request URI was normalized for compatibility.");
-                info_!("{} -> {}", req.uri(), normal);
-                req.set_uri(normal);
+    // #[deprecated(since = "0.6", note = "routing from Rocket v0.5 is now standard")]
+    pub fn uri_normalizer() -> impl Fairing {
+        #[derive(Default)]
+        struct Normalizer {
+            routes: state::Storage<Vec<crate::Route>>,
+        }
+
+        impl Normalizer {
+            fn routes(&self, rocket: &Rocket<Orbit>) -> &[crate::Route] {
+                self.routes.get_or_set(|| {
+                    rocket.routes()
+                        .filter(|r| r.uri.has_trailing_slash() || r.uri.metadata.dynamic_trail)
+                        .cloned()
+                        .collect()
+                })
             }
-        }))
+        }
+
+        #[crate::async_trait]
+        impl Fairing for Normalizer {
+            fn info(&self) -> Info {
+                Info { name: "URI Normalizer", kind: Kind::Ignite | Kind::Liftoff | Kind::Request }
+            }
+
+            async fn on_ignite(&self, rocket: Rocket<Build>) -> Result {
+                // We want a route like `/foo/<bar..>` to match a request for
+                // `/foo` as it would have before. While we could check if a
+                // route is mounted that would cause this match and then rewrite
+                // the request URI as `/foo/`, doing so is expensive and
+                // potentially incorrect due to request guards and ranking.
+                //
+                // Instead, we generate a new route with URI `/foo` with the
+                // same rank and handler as the `/foo/<bar..>` route and mount
+                // it to this instance of `rocket`. This preserves the previous
+                // matching while still checking request guards.
+                let normalized_trailing = rocket.routes()
+                    .filter(|r| r.uri.metadata.dynamic_trail)
+                    .filter(|r| r.uri.path().segments().num() > 1)
+                    .filter_map(|route| {
+                        let path = route.uri.unmounted().path();
+                        let new_path = path.as_str()
+                            .rsplit_once('/')
+                            .map(|(prefix, _)| prefix)
+                            .unwrap_or(path.as_str());
+
+                        let base = route.uri.base().as_str();
+                        let uri = match route.uri.unmounted().query() {
+                            Some(q) => format!("{}?{}", new_path, q),
+                            None => new_path.to_string()
+                        };
+
+                        let mut route = route.clone();
+                        route.uri = RouteUri::try_new(base, &uri).expect("valid => valid");
+                        route.name = route.name.map(|r| format!("{} [normalized]", r).into());
+                        Some(route)
+                    })
+                    .collect::<Vec<_>>();
+
+                Ok(rocket.mount("/", normalized_trailing))
+            }
+
+            async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
+                let _ = self.routes(rocket);
+            }
+
+            async fn on_request(&self, req: &mut Request<'_>, _: &mut Data<'_>) {
+                // If the URI has no trailing slash, it routes as before.
+                if req.uri().is_normalized_nontrailing() {
+                    return
+                }
+
+                // Otherwise, check if there's a route that matches the request
+                // with a trailing slash. If there is, leave the request alone.
+                // This allows incremental compatibility updates. Otherwise,
+                // rewrite the request URI to remove the `/`.
+                if !self.routes(req.rocket()).iter().any(|r| r.matches(req)) {
+                    let normal = req.uri().clone().into_normalized_nontrailing();
+                    warn!("Incoming request URI was normalized for compatibility.");
+                    info_!("{} -> {}", req.uri(), normal);
+                    req.set_uri(normal);
+                }
+            }
+        }
+
+        Normalizer::default()
     }
 }
 
