@@ -129,6 +129,12 @@ pub struct Catcher {
     pub(crate) rank: isize,
 }
 
+// The rank is computed as -(number of nonempty segments in base) => catchers
+// with more nonempty segments have lower ranks => higher precedence.
+fn rank(base: Path<'_>) -> isize {
+    -1 * (base.segments().filter(|s| !s.is_empty()).count() as isize)
+}
+
 impl Catcher {
     /// Creates a catcher for the given `status`, or a default catcher if
     /// `status` is `None`, using the given error handler. This should only be
@@ -178,7 +184,7 @@ impl Catcher {
             name: None,
             base: uri::Origin::ROOT,
             handler: Box::new(handler),
-            rank: 0,
+            rank: rank(uri::Origin::ROOT.path()),
             code
         }
     }
@@ -251,7 +257,7 @@ impl Catcher {
                 .into_normalized_nontrailing()
         };
 
-        self.rank = -1 * (self.base().segments().filter(|s| !s.is_empty()).count() as isize);
+        self.rank = rank(self.base());
         self
     }
 
@@ -296,7 +302,7 @@ impl Catcher {
         let new_base = uri::Origin::parse_owned(mapper(self.base))?;
         self.base = new_base.into_normalized_nontrailing();
         self.base.clear_query();
-        self.rank = -1 * (self.base().segments().filter(|s| !s.is_empty()).count() as isize);
+        self.rank = rank(self.base());
         Ok(self)
     }
 }
