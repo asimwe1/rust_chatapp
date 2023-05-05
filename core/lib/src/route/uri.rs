@@ -250,7 +250,7 @@ impl<'a> RouteUri<'a> {
         write!(f, "{}", Paint::blue(self.base()).underline())?;
         write!(f, "{}", Paint::blue(unmounted_part))?;
         if let Some(q) = self.unmounted().query() {
-            write!(f, "?{}", Paint::green(q))?;
+            write!(f, "{}{}", Paint::yellow("?"), Paint::yellow(q))?;
         }
 
         Ok(())
