@@ -6,6 +6,7 @@ use figment::value::{Map, Dict, magic::RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
+use crate::log::PaintExt;
 use crate::config::{LogLevel, Shutdown, Ident};
 use crate::request::{self, Request, FromRequest};
 use crate::http::uncased::Uncased;
@@ -376,13 +377,31 @@ impl Config {
         })
     }
 
-    pub(crate) fn pretty_print(&self, figment: &Figment) {
-        use crate::log::PaintExt;
+    #[inline]
+    pub(crate) fn trace_print(&self, figment: &Figment) {
+        if self.log_level != LogLevel::Debug {
+            return;
+        }
 
+        trace!("-- configuration trace information --");
+        for param in Self::PARAMETERS {
+            if let Some(meta) = figment.find_metadata(param) {
+                let (param, name) = (Paint::blue(param), Paint::white(&meta.name));
+                if let Some(ref source) = meta.source {
+                    trace_!("{:?} parameter source: {} ({})", param, name, source);
+                } else {
+                    trace_!("{:?} parameter source: {}", param, name);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn pretty_print(&self, figment: &Figment) {
         fn bold<T: std::fmt::Display>(val: T) -> Paint<T> {
             Paint::default(val).bold()
         }
 
+        self.trace_print(figment);
         launch_meta!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
         launch_meta_!("address: {}", bold(&self.address));
         launch_meta_!("port: {}", bold(&self.port));
@@ -408,15 +427,6 @@ impl Config {
             (true, true) => launch_meta_!("tls: {}", bold("enabled w/mtls")),
             (true, false) => launch_meta_!("tls: {} w/o mtls", bold("enabled")),
             (false, _) => launch_meta_!("tls: {}", bold("disabled")),
-        }
-
-        #[cfg(feature = "secrets")] {
-            launch_meta_!("secret key: {}", bold(&self.secret_key));
-            if !self.secret_key.is_provided() {
-                warn!("secrets enabled without a stable `secret_key`");
-                launch_meta_!("disable `secrets` feature or configure a `secret_key`");
-                launch_meta_!("this becomes an {} in non-debug profiles", Paint::red("error"));
-            }
         }
 
         launch_meta_!("shutdown: {}", bold(&self.shutdown));
@@ -449,6 +459,15 @@ impl Config {
                 } else {
                     launch_meta_!("profile `{}` has no special meaning", profile);
                 }
+            }
+        }
+
+        #[cfg(feature = "secrets")] {
+            launch_meta_!("secret key: {}", bold(&self.secret_key));
+            if !self.secret_key.is_provided() {
+                warn!("secrets enabled without a stable `secret_key`");
+                launch_meta_!("disable `secrets` feature or configure a `secret_key`");
+                launch_meta_!("this becomes an {} in non-debug profiles", Paint::red("error"));
             }
         }
     }
@@ -493,6 +512,12 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::keep_alive`].
     pub const KEEP_ALIVE: &'static str = "keep_alive";
 
+    /// The stringy parameter name for setting/extracting [`Config::ident`].
+    pub const IDENT: &'static str = "ident";
+
+    /// The stringy parameter name for setting/extracting [`Config::ip_header`].
+    pub const IP_HEADER: &'static str = "ip_header";
+
     /// The stringy parameter name for setting/extracting [`Config::limits`].
     pub const LIMITS: &'static str = "limits";
 
@@ -513,11 +538,24 @@ impl Config {
 
     /// The stringy parameter name for setting/extracting [`Config::cli_colors`].
     pub const CLI_COLORS: &'static str = "cli_colors";
+
+    /// An array of all of the stringy parameter names.
+    pub const PARAMETERS: &'static [&'static str] = &[
+        Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING,
+        Self::KEEP_ALIVE, Self::IDENT, Self::IP_HEADER, Self::LIMITS, Self::TLS,
+        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
+        Self::CLI_COLORS,
+    ];
 }
 
 impl Provider for Config {
+    #[track_caller]
     fn metadata(&self) -> Metadata {
-        Metadata::named("Rocket Config")
+        if self == &Config::default() {
+            Metadata::named("rocket::Config::default()")
+        } else {
+            Metadata::named("rocket::Config")
+        }
     }
 
     #[track_caller]
