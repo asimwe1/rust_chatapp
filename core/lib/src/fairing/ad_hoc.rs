@@ -321,7 +321,7 @@ impl AdHoc {
             fn routes(&self, rocket: &Rocket<Orbit>) -> &[crate::Route] {
                 self.routes.get_or_set(|| {
                     rocket.routes()
-                        .filter(|r| r.uri.has_trailing_slash() || r.uri.metadata.dynamic_trail)
+                        .filter(|r| r.uri.has_trailing_slash())
                         .cloned()
                         .collect()
                 })
@@ -353,7 +353,8 @@ impl AdHoc {
                         let new_path = path.as_str()
                             .rsplit_once('/')
                             .map(|(prefix, _)| prefix)
-                            .unwrap_or(path.as_str());
+                            .filter(|path| !path.is_empty())
+                            .unwrap_or("/");
 
                         let base = route.uri.base().as_str();
                         let uri = match route.uri.unmounted().query() {
@@ -362,7 +363,7 @@ impl AdHoc {
                         };
 
                         let mut route = route.clone();
-                        route.uri = RouteUri::try_new(base, &uri).expect("valid => valid");
+                        route.uri = RouteUri::try_new(base, &uri).ok()?;
                         route.name = route.name.map(|r| format!("{} [normalized]", r).into());
                         Some(route)
                     })
