@@ -4,7 +4,7 @@ use figment::{Figment, Profile, Provider, Metadata, error::Result};
 use figment::providers::{Serialized, Env, Toml, Format};
 use figment::value::{Map, Dict, magic::RelativePathBuf};
 use serde::{Deserialize, Serialize};
-use yansi::Paint;
+use yansi::{Paint, Style, Color::Primary};
 
 use crate::log::PaintExt;
 use crate::config::{LogLevel, Shutdown, Ident};
@@ -383,7 +383,7 @@ impl Config {
         trace!("-- configuration trace information --");
         for param in Self::PARAMETERS {
             if let Some(meta) = figment.find_metadata(param) {
-                let (param, name) = (Paint::blue(param), Paint::white(&meta.name));
+                let (param, name) = (param.blue(), meta.name.primary());
                 if let Some(ref source) = meta.source {
                     trace_!("{:?} parameter source: {} ({})", param, name, source);
                 } else {
@@ -394,52 +394,50 @@ impl Config {
     }
 
     pub(crate) fn pretty_print(&self, figment: &Figment) {
-        fn bold<T: std::fmt::Display>(val: T) -> Paint<T> {
-            Paint::default(val).bold()
-        }
+        static VAL: Style = Primary.bold();
 
         self.trace_print(figment);
-        launch_meta!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
-        launch_meta_!("address: {}", bold(&self.address));
-        launch_meta_!("port: {}", bold(&self.port));
-        launch_meta_!("workers: {}", bold(self.workers));
-        launch_meta_!("max blocking threads: {}", bold(self.max_blocking));
-        launch_meta_!("ident: {}", bold(&self.ident));
+        launch_meta!("{}Configured for {}.", "🔧 ".emoji(), self.profile.underline());
+        launch_meta_!("address: {}", self.address.paint(VAL));
+        launch_meta_!("port: {}", self.port.paint(VAL));
+        launch_meta_!("workers: {}", self.workers.paint(VAL));
+        launch_meta_!("max blocking threads: {}", self.max_blocking.paint(VAL));
+        launch_meta_!("ident: {}", self.ident.paint(VAL));
 
         match self.ip_header {
-            Some(ref name) => launch_meta_!("IP header: {}", bold(name)),
-            None => launch_meta_!("IP header: {}", bold("disabled"))
+            Some(ref name) => launch_meta_!("IP header: {}", name.paint(VAL)),
+            None => launch_meta_!("IP header: {}", "disabled".paint(VAL))
         }
 
-        launch_meta_!("limits: {}", bold(&self.limits));
-        launch_meta_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
-        launch_meta_!("http/2: {}", bold(cfg!(feature = "http2")));
+        launch_meta_!("limits: {}", (&self.limits).paint(VAL));
+        launch_meta_!("temp dir: {}", self.temp_dir.relative().display().paint(VAL));
+        launch_meta_!("http/2: {}", (cfg!(feature = "http2").paint(VAL)));
 
         match self.keep_alive {
-            0 => launch_meta_!("keep-alive: {}", bold("disabled")),
-            ka => launch_meta_!("keep-alive: {}{}", bold(ka), bold("s")),
+            0 => launch_meta_!("keep-alive: {}", "disabled".paint(VAL)),
+            ka => launch_meta_!("keep-alive: {}{}", ka.paint(VAL), "s".paint(VAL)),
         }
 
         match (self.tls_enabled(), self.mtls_enabled()) {
-            (true, true) => launch_meta_!("tls: {}", bold("enabled w/mtls")),
-            (true, false) => launch_meta_!("tls: {} w/o mtls", bold("enabled")),
-            (false, _) => launch_meta_!("tls: {}", bold("disabled")),
+            (true, true) => launch_meta_!("tls: {}", "enabled w/mtls".paint(VAL)),
+            (true, false) => launch_meta_!("tls: {} w/o mtls", "enabled".paint(VAL)),
+            (false, _) => launch_meta_!("tls: {}", "disabled".paint(VAL)),
         }
 
-        launch_meta_!("shutdown: {}", bold(&self.shutdown));
-        launch_meta_!("log level: {}", bold(self.log_level));
-        launch_meta_!("cli colors: {}", bold(&self.cli_colors));
+        launch_meta_!("shutdown: {}", self.shutdown.paint(VAL));
+        launch_meta_!("log level: {}", self.log_level.paint(VAL));
+        launch_meta_!("cli colors: {}", self.cli_colors.paint(VAL));
 
         // Check for now deprecated config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
             if let Some(md) = figment.find_metadata(key) {
-                warn!("found value for deprecated config key `{}`", Paint::white(key));
+                warn!("found value for deprecated config key `{}`", key.paint(VAL));
                 if let Some(ref source) = md.source {
-                    launch_meta_!("in {} {}", Paint::white(source), md.name);
+                    launch_meta_!("in {} {}", source.paint(VAL), md.name);
                 }
 
                 if let Some(new_key) = replacement {
-                    launch_meta_!("key has been by replaced by `{}`", Paint::white(new_key));
+                    launch_meta_!("key has been by replaced by `{}`", new_key.paint(VAL));
                 } else {
                     launch_meta_!("key has no special meaning");
                 }
@@ -449,10 +447,10 @@ impl Config {
         // Check for now removed config values.
         for (prefix, replacement) in Self::DEPRECATED_PROFILES {
             if let Some(profile) = figment.profiles().find(|p| p.starts_with(prefix)) {
-                warn!("found set deprecated profile `{}`", Paint::white(profile));
+                warn!("found set deprecated profile `{}`", profile.paint(VAL));
 
                 if let Some(new_profile) = replacement {
-                    launch_meta_!("profile was replaced by `{}`", Paint::white(new_profile));
+                    launch_meta_!("profile was replaced by `{}`", new_profile.paint(VAL));
                 } else {
                     launch_meta_!("profile `{}` has no special meaning", profile);
                 }
@@ -460,11 +458,11 @@ impl Config {
         }
 
         #[cfg(feature = "secrets")] {
-            launch_meta_!("secret key: {}", bold(&self.secret_key));
+            launch_meta_!("secret key: {}", self.secret_key.paint(VAL));
             if !self.secret_key.is_provided() {
                 warn!("secrets enabled without a stable `secret_key`");
                 launch_meta_!("disable `secrets` feature or configure a `secret_key`");
-                launch_meta_!("this becomes an {} in non-debug profiles", Paint::red("error"));
+                launch_meta_!("this becomes an {} in non-debug profiles", "error".red());
             }
         }
     }
@@ -598,7 +596,7 @@ pub fn pretty_print_error(error: figment::Error) {
     crate::log::init_default();
     error!("Failed to extract valid configuration.");
     for e in error {
-        fn w<T: std::fmt::Display>(v: T) -> Paint<T> { Paint::white(v) }
+        fn w<T>(v: T) -> yansi::Painted<T> { Paint::new(v).primary() }
 
         match e.kind {
             Kind::Message(msg) => error_!("{}", msg),

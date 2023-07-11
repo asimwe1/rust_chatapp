@@ -37,13 +37,12 @@ uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"]
 
 # Non-optional, core dependencies from here on out.
 futures = { version = "0.3.0", default-features = false, features = ["std"] }
-yansi = "0.5"
+yansi = { version = "1.0.0-rc", features = ["detect-tty"] }
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.0"
 time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
-is-terminal = "0.4.3"
 ref-cast = "1.0"
 atomic = "0.5"
 parking_lot = "0.12"

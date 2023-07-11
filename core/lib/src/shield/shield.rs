@@ -207,10 +207,10 @@ impl Fairing for Shield {
         }
 
         if !self.headers().is_empty() {
-            info!("{}{}:", Paint::emoji("🛡️ "), Paint::magenta("Shield"));
+            info!("{}{}:", "🛡️ ".emoji(), "Shield".magenta());
 
             for header in self.headers() {
-                info_!("{}: {}", header.name(), Paint::default(header.value()));
+                info_!("{}: {}", header.name(), header.value().primary());
             }
 
             if force_hsts {

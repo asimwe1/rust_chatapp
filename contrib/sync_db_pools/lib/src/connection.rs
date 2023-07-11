@@ -224,10 +224,13 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
         use rocket::yansi::Paint;
 
         if rocket.state::<ConnectionPool<K, C>>().is_none() {
-            let conn = Paint::default(std::any::type_name::<K>()).bold();
-            let fairing = Paint::default(format!("{}::fairing()", conn)).wrap().bold();
-            error!("requesting `{}` DB connection without attaching `{}`.", conn, fairing);
-            info_!("Attach `{}` to use database connection pooling.", fairing);
+            let conn = std::any::type_name::<K>().primary().bold();
+            error!("requesting `{}` DB connection without attaching `{}{}`.",
+                conn, conn.linger(), "::fairing()".clear());
+
+            info_!("Attach `{}{}` to use database connection pooling.",
+                conn.linger(), "::fairing()".clear());
+
             return true;
         }
 

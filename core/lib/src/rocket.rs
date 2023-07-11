@@ -255,7 +255,7 @@ impl Rocket<Build> {
             Err(e) => {
                 error!("invalid {} base: {}", kind, Paint::white(&base));
                 error_!("{}", e);
-                info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
+                info_!("{} {}", "in".primary(), std::panic::Location::caller());
                 panic!("aborting due to {} base error", kind);
             }
         };
@@ -600,7 +600,7 @@ fn log_items<T, I, B, O>(e: &str, t: &str, items: I, base: B, origin: O)
 {
     let mut items: Vec<_> = items.collect();
     if !items.is_empty() {
-        launch_meta!("{}{}:", Paint::emoji(e), Paint::magenta(t));
+        launch_meta!("{}{}:", e.emoji(), t.magenta());
     }
 
     items.sort_by_key(|i| origin(i).path().as_str().chars().count());
@@ -678,9 +678,7 @@ impl Rocket<Ignite> {
     async fn _local_launch(self) -> Rocket<Orbit> {
         let rocket = self.into_orbit();
         rocket.fairings.handle_liftoff(&rocket).await;
-        launch_info!("{}{}", Paint::emoji("🚀 "),
-            Paint::default("Rocket has launched into local orbit").bold());
-
+        launch_info!("{}{}", "🚀 ".emoji(), "Rocket has launched locally".primary().bold());
         rocket
     }
 
@@ -693,9 +691,9 @@ impl Rocket<Ignite> {
                 let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
                 let addr = format!("{}://{}", proto, socket_addr);
                 launch_info!("{}{} {}",
-                    Paint::emoji("🚀 "),
-                    Paint::default("Rocket has launched from").bold(),
-                    Paint::default(addr).bold().underline());
+                    "🚀 ".emoji(),
+                    "Rocket has launched from".bold().primary().linger(),
+                    addr.underline());
             }))
             .await
             .map(|rocket| rocket.into_ignite())

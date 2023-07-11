@@ -31,7 +31,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
     macro_rules! panic_info {
         ($name:expr, $e:expr) => {{
             match $name {
-                Some(name) => error_!("Handler {} panicked.", Paint::white(name)),
+                Some(name) => error_!("Handler {} panicked.", name.primary()),
                 None => error_!("A handler panicked.")
             };
 
@@ -129,7 +129,7 @@ impl Rocket<Orbit> {
         };
 
         match self._send_response(response, tx).await {
-            Ok(()) => info_!("{}", Paint::green("Response succeeded.")),
+            Ok(()) => info_!("{}", "Response succeeded.".green()),
             Err(e) if remote_hungup(&e) => warn_!("Remote left: {}.", e),
             Err(e) => warn_!("Failed to write response: {}.", e),
         }
@@ -284,7 +284,7 @@ impl Rocket<Orbit> {
         let mut response = match self.route(request, data).await {
             Outcome::Success(response) => response,
             Outcome::Forward((data, _)) if request.method() == Method::Head => {
-                info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+                info_!("Autohandling {} request.", "HEAD".primary().bold());
 
                 // Dispatch the request again with Method `GET`.
                 request._set_method(Method::Get);
@@ -334,7 +334,7 @@ impl Rocket<Orbit> {
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
             // (None) to try again.
-            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+            info_!("{} {}", "Outcome:".primary().bold(), outcome);
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
                 Outcome::Forward(forwarded) => (data, status) = forwarded,
@@ -372,7 +372,7 @@ impl Rocket<Orbit> {
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
         } else {
-            let code = Paint::blue(status.code).bold();
+            let code = status.code.blue().bold();
             warn_!("No {} catcher registered. Using Rocket default.", code);
             Ok(crate::catcher::default_handler(status, req))
         }

@@ -346,18 +346,18 @@ impl Route {
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref n) = self.name {
-            write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
+            write!(f, "{}{}{} ", "(".cyan(), n.primary(), ")".cyan())?;
         }
 
-        write!(f, "{} ", Paint::green(&self.method))?;
+        write!(f, "{} ", self.method.green())?;
         self.uri.color_fmt(f)?;
 
         if self.rank > 1 {
-            write!(f, " [{}]", Paint::default(&self.rank).bold())?;
+            write!(f, " [{}]", self.rank.primary().bold())?;
         }
 
         if let Some(ref format) = self.format {
-            write!(f, " {}", Paint::yellow(format))?;
+            write!(f, " {}", format.yellow())?;
         }
 
         Ok(())

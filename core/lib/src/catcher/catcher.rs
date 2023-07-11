@@ -343,14 +343,14 @@ impl From<StaticInfo> for Catcher {
 impl fmt::Display for Catcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref n) = self.name {
-            write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
+            write!(f, "{}{}{} ", "(".cyan(), n.primary(), ")".cyan())?;
         }
 
-        write!(f, "{} ", Paint::green(self.base.path()))?;
+        write!(f, "{} ", self.base.path().green())?;
 
         match self.code {
-            Some(code) => write!(f, "{}", Paint::blue(code)),
-            None => write!(f, "{}", Paint::blue("default"))
+            Some(code) => write!(f, "{}", code.blue()),
+            None => write!(f, "{}", "default".blue()),
         }
     }
 }

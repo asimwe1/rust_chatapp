@@ -247,10 +247,9 @@ impl<'a> RouteUri<'a> {
             .map(|raw| raw.as_str())
             .unwrap_or(unmounted.as_str());
 
-        write!(f, "{}", Paint::blue(self.base()).underline())?;
-        write!(f, "{}", Paint::blue(unmounted_part))?;
+        write!(f, "{}{}", self.base().blue().underline(), unmounted_part.blue())?;
         if let Some(q) = self.unmounted().query() {
-            write!(f, "{}{}", Paint::yellow("?"), Paint::yellow(q))?;
+            write!(f, "{}{}", "?".yellow(), q.yellow())?;
         }
 
         Ok(())

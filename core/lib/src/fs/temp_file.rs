@@ -536,7 +536,7 @@ impl<'r> FromData<'r> for Capped<TempFile<'_>> {
 
         let has_form = |ty: &ContentType| ty.is_form_data() || ty.is_form();
         if req.content_type().map_or(false, has_form) {
-            let (tf, form) = (Paint::white("TempFile<'_>"), Paint::white("Form<TempFile<'_>>"));
+            let (tf, form) = ("TempFile<'_>".primary(), "Form<TempFile<'_>>".primary());
             warn_!("Request contains a form that will not be processed.");
             info_!("Bare `{}` data guard writes raw, unprocessed streams to disk.", tf);
             info_!("Did you mean to use `{}` instead?", form);

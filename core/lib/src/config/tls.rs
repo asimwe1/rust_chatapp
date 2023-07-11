@@ -644,8 +644,9 @@ mod with_tls_feature {
             Either::Left(path) => {
                 let path = path.relative();
                 let file = fs::File::open(&path).map_err(move |e| {
-                    Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
-                            Paint::white(figment::Source::File(path)), e))
+                    let source = figment::Source::File(path);
+                    let msg = format!("error reading TLS file `{}`: {}", source.primary(), e);
+                    Error::new(e.kind(), msg)
                 })?;
 
                 Ok(Box::new(io::BufReader::new(file)))

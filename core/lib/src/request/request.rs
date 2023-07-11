@@ -1110,15 +1110,12 @@ impl fmt::Debug for Request<'_> {
 impl fmt::Display for Request<'_> {
     /// Pretty prints a Request. Primarily used by Rocket's logging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
+        write!(f, "{} {}", self.method().green(), self.uri.blue())?;
 
         // Print the requests media type when the route specifies a format.
-        if let Some(media_type) = self.format() {
-            if !media_type.is_any() {
-                write!(f, " {}{}{}",
-                    Paint::yellow(media_type.top()),
-                    Paint::yellow("/"),
-                    Paint::yellow(media_type.sub()))?;
+        if let Some(mime) = self.format() {
+            if !mime.is_any() {
+                write!(f, " {}/{}", mime.top().yellow().linger(), mime.sub().clear())?;
             }
         }
 

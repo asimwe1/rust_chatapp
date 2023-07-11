@@ -7,6 +7,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
 use futures::stream::Stream;
 use futures::ready;
+use yansi::Paint;
 
 use crate::http::hyper;
 use crate::ext::{PollExt, Chain};
@@ -261,8 +262,7 @@ impl AsyncRead for DataStream<'_> {
                 StreamKind::Multipart(_) => "a multipart form field",
             };
 
-            let msg = yansi::Paint::default(kind).bold();
-            warn_!("Data limit reached while reading {}.", msg);
+            warn_!("Data limit reached while reading {}.", kind.primary().bold());
         }
 
         Pin::new(&mut self.chain).poll_read(cx, buf)
