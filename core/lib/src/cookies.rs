@@ -243,8 +243,9 @@ impl<'a> CookieJar<'a> {
     /// container with the name `name`, irrespective of whether the cookie was
     /// private or not. If no such cookie exists, returns `None`.
     ///
-    /// This _does not_ return cookies sent by the client in a request. To
-    /// retrieve such cookies, using [`CookieJar::get()`] or
+    /// In general, due to performance overhead, calling this method should be
+    /// avoided if it is known that a cookie called `name` is not pending.
+    /// Instead, prefer to use [`CookieJar::get()`] or
     /// [`CookieJar::get_private()`].
     ///
     /// # Example
@@ -268,7 +269,14 @@ impl<'a> CookieJar<'a> {
         }
 
         drop(ops);
-        self.get(name).cloned()
+
+        #[cfg(feature = "secrets")] {
+            self.get_private(name).or_else(|| self.get(name).cloned())
+        }
+
+        #[cfg(not(feature = "secrets"))] {
+            self.get(name).cloned()
+        }
     }
 
     /// Adds `cookie` to this collection.
