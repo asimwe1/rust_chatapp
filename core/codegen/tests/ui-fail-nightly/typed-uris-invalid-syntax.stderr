@@ -96,7 +96,7 @@ error: unexpected token
 27 |     uri!(simple: id = );
    |                ^
 
-error: unexpected end of input, expected expression
+error: unexpected end of input, expected an expression
   --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:28:22
    |
 28 |     uri!(simple(id = ));
