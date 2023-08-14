@@ -20,4 +20,4 @@ fn fuzz(data: &str) {
     }
 }
 
-fuzz_target!(|data: &str| { fuzz(data) });
+fuzz_target!(|data: &str| fuzz(data));

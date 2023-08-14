@@ -202,16 +202,16 @@ fn fuzz((route_a, route_b, req): TestData<'_>) {
 }
 
 #[cfg(all(not(honggfuzz), not(afl)))]
-libfuzzer_sys::fuzz_target!(|data: TestData| { fuzz(data) });
+libfuzzer_sys::fuzz_target!(|data: TestData| fuzz(data));
 
 #[cfg(honggbuzz)]
 fn main() {
     loop {
-        honggfuzz::fuzz!(|data: TestData| { fuzz(data) });
+        honggfuzz::fuzz!(|data: TestData| fuzz(data));
     }
 }
 
 #[cfg(afl)]
 fn main() {
-    afl::fuzz!(|data: TestData| { fuzz(data) });
+    afl::fuzz!(|data: TestData| fuzz(data));
 }
