@@ -264,7 +264,7 @@ in three simple steps:
    #[get("/<id>")]
    async fn read(mut db: Connection<Logs>, id: i64) -> Option<String> {
        sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
-           .fetch_one(&mut *db).await
+           .fetch_one(&mut **db).await
            .and_then(|r| Ok(r.try_get(0)?))
            .ok()
    }
@@ -294,9 +294,9 @@ features enabled in `Cargo.toml`:
 
 ```toml
 [dependencies.sqlx]
-version = "0.6"
+version = "0.7"
 default-features = false
-features = ["macros", "offline", "migrate"]
+features = ["macros", "migrate"]
 
 [dependencies.rocket_db_pools]
 version = "=0.1.0-rc.3"
