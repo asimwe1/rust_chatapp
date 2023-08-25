@@ -23,12 +23,13 @@ struct Post {
 }
 
 #[post("/", data = "<post>")]
-async fn create(mut db: Connection<Db>, post: Json<Post>) -> Result<Created<Json<Post>>> {
-    // There is no support for `RETURNING`.
-    sqlx::query!("INSERT INTO posts (title, text) VALUES (?, ?)", post.title, post.text)
-        .execute(&mut **db)
-        .await?;
+async fn create(mut db: Connection<Db>, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
+    let query = sqlx::query! {
+        "INSERT INTO posts (title, text) VALUES (?, ?) RETURNING id",
+        post.title, post.text
+    };
 
+    post.id = Some(query.fetch_one(&mut **db).await?.id);
     Ok(Created::new("/").body(post))
 }
 

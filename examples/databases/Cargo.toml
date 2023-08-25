@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["json"] }
-diesel = "2"
+diesel = { version = "2", features = ["returning_clauses_for_sqlite_3_35"] }
 diesel_migrations = "2"
 
 [dependencies.sqlx]

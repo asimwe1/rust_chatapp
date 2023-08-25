@@ -22,13 +22,15 @@ struct Post {
 type Result<T, E = Debug<rusqlite::Error>> = std::result::Result<T, E>;
 
 #[post("/", data = "<post>")]
-async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
+async fn create(db: Db, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
     let item = post.clone();
-    db.run(move |conn| {
-        conn.execute("INSERT INTO posts (title, text) VALUES (?1, ?2)",
-            params![item.title, item.text])
+    let id = db.run(move |conn| {
+        conn.query_row("INSERT INTO posts (title, text) VALUES (?1, ?2) RETURNING id",
+            params![item.title, item.text],
+            |r| r.get(0))
     }).await?;
 
+    post.id = Some(id);
     Ok(Created::new("/").body(post))
 }
 

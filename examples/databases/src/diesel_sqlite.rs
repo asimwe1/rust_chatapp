@@ -32,14 +32,16 @@ table! {
 }
 
 #[post("/", data = "<post>")]
-async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
+async fn create(db: Db, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
     let post_value = post.clone();
-    db.run(move |conn| {
+    let id: Option<i32> = db.run(move |conn| {
         diesel::insert_into(posts::table)
             .values(&*post_value)
-            .execute(conn)
+            .returning(posts::id)
+            .get_result(conn)
     }).await?;
 
+    post.id = Some(id.expect("returning guarantees id present"));
     Ok(Created::new("/").body(post))
 }
 
