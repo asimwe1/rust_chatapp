@@ -24,12 +24,16 @@ struct Post {
 
 #[post("/", data = "<post>")]
 async fn create(mut db: Connection<Db>, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
-    let query = sqlx::query! {
-        "INSERT INTO posts (title, text) VALUES (?, ?) RETURNING id",
-        post.title, post.text
-    };
+    // NOTE: sqlx#2543, sqlx#1648 mean we can't use the pithier `fetch_one()`.
+    let results = sqlx::query!(
+            "INSERT INTO posts (title, text) VALUES (?, ?) RETURNING id",
+            post.title, post.text
+        )
+        .fetch(&mut **db)
+        .try_collect::<Vec<_>>()
+        .await?;
 
-    post.id = Some(query.fetch_one(&mut **db).await?.id);
+    post.id = Some(results.first().expect("returning results").id);
     Ok(Created::new("/").body(post))
 }
 
