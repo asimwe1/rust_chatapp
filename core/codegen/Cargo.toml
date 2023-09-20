@@ -23,6 +23,7 @@ proc-macro2 = "1.0.27"
 devise = "0.4"
 rocket_http = { version = "=0.5.0-rc.3", path = "../http/" }
 unicode-xid = "0.2"
+version_check = "0.9"
 glob = "0.3"
 
 [dev-dependencies]
