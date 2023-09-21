@@ -1,6 +1,6 @@
 //! Automatic MessagePack (de)serialization support.
 //!
-//! See [`MsgPack`](crate::serde::msgpack::MsgPack) for further details.
+//! See [`MsgPack`] for further details.
 //!
 //! # Enabling
 //!

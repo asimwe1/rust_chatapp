@@ -1,6 +1,6 @@
 //! Automatic JSON (de)serialization support.
 //!
-//! See [`Json`](Json) for details.
+//! See [`Json`] for details.
 //!
 //! # Enabling
 //!

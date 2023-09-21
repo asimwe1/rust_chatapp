@@ -1457,6 +1457,7 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// are not ignorable.
 ///
 /// [`Uri`]: ../rocket/http/uri/enum.Uri.html
+/// [`Uri::parse_any()`]: ../rocket/http/uri/enum.Uri.html#method.parse_any
 /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
 /// [`Asterisk`]: ../rocket/http/uri/struct.Asterisk.html
 /// [`Authority`]: ../rocket/http/uri/struct.Authority.html
