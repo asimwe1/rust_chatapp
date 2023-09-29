@@ -631,7 +631,7 @@ fn user_id(cookies: &CookieJar<'_>) -> Option<String> {
 /// Remove the `user_id` cookie.
 #[post("/logout")]
 fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
-    cookies.remove_private(Cookie::named("user_id"));
+    cookies.remove_private("user_id");
     Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 ```

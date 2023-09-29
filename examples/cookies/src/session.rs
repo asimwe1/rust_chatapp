@@ -60,7 +60,7 @@ fn login_page(flash: Option<FlashMessage<'_>>) -> Template {
 #[post("/login", data = "<login>")]
 fn post_login(jar: &CookieJar<'_>, login: Form<Login<'_>>) -> Result<Redirect, Flash<Redirect>> {
     if login.username == "Sergio" && login.password == "password" {
-        jar.add_private(Cookie::new("user_id", 1.to_string()));
+        jar.add_private(("user_id", "1"));
         Ok(Redirect::to(uri!(index)))
     } else {
         Err(Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password."))
@@ -69,7 +69,7 @@ fn post_login(jar: &CookieJar<'_>, login: Form<Login<'_>>) -> Result<Redirect, F
 
 #[post("/logout")]
 fn logout(jar: &CookieJar<'_>) -> Flash<Redirect> {
-    jar.remove_private(Cookie::named("user_id"));
+    jar.remove_private("user_id");
     Flash::success(Redirect::to(uri!(login_page)), "Successfully logged out.")
 }
 

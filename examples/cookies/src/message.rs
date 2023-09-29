@@ -12,17 +12,14 @@ pub use message_uri as uri;
 
 #[post("/", data = "<message>")]
 fn submit(cookies: &CookieJar<'_>, message: Form<&str>) -> Redirect {
-    cookies.add(Cookie::new("message", message.to_string()));
+    cookies.add(("message", message.to_string()));
     Redirect::to(uri!(index))
 }
 
 #[get("/")]
 fn index(cookies: &CookieJar<'_>) -> Template {
-    let cookie = cookies.get("message");
-
-    Template::render("message", context! {
-        message: cookie.map(|c| c.value()),
-    })
+    let message = cookies.get("message").map(|c| c.value());
+    Template::render("message", context! { message })
 }
 
 pub fn routes() -> Vec<rocket::Route> {

@@ -28,19 +28,19 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 ///
 /// #[get("/message")]
 /// fn message(jar: &CookieJar<'_>) {
-///     jar.add(Cookie::new("message", "hello!"));
-///     jar.add(Cookie::new("other", "bye!"));
+///     jar.add(("message", "hello!"));
+///     jar.add(Cookie::build(("session", "bye!")).expires(None));
 ///
 ///     // `get()` does not reflect changes.
-///     assert!(jar.get("other").is_none());
-///     # assert_eq!(jar.get("message").map(|c| c.value()), Some("hi"));
+///     assert!(jar.get("session").is_none());
+///     assert_eq!(jar.get("message").map(|c| c.value()), Some("hi"));
 ///
 ///     // `get_pending()` does.
-///     let other_pending = jar.get_pending("other");
+///     let session_pending = jar.get_pending("session");
 ///     let message_pending = jar.get_pending("message");
-///     assert_eq!(other_pending.as_ref().map(|c| c.value()), Some("bye!"));
+///     assert_eq!(session_pending.as_ref().map(|c| c.value()), Some("bye!"));
 ///     assert_eq!(message_pending.as_ref().map(|c| c.value()), Some("hello!"));
-///     # jar.remove(Cookie::named("message"));
+///     # jar.remove("message");
 ///     # assert_eq!(jar.get("message").map(|c| c.value()), Some("hi"));
 ///     # assert!(jar.get_pending("message").is_none());
 /// }
@@ -48,7 +48,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// #     use rocket::local::blocking::Client;
 /// #     let client = Client::debug_with(routes![message]).unwrap();
 /// #     let response = client.get("/message")
-/// #         .cookie(Cookie::new("message", "hi"))
+/// #         .cookie(("message", "hi"))
 /// #         .dispatch();
 /// #
 /// #     assert!(response.status().class().is_success());
@@ -202,7 +202,7 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
@@ -226,7 +226,7 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
@@ -252,7 +252,7 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
@@ -297,17 +297,18 @@ impl<'a> CookieJar<'a> {
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
-    ///     jar.add(Cookie::new("first", "value"));
+    ///     jar.add(("first", "value"));
     ///
-    ///     let cookie = Cookie::build("other", "value_two")
+    ///     let cookie = Cookie::build(("other", "value_two"))
     ///         .path("/")
     ///         .secure(true)
     ///         .same_site(SameSite::Lax);
     ///
-    ///     jar.add(cookie.finish());
+    ///     jar.add(cookie);
     /// }
     /// ```
-    pub fn add(&self, mut cookie: Cookie<'static>) {
+    pub fn add<C: Into<Cookie<'static>>>(&self, cookie: C) {
+        let mut cookie = cookie.into();
         Self::set_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, false));
     }
@@ -334,30 +335,32 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
-    ///     jar.add_private(Cookie::new("name", "value"));
+    ///     jar.add_private(("name", "value"));
     /// }
     /// ```
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    pub fn add_private(&self, mut cookie: Cookie<'static>) {
+    pub fn add_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
+        let mut cookie = cookie.into();
         Self::set_private_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, true));
     }
 
     /// Removes `cookie` from this collection and generates a "removal" cookies
-    /// to send to the client on response. For correctness, `cookie` must
-    /// contain the same `path` and `domain` as the cookie that was initially
-    /// set. Failure to provide the initial `path` and `domain` will result in
-    /// cookies that are not properly removed. For convenience, if a path is not
-    /// set on `cookie`, the `"/"` path will automatically be set.
+    /// to send to the client on response. A "removal" cookie is a cookie that
+    /// has the same name as the original cookie but has an empty value, a
+    /// max-age of 0, and an expiration date far in the past.
     ///
-    /// A "removal" cookie is a cookie that has the same name as the original
-    /// cookie but has an empty value, a max-age of 0, and an expiration date
-    /// far in the past.
+    /// **Note: For correctness, `cookie` must contain the same `path` and
+    /// `domain` as the cookie that was initially set. Failure to provide the
+    /// initial `path` and `domain` will result in cookies that are not properly
+    /// removed. For convenience, if a path is not set on `cookie`, the `"/"`
+    /// path will automatically be set.**
+    ///
     ///
     /// # Example
     ///
@@ -367,10 +370,15 @@ impl<'a> CookieJar<'a> {
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
-    ///     jar.remove(Cookie::named("name"));
+    ///     // Rocket will set `path` to `/`.
+    ///     jar.remove("name");
+    ///
+    ///     // Use a custom-built cookie to set a custom path.
+    ///     jar.remove(Cookie::build("name").path("/login"));
     /// }
     /// ```
-    pub fn remove(&self, mut cookie: Cookie<'static>) {
+    pub fn remove<C: Into<Cookie<'static>>>(&self, cookie: C) {
+        let mut cookie = cookie.into();
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
@@ -388,16 +396,17 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
-    ///     jar.remove_private(Cookie::named("name"));
+    ///     jar.remove_private("name");
     /// }
     /// ```
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    pub fn remove_private(&self, mut cookie: Cookie<'static>) {
+    pub fn remove_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
+        let mut cookie = cookie.into();
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
@@ -415,7 +424,7 @@ impl<'a> CookieJar<'a> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
+    /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
