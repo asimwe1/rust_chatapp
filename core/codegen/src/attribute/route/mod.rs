@@ -10,6 +10,7 @@ use crate::proc_macro_ext::StringLit;
 use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};
 use crate::attribute::param::Guard;
+use crate::exports::mixed;
 
 use self::parse::{Route, Attribute, MethodAttribute};
 
@@ -242,7 +243,7 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
         .map(|a| quote_spanned!(a.span() => .await));
 
     define_spanned_export!(ret_span => __req, _route);
-    quote_spanned! { Span::mixed_site().located_at(ret_span) =>
+    quote_spanned! { mixed(ret_span) =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
         #_route::Outcome::from(#__req, ___responder)
     }
