@@ -38,7 +38,7 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move {
         if !req.content_type().map_or(false, |ct| ct.is_plain()) {
             println!("    => Content-Type of upload must be text/plain. Ignoring.");
-            return route::Outcome::failure(Status::BadRequest);
+            return route::Outcome::error(Status::BadRequest);
         }
 
         let path = req.rocket().config().temp_dir.relative().join("upload.txt");
@@ -49,10 +49,10 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
             }
 
             println!("    => Failed copying.");
-            route::Outcome::failure(Status::InternalServerError)
+            route::Outcome::error(Status::InternalServerError)
         } else {
             println!("    => Couldn't open file: {:?}", file.unwrap_err());
-            route::Outcome::failure(Status::InternalServerError)
+            route::Outcome::error(Status::InternalServerError)
         }
     })
 }

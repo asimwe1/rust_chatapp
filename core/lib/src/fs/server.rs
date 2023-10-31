@@ -148,12 +148,12 @@ impl FileServer {
             if !options.contains(Options::IndexFile) && !path.is_dir() {
                 let path = path.display();
                 error!("FileServer path '{}' is not a directory.", path.primary());
-                warn_!("Aborting early to prevent inevitable handler failure.");
+                warn_!("Aborting early to prevent inevitable handler error.");
                 panic!("invalid directory: refusing to continue");
             } else if !path.exists() {
                 let path = path.display();
                 error!("FileServer path '{}' is not a file.", path.primary());
-                warn_!("Aborting early to prevent inevitable handler failure.");
+                warn_!("Aborting early to prevent inevitable handler error.");
                 panic!("invalid file: refusing to continue");
             }
         }

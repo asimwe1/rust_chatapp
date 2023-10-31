@@ -40,7 +40,7 @@ impl<'r, 'i> Parser<'r, 'i> {
 
         match parser {
             Ok(storage) => Outcome::Success(storage),
-            Err(e) => Outcome::Failure((e.status(), e.into()))
+            Err(e) => Outcome::Error((e.status(), e.into()))
         }
     }
 

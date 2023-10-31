@@ -213,7 +213,7 @@ impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
             Some(c) => c.get().await.into_outcome((Status::ServiceUnavailable, ())),
             None => {
                 error_!("Missing database fairing for `{}`", std::any::type_name::<K>());
-                Outcome::Failure((Status::InternalServerError, ()))
+                Outcome::Error((Status::InternalServerError, ()))
             }
         }
     }

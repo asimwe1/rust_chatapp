@@ -126,9 +126,9 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("Request guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward((#__data, __e));
             },
-            #Outcome::Failure((__c, __e)) => {
+            #Outcome::Error((__c, __e)) => {
                 #_log::warn_!("Request guard `{}` failed: {:?}.", stringify!(#ty), __e);
-                return #Outcome::Failure(__c);
+                return #Outcome::Error(__c);
             }
         };
     }
@@ -189,9 +189,9 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("Data guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward((__d, __e));
             }
-            #Outcome::Failure((__c, __e)) => {
+            #Outcome::Error((__c, __e)) => {
                 #_log::warn_!("Data guard `{}` failed: {:?}.", stringify!(#ty), __e);
-                return #Outcome::Failure(__c);
+                return #Outcome::Error(__c);
             }
         };
     }

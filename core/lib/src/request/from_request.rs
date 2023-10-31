@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
@@ -12,14 +13,14 @@ use crate::http::uri::{Host, Origin};
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 
 impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
-    type Failure = Status;
+    type Error = Status;
     type Forward = Status;
 
     #[inline]
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((status, err))
+            Err(err) => Error((status, err))
         }
     }
 
@@ -85,8 +86,8 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 /// ```
 ///
 /// Request guards always fire in left-to-right declaration order. In the
-/// example above, the order is `a` followed by `b` followed by `c`. Failure is
-/// short-circuiting; if one guard fails, the remaining are not attempted.
+/// example above, the order is `a` followed by `b` followed by `c`. Errors are
+/// short-circuiting; if one guard errors, the remaining are not attempted.
 ///
 /// # Outcomes
 ///
@@ -99,12 +100,12 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///   the value for the corresponding parameter.  As long as all other guards
 ///   succeed, the request will be handled.
 ///
-/// * **Failure**(Status, E)
+/// * **Error**(Status, E)
 ///
-///   If the `Outcome` is [`Failure`], the request will fail with the given
+///   If the `Outcome` is [`Error`], the request will fail with the given
 ///   status code and error. The designated error [`Catcher`](crate::Catcher)
 ///   will be used to respond to the request. Note that users can request types
-///   of `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the
+///   of `Result<S, E>` and `Option<S>` to catch `Error`s and retrieve the
 ///   error value.
 ///
 /// * **Forward**(Status)
@@ -191,7 +192,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///
 ///     The type `T` is derived from the incoming request using `T`'s
 ///     `FromRequest` implementation. If derivation is a `Success`, the value is
-///     returned in `Ok`. If the derivation is a `Failure`, the error value is
+///     returned in `Ok`. If the derivation is an `Error`, the error value is
 ///     returned in `Err`. If the derivation is a `Forward`, the request is
 ///     forwarded with the same status code as the original forward.
 ///
@@ -232,9 +233,9 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///         }
 ///
 ///         match req.headers().get_one("x-api-key") {
-///             None => Outcome::Failure((Status::BadRequest, ApiKeyError::Missing)),
+///             None => Outcome::Error((Status::BadRequest, ApiKeyError::Missing)),
 ///             Some(key) if is_valid(key) => Outcome::Success(ApiKey(key)),
-///             Some(_) => Outcome::Failure((Status::BadRequest, ApiKeyError::Invalid)),
+///             Some(_) => Outcome::Error((Status::BadRequest, ApiKeyError::Invalid)),
 ///         }
 ///     }
 /// }
@@ -390,7 +391,7 @@ pub trait FromRequest<'r>: Sized {
     /// Derives an instance of `Self` from the incoming request metadata.
     ///
     /// If the derivation is successful, an outcome of `Success` is returned. If
-    /// the derivation fails in an unrecoverable fashion, `Failure` is returned.
+    /// the derivation fails in an unrecoverable fashion, `Error` is returned.
     /// `Forward` is returned to indicate that the request should be forwarded
     /// to other matching routes, if any.
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
@@ -398,27 +399,27 @@ pub trait FromRequest<'r>: Sized {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for Method {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         Success(request.method())
     }
 }
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r Origin<'r> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         Success(request.uri())
     }
 }
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r Host<'r> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.host() {
             Some(host) => Success(host),
             None => Forward(Status::NotFound)
@@ -428,9 +429,9 @@ impl<'r> FromRequest<'r> for &'r Host<'r> {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r Route {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.route() {
             Some(route) => Success(route),
             None => Forward(Status::InternalServerError)
@@ -440,18 +441,18 @@ impl<'r> FromRequest<'r> for &'r Route {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r CookieJar<'r> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         Success(request.cookies())
     }
 }
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r Accept {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.accept() {
             Some(accept) => Success(accept),
             None => Forward(Status::NotFound)
@@ -461,9 +462,9 @@ impl<'r> FromRequest<'r> for &'r Accept {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r ContentType {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
             None => Forward(Status::NotFound)
@@ -473,9 +474,9 @@ impl<'r> FromRequest<'r> for &'r ContentType {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for IpAddr {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.client_ip() {
             Some(addr) => Success(addr),
             None => Forward(Status::NotFound)
@@ -485,9 +486,9 @@ impl<'r> FromRequest<'r> for IpAddr {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for SocketAddr {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.remote() {
             Some(addr) => Success(addr),
             None => Forward(Status::NotFound)
@@ -497,12 +498,12 @@ impl<'r> FromRequest<'r> for SocketAddr {
 
 #[crate::async_trait]
 impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match T::from_request(request).await {
             Success(val) => Success(Ok(val)),
-            Failure((_, e)) => Success(Err(e)),
+            Error((_, e)) => Success(Err(e)),
             Forward(status) => Forward(status),
         }
     }
@@ -510,21 +511,21 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
 
 #[crate::async_trait]
 impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match T::from_request(request).await {
             Success(val) => Success(Some(val)),
-            Failure(_) | Forward(_) => Success(None),
+            Error(_) | Forward(_) => Success(None),
         }
     }
 }
 
 #[crate::async_trait]
 impl<'r, T: FromRequest<'r>> FromRequest<'r> for Outcome<T, T::Error> {
-    type Error = std::convert::Infallible;
+    type Error = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         Success(T::from_request(request).await)
     }
 }

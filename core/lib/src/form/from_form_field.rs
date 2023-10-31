@@ -297,7 +297,7 @@ impl<'v> FromFormField<'v> for Capped<&'v str> {
 
         match <Capped<&'v str> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
-            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Error((_, e)) => Err(e)?,
             Outcome::Forward(..) => {
                 Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
             }
@@ -318,7 +318,7 @@ impl<'v> FromFormField<'v> for Capped<String> {
 
         match <Capped<String> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
-            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Error((_, e)) => Err(e)?,
             Outcome::Forward(..) => {
                 Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
             }
@@ -354,7 +354,7 @@ impl<'v> FromFormField<'v> for Capped<&'v [u8]> {
 
         match <Capped<&'v [u8]> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
-            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Error((_, e)) => Err(e)?,
             Outcome::Forward(..) => {
                 Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
             }
