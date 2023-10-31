@@ -9,7 +9,7 @@ use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
 
 fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
-    Box::pin(async move { route::Outcome::forward(data) })
+    Box::pin(async move { route::Outcome::forward(data, Status::NotFound) })
 }
 
 fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
@@ -27,7 +27,7 @@ fn name<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
 fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     let param_outcome = req.param::<&str>(1)
         .and_then(Result::ok)
-        .into_outcome(Status::BadRequest);
+        .or_error(Status::BadRequest);
 
     Box::pin(async move {
         route::Outcome::from(req, try_outcome!(param_outcome))

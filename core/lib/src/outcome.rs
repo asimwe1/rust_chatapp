@@ -90,6 +90,10 @@ use std::fmt;
 
 use yansi::{Paint, Color};
 
+use crate::{route, request, response};
+use crate::data::{self, Data, FromData};
+use crate::http::Status;
+
 use self::Outcome::*;
 
 /// An enum representing success (`Success`), error (`Error`), or forwarding
@@ -105,46 +109,6 @@ pub enum Outcome<S, E, F> {
     Error(E),
     /// Contains the value to forward on.
     Forward(F),
-}
-
-/// Conversion trait from some type into an Outcome type.
-pub trait IntoOutcome<S, E, F> {
-    /// The type to use when returning an `Outcome::Error`.
-    type Error: Sized;
-
-    /// The type to use when returning an `Outcome::Forward`.
-    type Forward: Sized;
-
-    /// Converts `self` into an `Outcome`. If `self` represents a success, an
-    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Error` is
-    /// returned with `error` as the inner value.
-    fn into_outcome(self, error: Self::Error) -> Outcome<S, E, F>;
-
-    /// Converts `self` into an `Outcome`. If `self` represents a success, an
-    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Forward` is
-    /// returned with `forward` as the inner value.
-    fn or_forward(self, forward: Self::Forward) -> Outcome<S, E, F>;
-}
-
-impl<S, E, F> IntoOutcome<S, E, F> for Option<S> {
-    type Error = E;
-    type Forward = F;
-
-    #[inline]
-    fn into_outcome(self, error: E) -> Outcome<S, E, F> {
-        match self {
-            Some(val) => Success(val),
-            None => Error(error)
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, forward: F) -> Outcome<S, E, F> {
-        match self {
-            Some(val) => Success(val),
-            None => Forward(forward)
-        }
-    }
 }
 
 impl<S, E, F> Outcome<S, E, F> {
@@ -651,15 +615,6 @@ impl<S, E, F> Outcome<S, E, F> {
             Outcome::Forward(v) => Err(v),
         }
     }
-
-    #[inline]
-    fn formatting(&self) -> (Color, &'static str) {
-        match *self {
-            Success(..) => (Color::Green, "Success"),
-            Error(..) => (Color::Red, "Error"),
-            Forward(..) => (Color::Yellow, "Forward"),
-        }
-    }
 }
 
 impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
@@ -755,15 +710,158 @@ crate::export! {
     }
 }
 
+impl<S, E, F> Outcome<S, E, F> {
+    #[inline]
+    fn dbg_str(&self) -> &'static str {
+        match self {
+            Success(..) => "Success",
+            Error(..) => "Error",
+            Forward(..) => "Forward",
+        }
+    }
+
+    #[inline]
+    fn color(&self) -> Color {
+        match self {
+            Success(..) => Color::Green,
+            Error(..) => Color::Red,
+            Forward(..) => Color::Yellow,
+        }
+    }
+}
+
+pub(crate) struct Display<'a, 'r>(&'a route::Outcome<'r>);
+
+impl<'r> route::Outcome<'r> {
+    pub(crate) fn log_display(&self) -> Display<'_, 'r> {
+        impl fmt::Display for Display<'_, '_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", "Outcome: ".primary().bold())?;
+
+                let color = self.0.color();
+                match self.0 {
+                    Success(r) => write!(f, "{}({})", "Success".paint(color), r.status().primary()),
+                    Error(s) => write!(f, "{}({})", "Error".paint(color), s.primary()),
+                    Forward((_, s)) => write!(f, "{}({})", "Forward".paint(color), s.primary()),
+                }
+            }
+        }
+
+        Display(self)
+    }
+}
+
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Outcome::{}", self.formatting().1)
+        write!(f, "Outcome::{}", self.dbg_str())
     }
 }
 
 impl<S, E, F> fmt::Display for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (color, string) = self.formatting();
-        write!(f, "{}", string.paint(color))
+        write!(f, "{}", self.dbg_str().paint(self.color()))
+    }
+}
+
+/// Conversion trait from some type into an Outcome type.
+pub trait IntoOutcome<Outcome> {
+    /// The type to use when returning an `Outcome::Error`.
+    type Error: Sized;
+
+    /// The type to use when returning an `Outcome::Forward`.
+    type Forward: Sized;
+
+    /// Converts `self` into an `Outcome`. If `self` represents a success, an
+    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Error` is
+    /// returned with `error` as the inner value.
+    fn or_error(self, error: Self::Error) -> Outcome;
+
+    /// Converts `self` into an `Outcome`. If `self` represents a success, an
+    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Forward` is
+    /// returned with `forward` as the inner value.
+    fn or_forward(self, forward: Self::Forward) -> Outcome;
+}
+
+impl<S, E, F> IntoOutcome<Outcome<S, E, F>> for Option<S> {
+    type Error = E;
+    type Forward = F;
+
+    #[inline]
+    fn or_error(self, error: E) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Error(error)
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, forward: F) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Forward(forward)
+        }
+    }
+}
+
+impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Error> {
+    type Error = Status;
+    type Forward = (Data<'r>, Status);
+
+    #[inline]
+    fn or_error(self, error: Status) -> data::Outcome<'r, T> {
+        match self {
+            Ok(val) => Success(val),
+            Err(err) => Error((error, err))
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> data::Outcome<'r, T> {
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward((data, forward))
+        }
+    }
+}
+
+impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
+    type Error = Status;
+    type Forward = Status;
+
+    #[inline]
+    fn or_error(self, error: Status) -> request::Outcome<S, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(err) => Error((error, err))
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, status: Status) -> request::Outcome<S, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward(status)
+        }
+    }
+}
+
+impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
+    type Error = ();
+    type Forward = (Data<'r>, Status);
+
+    #[inline]
+    fn or_error(self, _: ()) -> route::Outcome<'r> {
+        match self {
+            Ok(val) => Success(val),
+            Err(status) => Error(status),
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> route::Outcome<'r> {
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward((data, forward))
+        }
     }
 }

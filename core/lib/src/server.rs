@@ -334,7 +334,7 @@ impl Rocket<Orbit> {
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
             // (None) to try again.
-            info_!("{} {}", "Outcome:".primary().bold(), outcome);
+            info_!("{}", outcome.log_display());
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Error(_) => return o,
                 Outcome::Forward(forwarded) => (data, status) = forwarded,

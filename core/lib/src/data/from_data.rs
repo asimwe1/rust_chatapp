@@ -9,27 +9,6 @@ use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
     = outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
 
-impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> {
-    type Error = Status;
-    type Forward = (Data<'r>, Status);
-
-    #[inline]
-    fn into_outcome(self, status: Status) -> Outcome<'r, S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(err) => Error((status, err))
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, (data, status): (Data<'r>, Status)) -> Outcome<'r, S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(_) => Forward((data, status))
-        }
-    }
-}
-
 /// Trait implemented by data guards to derive a value from request body data.
 ///
 /// # Data Guards
@@ -271,7 +250,7 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Outcome::Forward((data, Status::NotFound));
+///             return Outcome::Forward((data, Status::UnsupportedMediaType));
 ///         }
 ///
 ///         // Use a configured limit with name 'person' or fallback to default.
@@ -343,7 +322,7 @@ impl<'r> FromData<'r> for Capped<String> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("string").unwrap_or(Limits::STRING);
-        data.open(limit).into_string().await.into_outcome(Status::BadRequest)
+        data.open(limit).into_string().await.or_error(Status::BadRequest)
     }
 }
 
@@ -406,7 +385,7 @@ impl<'r> FromData<'r> for Capped<Vec<u8>> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("bytes").unwrap_or(Limits::BYTES);
-        data.open(limit).into_bytes().await.into_outcome(Status::BadRequest)
+        data.open(limit).into_bytes().await.or_error(Status::BadRequest)
     }
 }
 

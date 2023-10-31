@@ -3,35 +3,13 @@ use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
 use crate::{Request, Route};
-use crate::outcome::{self, IntoOutcome};
-use crate::outcome::Outcome::*;
+use crate::outcome::{self, Outcome::*};
 
-use crate::http::{Status, ContentType, Accept, Method, CookieJar};
 use crate::http::uri::{Host, Origin};
+use crate::http::{Status, ContentType, Accept, Method, CookieJar};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
-
-impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
-    type Error = Status;
-    type Forward = Status;
-
-    #[inline]
-    fn into_outcome(self, status: Status) -> Outcome<S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(err) => Error((status, err))
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, status: Status) -> Outcome<S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(_) => Forward(status)
-        }
-    }
-}
 
 /// Trait implemented by request guards to derive a value from incoming
 /// requests.
@@ -136,7 +114,8 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///   * **&Host**
 ///
 ///     Extracts the [`Host`] from the incoming request, if it exists. See
-///     [`Request::host()`] for details.
+///     [`Request::host()`] for details. If it does not exist, the request is
+///     forwarded with a 500 Internal Server Error status.
 ///
 ///   * **&Route**
 ///
@@ -162,23 +141,30 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **ContentType**
+///   * **&ContentType**
 ///
 ///     Extracts the [`ContentType`] from the incoming request via
 ///     [`Request::content_type()`]. If the request didn't specify a
-///     Content-Type, the request is forwarded with a 404 Not Found status.
+///     Content-Type, the request is forwarded with a 500 Internal Server Error
+///     status.
 ///
-///   * **IpAddr**
+///   * **&ContentType**
+///
+///     Extracts the [`Accept`] from the incoming request via
+///     [`Request::accept()`]. If the request didn't specify an `Accept`, the
+///     request is forwarded with a 500 Internal Server Error status.
+///
+///   * ***IpAddr**
 ///
 ///     Extracts the client ip address of the incoming request as an [`IpAddr`]
 ///     via [`Request::client_ip()`]. If the client's IP address is not known,
-///     the request is forwarded with a 404 Not Found status.
+///     the request is forwarded with a 500 Internal Server Error status.
 ///
 ///   * **SocketAddr**
 ///
 ///     Extracts the remote address of the incoming request as a [`SocketAddr`]
 ///     via [`Request::remote()`]. If the remote address is not known, the
-///     request is forwarded with a 404 Not Found status.
+///     request is forwarded with a 500 Internal Server Error status.
 ///
 ///   * **Option&lt;T>** _where_ **T: FromRequest**
 ///
@@ -422,7 +408,7 @@ impl<'r> FromRequest<'r> for &'r Host<'r> {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.host() {
             Some(host) => Success(host),
-            None => Forward(Status::NotFound)
+            None => Forward(Status::InternalServerError)
         }
     }
 }
@@ -455,7 +441,7 @@ impl<'r> FromRequest<'r> for &'r Accept {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(Status::NotFound)
+            None => Forward(Status::InternalServerError)
         }
     }
 }
@@ -467,7 +453,7 @@ impl<'r> FromRequest<'r> for &'r ContentType {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(Status::NotFound)
+            None => Forward(Status::InternalServerError)
         }
     }
 }
@@ -479,7 +465,7 @@ impl<'r> FromRequest<'r> for IpAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.client_ip() {
             Some(addr) => Success(addr),
-            None => Forward(Status::NotFound)
+            None => Forward(Status::InternalServerError)
         }
     }
 }
@@ -491,7 +477,7 @@ impl<'r> FromRequest<'r> for SocketAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.remote() {
             Some(addr) => Success(addr),
-            None => Forward(Status::NotFound)
+            None => Forward(Status::InternalServerError)
         }
     }
 }

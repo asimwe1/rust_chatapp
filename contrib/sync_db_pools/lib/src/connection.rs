@@ -210,7 +210,7 @@ impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
     #[inline]
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
         match request.rocket().state::<ConnectionPool<K, C>>() {
-            Some(c) => c.get().await.into_outcome((Status::ServiceUnavailable, ())),
+            Some(c) => c.get().await.or_error((Status::ServiceUnavailable, ())),
             None => {
                 error_!("Missing database fairing for `{}`", std::any::type_name::<K>());
                 Outcome::Error((Status::InternalServerError, ()))

@@ -218,31 +218,6 @@ impl<'r, 'o: 'r> Outcome<'o> {
         }
     }
 
-    /// Return the `Outcome` of response to `req` from `responder`.
-    ///
-    /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Forward`
-    /// with a status of `404 Not Found` is returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::{Request, Data, route};
-    ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
-    ///     route::Outcome::from_or_forward(req, data, "Hello, world!")
-    /// }
-    /// ```
-    #[inline]
-    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data<'r>, responder: R) -> Outcome<'r>
-        where R: Responder<'r, 'o>
-    {
-        match responder.respond_to(req) {
-            Ok(response) => Outcome::Success(response),
-            Err(_) => Outcome::Forward((data, Status::NotFound))
-        }
-    }
-
     /// Return an `Outcome` of `Error` with the status code `code`. This is
     /// equivalent to `Outcome::Error(code)`.
     ///
@@ -263,8 +238,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
         Outcome::Error(code)
     }
 
-    /// Return an `Outcome` of `Forward` with the data `data`. This is
-    /// equivalent to `Outcome::Forward((data, Status::NotFound))`.
+    /// Return an `Outcome` of `Forward` with the data `data` and status
+    /// `status`. This is equivalent to `Outcome::Forward((data, status))`.
     ///
     /// This method exists to be used during manual routing.
     ///
@@ -272,14 +247,15 @@ impl<'r, 'o: 'r> Outcome<'o> {
     ///
     /// ```rust
     /// use rocket::{Request, Data, route};
+    /// use rocket::http::Status;
     ///
     /// fn always_forward<'r>(_: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
-    ///     route::Outcome::forward(data)
+    ///     route::Outcome::forward(data, Status::InternalServerError)
     /// }
     /// ```
     #[inline(always)]
-    pub fn forward(data: Data<'r>) -> Outcome<'r> {
-        Outcome::Forward((data, Status::NotFound))
+    pub fn forward(data: Data<'r>, status: Status) -> Outcome<'r> {
+        Outcome::Forward((data, status))
     }
 }
 

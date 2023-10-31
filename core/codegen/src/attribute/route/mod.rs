@@ -105,7 +105,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
             if !__e.is_empty() {
                 #_log::warn_!("Query string failed to match route declaration.");
                 for _err in __e { #_log::warn_!("{}", _err); }
-                return #Outcome::Forward((#__data, #Status::NotFound));
+                return #Outcome::Forward((#__data, #Status::UnprocessableEntity));
             }
 
             (#(#ident.unwrap()),*)
@@ -146,7 +146,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
         #_log::warn_!("Parameter guard `{}: {}` is forwarding: {:?}.",
             #name, stringify!(#ty), __error);
 
-        #Outcome::Forward((#__data, #Status::NotFound))
+        #Outcome::Forward((#__data, #Status::UnprocessableEntity))
     });
 
     // All dynamic parameters should be found if this function is being called;
