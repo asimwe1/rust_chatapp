@@ -16,12 +16,19 @@ fn submit(cookies: &CookieJar<'_>, message: Form<&str>) -> Redirect {
     Redirect::to(uri!(index))
 }
 
+#[delete("/")]
+fn delete(cookies: &CookieJar<'_>) -> Redirect {
+    cookies.remove("message");
+    Redirect::to(uri!(index))
+}
+
 #[get("/")]
 fn index(cookies: &CookieJar<'_>) -> Template {
     let message = cookies.get("message").map(|c| c.value());
-    Template::render("message", context! { message })
+    let present = cookies.get("message").is_some();
+    Template::render("message", context! { present, message })
 }
 
 pub fn routes() -> Vec<rocket::Route> {
-    routes![submit, index]
+    routes![index, submit, delete]
 }
