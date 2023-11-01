@@ -1,3 +1,161 @@
+# Version 0.5.0-rc.4 (Nov 1, 2023)
+
+## Major Features and Improvements
+
+  * Introduced [request connection upgrade APIs].
+
+    The APIs allow responders to handle upgrade requests by [registering]
+    [`IoHandler`]s for upgraded protocols. The [`IoHandler`] can perform raw
+    byte I/O with the client. This functionality is used to implement WebSocket
+    support by the newly introduced [`rocket_ws`] library.
+
+  * Introduced WebSocket support: [`rocket_ws`].
+
+    The newly introduced [`rocket_ws`] contrib library -- entirely external to
+    Rocket itself -- provides complete, multi-modal support for interacting with
+    clients over WebSockets. Modalities include async streams:
+
+    ```rust
+    #[get("/echo?compose")]
+    fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
+        ws.stream(|io| io)
+    }
+    ```
+
+    And generator syntax, among others:
+
+    ```rust
+    #[get("/echo?stream")]
+    fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+        ws::Stream! { ws =>
+            for await message in ws {
+                yield message?;
+            }
+        }
+    }
+    ```
+
+[request connection upgrade APIs]: https://api.rocket.rs/v0.5-rc/rocket/struct.Response.html#upgrading
+[`rocket_ws`]: https://api.rocket.rs/v0.5-rc/rocket_ws/
+[registering]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Response.html#method.add_upgrade
+[`IoHandler`]: https://api.rocket.rs/v0.5-rc/rocket/data/trait.IoHandler.html
+
+## Breaking Changes
+
+  * The types of responders in [`response::status`] were unified to all be of
+    the form `Status<R>(R)`.
+
+    Previously, some responders were of the form `Status<R>(Option<R>)`.
+
+  * [Custom form errors] must now specify an associated `Status`.
+
+    Change errors created as `ErrorKind(error)` to `ErrorKind(status, error)`.
+
+  * [Route `Forward` outcomes] are now associated with a `Status`.
+
+    This allows guards to determine which catcher will be invoked when all
+    routes forward. All [`request::Outcome`] `Forward` values must be modified
+    to include a `Status` hint.
+
+  * `Outcome::Failure` was renamed to [`Outcome::Error`].
+
+    This disambiguates the leading `F`s in `Failure` and `Forward`. In
+    particular, generics of `E` and `F` now clearly correspond to `Error` and
+    `Forward`, respectively.
+
+  * The status codes used when built-in guards forward were changed.
+
+    Previously, the `NotFound` status code was used to signal many kinds of
+    recoverable, forwarding errors. This included validation errors, incorrect
+    Content-Type errors, and more. This has been changed such that the status
+    code used more closely matches the issue encountered.
+
+    The net effect is that different error catchers will be invoked when
+    built-in guards fail. The complete changes are:
+
+    * Route parameter `FromParam` errors now forward as 422.
+    * Query paramater errors now forward as 422.
+    * Incorrect form content-type errors forwards as 413.
+    * `&Host`, `&Accept`, `&ContentType`, `IpAddr`, and `SocketAddr` all forward
+      with a 500.
+
+  * [`IntoOutcome`] was overhauled to supplant methods now removed in `Outcome`.
+
+    * `IntoOutcome::into_outcome()` is now `or_error()`.
+    * `IntoOutcome` is implemented for all `Outcome` type aliases.
+    * `Outcome::forward()` requires specifying a status code.
+    * `Outcome::from()` and `Outcome::from_or_forward()` were removed.
+
+      Use `responder.respond_to(req)` followed by a chaining of `.or_error()` or
+      `.or_forward()`.
+
+  * `Secure` cookie flags are set by default when serving over TLS.
+
+  * Removal cookies now have `SameSite` set to `Lax`.
+
+  * [`MediaType::JavaScript`] is now `text/javascript`.
+
+[`response::status`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/index.html
+[Custom form errors]: https://api.rocket.rs/v0.5-rc/rocket/form/error/enum.ErrorKind.html#variant.Custom
+[`request::Outcome`]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
+[Route `Forward` outcomes]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
+[`Outcome::Error`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/enum.Outcome.html#variant.Error
+[`IntoOutcome`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/trait.IntoOutcome.html
+[`MediaType::JavaScript`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html#associatedconstant.JavaScript
+
+## General Improvements
+
+  * [`rocket_db_pools`] gained support for [`diesel-async`].
+  * Added [`TempFile::open()`] to stream `TempFile` data.
+  * mTLS certificates can now be set on local requests via
+    [`LocalRequest::identity()`].
+  * Added [`Error::pretty_print()`] for pretty-printing errors like Rocket.
+  * The TLS example now includes an HTTP to HTTPS redirection fairing.
+  * When data limits are reached, warnings are logged.
+  * A warning is emitted when `String` is used as a route parameter.
+  * Configuration provenance information is logged under the `debug` log level.
+  * `template_dir` as recognized by `rocket_dyn_templates` is more reliably
+    interpreted.
+  * Logging of `Outcome`s now includes the relevant status code.
+
+[`diesel-async`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#diesel-v2
+[`LocalRequest::identity()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.identity
+[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
+[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
+
+### Known Media Types
+
+  * The `.mjs` extension is now recognized as JavaScript.
+  * '.exe', '.iso', '.dmg' are marked as known extensions.
+
+### Trait Implementations
+
+  * Implemented `De(Serialize)` for `Status`.
+
+### Updated Dependencies
+
+  * `rustls` to 0.21.
+  * `tokio-rustls` to 0.24.
+  * `state` to 0.21.
+  * `sqlx` to 0.7.
+  * `notify` to 6.
+  * `indexmap` to 2.
+  * `cookie` to 0.18.
+
+### Documentation
+
+  * Driver versions in `db_pools` were fixed and updated.
+  * Added details on using `Status` as a field in a derived `Responder`.
+  * All built-in data guards are now properly documented.
+  * Further details on deriving `UriDisplay` were added.
+  * The guide now includes notes on enabling crate features when needed.
+
+## Infrastructure
+
+  * The CI now frees disk space before proceeding to avoid out-of-disk errors.
+  * `Span::mixed_site()` is used in codegen to reduce errant `clippy` warnings.
+  * All workspaces now use `resolver = 2`.
+
 # Version 0.5.0-rc.3 (Mar 23, 2023)
 
 ## Major Features and Improvements
