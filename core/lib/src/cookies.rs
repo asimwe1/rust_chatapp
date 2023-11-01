@@ -350,17 +350,24 @@ impl<'a> CookieJar<'a> {
         self.ops.lock().push(Op::Add(cookie, true));
     }
 
-    /// Removes `cookie` from this collection and generates a "removal" cookies
+    /// Removes `cookie` from this collection and generates a "removal" cookie
     /// to send to the client on response. A "removal" cookie is a cookie that
     /// has the same name as the original cookie but has an empty value, a
     /// max-age of 0, and an expiration date far in the past.
     ///
-    /// **Note: For correctness, `cookie` must contain the same `path` and
-    /// `domain` as the cookie that was initially set. Failure to provide the
-    /// initial `path` and `domain` will result in cookies that are not properly
-    /// removed. For convenience, if a path is not set on `cookie`, the `"/"`
-    /// path will automatically be set.**
+    /// **For successful removal, `cookie` must contain the same `path` and
+    /// `domain` as the cookie that was originally set. The cookie will fail to
+    /// be deleted if any other `path` and `domain` are provided. For
+    /// convenience, a path of `"/"` is automatically set when one is not
+    /// specified.** The full list of defaults when corresponding values aren't
+    /// specified is:
     ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Lax`
+    ///
+    /// <small>Note: a default setting of `Lax` for `SameSite` carries no
+    /// security implications: the removal cookie has expired, so it is never
+    /// transferred to any origin.</small>
     ///
     /// # Example
     ///
@@ -370,47 +377,62 @@ impl<'a> CookieJar<'a> {
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
-    ///     // Rocket will set `path` to `/`.
+    ///     // `path` and `SameSite` are set to defaults (`/` and `Lax`)
     ///     jar.remove("name");
     ///
     ///     // Use a custom-built cookie to set a custom path.
     ///     jar.remove(Cookie::build("name").path("/login"));
+    ///
+    ///     // Use a custom-built cookie to set a custom path and domain.
+    ///     jar.remove(Cookie::build("id").path("/guide").domain("rocket.rs"));
     /// }
     /// ```
     pub fn remove<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
-        if cookie.path().is_none() {
-            cookie.set_path("/");
-        }
-
+        Self::set_removal_defaults(&mut cookie);
         self.ops.lock().push(Op::Remove(cookie, false));
     }
 
     /// Removes the private `cookie` from the collection.
     ///
-    /// For correct removal, the passed in `cookie` must contain the same `path`
-    /// and `domain` as the cookie that was initially set. If a path is not set
-    /// on `cookie`, the `"/"` path will automatically be set.
+    /// **For successful removal, `cookie` must contain the same `path` and
+    /// `domain` as the cookie that was originally set. The cookie will fail to
+    /// be deleted if any other `path` and `domain` are provided. For
+    /// convenience, a path of `"/"` is automatically set when one is not
+    /// specified.** The full list of defaults when corresponding values aren't
+    /// specified is:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Lax`
+    ///
+    /// <small>Note: a default setting of `Lax` for `SameSite` carries no
+    /// security implications: the removal cookie has expired, so it is never
+    /// transferred to any origin.</small>
     ///
     /// # Example
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::CookieJar;
+    /// use rocket::http::{CookieJar, Cookie};
     ///
     /// #[get("/")]
     /// fn handler(jar: &CookieJar<'_>) {
+    ///     // `path` and `SameSite` are set to defaults (`/` and `Lax`)
     ///     jar.remove_private("name");
+    ///
+    ///     // Use a custom-built cookie to set a custom path.
+    ///     jar.remove_private(Cookie::build("name").path("/login"));
+    ///
+    ///     // Use a custom-built cookie to set a custom path and domain.
+    ///     let cookie = Cookie::build("id").path("/guide").domain("rocket.rs");
+    ///     jar.remove_private(cookie);
     /// }
     /// ```
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn remove_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
-        if cookie.path().is_none() {
-            cookie.set_path("/");
-        }
-
+        Self::set_removal_defaults(&mut cookie);
         self.ops.lock().push(Op::Remove(cookie, true));
     }
 
@@ -505,6 +527,21 @@ impl<'a> CookieJar<'a> {
 
         if cookie.secure().is_none() && config.tls_enabled() {
             cookie.set_secure(true);
+        }
+    }
+
+    /// For each property below, this method checks if there is a provided value
+    /// and if there is none, sets a default value. Default values are:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Lax`
+    fn set_removal_defaults(cookie: &mut Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
+        }
+
+        if cookie.same_site().is_none() {
+            cookie.set_same_site(SameSite::Lax);
         }
     }
 
