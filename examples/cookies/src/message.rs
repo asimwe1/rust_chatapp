@@ -1,6 +1,6 @@
 use rocket::form::Form;
 use rocket::response::Redirect;
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::CookieJar;
 use rocket_dyn_templates::{Template, context};
 
 #[macro_export]

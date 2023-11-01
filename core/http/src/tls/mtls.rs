@@ -4,7 +4,6 @@ pub mod oid {
     //! [`der-parser`](https://docs.rs/der-parser/7).
 
     pub use x509_parser::oid_registry::*;
-    pub use x509_parser::der_parser::oid::*;
     pub use x509_parser::objects::*;
 }
 

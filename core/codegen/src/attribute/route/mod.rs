@@ -225,6 +225,7 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
         }
 
         #[doc(hidden)]
+        #[allow(unused)]
         pub use #inner_macro_name as #macro_name;
     }
 }

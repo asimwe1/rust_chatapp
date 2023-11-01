@@ -1,7 +1,7 @@
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
-use rocket::http::{Cookie, CookieJar, Status};
+use rocket::http::{CookieJar, Status};
 use rocket::form::Form;
 
 use rocket_dyn_templates::{Template, context};
