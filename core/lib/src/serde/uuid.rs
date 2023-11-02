@@ -7,7 +7,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket]
-//! version = "=0.5.0-rc.3"
+//! version = "=0.5.0-rc.4"
 //! features = ["uuid"]
 //! ```
 //!

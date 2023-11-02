@@ -10,7 +10,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ws = { package = "rocket_ws", version ="=0.1.0-rc.3" }
+//! ws = { package = "rocket_ws", version ="=0.1.0-rc.4" }
 //! ```
 //!
 //! Then, use [`WebSocket`] as a request guard in any route and either call

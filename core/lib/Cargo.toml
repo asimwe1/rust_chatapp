@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.5.0-rc.3"
+version = "0.5.0-rc.4"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
@@ -61,11 +61,11 @@ tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 state = "0.6"
 
 [dependencies.rocket_codegen]
-version = "=0.5.0-rc.3"
+version = "=0.5.0-rc.4"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "=0.5.0-rc.3"
+version = "=0.5.0-rc.4"
 path = "../http"
 features = ["serde"]
 

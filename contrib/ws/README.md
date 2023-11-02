@@ -16,7 +16,7 @@ This crate provides WebSocket support for Rocket via integration with Rocket's
 
      ```toml
      [dependencies]
-     ws = { package = "rocket_ws", version ="=0.1.0-rc.3" }
+     ws = { package = "rocket_ws", version ="=0.1.0-rc.4" }
      ```
 
    2. Use it!
