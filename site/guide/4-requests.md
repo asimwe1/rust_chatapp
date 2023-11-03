@@ -1196,7 +1196,7 @@ use std::str::FromStr;
 struct Token<'r>(&'r str);
 ```
 
-[`try_with`]: rocket/form/validate/fn.try_with.html
+[`try_with`]: @api/rocket/form/validate/fn.try_with.html
 
 ### Collections
 
