@@ -54,7 +54,7 @@ looks like:
 
 | Framework            | Dependencies | Build Time |
 |----------------------|--------------|------------|
-| Rocket 0.5-rc.2      | 151          | 50s        |
+| Rocket 0.5      | 151          | 50s        |
 | Actix-Web 4.0.1      | 155          | 40s        |
 | Tide 0.16            | 202          | 37s        |
 | Warp 0.3.2           | 132          | 30s        |
@@ -646,7 +646,7 @@ is to depend on a `contrib` library from git while also depending on a
 `crates.io` version of Rocket or vice-versa:
 
 ```toml
-rocket = "=0.5.0-rc.4"
+rocket = "0.5.0"
 rocket_db_pools = { git = "https://github.com/SergioBenitez/Rocket.git" }
 ```
 

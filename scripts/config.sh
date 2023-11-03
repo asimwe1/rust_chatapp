@@ -58,8 +58,8 @@ VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2
 MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
 VIRTUAL_CODENAME="$(git branch --show-current)"
 PHYSICAL_CODENAME="v${MAJOR_VERSION}"
-CURRENT_RELEASE=false
-PRE_RELEASE=true
+CURRENT_RELEASE=true
+PRE_RELEASE=false
 
 # A generated codename for this version. Use the git branch for pre-releases.
 case $PRE_RELEASE in

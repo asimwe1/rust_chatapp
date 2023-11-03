@@ -3,7 +3,7 @@
 [crates.io]: https://img.shields.io/crates/v/rocket_ws.svg
 [crate]: https://crates.io/crates/rocket_ws
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/v0.5-rc/rocket_ws
+[crate docs]: https://api.rocket.rs/v0.5/rocket_ws
 [ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
 [ci]: https://github.com/SergioBenitez/Rocket/actions
 
@@ -16,7 +16,7 @@ This crate provides WebSocket support for Rocket via integration with Rocket's
 
      ```toml
      [dependencies]
-     ws = { package = "rocket_ws", version ="=0.1.0-rc.4" }
+     ws = { package = "rocket_ws", version = "0.1.0" }
      ```
 
    2. Use it!

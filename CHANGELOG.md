@@ -8,7 +8,7 @@ This release introduces the following major features and improvements:
   * A rewritten, fully asynchronous core with support for [`async`/`await`].
   * WebSocket support via [`rocket_ws`].
   * [Feature-complete forms support] including multipart, collections, [ad-hoc validation], and
-    [context](https://rocket.rs/v0.5-rc/guide/requests/#context).
+    [context](https://rocket.rs/v0.5/guide/requests/#context).
   * [Sentinels]: automatic verification of application state at start-up to prevent runtime errors.
   * [Graceful shutdown] with configurable signaling, grace periods, [notification], and
     [shutdown fairings].
@@ -28,8 +28,8 @@ This release introduces the following major features and improvements:
   * [Ignorable segments]: wildcard route matching with no typing restrictions.
   * First-class [support for `serde`] for built-in guards and types.
   * New application launch attributes:
-    [`#[launch]`](https://api.rocket.rs/v0.5-rc/rocket/attr.launch.html) and
-    [`#[rocket::main]`](https://api.rocket.rs/v0.5-rc/rocket/attr.main.html).
+    [`#[launch]`](https://api.rocket.rs/v0.5/rocket/attr.launch.html) and
+    [`#[rocket::main]`](https://api.rocket.rs/v0.5/rocket/attr.main.html).
   * [Default catchers] via `#[catch(default)]`, which handle _any_ status code.
   * [Catcher scoping] to narrow the scope of a catcher to a URI prefix.
   * Built-in libraries and support for [asynchronous testing].
@@ -48,7 +48,7 @@ This release introduces the following major features and improvements:
   * Borrowed byte slices as data and form guards.
   * Fail-fast behavior for [misconfigured secrets], file serving paths.
   * Support for generics and custom generic bounds in
-    [`#[derive(Responder)]`](https://api.rocket.rs/v0.5-rc/rocket/derive.Responder.html).
+    [`#[derive(Responder)]`](https://api.rocket.rs/v0.5/rocket/derive.Responder.html).
   * [Default ranking colors], which prevent more routing collisions automatically.
   * Improved error logging with suggestions when common errors are detected.
   * Completely rewritten examples including a new real-time [`chat`] application.
@@ -172,7 +172,7 @@ The `rocket_contrib` crate is deprecated and the functionality moved to other `r
     - These crates are versioned and released independently of `rocket`.
     - `rocket_contrib::databases::DbError` is now `rocket_sync_db_pools::Error`.
     - Removed `redis`, `mongodb`, and `mysql` integrations which have upstream `async` drivers.
-    - The [`#[database]`](https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/attr.database.html)
+    - The [`#[database]`](https://api.rocket.rs/v0.5/rocket_sync_db_pools/attr.database.html)
       attribute generates an [`async run()`] method instead of `Deref` implementations.
 
 ### General
@@ -441,7 +441,7 @@ In addition to new features and changes, Rocket saw the following improvements:
   * Added support for the `X-DNS-Prefetch-Control` header to `Shield`.
   * Added support for manually-set `expires` values for private cookies.
   * Added support for type generics and custom generic bounds to
-    [`#[derive(Responder)]`](https://api.rocket.rs/v0.5-rc/rocket/derive.Responder.html).
+    [`#[derive(Responder)]`](https://api.rocket.rs/v0.5/rocket/derive.Responder.html).
   * The `Server` header is only set if one isn't already set.
   * Accurate `Content-Length` headers are sent even for partially read `Body`s.
   * [`Redirect`] now accepts a `TryFrom<Reference>`, allowing fragment parts.
@@ -548,178 +548,178 @@ The following changes were made to the project's infrastructure:
   * The CI now frees disk space before proceeding to avoid out-of-disk errors.
   * All workspaces now use `resolver = 2`.
 
-[phase]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#phases
-[`async`/`await`]: https://rocket.rs/v0.5-rc/guide/overview/#async-routes
-[compilation on Rust's stable]: https://rocket.rs/v0.5-rc/guide/getting-started/#installing-rust
-[Feature-complete forms support]: https://rocket.rs/v0.5-rc/guide/requests/#forms
-[configuration system]: https://rocket.rs/v0.5-rc/guide/configuration/#configuration
-[graceful shutdown]: https://api.rocket.rs/v0.5-rc/rocket/config/struct.Shutdown.html#summary
-[asynchronous testing]: https://rocket.rs/v0.5-rc/guide/testing/#asynchronous-testing
-[UTF-8 characters]: https://rocket.rs/v0.5-rc/guide/requests/#static-parameters
-[ignorable segments]: https://rocket.rs/v0.5-rc/guide/requests/#ignored-segments
-[Catcher scoping]: https://rocket.rs/v0.5-rc/guide/requests/#scoping
-[ad-hoc validation]: https://rocket.rs/v0.5-rc/guide/requests#ad-hoc-validation
-[incoming data limits]: https://rocket.rs/v0.5-rc/guide/requests/#streaming
-[build phases]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#phases
-[Singleton fairings]: https://api.rocket.rs/v0.5-rc/rocket/fairing/trait.Fairing.html#singletons
-[features into core]: https://api.rocket.rs/v0.5-rc/rocket/index.html#features
-[features of `rocket`]: https://api.rocket.rs/v0.5-rc/rocket/index.html#features
-[Data limit declaration in SI units]: https://api.rocket.rs/v0.5-rc/rocket/data/struct.ByteUnit.html
-[support for `serde`]: https://api.rocket.rs/v0.5-rc/rocket/serde/index.html
-[automatic typed config extraction]: https://api.rocket.rs/v0.5-rc/rocket/fairing/struct.AdHoc.html#method.config
-[misconfigured secrets]: https://api.rocket.rs/v0.5-rc/rocket/config/struct.SecretKey.html
-[default ranking colors]: https://rocket.rs/v0.5-rc/guide/requests/#default-ranking
-[`chat`]: https://github.com/SergioBenitez/Rocket/tree/v0.5-rc/examples/chat
-[`Form` guard]: https://api.rocket.rs/v0.5-rc/rocket/form/struct.Form.html
-[`Strict`]: https://api.rocket.rs/v0.5-rc/rocket/form/struct.Strict.html
-[`CookieJar`#pending]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.CookieJar.html#pending
-[`rocket::serde::json`]: https://api.rocket.rs/v0.5-rc/rocket/serde/json/index.html
-[`rocket::serde::msgpack`]: https://api.rocket.rs/v0.5-rc/rocket/serde/msgpack/index.html
-[`rocket::serde::uuid`]: https://api.rocket.rs/v0.5-rc/rocket/serde/uuid/index.html
-[`rocket::shield`]: https://api.rocket.rs/v0.5-rc/rocket/shield/index.html
-[`rocket::fs`]: https://api.rocket.rs/v0.5-rc/rocket/fs/index.html
-[`async run()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/index.html#handlers
-[`LocalRequest::json()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.json
-[`LocalRequest::msgpack()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.msgpack
-[`LocalResponse::json()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalResponse.html#method.json
-[`LocalResponse::msgpack()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalResponse.html#method.msgpack
-[hierarchical data limits]: https://api.rocket.rs/v0.5-rc/rocket/data/struct.Limits.html#hierarchy
-[default form field values]: https://rocket.rs/v0.5-rc/guide/requests/#defaults
+[phase]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#phases
+[`async`/`await`]: https://rocket.rs/v0.5/guide/overview/#async-routes
+[compilation on Rust's stable]: https://rocket.rs/v0.5/guide/getting-started/#installing-rust
+[Feature-complete forms support]: https://rocket.rs/v0.5/guide/requests/#forms
+[configuration system]: https://rocket.rs/v0.5/guide/configuration/#configuration
+[graceful shutdown]: https://api.rocket.rs/v0.5/rocket/config/struct.Shutdown.html#summary
+[asynchronous testing]: https://rocket.rs/v0.5/guide/testing/#asynchronous-testing
+[UTF-8 characters]: https://rocket.rs/v0.5/guide/requests/#static-parameters
+[ignorable segments]: https://rocket.rs/v0.5/guide/requests/#ignored-segments
+[Catcher scoping]: https://rocket.rs/v0.5/guide/requests/#scoping
+[ad-hoc validation]: https://rocket.rs/v0.5/guide/requests#ad-hoc-validation
+[incoming data limits]: https://rocket.rs/v0.5/guide/requests/#streaming
+[build phases]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#phases
+[Singleton fairings]: https://api.rocket.rs/v0.5/rocket/fairing/trait.Fairing.html#singletons
+[features into core]: https://api.rocket.rs/v0.5/rocket/index.html#features
+[features of `rocket`]: https://api.rocket.rs/v0.5/rocket/index.html#features
+[Data limit declaration in SI units]: https://api.rocket.rs/v0.5/rocket/data/struct.ByteUnit.html
+[support for `serde`]: https://api.rocket.rs/v0.5/rocket/serde/index.html
+[automatic typed config extraction]: https://api.rocket.rs/v0.5/rocket/fairing/struct.AdHoc.html#method.config
+[misconfigured secrets]: https://api.rocket.rs/v0.5/rocket/config/struct.SecretKey.html
+[default ranking colors]: https://rocket.rs/v0.5/guide/requests/#default-ranking
+[`chat`]: https://github.com/SergioBenitez/Rocket/tree/v0.5/examples/chat
+[`Form` guard]: https://api.rocket.rs/v0.5/rocket/form/struct.Form.html
+[`Strict`]: https://api.rocket.rs/v0.5/rocket/form/struct.Strict.html
+[`CookieJar`#pending]: https://api.rocket.rs/v0.5/rocket/http/struct.CookieJar.html#pending
+[`rocket::serde::json`]: https://api.rocket.rs/v0.5/rocket/serde/json/index.html
+[`rocket::serde::msgpack`]: https://api.rocket.rs/v0.5/rocket/serde/msgpack/index.html
+[`rocket::serde::uuid`]: https://api.rocket.rs/v0.5/rocket/serde/uuid/index.html
+[`rocket::shield`]: https://api.rocket.rs/v0.5/rocket/shield/index.html
+[`rocket::fs`]: https://api.rocket.rs/v0.5/rocket/fs/index.html
+[`async run()`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/index.html#handlers
+[`LocalRequest::json()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalRequest.html#method.json
+[`LocalRequest::msgpack()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalRequest.html#method.msgpack
+[`LocalResponse::json()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalResponse.html#method.json
+[`LocalResponse::msgpack()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalResponse.html#method.msgpack
+[hierarchical data limits]: https://api.rocket.rs/v0.5/rocket/data/struct.Limits.html#hierarchy
+[default form field values]: https://rocket.rs/v0.5/guide/requests/#defaults
 [`Config::ident`]: https://api.rocket.rs/rocket/struct.Config.html#structfield.ident
 [`tokio`]: https://tokio.rs/
 [Figment]: https://docs.rs/figment/0.10/figment/
-[`TempFile`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html
-[`Contextual`]: https://rocket.rs/v0.5-rc/guide/requests/#context
-[`Capped<T>`]: https://api.rocket.rs/v0.5-rc/rocket/data/struct.Capped.html
-[default catchers]: https://rocket.rs/v0.5-rc/guide/requests/#default-catchers
-[URI types]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/index.html
-[`uri!`]: https://api.rocket.rs/v0.5-rc/rocket/macro.uri.html
-[`Reference`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Reference.html
-[`Asterisk`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Asterisk.html
-[`Redirect`]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Redirect.html
-[`UriDisplayQuery`]: https://api.rocket.rs/v0.5-rc/rocket/derive.UriDisplayQuery.html
-[`Shield`]: https://api.rocket.rs/v0.5-rc/rocket/shield/struct.Shield.html
-[Sentinels]: https://api.rocket.rs/v0.5-rc/rocket/trait.Sentinel.html
-[`local_cache!`]: https://api.rocket.rs/v0.5-rc/rocket/request/macro.local_cache.html
-[`local_cache_once!`]: https://api.rocket.rs/v0.5-rc/rocket/request/macro.local_cache_once.html
-[`CookieJar`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.CookieJar.html
-[asynchronous streams]: https://rocket.rs/v0.5-rc/guide/responses/#async-streams
-[Server-Sent Events]: https://api.rocket.rs/v0.5-rc/rocket/response/stream/struct.EventStream.html
-[`fs::relative!`]: https://api.rocket.rs/v0.5-rc/rocket/fs/macro.relative.html
-[notification]: https://api.rocket.rs/v0.5-rc/rocket/struct.Shutdown.html
-[`Rocket`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html
-[`rocket::build()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.build
-[`Rocket::ignite()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.ignite
-[`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
-[`Request::rocket()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.rocket
-[Fairings]: https://rocket.rs/v0.5-rc/guide/fairings/
-[configuration system]: https://rocket.rs/v0.5-rc/guide/configuration/
-[`Poolable`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/trait.Poolable.html
-[`Config`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html
-[`Error`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html
-[`LogLevel`]: https://api.rocket.rs/v0.5-rc/rocket/config/enum.LogLevel.html
-[`Rocket::register()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.register
-[`NamedFile::open`]: https://api.rocket.rs/v0.5-rc/rocket/fs/struct.NamedFile.html#method.open
-[`Request::local_cache_async()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.local_cache_async
-[`FromRequest`]: https://api.rocket.rs/v0.5-rc/rocket/request/trait.FromRequest.html
-[`Fairing`]: https://api.rocket.rs/v0.5-rc/rocket/fairing/trait.Fairing.html
-[`catcher::Handler`]: https://api.rocket.rs/v0.5-rc/rocket/catcher/trait.Handler.html
-[`route::Handler`]: https://api.rocket.rs/v0.5-rc/rocket/route/trait.Handler.html
-[`FromData`]: https://api.rocket.rs/v0.5-rc/rocket/data/trait.FromData.html
+[`TempFile`]: https://api.rocket.rs/v0.5/rocket/fs/enum.TempFile.html
+[`Contextual`]: https://rocket.rs/v0.5/guide/requests/#context
+[`Capped<T>`]: https://api.rocket.rs/v0.5/rocket/data/struct.Capped.html
+[default catchers]: https://rocket.rs/v0.5/guide/requests/#default-catchers
+[URI types]: https://api.rocket.rs/v0.5/rocket/http/uri/index.html
+[`uri!`]: https://api.rocket.rs/v0.5/rocket/macro.uri.html
+[`Reference`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Reference.html
+[`Asterisk`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Asterisk.html
+[`Redirect`]: https://api.rocket.rs/v0.5/rocket/response/struct.Redirect.html
+[`UriDisplayQuery`]: https://api.rocket.rs/v0.5/rocket/derive.UriDisplayQuery.html
+[`Shield`]: https://api.rocket.rs/v0.5/rocket/shield/struct.Shield.html
+[Sentinels]: https://api.rocket.rs/v0.5/rocket/trait.Sentinel.html
+[`local_cache!`]: https://api.rocket.rs/v0.5/rocket/request/macro.local_cache.html
+[`local_cache_once!`]: https://api.rocket.rs/v0.5/rocket/request/macro.local_cache_once.html
+[`CookieJar`]: https://api.rocket.rs/v0.5/rocket/http/struct.CookieJar.html
+[asynchronous streams]: https://rocket.rs/v0.5/guide/responses/#async-streams
+[Server-Sent Events]: https://api.rocket.rs/v0.5/rocket/response/stream/struct.EventStream.html
+[`fs::relative!`]: https://api.rocket.rs/v0.5/rocket/fs/macro.relative.html
+[notification]: https://api.rocket.rs/v0.5/rocket/struct.Shutdown.html
+[`Rocket`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html
+[`rocket::build()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.build
+[`Rocket::ignite()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.ignite
+[`Rocket::launch()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.launch
+[`Request::rocket()`]: https://api.rocket.rs/v0.5/rocket/request/struct.Request.html#method.rocket
+[Fairings]: https://rocket.rs/v0.5/guide/fairings/
+[configuration system]: https://rocket.rs/v0.5/guide/configuration/
+[`Poolable`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/trait.Poolable.html
+[`Config`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html
+[`Error`]: https://api.rocket.rs/v0.5/rocket/struct.Error.html
+[`LogLevel`]: https://api.rocket.rs/v0.5/rocket/config/enum.LogLevel.html
+[`Rocket::register()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.register
+[`NamedFile::open`]: https://api.rocket.rs/v0.5/rocket/fs/struct.NamedFile.html#method.open
+[`Request::local_cache_async()`]: https://api.rocket.rs/v0.5/rocket/request/struct.Request.html#method.local_cache_async
+[`FromRequest`]: https://api.rocket.rs/v0.5/rocket/request/trait.FromRequest.html
+[`Fairing`]: https://api.rocket.rs/v0.5/rocket/fairing/trait.Fairing.html
+[`catcher::Handler`]: https://api.rocket.rs/v0.5/rocket/catcher/trait.Handler.html
+[`route::Handler`]: https://api.rocket.rs/v0.5/rocket/route/trait.Handler.html
+[`FromData`]: https://api.rocket.rs/v0.5/rocket/data/trait.FromData.html
 [`AsyncRead`]: https://docs.rs/tokio/1/tokio/io/trait.AsyncRead.html
 [`AsyncSeek`]: https://docs.rs/tokio/1/tokio/io/trait.AsyncSeek.html
-[`rocket::local::asynchronous`]: https://api.rocket.rs/v0.5-rc/rocket/local/asynchronous/index.html
-[`rocket::local::blocking`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/index.html
-[`Outcome`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/enum.Outcome.html
-[`rocket::outcome::try_outcome!`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/macro.try_outcome.html
-[`Result<T, E>` implements `Responder`]: https://api.rocket.rs/v0.5-rc/rocket/response/trait.Responder.html#provided-implementations
-[`Debug`]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html
+[`rocket::local::asynchronous`]: https://api.rocket.rs/v0.5/rocket/local/asynchronous/index.html
+[`rocket::local::blocking`]: https://api.rocket.rs/v0.5/rocket/local/blocking/index.html
+[`Outcome`]: https://api.rocket.rs/v0.5/rocket/outcome/enum.Outcome.html
+[`rocket::outcome::try_outcome!`]: https://api.rocket.rs/v0.5/rocket/outcome/macro.try_outcome.html
+[`Result<T, E>` implements `Responder`]: https://api.rocket.rs/v0.5/rocket/response/trait.Responder.html#provided-implementations
+[`Debug`]: https://api.rocket.rs/v0.5/rocket/response/struct.Debug.html
 [`std::convert::Infallible`]: https://doc.rust-lang.org/stable/std/convert/enum.Infallible.html
-[`ErrorKind::Collisions`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Collisions
-[`rocket::http::uri::fmt`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/fmt/index.html
-[`Data::open()`]: https://api.rocket.rs/v0.5-rc/rocket/data/struct.Data.html#method.open
-[`DataStream`]: https://api.rocket.rs/v0.5-rc/rocket/data/struct.DataStream.html
-[`rocket::form`]: https://api.rocket.rs/v0.5-rc/rocket/form/index.html
-[`FromFormField`]: https://api.rocket.rs/v0.5-rc/rocket/form/trait.FromFormField.html
-[`FromForm`]: https://api.rocket.rs/v0.5-rc/rocket/form/trait.FromForm.html
-[`FlashMessage`]: https://api.rocket.rs/v0.5-rc/rocket/request/type.FlashMessage.html
-[`Flash`]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Flash.html
-[`rocket::State`]: https://api.rocket.rs/v0.5-rc/rocket/struct.State.html
-[`Segments<Path>` and `Segments<Query>`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Segments.html
-[`Route::map_base()`]: https://api.rocket.rs/v0.5-rc/rocket/route/struct.Route.html#method.map_base
-[`uuid` support]: https://api.rocket.rs/v0.5-rc/rocket/serde/uuid/index.html
-[`json`]: https://api.rocket.rs/v0.5-rc/rocket/serde/json/index.html
-[`msgpack`]: https://api.rocket.rs/v0.5-rc/rocket/serde/msgpack/index.html
-[`rocket::serde::json::json!`]: https://api.rocket.rs/v0.5-rc/rocket/serde/json/macro.json.html
-[`rocket::shield::Shield`]: https://api.rocket.rs/v0.5-rc/rocket/shield/struct.Shield.html
-[`rocket::fs::FileServer`]: https://api.rocket.rs/v0.5-rc/rocket/fs/struct.FileServer.html
-[`rocket_dyn_templates`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/index.html
-[`rocket_sync_db_pools`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/index.html
-[multitasking]: https://rocket.rs/v0.5-rc/guide/overview/#multitasking
-[`Created<R>`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/struct.Created.html
-[`Created::tagged_body`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/struct.Created.html#method.tagged_body
+[`ErrorKind::Collisions`]: https://api.rocket.rs/v0.5/rocket/error/enum.ErrorKind.html#variant.Collisions
+[`rocket::http::uri::fmt`]: https://api.rocket.rs/v0.5/rocket/http/uri/fmt/index.html
+[`Data::open()`]: https://api.rocket.rs/v0.5/rocket/data/struct.Data.html#method.open
+[`DataStream`]: https://api.rocket.rs/v0.5/rocket/data/struct.DataStream.html
+[`rocket::form`]: https://api.rocket.rs/v0.5/rocket/form/index.html
+[`FromFormField`]: https://api.rocket.rs/v0.5/rocket/form/trait.FromFormField.html
+[`FromForm`]: https://api.rocket.rs/v0.5/rocket/form/trait.FromForm.html
+[`FlashMessage`]: https://api.rocket.rs/v0.5/rocket/request/type.FlashMessage.html
+[`Flash`]: https://api.rocket.rs/v0.5/rocket/response/struct.Flash.html
+[`rocket::State`]: https://api.rocket.rs/v0.5/rocket/struct.State.html
+[`Segments<Path>` and `Segments<Query>`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Segments.html
+[`Route::map_base()`]: https://api.rocket.rs/v0.5/rocket/route/struct.Route.html#method.map_base
+[`uuid` support]: https://api.rocket.rs/v0.5/rocket/serde/uuid/index.html
+[`json`]: https://api.rocket.rs/v0.5/rocket/serde/json/index.html
+[`msgpack`]: https://api.rocket.rs/v0.5/rocket/serde/msgpack/index.html
+[`rocket::serde::json::json!`]: https://api.rocket.rs/v0.5/rocket/serde/json/macro.json.html
+[`rocket::shield::Shield`]: https://api.rocket.rs/v0.5/rocket/shield/struct.Shield.html
+[`rocket::fs::FileServer`]: https://api.rocket.rs/v0.5/rocket/fs/struct.FileServer.html
+[`rocket_dyn_templates`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/index.html
+[`rocket_sync_db_pools`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/index.html
+[multitasking]: https://rocket.rs/v0.5/guide/overview/#multitasking
+[`Created<R>`]: https://api.rocket.rs/v0.5/rocket/response/status/struct.Created.html
+[`Created::tagged_body`]: https://api.rocket.rs/v0.5/rocket/response/status/struct.Created.html#method.tagged_body
 [raw identifiers]: https://doc.rust-lang.org/1.51.0/book/appendix-01-keywords.html#raw-identifiers
-[`Rocket::config()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.config
-[`Rocket::figment()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.figment
-[`Rocket::state()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.state
-[`Rocket::catchers()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.catchers
-[`LocalRequest::inner_mut()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.inner_mut
-[`RawStrBuf`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.RawStrBuf.html
-[`RawStr`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.RawStr.html
-[`RawStr::percent_encode()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.RawStr.html#method.percent_encode
-[`RawStr::percent_encode_bytes()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.RawStr.html#method.percent_encode_bytes
-[`RawStr::strip()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.RawStr.html#method.strip_prefix
-[`rocket::catcher`]: https://api.rocket.rs/v0.5-rc/rocket/catcher/index.html
-[`rocket::route`]: https://api.rocket.rs/v0.5-rc/rocket/route/index.html
-[`Segments::prefix_of()`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Segments.html#method.prefix_of
-[`Template::try_custom()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Template.html#method.try_custom
-[`Template::custom`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Template.html#method.custom
-[`FileServer::new()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/struct.FileServer.html#method.new
-[`content`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html
-[`rocket_db_pools`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html
-[mutual TLS]: https://rocket.rs/v0.5-rc/guide/configuration/#mutual-tls
-[`Certificate`]: https://api.rocket.rs/v0.5-rc/rocket/mtls/struct.Certificate.html
-[`MediaType::with_params()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html#method.with_params
-[`ContentType::with_params()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.ContentType.html#method.with_params
-[`Host`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Host.html
-[`&Host`]: https://api.rocket.rs/v0.5-rc/rocket/http/uri/struct.Host.html
-[`Request::host()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.host
-[`context!`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/macro.context.html
-[`MediaType`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html
-[`ContentType`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.ContentType.html
-[`Method`]: https://api.rocket.rs/v0.5-rc/rocket/http/enum.Method.html
-[`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
-[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading/
-[contrib deprecation upgrade guide]: https://rocket.rs/v0.5-rc/guide/upgrading/#contrib-deprecation
-[FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
-[`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
-[`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Shutdown
-[shutdown fairings]: https://api.rocket.rs/v0.5-rc/rocket/fairing/trait.Fairing.html#shutdown
-[`Client::terminate()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.Client.html#method.terminate
-[`rocket::execute()`]: https://api.rocket.rs/v0.5-rc/rocket/fn.execute.html
-[`CookieJar::get_pending()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.CookieJar.html#method.get_pending
-[`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
-[`pool()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
-[`Request::client_ip()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.client_ip
-[`max_blocking`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.max_blocking
-[`ip_header`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.ip_header
-[`LocalRequest::identity()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.identity
-[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
-[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
-[Request connection upgrade APIs]: https://api.rocket.rs/v0.5-rc/rocket/struct.Response.html#upgrading
-[`rocket_ws`]: https://api.rocket.rs/v0.5-rc/rocket_ws/
-[registering]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Response.html#method.add_upgrade
-[`IoHandler`]: https://api.rocket.rs/v0.5-rc/rocket/data/trait.IoHandler.html
-[`response::status`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/index.html
-[Custom form errors]: https://api.rocket.rs/v0.5-rc/rocket/form/error/enum.ErrorKind.html#variant.Custom
-[`request::Outcome`]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
-[Route `Forward` outcomes]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
-[`Outcome::Error`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/enum.Outcome.html#variant.Error
-[`IntoOutcome`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/trait.IntoOutcome.html
-[`MediaType::JavaScript`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html#associatedconstant.JavaScript
-[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
-[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
-[`RouteUri`]: https://api.rocket.rs/v0.5-rc/rocket/route/struct.RouteUri.html
+[`Rocket::config()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.config
+[`Rocket::figment()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.figment
+[`Rocket::state()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.state
+[`Rocket::catchers()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.catchers
+[`LocalRequest::inner_mut()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalRequest.html#method.inner_mut
+[`RawStrBuf`]: https://api.rocket.rs/v0.5/rocket/http/struct.RawStrBuf.html
+[`RawStr`]: https://api.rocket.rs/v0.5/rocket/http/struct.RawStr.html
+[`RawStr::percent_encode()`]: https://api.rocket.rs/v0.5/rocket/http/struct.RawStr.html#method.percent_encode
+[`RawStr::percent_encode_bytes()`]: https://api.rocket.rs/v0.5/rocket/http/struct.RawStr.html#method.percent_encode_bytes
+[`RawStr::strip()`]: https://api.rocket.rs/v0.5/rocket/http/struct.RawStr.html#method.strip_prefix
+[`rocket::catcher`]: https://api.rocket.rs/v0.5/rocket/catcher/index.html
+[`rocket::route`]: https://api.rocket.rs/v0.5/rocket/route/index.html
+[`Segments::prefix_of()`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Segments.html#method.prefix_of
+[`Template::try_custom()`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Template.html#method.try_custom
+[`Template::custom`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Template.html#method.custom
+[`FileServer::new()`]: https://api.rocket.rs/v0.5/rocket/fs/struct.FileServer.html#method.new
+[`content`]: https://api.rocket.rs/v0.5/rocket/response/content/index.html
+[`rocket_db_pools`]: https://api.rocket.rs/v0.5/rocket_db_pools/index.html
+[mutual TLS]: https://rocket.rs/v0.5/guide/configuration/#mutual-tls
+[`Certificate`]: https://api.rocket.rs/v0.5/rocket/mtls/struct.Certificate.html
+[`MediaType::with_params()`]: https://api.rocket.rs/v0.5/rocket/http/struct.MediaType.html#method.with_params
+[`ContentType::with_params()`]: https://api.rocket.rs/v0.5/rocket/http/struct.ContentType.html#method.with_params
+[`Host`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Host.html
+[`&Host`]: https://api.rocket.rs/v0.5/rocket/http/uri/struct.Host.html
+[`Request::host()`]: https://api.rocket.rs/v0.5/rocket/request/struct.Request.html#method.host
+[`context!`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/macro.context.html
+[`MediaType`]: https://api.rocket.rs/v0.5/rocket/http/struct.MediaType.html
+[`ContentType`]: https://api.rocket.rs/v0.5/rocket/http/struct.ContentType.html
+[`Method`]: https://api.rocket.rs/v0.5/rocket/http/enum.Method.html
+[`(ContentType, T)`]: https://api.rocket.rs/v0.5/rocket/response/content/index.html#usage
+[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5/guide/upgrading/
+[contrib deprecation upgrade guide]: https://rocket.rs/v0.5/guide/upgrading/#contrib-deprecation
+[FAQ]: https://rocket.rs/v0.5/guide/faq/
+[`Rocket::launch()`]: https://api.rocket.rs/v0.5/rocket/struct.Rocket.html#method.launch
+[`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5/rocket/error/enum.ErrorKind.html#variant.Shutdown
+[shutdown fairings]: https://api.rocket.rs/v0.5/rocket/fairing/trait.Fairing.html#shutdown
+[`Client::terminate()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.Client.html#method.terminate
+[`rocket::execute()`]: https://api.rocket.rs/v0.5/rocket/fn.execute.html
+[`CookieJar::get_pending()`]: https://api.rocket.rs/v0.5/rocket/http/struct.CookieJar.html#method.get_pending
+[`Metadata::render()`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Metadata.html#method.render
+[`pool()`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
+[`Request::client_ip()`]: https://api.rocket.rs/v0.5/rocket/request/struct.Request.html#method.client_ip
+[`max_blocking`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.max_blocking
+[`ip_header`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.ip_header
+[`LocalRequest::identity()`]: https://api.rocket.rs/v0.5/rocket/local/blocking/struct.LocalRequest.html#method.identity
+[`TempFile::open()`]: https://api.rocket.rs/v0.5/rocket/fs/enum.TempFile.html#method.open
+[`Error::pretty_print()`]: https://api.rocket.rs/v0.5/rocket/struct.Error.html#method.pretty_print
+[Request connection upgrade APIs]: https://api.rocket.rs/v0.5/rocket/struct.Response.html#upgrading
+[`rocket_ws`]: https://api.rocket.rs/v0.5/rocket_ws/
+[registering]: https://api.rocket.rs/v0.5/rocket/response/struct.Response.html#method.add_upgrade
+[`IoHandler`]: https://api.rocket.rs/v0.5/rocket/data/trait.IoHandler.html
+[`response::status`]: https://api.rocket.rs/v0.5/rocket/response/status/index.html
+[Custom form errors]: https://api.rocket.rs/v0.5/rocket/form/error/enum.ErrorKind.html#variant.Custom
+[`request::Outcome`]: https://api.rocket.rs/v0.5/rocket/request/type.Outcome.html#variant.Forward
+[Route `Forward` outcomes]: https://api.rocket.rs/v0.5/rocket/request/type.Outcome.html#variant.Forward
+[`Outcome::Error`]: https://api.rocket.rs/v0.5/rocket/outcome/enum.Outcome.html#variant.Error
+[`IntoOutcome`]: https://api.rocket.rs/v0.5/rocket/outcome/trait.IntoOutcome.html
+[`MediaType::JavaScript`]: https://api.rocket.rs/v0.5/rocket/http/struct.MediaType.html#associatedconstant.JavaScript
+[`TempFile::open()`]: https://api.rocket.rs/v0.5/rocket/fs/enum.TempFile.html#method.open
+[`Error::pretty_print()`]: https://api.rocket.rs/v0.5/rocket/struct.Error.html#method.pretty_print
+[`RouteUri`]: https://api.rocket.rs/v0.5/rocket/route/struct.RouteUri.html
 
 # Version 0.4.10 (May 21, 2021)
 

@@ -237,7 +237,7 @@ Security). To enable TLS support:
 
    ```toml,ignore
    [dependencies]
-   rocket = { version = "=0.5.0-rc.4", features = ["tls"] }
+   rocket = { version = "0.5.0", features = ["tls"] }
    ```
 
   2. Configure a TLS certificate chain and private key via the `tls.key` and
@@ -302,7 +302,7 @@ enabled and support configured via the `tls.mutual` config parameter:
 
    ```toml,ignore
    [dependencies]
-   rocket = { version = "=0.5.0-rc.4", features = ["mtls"] }
+   rocket = { version = "0.5.0", features = ["mtls"] }
    ```
 
    This implicitly enables the `tls` feature.

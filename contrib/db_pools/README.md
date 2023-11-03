@@ -3,7 +3,7 @@
 [crates.io]: https://img.shields.io/crates/v/rocket_db_pools.svg
 [crate]: https://crates.io/crates/rocket_db_pools
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/v0.5-rc/rocket_db_pools
+[crate docs]: https://api.rocket.rs/v0.5/rocket_db_pools
 [ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
 [ci]: https://github.com/SergioBenitez/Rocket/actions
 
@@ -17,7 +17,7 @@ full usage details.
 
    ```toml
    [dependencies.rocket_db_pools]
-   version = "=0.1.0-rc.4"
+   version = "0.1.0"
    features = ["sqlx_sqlite"]
    ```
 
@@ -60,8 +60,8 @@ full usage details.
    }
    ```
 
-[database driver features]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#supported-drivers
-[`Pool`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#supported-drivers
-[Configure]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#configuration
-[Derive `Database`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/derive.Database.html
-[`Connection<Type>`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/struct.Connection.html
+[database driver features]: https://api.rocket.rs/v0.5/rocket_db_pools/index.html#supported-drivers
+[`Pool`]: https://api.rocket.rs/v0.5/rocket_db_pools/index.html#supported-drivers
+[Configure]: https://api.rocket.rs/v0.5/rocket_db_pools/index.html#configuration
+[Derive `Database`]: https://api.rocket.rs/v0.5/rocket_db_pools/derive.Database.html
+[`Connection<Type>`]: https://api.rocket.rs/v0.5/rocket_db_pools/struct.Connection.html

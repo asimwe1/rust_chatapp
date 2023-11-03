@@ -1,6 +1,6 @@
 [package]
 name = "rocket_guide_tests"
-version = "0.5.0-rc.4"
+version = "0.5.0"
 workspace = "../../"
 edition = "2021"
 publish = false
@@ -22,4 +22,4 @@ path = "../../contrib/db_pools/lib"
 features = ["sqlx_sqlite"]
 
 [dev-dependencies.rocket_ws]
-path = "../../contrib/ws/lib"
+path = "../../contrib/ws"

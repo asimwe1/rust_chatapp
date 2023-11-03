@@ -71,8 +71,8 @@ enum Kind {
 /// assert!(matches!(error.kind(), ErrorKind::InsecureSecretKey(profile)));
 /// ```
 ///
-/// [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
-/// [configuration guide]: https://rocket.rs/v0.5-rc/guide/configuration/#secret-key
+/// [private cookies]: https://rocket.rs/v0.5/guide/requests/#private-cookies
+/// [configuration guide]: https://rocket.rs/v0.5/guide/configuration/#secret-key
 #[derive(Clone)]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
 pub struct SecretKey {

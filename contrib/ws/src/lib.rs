@@ -10,7 +10,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ws = { package = "rocket_ws", version ="=0.1.0-rc.4" }
+//! ws = { package = "rocket_ws", version = "0.1.0" }
 //! ```
 //!
 //! Then, use [`WebSocket`] as a request guard in any route and either call
@@ -70,7 +70,7 @@
 //! }
 //! ```
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.5-rc/rocket_ws")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5/rocket_ws")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
