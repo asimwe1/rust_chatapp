@@ -145,7 +145,7 @@ fn test_forwarding() {
 fn test_redirection() {
     let client = Client::debug(rocket()).expect("valid rocket");
 
-    // Redirection only happens if enabled, and doesn't affect index behaviour.
+    // Redirection only happens if enabled, and doesn't affect index behavior.
     let response = client.get("/no_index/inner").dispatch();
     assert_eq!(response.status(), Status::NotFound);
 

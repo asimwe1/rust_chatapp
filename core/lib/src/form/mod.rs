@@ -114,7 +114,7 @@
 //             .map_err(|e| errors.push(e))
 //             .map(Some).unwrap_or(None);
 //
-//          let field_b = B::finblize(&mut this.field_b)
+//          let field_b = B::finalize(&mut this.field_b)
 //             .map_err(|e| errors.push(e))
 //             .map(Some).unwrap_or(None);
 //

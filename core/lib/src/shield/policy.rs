@@ -176,10 +176,10 @@ impl From<&Referrer> for Header<'static> {
 /// The [Expect-CT] header: enables reporting and/or enforcement of [Certificate
 /// Transparency].
 ///
-/// [Certificate Transparency] can detect and prevent the use of misissued,
-/// malicious, or revoked TLS certificates. It solves a variety of problems with
-/// public TLS/SSL certificate management and is valuable measure for all public
-/// TLS applications.
+/// [Certificate Transparency] can detect and prevent the use of incorrectly
+/// issued malicious, or revoked TLS certificates. It solves a variety of
+/// problems with public TLS/SSL certificate management and is valuable measure
+/// for all public TLS applications.
 ///
 /// If you're just [getting started] with certificate transparency, ensure that
 /// your [site is in compliance][getting started] before you enable enforcement

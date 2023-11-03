@@ -47,7 +47,7 @@ mod launch_b {
 
 mod launch_c {
     #[rocket::launch]
-    fn main() -> rocekt::Rocket<rocket::Build> {
+    fn main() -> rocket::Rocket<rocket::Build> {
         rocket::build()
     }
 }

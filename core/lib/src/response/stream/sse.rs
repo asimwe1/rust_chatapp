@@ -783,7 +783,7 @@ mod sse_tests {
             yield Event::data("bar");
         };
 
-        // We expect: foo\n\n [heartbeat] bar\n\n [maybe beartbeat].
+        // We expect: foo\n\n [heartbeat] bar\n\n [maybe heartbeat].
         let string = stream.heartbeat(Duration::from_millis(350)).into_string();
         let heartbeats = string.matches(HEARTBEAT).count();
         assert!(heartbeats >= 1 && heartbeats <= 3, "got {} beat(s)", heartbeats);

@@ -504,8 +504,8 @@ fn index() -> Template {
 }
 ```
 
-For a template to be renderable, it must first be registered. The `Template`
-fairing automatically registers all discoverable templates when attached. The
+To render a template, it must first be registered. The `Template` fairing
+automatically registers all discoverable templates when attached. The
 [Fairings](../fairings) sections of the guide provides more information on
 fairings. To attach the template fairing, simply call
 `.attach(Template::fairing())` on an instance of `Rocket` as follows:

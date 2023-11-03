@@ -47,7 +47,7 @@ error: attribute cannot be applied to `main` function
 note: this function cannot be `main`
   --> tests/ui-fail-nightly/async-entry.rs:50:8
    |
-50 |     fn main() -> rocekt::Rocket<rocket::Build> {
+50 |     fn main() -> rocket::Rocket<rocket::Build> {
    |        ^^^^
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 

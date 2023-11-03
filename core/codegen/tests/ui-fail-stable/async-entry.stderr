@@ -38,7 +38,7 @@ error: attribute cannot be applied to `main` function
 error: [note] this function cannot be `main`
   --> tests/ui-fail-stable/async-entry.rs:50:8
    |
-50 |     fn main() -> rocekt::Rocket<rocket::Build> {
+50 |     fn main() -> rocket::Rocket<rocket::Build> {
    |        ^^^^
 
 error: attribute can only be applied to functions that return a value

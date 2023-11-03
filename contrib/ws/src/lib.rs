@@ -141,7 +141,7 @@ pub use self::tungstenite::Message;
 ///         max_send_queue: Some(5),
 ///         // Decrease the maximum (complete) message size to 4MiB.
 ///         max_message_size: Some(4.mebibytes().as_u64() as usize),
-///         // Decrease the maximum size of _one_ frame (not messag) to 1MiB.
+///         // Decrease the maximum size of _one_ frame (not message) to 1MiB.
 ///         max_frame_size: Some(1.mebibytes().as_u64() as usize),
 ///         // Use the default values for the rest.
 ///         ..Default::default()
