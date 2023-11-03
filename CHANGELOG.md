@@ -1,320 +1,4 @@
-# Version 0.5.0-rc.4 (Nov 1, 2023)
-
-## Major Features and Improvements
-
-  * Introduced [request connection upgrade APIs].
-
-    The APIs allow responders to handle upgrade requests by [registering]
-    [`IoHandler`]s for upgraded protocols. The [`IoHandler`] can perform raw
-    byte I/O with the client. This functionality is used to implement WebSocket
-    support by the newly introduced [`rocket_ws`] library.
-
-  * Introduced WebSocket support: [`rocket_ws`].
-
-    The newly introduced [`rocket_ws`] contrib library -- entirely external to
-    Rocket itself -- provides complete, multi-modal support for interacting with
-    clients over WebSockets. Modalities include async streams:
-
-    ```rust
-    #[get("/echo?compose")]
-    fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
-        ws.stream(|io| io)
-    }
-    ```
-
-    And generator syntax, among others:
-
-    ```rust
-    #[get("/echo?stream")]
-    fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-        ws::Stream! { ws =>
-            for await message in ws {
-                yield message?;
-            }
-        }
-    }
-    ```
-
-[request connection upgrade APIs]: https://api.rocket.rs/v0.5-rc/rocket/struct.Response.html#upgrading
-[`rocket_ws`]: https://api.rocket.rs/v0.5-rc/rocket_ws/
-[registering]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Response.html#method.add_upgrade
-[`IoHandler`]: https://api.rocket.rs/v0.5-rc/rocket/data/trait.IoHandler.html
-
-## Breaking Changes
-
-  * The types of responders in [`response::status`] were unified to all be of
-    the form `Status<R>(R)`.
-
-    Previously, some responders were of the form `Status<R>(Option<R>)`.
-
-  * [Custom form errors] must now specify an associated `Status`.
-
-    Change errors created as `ErrorKind(error)` to `ErrorKind(status, error)`.
-
-  * [Route `Forward` outcomes] are now associated with a `Status`.
-
-    This allows guards to determine which catcher will be invoked when all
-    routes forward. All [`request::Outcome`] `Forward` values must be modified
-    to include a `Status` hint.
-
-  * `Outcome::Failure` was renamed to [`Outcome::Error`].
-
-    This disambiguates the leading `F`s in `Failure` and `Forward`. In
-    particular, generics of `E` and `F` now clearly correspond to `Error` and
-    `Forward`, respectively.
-
-  * The status codes used when built-in guards forward were changed.
-
-    Previously, the `NotFound` status code was used to signal many kinds of
-    recoverable, forwarding errors. This included validation errors, incorrect
-    Content-Type errors, and more. This has been changed such that the status
-    code used more closely matches the issue encountered.
-
-    The net effect is that different error catchers will be invoked when
-    built-in guards fail. The complete changes are:
-
-    * Route parameter `FromParam` errors now forward as 422.
-    * Query paramater errors now forward as 422.
-    * Incorrect form content-type errors forwards as 413.
-    * `&Host`, `&Accept`, `&ContentType`, `IpAddr`, and `SocketAddr` all forward
-      with a 500.
-
-  * [`IntoOutcome`] was overhauled to supplant methods now removed in `Outcome`.
-
-    * `IntoOutcome::into_outcome()` is now `or_error()`.
-    * `IntoOutcome` is implemented for all `Outcome` type aliases.
-    * `Outcome::forward()` requires specifying a status code.
-    * `Outcome::from()` and `Outcome::from_or_forward()` were removed.
-
-      Use `responder.respond_to(req)` followed by a chaining of `.or_error()` or
-      `.or_forward()`.
-
-  * `Secure` cookie flags are set by default when serving over TLS.
-
-  * Removal cookies now have `SameSite` set to `Lax`.
-
-  * [`MediaType::JavaScript`] is now `text/javascript`.
-
-[`response::status`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/index.html
-[Custom form errors]: https://api.rocket.rs/v0.5-rc/rocket/form/error/enum.ErrorKind.html#variant.Custom
-[`request::Outcome`]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
-[Route `Forward` outcomes]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
-[`Outcome::Error`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/enum.Outcome.html#variant.Error
-[`IntoOutcome`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/trait.IntoOutcome.html
-[`MediaType::JavaScript`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html#associatedconstant.JavaScript
-
-## General Improvements
-
-  * [`rocket_db_pools`] gained support for [`diesel-async`].
-  * Added [`TempFile::open()`] to stream `TempFile` data.
-  * mTLS certificates can now be set on local requests via
-    [`LocalRequest::identity()`].
-  * Added [`Error::pretty_print()`] for pretty-printing errors like Rocket.
-  * The TLS example now includes an HTTP to HTTPS redirection fairing.
-  * When data limits are reached, warnings are logged.
-  * A warning is emitted when `String` is used as a route parameter.
-  * Configuration provenance information is logged under the `debug` log level.
-  * `template_dir` as recognized by `rocket_dyn_templates` is more reliably
-    interpreted.
-  * Logging of `Outcome`s now includes the relevant status code.
-
-[`diesel-async`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#diesel-v2
-[`LocalRequest::identity()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.identity
-[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
-[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
-
-### Known Media Types
-
-  * The `.mjs` extension is now recognized as JavaScript.
-  * '.exe', '.iso', '.dmg' are marked as known extensions.
-
-### Trait Implementations
-
-  * Implemented `De(Serialize)` for `Status`.
-
-### Updated Dependencies
-
-  * `rustls` to 0.21.
-  * `tokio-rustls` to 0.24.
-  * `state` to 0.21.
-  * `sqlx` to 0.7.
-  * `notify` to 6.
-  * `indexmap` to 2.
-  * `cookie` to 0.18.
-
-### Documentation
-
-  * Driver versions in `db_pools` were fixed and updated.
-  * Added details on using `Status` as a field in a derived `Responder`.
-  * All built-in data guards are now properly documented.
-  * Further details on deriving `UriDisplay` were added.
-  * The guide now includes notes on enabling crate features when needed.
-
-## Infrastructure
-
-  * The CI now frees disk space before proceeding to avoid out-of-disk errors.
-  * `Span::mixed_site()` is used in codegen to reduce errant `clippy` warnings.
-  * All workspaces now use `resolver = 2`.
-
-# Version 0.5.0-rc.3 (Mar 23, 2023)
-
-## Major Features and Improvements
-
-  * Added a [`max_blocking`] configuration parameter.
-
-    The parameter sets a limit on the number of threads used by blocking tasks.
-
-  * Added an [`ip_header`] "real IP" header configuration parameter.
-
-    The parameter allows modifying the header that Rocket attempts to use to retrieve the "real IP"
-    address of the client via `Request` methods like [`Request::client_ip()`]. Additionally, the
-    change allows disabling the use of any such header entirely.
-
-  * A [`pool()`] method is emitted by [`rocket_sync_db_pools`] for code-generated pools.
-
-    The method returns an opaque reference to a type that can be used to retrieve pooled connections
-    outside of a request handling context.
-
-  * Raw binary form field data can be retrieved using the `&[u8]` form guard.
-
-  * Data guards are now eligible [sentinels].
-
-## General Improvements
-
-  * Final launch messages are now _always_ logged, irrespective of profile.
-  * Only functions that return `Rocket<Build>` are now `#[must_use]`, not all `Rocket<P>`.
-  * Fixed mismatched form field names in errors under certain conditions in [`FromForm`] derive.
-  * The [`FromForm`] derive now collects _all_ errors that occur.
-  * Data pools are now gracefully shutdown in [`rocket_sync_db_pools`].
-  * Added [`Metadata::render()`] in [`rocket_dyn_templates`] for direct template rendering.
-  * Rocket salvages more information from malformed requests for error catchers.
-  * The `cookie` `secure` feature is now properly conditionally enabled.
-  * Data before encapsulation boundaries in TLS keys is allowed and ignored.
-  * Support for TLS keys in SEC1 format was added.
-  * Rocket now warns when a known secret key is configured.
-  * A panic that could occur on shutdown in `rocket_sync_db_pools` was fixed.
-
-### Known Media Types
-
-  - Added `MP3`: `audio/mpeg`.
-  - Added `CBZ`: `application/vnd.comicbook+zip`, extension `.cbz`.
-  - Added `CBR`: `application/vnd.comicbook-rar`, extension `.cbr`.
-  - Added `RAR`: `application/vnd.rar`, extension `.rar`.
-  - Added `EPUB`: `application/epub+zip`, extension `.epub`.
-  - Added `OPF`: `application/oebps-package+xml`, extension `.opf`.
-  - Added `XHTML`: `application/xhtml+xml`, extension `.xhtml`.
-
-### Trait Implementations
-
-  * Implemented `Responder` for `Box<T: Responder + Sized>`.
-  * Implemented `FromForm` for `Arc<T>`.
-  * Implemented `Fairing` for `Arc<dyn Fairing>`.
-
-### Updated Dependencies
-
-  * Updated `syn` to `2`.
-  * Updated `diesel` to `2.0`.
-  * Updated `sqlx` to `0.6`.
-  * Updated `notify` to `5.0`.
-  * Updated `criterion` to `0.4`.
-  * Updated `deadpool-redis` to `0.11`.
-  * Updated `normpath` from to `1`.
-  * Updated `cookie` to `0.17`.
-  * Replaced `atty` with `is-terminal`.
-
-## Infrastructure
-
-  * UI tests are now allowed to fail by the CI to avoid false negatives.
-  * Fixed many typos, errors, and broken links throughout docs and examples.
-  * The GitHub CI workflow was updated to use maintained actions.
-
-[`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
-[`pool()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
-[`Request::client_ip()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.client_ip
-[`max_blocking`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.max_blocking
-[`ip_header`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.ip_header
-
-# Version 0.5.0-rc.2 (May 09, 2022)
-
-## Major Features and Improvements
-
-  * Introduced [`rocket_db_pools`] for asynchronous database pooling.
-  * Introduced support for [mutual TLS] and client [`Certificate`]s.
-  * Added a [`local_cache_once!`] macro for request-local storage.
-  * Added a [v0.4 to v0.5 migration guide] and [FAQ] to Rocket's website.
-  * Introduced [shutdown fairings].
-
-## Breaking Changes
-
-  * `Hash` `impl`s for `MediaType` and `ContentType` no longer consider media type parameters.
-  * TLS config values are only available when the `tls` feature is enabled.
-  * [`MediaType::with_params()`] and [`ContentType::with_params()`] are now builder methods.
-  * Content-Type [`content`] responder type names are now prefixed with `Raw`.
-  * The `content::Plain` responder is now called `content::RawText`.
-  * The `content::Custom<T>` responder was removed in favor of [`(ContentType, T)`].
-  * TLS config structs are now only available when the `tls` feature is enabled.
-  * Removed `CookieJar::get_private_pending()` in favor of [`CookieJar::get_pending()`].
-  * The [`local_cache!`] macro accepts fewer types. Use [`local_cache_once!`] as appropriate.
-  * When requested, the `FromForm` implementations of `Vec` and `Map`s are now properly lenient.
-  * To concord with browsers, the `[` and `]` characters are now accepted in URI paths.
-  * The `[` and `]` characters are no longer encoded by [`uri!`].
-  * [`Rocket::launch()`] allows `Rocket` recovery by returning the instance after shutdown.
-  * `ErrorKind::Runtime` was removed; [`ErrorKind::Shutdown`] was added.
-
-## General Improvements
-
-  * [`Rocket`] is now `#[must_use]`.
-  * Support for HTTP/2 can be disabled by disabling the default `http2` crate feature.
-  * Added [`rocket::execute()`] for executing Rocket's `launch()` future.
-  * Added the [`context!`] macro to [`rocket_dyn_templates`] for ad-hoc template contexts.
-  * The `time` crate is re-exported from the crate root.
-  * The `FromForm`, `Responder`, and `UriDisplay` derives now fully support generics.
-  * Added helper functions to `serde` submodules.
-  * The [`Shield`] HSTS preload header now includes `includeSubdomains`.
-  * Logging ignores `write!` errors if `stdout` disappears, preventing panics.
-  * Added [`Client::terminate()`] to run graceful shutdown in testing.
-  * Shutdown now terminates the `async` runtime, never the process.
-
-### HTTP
-
-  * Introduced [`Host`] and the [`&Host`] request guard.
-  * Added `Markdown` (`text/markdown`) as a known media type.
-  * Added [`RawStr::percent_encode_bytes()`].
-  * `NODELAY` is now enabled on all connections by default.
-  * The TLS implementation handles handshakes off the main task, improving DoS resistance.
-
-### Request
-
-  * Added [`Request::host()`] to retrieve the client-requested host.
-
-### Trait Implementations
-
-  * `Arc<T>`, `Box<T>` where `T: Responder` now implement `Responder`.
-  * [`Method`] implements `Serialize` and `Deserialize`.
-  * [`MediaType`] and [`ContentType`] implement `Eq`.
-
-### Updated Dependencies
-
-  * The `time` dependency was updated to `0.3`.
-  * The `handlebars` dependency was updated to `4.0`.
-  * The `memcache` dependency was updated to `0.16`.
-  * The `rustls` dependency was updated to `0.20`.
-
-## Infrastructure
-
-  * Rocket now uses the 2021 edition of Rust.
-
-[`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
-[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading/
-[FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
-[`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
-[`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Shutdown
-[shutdown fairings]: https://api.rocket.rs/v0.5-rc/rocket/fairing/trait.Fairing.html#shutdown
-[`Client::terminate()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.Client.html#method.terminate
-[`rocket::execute()`]: https://api.rocket.rs/v0.5-rc/rocket/fn.execute.html
-[`CookieJar::get_pending()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.CookieJar.html#method.get_pending
-
-# Version 0.5.0-rc.1 (Jun 09, 2021)
+# Version 0.5.0 (Nov XX, 2023)
 
 ## Major Features and Improvements
 
@@ -322,19 +6,24 @@ This release introduces the following major features and improvements:
 
   * Support for [compilation on Rust's stable] release channel.
   * A rewritten, fully asynchronous core with support for [`async`/`await`].
+  * WebSocket support via [`rocket_ws`].
   * [Feature-complete forms support] including multipart, collections, [ad-hoc validation], and
     [context](https://rocket.rs/v0.5-rc/guide/requests/#context).
   * [Sentinels]: automatic verification of application state at start-up to prevent runtime errors.
-  * [Graceful shutdown] with configurable signaling, grace periods, notification via [`Shutdown`].
+  * [Graceful shutdown] with configurable signaling, grace periods, [notification], and
+    [shutdown fairings].
   * An entirely new, flexible and robust [configuration system] based on [Figment].
   * Typed [asynchronous streams] and [Server-Sent Events] with generator syntax.
+  * Asynchronous database pooling support via [`rocket_db_pools`].
+  * Support for [mutual TLS] and client [`Certificate`]s.
   * Automatic support for HTTP/2 including `h2` ALPN.
   * Graduation of `json`, `msgpack`, and `uuid` `rocket_contrib` [features into core].
   * An automatically enabled [`Shield`]: security and privacy headers for all responses.
   * Type-system enforced [incoming data limits] to mitigate memory-based DoS attacks.
   * Compile-time URI literals via a fully revamped [`uri!`] macro.
+  * [Request connection upgrade APIs] with support for raw I/O with the client.
   * Full support for [UTF-8 characters] in routes and catchers.
-  * Precise detection of unmanaged state and missing database, template fairings with [sentinels].
+  * Precise detection of missing managed state, databases, and templating with [sentinels].
   * Typed [build phases] with strict application-level guarantees.
   * [Ignorable segments]: wildcard route matching with no typing restrictions.
   * First-class [support for `serde`] for built-in guards and types.
@@ -350,7 +39,7 @@ This release introduces the following major features and improvements:
   * Support for custom config profiles and [automatic typed config extraction].
   * Rewritten, zero-copy, RFC compliant URI parsers with support for URI-[`Reference`]s.
   * Multi-segment parameters (`<param..>`) which match _zero_ segments.
-  * A [`request::local_cache!`] macro for request-local storage of non-uniquely typed values.
+  * A [`local_cache!`] macro for request-local storage of non-uniquely typed values.
   * A [`CookieJar`] without "one-at-a-time" limitations.
   * [Singleton fairings] with replacement and guaranteed uniqueness.
   * [Data limit declaration in SI units]: "2 MiB", `2.mebibytes()`.
@@ -366,9 +55,9 @@ This release introduces the following major features and improvements:
 
 ## Support for Rust Stable
 
-As a result of support for Rust stable (Rust 2021 Edition and beyond), the
-`#![feature(..)]` crate attribute is no longer required for Rocket applications.
-The complete canonical example with a single `hello` route becomes:
+As a result of support for Rust stable (Rust 2021 Edition and beyond),
+`#![feature(..)]` crate attributes are no longer required to use Rocket. The
+complete canonical example with a single `hello` route becomes:
 
 ```rust
 #[macro_use] extern crate rocket;
@@ -411,7 +100,8 @@ fn rocket() -> _ {
 
 ## Breaking Changes
 
-This release includes many breaking changes. The most significant changes are listed below.
+This release includes many breaking changes. For a walkthrough guide on handling these changes, see
+the [v0.4 to v0.5 migration guide]. The most significant changes are listed below.
 
 ### Silent Changes
 
@@ -454,87 +144,111 @@ We **strongly** advise all application authors to review this list carefully.
     than the defaults.
   * [`CookieJar`] `get()`s do not return cookies added during request handling. See
     [`CookieJar`#pending].
+  * `Hash` `impl`s for `MediaType` and `ContentType` no longer consider media type parameters.
+  * When requested, the `FromForm` implementations of `Vec` and `Map`s are now properly lenient.
+  * To agree with browsers, the `[` and `]` characters are now accepted in URI paths.
+  * The `[` and `]` characters are no longer encoded by [`uri!`].
+  * The `Secure` cookie flag is set by default for all cookies when serving over TLS.
+  * Removal cookies have `SameSite` set to `Lax` by default.
+  * [`MediaType::JavaScript`] is now `text/javascript`.
 
 ### Contrib Graduation
 
-  * The `rocket_contrib` crate has been deprecated and should no longer be used.
+The `rocket_contrib` crate is deprecated and the functionality moved to other `rocket` crates. The
+[contrib deprecation upgrade guide] provides a walkthrough on migrating. The relevant changes are:
+
   * Several features previously in `rocket_contrib` were merged into `rocket` itself:
-    * `json`, `msgpack`, and `uuid` are now [features of `rocket`].
-    * Moved `rocket_contrib::json` to [`rocket::serde::json`].
-    * Moved `rocket_contrib::msgpack` to [`rocket::serde::msgpack`].
-    * Moved `rocket_contrib::uuid` to [`rocket::serde::uuid`].
-    * Moved `rocket_contrib::helmet` to [`rocket::shield`]. [`Shield`] is enabled by default.
-    * Moved `rocket_contrib::serve` to [`rocket::fs`], `StaticFiles` to [`rocket::fs::FileServer`].
-    * Removed the now unnecessary `Uuid` and `JsonValue` wrapper types.
-    * Removed headers in `Shield` that are no longer respected by browsers.
+    - `json`, `msgpack`, and `uuid` are now [features of `rocket`].
+    - Moved `rocket_contrib::json` to [`rocket::serde::json`].
+    - Moved `rocket_contrib::msgpack` to [`rocket::serde::msgpack`].
+    - Moved `rocket_contrib::uuid` to [`rocket::serde::uuid`].
+    - Moved `rocket_contrib::helmet` to [`rocket::shield`]. [`Shield`] is enabled by default.
+    - Moved `rocket_contrib::serve` to [`rocket::fs`], `StaticFiles` to [`rocket::fs::FileServer`].
+    - Removed the now unnecessary `Uuid` and `JsonValue` wrapper types.
+    - Removed headers in `Shield` that are no longer respected by browsers.
   * The remaining features from `rocket_contrib` are now provided by separate crates:
-    * Replaced `rocket_contrib::templates` with [`rocket_dyn_templates`].
-    * Replaced `rocket_contrib::databases` with [`rocket_sync_db_pools`] and [`rocket_db_pools`].
-    * These crates are versioned and released independently of `rocket`.
-    * `rocket_contrib::databases::DbError` is now `rocket_sync_db_pools::Error`.
-    * Removed `redis`, `mongodb`, and `mysql` integrations which have upstream `async` drivers.
-    * The [`#[database]`](https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/attr.database.html)
+    - Replaced `rocket_contrib::templates` with [`rocket_dyn_templates`].
+    - Replaced `rocket_contrib::databases` with [`rocket_sync_db_pools`] and [`rocket_db_pools`].
+    - These crates are versioned and released independently of `rocket`.
+    - `rocket_contrib::databases::DbError` is now `rocket_sync_db_pools::Error`.
+    - Removed `redis`, `mongodb`, and `mysql` integrations which have upstream `async` drivers.
+    - The [`#[database]`](https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/attr.database.html)
       attribute generates an [`async run()`] method instead of `Deref` implementations.
 
 ### General
 
+The following breaking changes apply broadly and are likely to cause compile-time errors.
+
   * [`Rocket`] is now generic over a [phase] marker:
-    * APIs operate on `Rocket<Build>`, `Rocket<Ignite>`, `Rocket<Orbit>`, or `Rocket<P: Phase>` as
+    - APIs operate on `Rocket<Build>`, `Rocket<Ignite>`, `Rocket<Orbit>`, or `Rocket<P: Phase>` as
       needed.
-    * The phase marker statically enforces state transitions in `Build`, `Ignite`, `Orbit` order.
-    * `rocket::ignite()` is now [`rocket::build()`], returns a `Rocket<Build>`.
-    * [`Rocket::ignite()`] transitions to the `Ignite` phase. This is run automatically on launch as
+    - The phase marker statically enforces state transitions in `Build`, `Ignite`, `Orbit` order.
+    - `rocket::ignite()` is now [`rocket::build()`] and returns a `Rocket<Build>`.
+    - [`Rocket::ignite()`] transitions to the `Ignite` phase. This is run automatically on launch as
       needed.
-    * Ignition finalizes configuration, runs `ignite` fairings, and verifies [sentinels].
-    * [`Rocket::launch()`] transitions into the `Orbit` phase and starts the server.
-    * Methods like [`Request::rocket()`] that refer to a live Rocket instance return an
+    - Ignition finalizes configuration, runs `ignite` fairings, and verifies [sentinels].
+    - [`Rocket::launch()`] transitions into the `Orbit` phase and starts the server.
+    - Methods like [`Request::rocket()`] that refer to a live Rocket instance return an
       `&Rocket<Orbit>`.
   * [Fairings] have been reorganized and restructured for `async`:
-    * Replaced `attach` fairings with `ignite` fairings. Unlike `attach` fairings, which ran
+    - Replaced `attach` fairings with `ignite` fairings. Unlike `attach` fairings, which ran
       immediately at the time of attachment, `ignite` fairings are run when transitioning into the
       `Ignite` phase.
-    * Replaced `launch` fairings with `liftoff` fairings. `liftoff` fairings are always run, even in
+    - Replaced `launch` fairings with `liftoff` fairings. `liftoff` fairings are always run, even in
       local clients, after the server begins listening and the concrete port is known.
   * Introduced a new [configuration system] based on [Figment]:
-    * The concept of "environments" is replaced with "profiles".
-    * `ROCKET_ENV` is superseded by `ROCKET_PROFILE`.
-    * `ROCKET_LOG` is superseded by `ROCKET_LOG_LEVEL`.
-    * Profile names can now be arbitrarily chosen. The `dev`, `stage`, and `prod` profiles carry no
+    - The concept of "environments" is replaced with "profiles".
+    - `ROCKET_ENV` is superseded by `ROCKET_PROFILE`.
+    - `ROCKET_LOG` is superseded by `ROCKET_LOG_LEVEL`.
+    - Profile names can now be arbitrarily chosen. The `dev`, `stage`, and `prod` profiles carry no
       special meaning.
-    * The `debug` and `release` profiles are the default profiles for the debug and release
+    - The `debug` and `release` profiles are the default profiles for the debug and release
       compilation profiles.
-    * A new specially recognized `default` profile specifies defaults for all profiles.
-    * The `global` profile has highest precedence, followed by the selected profile, followed by
+    - A new specially recognized `default` profile specifies defaults for all profiles.
+    - The `global` profile has highest precedence, followed by the selected profile, followed by
       `default`.
-    * Added support for limits specified in SI units: "1 MiB".
-    * Renamed `LoggingLevel` to [`LogLevel`].
-    * Inlined error variants into the [`Error`] structure.
-    * Changed the type of `workers` to `usize` from `u16`.
-    * Changed accepted values for `keep_alive`: it is disabled with `0`, not `false` or `off`.
-    * Disabled the `secrets` feature (for private cookies) by default.
-    * Removed APIs related to "extras". Typed values can be extracted from the configured `Figment`.
-    * Removed `ConfigBuilder`: all fields of [`Config`] are public with constructors for each field
+    - Added support for limits specified in SI units: "1 MiB".
+    - Renamed `LoggingLevel` to [`LogLevel`].
+    - Inlined error variants into the [`Error`] structure.
+    - Changed the type of `workers` to `usize` from `u16`.
+    - Changed accepted values for `keep_alive`: it is disabled with `0`, not `false` or `off`.
+    - Disabled the `secrets` feature (for private cookies) by default.
+    - Removed APIs related to "extras". Typed values can be extracted from the configured `Figment`.
+    - Removed `ConfigBuilder`: all fields of [`Config`] are public with constructors for each field
       type.
   * Many functions, traits, and trait bounds have been modified for `async`:
-    * [`FromRequest`], [`Fairing`], [`catcher::Handler`], [`route::Handler`], and [`FromData`] use
+    - [`FromRequest`], [`Fairing`], [`catcher::Handler`], [`route::Handler`], and [`FromData`] use
       `#[async_trait]`.
-    * [`NamedFile::open`] is now an `async` function.
-    * Added [`Request::local_cache_async()`] for use in async request guards.
-    * Unsized `Response` bodies must be [`AsyncRead`] instead of `Read`.
-    * Automatically sized `Response` bodies must be [`AsyncSeek`] instead of `Seek`.
-    * The `local` module is split into two: [`rocket::local::asynchronous`] and
+    - [`NamedFile::open`] is now an `async` function.
+    - Added [`Request::local_cache_async()`] for use in async request guards.
+    - Unsized `Response` bodies must be [`AsyncRead`] instead of `Read`.
+    - Automatically sized `Response` bodies must be [`AsyncSeek`] instead of `Seek`.
+    - The `local` module is split into two: [`rocket::local::asynchronous`] and
       [`rocket::local::blocking`].
   * Functionality and features requiring Rust nightly were removed:
-    * Removed the `Try` implementation on [`Outcome`] which allowed using `?` with `Outcome`s. The
+    - Removed the `Try` implementation on [`Outcome`] which allowed using `?` with `Outcome`s. The
       recommended replacement is the [`rocket::outcome::try_outcome!`] macro or the various
       combinator functions on `Outcome`.
-    * [`Result<T, E>` implements `Responder`] only when both `T` and `E` implement `Responder`. The
+    - [`Result<T, E>` implements `Responder`] only when both `T` and `E` implement `Responder`. The
       new [`Debug`] wrapping responder replaces `Result<T: Responder, E: Debug>`.
-    * APIs which used the `!` type to now use [`std::convert::Infallible`].
+    - APIs which used the `!` type to now use [`std::convert::Infallible`].
+  * [`IntoOutcome`] was overhauled to supplant methods now removed in `Outcome`.
+    - `IntoOutcome::into_outcome()` is now `or_error()`.
+    - `IntoOutcome` is implemented for all `Outcome` type aliases.
+    - `Outcome::forward()` requires specifying a status code.
+    - `Outcome::from()` and `Outcome::from_or_forward()` were removed.
   * [`Rocket::register()`] now takes a base path to scope catchers under as its first argument.
   * `ErrorKind::Collision` has been renamed to [`ErrorKind::Collisions`].
-
-[phase]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#phases
+  * TLS config values are only available when the `tls` feature is enabled.
+  * [`MediaType::with_params()`] and [`ContentType::with_params()`] are now builder methods.
+  * Content-Type [`content`] responder type names are now prefixed with `Raw`.
+  * The `content::Plain` responder is now called `content::RawText`.
+  * The `content::Custom<T>` responder was removed in favor of [`(ContentType, T)`].
+  * Removed `CookieJar::get_private_pending()` in favor of [`CookieJar::get_pending()`].
+  * The [`local_cache!`] macro accepts fewer types. Use [`local_cache_once!`] as appropriate.
+  * [`Rocket::launch()`] allows `Rocket` recovery by returning the instance after shutdown.
+  * `ErrorKind::Runtime` was removed; [`ErrorKind::Shutdown`] was added.
+  * `Outcome::Failure` was renamed to [`Outcome::Error`].
 
 ### Routing and URIs
 
@@ -555,14 +269,19 @@ We **strongly** advise all application authors to review this list carefully.
   * `Origin::path()` and `Origin::query()` return `&RawStr` instead of `&str`.
   * The type of `Route::name` is now `Option<Cow<'static, str>>`.
   * `Route::set_uri` was replaced with [`Route::map_base()`].
-  * `Route::uri()` returns a new [`RouteUri`] type.
+  * The `Route::uri` field is now of type [`RouteUri`].
   * `Route::base` was removed in favor of `Route.uri().base()`.
-
-[`RouteUri`]: https://api.rocket.rs/v0.5-rc/rocket/route/struct.RouteUri.html
+  * [Route `Forward` outcomes] are now associated with a `Status`.
+  * The status codes used when built-in guards forward were changed:
+    - Route parameter `FromParam` errors now forward as 422.
+    - Query parameter errors now forward as 422.
+    - Incorrect form content-type errors forwards as 413.
+    - `&Host`, `&Accept`, `&ContentType`, `IpAddr`, and `SocketAddr` all forward
+      with a 500.
 
 ### Data and Forms
 
-  * `Data` now has a lifetime: `Data<'r>`.
+  * `Data` now has a lifetime generic: `Data<'r>`.
   * [`Data::open()`] indelibly requires a data limit.
   * Removed `FromDataSimple`. Use [`FromData`] and [`local_cache!`] or [`local_cache_once!`].
   * All [`DataStream`] APIs require limits and return [`Capped<T>`] types.
@@ -571,6 +290,7 @@ We **strongly** advise all application authors to review this list carefully.
   * Replaced `FromFormValue` with [`FromFormField`]. All `T: FromFormField` implement `FromForm`.
   * Form field values are percent-decoded before calling [`FromFormField`] implementations.
   * Renamed the `#[form(field = ...)]` attribute to `#[field(name = ...)]`.
+  * [Custom form errors] must now specify an associated `Status`.
 
 ### Request Guards
 
@@ -581,7 +301,7 @@ We **strongly** advise all application authors to review this list carefully.
   * Replaced `Request::get_query_value()` with `Request::query_value()`.
   * Replaced `Segments::into_path_buf()` with `Segments::to_path_buf()`.
   * Replaced `Segments` and `QuerySegments` with [`Segments<Path>` and `Segments<Query>`].
-  * [`Flash`] constructors to take `Into<String>` instead of `AsRef<str>`.
+  * [`Flash`] constructors now take `Into<String>` instead of `AsRef<str>`.
   * The `State<'_, T>` request guard is now `&State<T>`.
   * Removed a lifetime from [`FromRequest`]: `FromRequest<'r>`.
   * Removed a lifetime from [`FlashMessage`]: `FlashMessage<'_>`.
@@ -597,10 +317,12 @@ We **strongly** advise all application authors to review this list carefully.
   * Removed inaccurate "chunked body" types and variants.
   * Removed `Responder` `impl` for `Response`. Prefer custom responders with `#[derive(Responder)]`.
   * Removed the unused reason phrase from `Status`.
+  * The types of responders in [`response::status`] were unified to all be of
+    the form `Status<R>(R)`.
 
 ## General Improvements
 
-In addition to new features and major improvements, Rocket saw the following improvements:
+In addition to new features and changes, Rocket saw the following improvements:
 
 ### General
 
@@ -632,19 +354,73 @@ In addition to new features and major improvements, Rocket saw the following imp
   * Added support to [`UriDisplayQuery`] for C-like enums.
   * The [`UriDisplayQuery`] derive now recognizes the `#[field]` attribute for field renaming.
   * `Client` method builders accept `TryInto<Origin>` allowing a `uri!()` to be used directly.
-  * [`Redirect`] now accepts a `TryFrom<Reference>`, allowing fragment parts.
+  * [`Rocket`] is now `#[must_use]`.
+  * Support for HTTP/2 can be disabled by disabling the default `http2` crate feature.
+  * Added [`rocket::execute()`] for executing Rocket's `launch()` future.
+  * Added the [`context!`] macro to [`rocket_dyn_templates`] for ad-hoc template contexts.
+  * The `time` crate is re-exported from the crate root.
+  * The `FromForm`, `Responder`, and `UriDisplay` derives now fully support generics.
+  * Added helper functions to `serde` submodules.
+  * The [`Shield`] HSTS preload header now includes `includeSubdomains`.
+  * Logging ignores `write!` errors if `stdout` disappears, preventing panics.
+  * Added [`Client::terminate()`] to run graceful shutdown in testing.
+  * Shutdown now terminates the `async` runtime, never the process.
+  * Added a [`local_cache_once!`] macro for request-local storage.
+  * Final launch messages are now _always_ logged, irrespective of profile.
+  * Only functions that return `Rocket<Build>` are now `#[must_use]`, not all `Rocket<P>`.
+  * Fixed mismatched form field names in errors under certain conditions in [`FromForm`] derive.
+  * The [`FromForm`] derive now collects _all_ errors that occur.
+  * Data pools are now gracefully shutdown in [`rocket_sync_db_pools`].
+  * Added [`Metadata::render()`] in [`rocket_dyn_templates`] for direct template rendering.
+  * Rocket salvages more information from malformed requests for error catchers.
+  * The `cookie` `secure` feature is now properly conditionally enabled.
+  * Data before encapsulation boundaries in TLS keys is allowed and ignored.
+  * Support for TLS keys in SEC1 format was added.
+  * Rocket now warns when a known secret key is configured.
+  * A panic that could occur on shutdown in `rocket_sync_db_pools` was fixed.
+  * Added a [`max_blocking`] configuration parameter to control number of blocking threads.
+  * Added an [`ip_header`] "real IP" header configuration parameter.
+  * A [`pool()`] method is emitted by [`rocket_sync_db_pools`] for code-generated pools.
+  * Data guards are now eligible [sentinels].
+  * Raw binary form field data can be retrieved using the `&[u8]` form guard.
+  * Added [`TempFile::open()`] to stream `TempFile` data.
+  * mTLS certificates can be set on local requests with [`LocalRequest::identity()`].
+  * Added [`Error::pretty_print()`] for pretty-printing errors like Rocket.
+  * Warnings are logged when data limits are reached.
+  * A warning is emitted when `String` is used as a route parameter.
+  * Configuration provenance information is logged under the `debug` log level.
+  * Logging of `Outcome`s now includes the relevant status code.
+  * `Span::mixed_site()` is used in codegen to reduce errant `clippy` warnings.
 
 ### HTTP
 
   * Added support for HTTP/2, enabled by default via the `http2` crate feature.
-  * Added AVIF (`image/avif`) as a known media type.
-  * Added `EventStream` (`text/event-stream`) as a known media type.
   * Added a `const` constructor for `MediaType`.
-  * Added aliases `Text`, `Bytes` for the `Plain`, `Binary` media types, respectively.
   * Introduced [`RawStrBuf`], an owned `RawStr`.
   * Added many new "pattern" methods to [`RawStr`].
   * Added [`RawStr::percent_encode()`] and [`RawStr::strip()`].
   * Added support for unencoded query characters in URIs that are frequently sent by browsers.
+  * Introduced [`Host`] and [`&Host`] request guards.
+  * Added [`RawStr::percent_encode_bytes()`].
+  * `NODELAY` is now enabled on all connections by default.
+  * The TLS implementation handles handshakes off the main task, improving DoS resistance.
+
+### Known Media Types
+
+  * Added AVIF: `image/avif`.
+  * Added `EventStream`: `text/event-stream`.
+  * Added `Markdown`: `text/markdown`.
+  * Added `MP3`: `audio/mpeg`.
+  * Added `CBZ`: `application/vnd.comicbook+zip`, extension `.cbz`.
+  * Added `CBR`: `application/vnd.comicbook-rar`, extension `.cbr`.
+  * Added `RAR`: `application/vnd.rar`, extension `.rar`.
+  * Added `EPUB`: `application/epub+zip`, extension `.epub`.
+  * Added `OPF`: `application/oebps-package+xml`, extension `.opf`.
+  * Added `XHTML`: `application/xhtml+xml`, extension `.xhtml`.
+  * Added `Text` as an alias for the `Plain` media type.
+  * Added `Bytes` as an alias for the `Binary` media type.
+  * Added `.mjs` as known JavaScript extension.
+  * Added '.exe', '.iso', '.dmg' as known extensions.
 
 ### Request
 
@@ -656,6 +432,7 @@ In addition to new features and major improvements, Rocket saw the following imp
   * `Json<T>`, `MsgPack<T>` accept `T: Deserialize`, not only `T: DeserializeOwned`.
   * Diesel SQLite connections in `rocket_sync_db_pools` use better defaults.
   * The default number of workers for synchronous database pools is now `workers * 4`.
+  * Added [`Request::host()`] to retrieve the client-requested host.
 
 ### Response
 
@@ -667,6 +444,7 @@ In addition to new features and major improvements, Rocket saw the following imp
     [`#[derive(Responder)]`](https://api.rocket.rs/v0.5-rc/rocket/derive.Responder.html).
   * The `Server` header is only set if one isn't already set.
   * Accurate `Content-Length` headers are sent even for partially read `Body`s.
+  * [`Redirect`] now accepts a `TryFrom<Reference>`, allowing fragment parts.
 
 ### Trait Implementations
 
@@ -698,46 +476,66 @@ In addition to new features and major improvements, Rocket saw the following imp
   * Implemented `Serialize`, `Deserialize`, `UriDisplay` and `FromUriParam` for `uuid::Uuid`
   * Implemented `Serialize`, `Deserialize` for `RawStr`.
   * Implemented `Serialize`, `Deserialize` for all URI types.
+  * Implemented `Responder` for `Arc<T>`, `Box<T>` where `T: Responder`.
+  * Implemented `Serialize` and `Deserialize` for [`Method`].
+  * Implemented `Eq` for [`MediaType`] and [`ContentType`].
+  * Implemented `Responder` for `Box<T: Responder + Sized>`.
+  * Implemented `FromForm` for `Arc<T>`.
+  * Implemented `Fairing` for `Arc<dyn Fairing>`.
+  * Implemented `Serialize` and `Deserialize` for `Status`.
 
-### Updated Dependencies
+### Dependency Changes
 
-  * The `serde` dependency was introduced (`1.0`).
-  * The `futures` dependency was introduced (`0.3`).
-  * The `state` dependency was updated to `0.5`.
-  * The `time` dependency was updated to `0.2`.
-  * The `binascii` dependency was introduced (`0.1`).
-  * The `ref-cast` dependency was introduced (`1.0`).
-  * The `atomic` dependency was introduced (`0.5`).
-  * The `parking_lot` dependency was introduced (`0.11`).
-  * The `ubtye` dependency was introduced (`0.10`).
-  * The `figment` dependency was introduced (`0.10`).
-  * The `rand` dependency was introduced (`0.8`).
-  * The `either` dependency was introduced (`1.0`).
-  * The `pin-project-lite` dependency was introduced (`0.2`).
-  * The `indexmap` dependency was introduced (`1.0`).
-  * The `tempfile` dependency was introduced (`3.0`).
-  * The `async-trait` dependency was introduced (`0.1`).
-  * The `async-stream` dependency was introduced (`0.3`).
-  * The `multer` dependency was introduced (`2.0`).
-  * The `tokio` dependency was introduced (`1.6.1`).
-  * The `tokio-util` dependency was introduced (`0.6`).
-  * The `tokio-stream` dependency was introduced (`0.1.6`).
-  * The `bytes` dependency was introduced (`1.0`).
-  * The `rmp-serde` dependency was updated to `0.15`.
-  * The `uuid` dependency was updated to `0.8`.
-  * The `tera` dependency was updated to `1.10`.
-  * The `handlebars` dependency was updated to `3.0`.
-  * The `normpath` dependency was introduced (`0.3`).
-  * The `postgres` dependency was updated to `0.19`.
-  * The `rusqlite` dependency was updated to `0.25`.
-  * The `r2d2_sqlite` dependency was updated to `0.18`.
-  * The `memcache` dependency was updated to `0.15`.
+  * `serde` was introduced (`1.0`).
+  * `futures` was introduced (`0.3`).
+  * `binascii` was introduced (`0.1`).
+  * `ref-cast` was introduced (`1.0`).
+  * `atomic` was introduced (`0.5`).
+  * `parking_lot` was introduced (`0.11`).
+  * `ubtye` was introduced (`0.10`).
+  * `figment` was introduced (`0.10`).
+  * `rand` was introduced (`0.8`).
+  * `either` was introduced (`1.0`).
+  * `pin-project-lite` was introduced (`0.2`).
+  * `indexmap` was introduced (`2.0`).
+  * `tempfile` was introduced (`3.0`).
+  * `async-trait` was introduced (`0.1`).
+  * `async-stream` was introduced (`0.3`).
+  * `multer` was introduced (`2.0`).
+  * `tokio` was introduced (`1.6.1`).
+  * `tokio-util` was introduced (`0.6`).
+  * `tokio-stream` was introduced (`0.1.6`).
+  * `bytes` was introduced (`1.0`).
+  * `normpath` was introduced (`1`).
+  * `state` was updated to `0.6`.
+  * `rmp-serde` was updated to `0.15`.
+  * `uuid` was updated to `0.8`.
+  * `tera` was updated to `1.10`.
+  * `postgres` was updated to `0.19`.
+  * `rusqlite` was updated to `0.25`.
+  * `r2d2_sqlite` was updated to `0.18`.
+  * `time` was updated to `0.3`.
+  * `handlebars` was updated to `4.0`.
+  * `memcache` was updated to `0.16`.
+  * `rustls` was updated to `0.21`.
+  * `tokio-rustls` was updated to `0.24`.
+  * `syn` was updated to `2`.
+  * `diesel` was updated to `2.0`.
+  * `sqlx` was updated to `0.7`.
+  * `notify` was updated to `6`.
+  * `criterion` was updated to `0.4`.
+  * `cookie` was updated to `0.18`.
+  * `yansi` was updated to `1.0`.
+  * `atty` was removed.
 
 ## Infrastructure
 
-  * Rocket now uses the 2018 edition of Rust.
+The following changes were made to the project's infrastructure:
+
+  * Rocket now uses the 2021 edition of Rust.
+  * Added a [v0.4 to v0.5 migration guide] and [FAQ] to Rocket's website.
   * Added visible `use` statements to examples in the guide.
-  * Split examples into a separate workspace from the non-example crates.
+  * Split examples into a separate workspace for easier testing.
   * Updated documentation for all changes.
   * Fixed many typos, errors, and broken links throughout documentation and examples.
   * Improved the general robustness of macros, and the quality and frequency of error messages.
@@ -745,8 +543,12 @@ In addition to new features and major improvements, Rocket saw the following imp
   * Fixed the SPDX license expressions in `Cargo.toml` files.
   * Added support to `test.sh` for a `+` flag (e.g. `+stable`) to pass to `cargo`.
   * Added support to `test.sh` for extra flags to be passed on to `cargo`.
-  * Migrated CI to Github Actions.
+  * UI tests are now allowed to fail by the CI to avoid false negatives.
+  * The GitHub CI workflow was updated to use maintained actions.
+  * The CI now frees disk space before proceeding to avoid out-of-disk errors.
+  * All workspaces now use `resolver = 2`.
 
+[phase]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#phases
 [`async`/`await`]: https://rocket.rs/v0.5-rc/guide/overview/#async-routes
 [compilation on Rust's stable]: https://rocket.rs/v0.5-rc/guide/getting-started/#installing-rust
 [Feature-complete forms support]: https://rocket.rs/v0.5-rc/guide/requests/#forms
@@ -804,7 +606,7 @@ In addition to new features and major improvements, Rocket saw the following imp
 [asynchronous streams]: https://rocket.rs/v0.5-rc/guide/responses/#async-streams
 [Server-Sent Events]: https://api.rocket.rs/v0.5-rc/rocket/response/stream/struct.EventStream.html
 [`fs::relative!`]: https://api.rocket.rs/v0.5-rc/rocket/fs/macro.relative.html
-[`Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Shutdown.html
+[notification]: https://api.rocket.rs/v0.5-rc/rocket/struct.Shutdown.html
 [`Rocket`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html
 [`rocket::build()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.build
 [`Rocket::ignite()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.ignite
@@ -886,13 +688,45 @@ In addition to new features and major improvements, Rocket saw the following imp
 [`MediaType`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html
 [`ContentType`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.ContentType.html
 [`Method`]: https://api.rocket.rs/v0.5-rc/rocket/http/enum.Method.html
+[`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
+[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading/
+[contrib deprecation upgrade guide]: https://rocket.rs/v0.5-rc/guide/upgrading/#contrib-deprecation
+[FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
+[`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
+[`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Shutdown
+[shutdown fairings]: https://api.rocket.rs/v0.5-rc/rocket/fairing/trait.Fairing.html#shutdown
+[`Client::terminate()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.Client.html#method.terminate
+[`rocket::execute()`]: https://api.rocket.rs/v0.5-rc/rocket/fn.execute.html
+[`CookieJar::get_pending()`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.CookieJar.html#method.get_pending
+[`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
+[`pool()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
+[`Request::client_ip()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.client_ip
+[`max_blocking`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.max_blocking
+[`ip_header`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.ip_header
+[`LocalRequest::identity()`]: https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html#method.identity
+[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
+[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
+[Request connection upgrade APIs]: https://api.rocket.rs/v0.5-rc/rocket/struct.Response.html#upgrading
+[`rocket_ws`]: https://api.rocket.rs/v0.5-rc/rocket_ws/
+[registering]: https://api.rocket.rs/v0.5-rc/rocket/response/struct.Response.html#method.add_upgrade
+[`IoHandler`]: https://api.rocket.rs/v0.5-rc/rocket/data/trait.IoHandler.html
+[`response::status`]: https://api.rocket.rs/v0.5-rc/rocket/response/status/index.html
+[Custom form errors]: https://api.rocket.rs/v0.5-rc/rocket/form/error/enum.ErrorKind.html#variant.Custom
+[`request::Outcome`]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
+[Route `Forward` outcomes]: https://api.rocket.rs/v0.5-rc/rocket/request/type.Outcome.html#variant.Forward
+[`Outcome::Error`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/enum.Outcome.html#variant.Error
+[`IntoOutcome`]: https://api.rocket.rs/v0.5-rc/rocket/outcome/trait.IntoOutcome.html
+[`MediaType::JavaScript`]: https://api.rocket.rs/v0.5-rc/rocket/http/struct.MediaType.html#associatedconstant.JavaScript
+[`TempFile::open()`]: https://api.rocket.rs/v0.5-rc/rocket/fs/enum.TempFile.html#method.open
+[`Error::pretty_print()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Error.html#method.pretty_print
+[`RouteUri`]: https://api.rocket.rs/v0.5-rc/rocket/route/struct.RouteUri.html
 
 # Version 0.4.10 (May 21, 2021)
 
 ## Core
 
-  * [[`3276b8`]] Removed used of `unsafe` in `Origin::parse_owned()`, fixing a
-    soundness issue.
+  * [[`3276b8`]] Removed `unsafe` in `Origin::parse_owned()`, fixing a soundness
+    issue.
 
 [`3276b8`]: https://github.com/SergioBenitez/Rocket/commit/3276b8
 
