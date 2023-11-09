@@ -48,22 +48,18 @@ and correctness blunders. It does this by including, out-of-the-box:
     trivial DoS attacks.
 
 Of course, this functionality comes at a compile-time cost (but notably, _not_
-at a runtime cost), impacting Rocket's clean build-time. For comparison, here's
-what building "Hello, world!" for the first time in popular Rust web frameworks
-looks like:
+a runtime cost), impacting Rocket's clean build-time. For comparison, here's
+what a clean build of "Hello, world!" looks like for some Rust web frameworks:
 
-| Framework            | Dependencies | Build Time |
-|----------------------|--------------|------------|
-| Rocket 0.5      | 151          | 50s        |
-| Actix-Web 4.0.1      | 155          | 40s        |
-| Tide 0.16            | 202          | 37s        |
-| Warp 0.3.2           | 132          | 30s        |
-| Axum 0.5.4           | 81           | 18s        |
+| Framework       | Dependencies | Build Time | Build w/ `sscache` |
+|-----------------|--------------|------------|--------------------|
+| Rocket 0.5      | 105          | 12s        | 5s                 |
+| Actix-Web 4.4.0 | 119          | 11s        | 4s                 |
+| Axum 0.6.20     | 78           | 10s        | 4s                 |
 
-<small>· Measurements taken on a MacBookPro15,1 Intel Core i9 @ 2.9GHZ, macOS
-12.1, Rust 1.60 stable. Best of 3.</small><br />
-<small>· Rocket includes features like multipart parsing and static file
-serving that would require additional deps in other frameworks.</small>
+<small>· Measurements taken on Apple Mac14,6 M2 Max, macOS 13, Rust 1.75. Best of 3.</small><br />
+<small>· Rocket includes features like graceful shutdown, HTTP/2 keepalive, SSE
+support, and static file serving that require additional deps in other frameworks.</small>
 
 Of course, iterative build-time is nearly identical for all frameworks, and the
 time can be further reduced by using faster linkers like `lld`. We think the
