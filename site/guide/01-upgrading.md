@@ -809,6 +809,49 @@ fn stream(n: Option<u64>) -> EventStream![] {
 [async streams]: ../responses/#async-streams
 [chat example]: @example/chat
 
+### WebSockets
+
+Rocket v0.5 introduces support for HTTP connection upgrades via a new [upgrade
+API]. The API allows responders to take over an HTTP connection and perform raw
+I/O with the client. In other words, an HTTP connection can be _upgraded_ to any
+protocol, including HTTP WebSockets!
+
+The newly introduced [`rocket_ws`] library takes advantage of the new API to
+implement first-class support for WebSockets entirely outside of Rocket's core.
+The simplest use of the library, implementing an echo server and showcasing that
+the incoming message stream is `async`, looks like this:
+
+```rust
+# use rocket::get;
+# use rocket_ws as ws;
+
+#[get("/echo")]
+fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ws.stream(|io| io)
+}
+```
+
+The simplified [async streams] generator syntax can also be used:
+
+```rust
+# use rocket::get;
+# use rocket_ws as ws;
+
+#[get("/echo")]
+fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ws::Stream! { ws =>
+        for await message in ws {
+            yield message?;
+        }
+    }
+}
+```
+
+For complete usage details, see the [`rocket_ws`] documentation.
+
+[upgrade API]: @api/rocket/response/struct.Response.html#upgrading
+[`rocket_ws`]: @api/rocket_ws
+
 ## Getting Help
 
 If you run into any issues upgrading, we encourage you to ask questions via
