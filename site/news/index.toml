@@ -1,5 +1,21 @@
 [[articles]]
 title = """
+Rocket v0.5: Stable, Async, Featureful
+"""
+slug = "2023-05-26-version-0.5"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "May 26, 2023"
+snippet = """
+I am _elated_ to announce that Rocket v0.5 is generally available. A step
+forward in every direction, it is **packed** with features and improvements that
+increase developer productivity, improve application security and robustness,
+provide new opportunities for extensibility, and deliver a renewed degree of
+toolchain stability.
+"""
+
+[[articles]]
+title = """
   Rocket's 4th v0.5 Release Candidate
 """
 slug = "2023-11-01-version-0.5-rc.4"
