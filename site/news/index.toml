@@ -1,17 +1,30 @@
 [[articles]]
 title = """
-Rocket v0.5: Stable, Async, Featureful
+Rocket v0.5: Stable, Async, Feature Packed
 """
-slug = "2023-05-26-version-0.5"
+slug = "2023-11-17-version-0.5"
 author = "Sergio Benitez"
 author_url = "https://sergio.bz"
-date = "May 26, 2023"
+date = "Nov 17, 2023"
 snippet = """
-I am _elated_ to announce that Rocket v0.5 is generally available. A step
+I am _elated_ to announce that Rocket v0.5 is now generally available. A step
 forward in every direction, it is **packed** with features and improvements that
 increase developer productivity, improve application security and robustness,
-provide new opportunities for extensibility, and deliver a renewed degree of
-toolchain stability.
+provide new opportunities for extensibility, and afford toolchain stability.
+"""
+
+[[articles]]
+title = """
+Building a Better Foundation for Rocket's Future
+"""
+slug = "2023-11-17-rwf2-prelaunch"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "Nov 17, 2023"
+snippet = """
+Today I'm excited to share plans to launch the Rocket Web Framework Foundation
+(RWF2), a 501(c)(3) nonprofit and collective to support Rocket and the
+surrounding ecosystem.
 """
 
 [[articles]]
