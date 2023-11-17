@@ -1,4 +1,4 @@
-# Version 0.5.0 (Nov XX, 2023)
+# Version 0.5.0 (Nov 17, 2023)
 
 ## Major Features and Improvements
 
