@@ -2,7 +2,7 @@
 //!
 //! For details on how to configure mutual TLS, see
 //! [`MutualTls`](crate::config::MutualTls) and the [TLS
-//! guide](https://rocket.rs/v0.5/guide/configuration/#tls). See
+//! guide](https://rocket.rs/master/guide/configuration/#tls). See
 //! [`Certificate`] for a request guard that validated, verifies, and retrieves
 //! client certificates.
 

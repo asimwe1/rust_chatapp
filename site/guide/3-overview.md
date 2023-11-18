@@ -260,8 +260,8 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 
 ! note
 
-  Rocket v0.5 uses the tokio runtime. The runtime is started for you if you
-  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
+  Rocket uses the tokio runtime. The runtime is started for you if you use
+  `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
   instance on a custom-built runtime by not using _either_ attribute.
 
 ### Async Routes

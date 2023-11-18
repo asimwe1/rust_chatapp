@@ -1,6 +1,6 @@
 #![recursion_limit="256"]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_root_url = "https://api.rocket.rs/master")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
@@ -18,10 +18,10 @@
 //! detailed guide]. If you'd like pointers on getting started, see the
 //! [quickstart] or [getting started] chapters of the guide.
 //!
-//! [overview]: https://rocket.rs/v0.5/overview
-//! [full, detailed guide]: https://rocket.rs/v0.5/guide
-//! [quickstart]: https://rocket.rs/v0.5/guide/quickstart
-//! [getting started]: https://rocket.rs/v0.5/guide/getting-started
+//! [overview]: https://rocket.rs/master/overview
+//! [full, detailed guide]: https://rocket.rs/master/guide
+//! [quickstart]: https://rocket.rs/master/guide/quickstart
+//! [getting started]: https://rocket.rs/master/guide/getting-started
 //!
 //! ## Usage
 //!
@@ -29,13 +29,13 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.0"
+//! rocket = "0.6.0-dev"
 //! ```
 //!
 //! <small>Note that development versions, tagged with `-dev`, are not published
 //! and need to be specified as [git dependencies].</small>
 //!
-//! See the [guide](https://rocket.rs/v0.5/guide) for more information on how
+//! See the [guide](https://rocket.rs/master/guide) for more information on how
 //! to write Rocket applications. Here's a simple example to get you started:
 //!
 //! [git dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
@@ -73,21 +73,21 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0", features = ["secrets", "tls", "json"] }
+//! rocket = { version = "0.6.0-dev", features = ["secrets", "tls", "json"] }
 //! ```
 //!
 //! Conversely, HTTP/2 can be disabled:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0", default-features = false }
+//! rocket = { version = "0.6.0-dev", default-features = false }
 //! ```
 //!
 //! [JSON (de)serialization]: crate::serde::json
 //! [MessagePack (de)serialization]: crate::serde::msgpack
 //! [UUID value parsing and (de)serialization]: crate::serde::uuid
-//! [private cookies]: https://rocket.rs/v0.5/guide/requests/#private-cookies
-//! [TLS]: https://rocket.rs/v0.5/guide/configuration/#tls
+//! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
+//! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //! [mutual TLS]: crate::mtls
 //!
 //! ## Configuration
@@ -103,8 +103,8 @@
 //! integration testing of a Rocket application. The top-level [`local`] module
 //! documentation and the [testing guide] include detailed examples.
 //!
-//! [configuration guide]: https://rocket.rs/v0.5/guide/configuration/
-//! [testing guide]: https://rocket.rs/v0.5/guide/testing/#testing
+//! [configuration guide]: https://rocket.rs/master/guide/configuration/
+//! [testing guide]: https://rocket.rs/master/guide/testing/#testing
 //! [Figment]: https://docs.rs/figment
 
 /// These are public dependencies! Update docs if these are changed, especially

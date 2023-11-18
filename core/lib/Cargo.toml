@@ -1,11 +1,11 @@
 [package]
 name = "rocket"
-version = "0.5.0"
+version = "0.6.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
 """
-documentation = "https://api.rocket.rs/v0.5/rocket/"
+documentation = "https://api.rocket.rs/master/rocket/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -61,11 +61,11 @@ tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 state = "0.6"
 
 [dependencies.rocket_codegen]
-version = "0.5.0"
+version = "0.6.0-dev"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "0.5.0"
+version = "0.6.0-dev"
 path = "../http"
 features = ["serde"]
 

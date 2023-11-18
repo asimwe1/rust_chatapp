@@ -310,7 +310,7 @@ impl AdHoc {
     /// let response = client.get("/bar").dispatch();
     /// assert_eq!(response.into_string().unwrap(), "bar");
     /// ```
-    // #[deprecated(since = "0.6", note = "routing from Rocket v0.5 is now standard")]
+    // #[deprecated(since = "0.7", note = "routing from Rocket 0.6 is now standard")]
     pub fn uri_normalizer() -> impl Fairing {
         #[derive(Default)]
         struct Normalizer {

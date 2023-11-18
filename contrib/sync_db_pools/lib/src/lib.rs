@@ -166,7 +166,7 @@
 //! Lastly, databases can be configured via environment variables by specifying
 //! the `databases` table as detailed in the [Environment Variables
 //! configuration
-//! guide](https://rocket.rs/v0.5/guide/configuration/#environment-variables):
+//! guide](https://rocket.rs/master/guide/configuration/#environment-variables):
 //!
 //! ```bash
 //! ROCKET_DATABASES='{my_db={url="db.sqlite"}}'
@@ -349,7 +349,7 @@
 //! [request guards]: rocket::request::FromRequest
 //! [`Poolable`]: crate::Poolable
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.5/rocket_sync_db_pools")]
+#![doc(html_root_url = "https://api.rocket.rs/master/rocket_sync_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]

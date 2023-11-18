@@ -137,7 +137,7 @@ macro_rules! pub_client_impl {
 
     /// Deprecated alias to [`Client::tracked()`].
     #[deprecated(
-        since = "0.5.0",
+        since = "0.6.0-dev",
         note = "choose between `Client::untracked()` and `Client::tracked()`"
     )]
     pub $($prefix)? fn new<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
