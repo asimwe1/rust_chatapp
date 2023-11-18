@@ -14,7 +14,7 @@ aspect of Rocket. The sections are:
    - **[Introduction](introduction/):** introduces Rocket and its philosophy.
    - **[Quickstart](quickstart/):** presents the minimal steps necessary to
       run your first Rocket application.
-   - **[Upgrading from v0.4](upgrading/):** a migration guide from v0.4 to v0.5.
+   - **[Upgrading from v0.5](upgrading/):** a migration guide from v0.5 to v0.6.
    - **[Getting Started](getting-started/):** a gentle introduction to getting
      your first Rocket application running.
    - **[Overview](overview/):** describes the core concepts of Rocket.
