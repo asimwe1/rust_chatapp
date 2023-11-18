@@ -59,7 +59,7 @@ MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
 VIRTUAL_CODENAME="$(git branch --show-current)"
 PHYSICAL_CODENAME="v${MAJOR_VERSION}"
 CURRENT_RELEASE=false
-PRE_RELEASE=false
+PRE_RELEASE=true
 
 # A generated codename for this version. Use the git branch for pre-releases.
 case $PRE_RELEASE in
