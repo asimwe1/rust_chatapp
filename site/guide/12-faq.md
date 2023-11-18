@@ -272,13 +272,15 @@ Can I, and if so how, do I use WebSockets?
 </summary>
 <div class="content">
 
-Rocket doesn't support WebSockets quite yet. We're [working on it].
+You can! WebSocket support is provided by the officially maintained
+[`rocket_ws`](@api/rocket_ws) crate. You'll find all the docs you need there.
 
-That being said, Rocket _does_ support [Server-Sent Events], which allows for
-real-time _unidirectional_ communication from the server to the client. This is
-often sufficient for many of the applications that WebSockets are typically used
-for. For instance, the [chat example] uses SSE to implement a real-time,
-multiroom chat application.
+Rocket _also_ supports [Server-Sent Events], which allows for real-time
+_unidirectional_ communication from the server to the client. The protocol is a
+bit simpler, and you may find SSE sufficient for your use-case. For instance,
+the [chat example] uses SSE to implement a real-time, multiroom chat
+application.
+
 </div>
 </details>
 

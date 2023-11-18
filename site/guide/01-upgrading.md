@@ -166,8 +166,8 @@ and deploy for production on the stable channel.
 
 ### Feature Attribute
 
-As a result support for the stable release channel, Rocket applications no
-longer need to enable any features to be used. You should **remove any
+As a result of support for the stable release channel, Rocket applications no
+longer need to enable any features to be used. You should **remove all
 `#[feature(..)]` crate attributes:**
 
 ```diff
@@ -225,7 +225,7 @@ applications prior to v0.5, must take great care to convert all synchronous,
 blocking I/O, to `async` I/O. This is because, as the name implies, blocking I/O
 blocks a thread from making progress until the I/O result is available, meaning
 that no tasks can be scheduled on the waiting thread, wasting valuable resources
-and significantly degrading performance.
+and degrading performance.
 
 Common sources of blocking I/O and their `async` replacements include:
 
@@ -330,7 +330,7 @@ All trait documentation has been updated to call out such traits with an example
 implementation that includes the invocation. The example implementation also
 serves as better documentation for trait and trait method signatures than the
 rustdocs. Because `async_trait` modifies these signatures, the rustdocs diverge
-from what is written in source. For example, rustdoc renders:
+from what is written in the source. For example, rustdoc renders:
 
 ```rust,ignore
 fn from_request<'life0, 'async_trait>(
@@ -357,11 +357,11 @@ of truth for trait and method signatures.
 Rocket's configuration system has been entirely revamped for v0.5. The
 [configuration](../configuration) section of the guide contains a full
 walkthrough of the new system while the [general changes] section of the
-CHANGELOG contains further details on configuration changes. We call out the
+[CHANGELOG] contains further details on configuration changes. We call out the
 most important of these changes here. All users _must_:
 
-  * Replace `ROCKET_ENV` environment variable use with `ROCKET_PROFILE`.
-  * Replace `ROCKET_LOG` environment variable with `ROCKET_LOG_LEVEL`.
+  * Replace the `ROCKET_ENV` environment variable with `ROCKET_PROFILE`.
+  * Replace the `ROCKET_LOG` environment variable with `ROCKET_LOG_LEVEL`.
   * Use only IP addresses for the `address` configuration parameter.
   * Replace the `dev` or `development` profile with `debug`.
   * Note that the `stage`, `staging`, `prod`, and `production` profiles carry no
@@ -445,7 +445,7 @@ Rocket v0.5 brings several major changes that affect routing:
      `FromParam`.
   4. Query parameters parse with [`FromForm`] instead of `FromQuery` and support
      arbitrarily collections, nesting, structures, etc.
-  5. All UTF-8 characters are allowed in static path components: `#[get("/❤️")]`.
+  5. All UTF-8 characters are allowed in static path components: `#[get("/🚀")]`.
   6. The [`register()`] method require a path to [scope catchers] under. Using
      `"/"` emulates the previous behavior.
 
@@ -538,8 +538,8 @@ corollary is three-fold:
      avoided.
 
 Most applications can simply swap uses of `&RawStr` and `String` for `&str` in
-routes, forms, and so on to benefit from the increase web-safety and
-performance. For instance, the front-page example becomes:
+routes, forms, and so on to benefit from the increased safety and performance.
+For instance, the front-page example becomes:
 
 ```diff
  #[get("/<name>/<age>")]
@@ -720,7 +720,7 @@ impl Sentinel for MyResponder {
 Rocket v0.5 brings a completely overhauled [`uri!()`] macro and support for
 typed URIs in more APIs. Notably, the `uri!()` macro now:
 
-  * Allows URIs to be constructed from static values:
+  * Allows URIs to be constructed from and as static values:
 
     ```rust
     # use rocket::uri;
