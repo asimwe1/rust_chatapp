@@ -4,8 +4,8 @@
 [crate]: https://crates.io/crates/rocket_db_pools
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
 [crate docs]: https://api.rocket.rs/master/rocket_db_pools
-[ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
-[ci]: https://github.com/SergioBenitez/Rocket/actions
+[ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
+[ci]: https://github.com/rwf2/Rocket/actions
 
 Asynchronous database driver integration for Rocket. See the [crate docs] for
 full usage details.

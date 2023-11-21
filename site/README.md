@@ -29,8 +29,8 @@ Rocket API. They are replaced at build time with a URL prefix. At present, the
 following aliases are available, where `${version}` is Rocket's version string
 at the time of compilation:
 
-  * `@example`: https://github.com/SergioBenitez/Rocket/tree/${version}/examples
-  * `@github`: https://github.com/SergioBenitez/Rocket/tree/${version}
+  * `@example`: https://github.com/rwf2/Rocket/tree/${version}/examples
+  * `@github`: https://github.com/rwf2/Rocket/tree/${version}
   * `@api`: https://api.rocket.rs/${version}
 
 For example, to link to `Rocket::launch()`, you might write:

@@ -9,7 +9,7 @@
 //! HTTP library when needed. Because the underlying HTTP library is likely to
 //! change (see [#17]), types in [`hyper`] should be considered unstable.
 //!
-//! [#17]: https://github.com/SergioBenitez/Rocket/issues/17
+//! [#17]: https://github.com/rwf2/Rocket/issues/17
 
 #[macro_use]
 extern crate pear;

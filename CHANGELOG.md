@@ -569,7 +569,7 @@ The following changes were made to the project's infrastructure:
 [automatic typed config extraction]: https://api.rocket.rs/v0.5/rocket/fairing/struct.AdHoc.html#method.config
 [misconfigured secrets]: https://api.rocket.rs/v0.5/rocket/config/struct.SecretKey.html
 [default ranking colors]: https://rocket.rs/v0.5/guide/requests/#default-ranking
-[`chat`]: https://github.com/SergioBenitez/Rocket/tree/v0.5/examples/chat
+[`chat`]: https://github.com/rwf2/Rocket/tree/v0.5/examples/chat
 [`Form` guard]: https://api.rocket.rs/v0.5/rocket/form/struct.Form.html
 [`Strict`]: https://api.rocket.rs/v0.5/rocket/form/struct.Strict.html
 [`CookieJar`#pending]: https://api.rocket.rs/v0.5/rocket/http/struct.CookieJar.html#pending
@@ -728,7 +728,7 @@ The following changes were made to the project's infrastructure:
   * [[`3276b8`]] Removed `unsafe` in `Origin::parse_owned()`, fixing a soundness
     issue.
 
-[`3276b8`]: https://github.com/SergioBenitez/Rocket/commit/3276b8
+[`3276b8`]: https://github.com/rwf2/Rocket/commit/3276b8
 
 # Version 0.4.9 (May 19, 2021)
 
@@ -736,8 +736,8 @@ The following changes were made to the project's infrastructure:
 
   * [[`#1645`], [`f2a56f`]] Fixed `Try` `impl FromResidual<Result> for Outcome`.
 
-[`#1645`]: https://github.com/SergioBenitez/Rocket/issues/1645
-[`f2a56f`]: https://github.com/SergioBenitez/Rocket/commit/f2a56f
+[`#1645`]: https://github.com/rwf2/Rocket/issues/1645
+[`f2a56f`]: https://github.com/rwf2/Rocket/commit/f2a56f
 
 # Version 0.4.8 (May 18, 2021)
 
@@ -752,8 +752,8 @@ The following changes were made to the project's infrastructure:
 
   * Updated `base64` dependency to `0.13`.
 
-[`#1548`]: https://github.com/SergioBenitez/Rocket/issues/1548
-[`93e88b0`]: https://github.com/SergioBenitez/Rocket/commit/93e88b0
+[`#1548`]: https://github.com/rwf2/Rocket/issues/1548
+[`93e88b0`]: https://github.com/rwf2/Rocket/commit/93e88b0
 
 # Version 0.4.7 (Feb 09, 2021)
 
@@ -762,8 +762,8 @@ The following changes were made to the project's infrastructure:
   * [[#1534], [`2059a6`]] Fixed a low-severity, minimal impact soundness issue
     in `uri::Formatter`.
 
-[#1534]: https://github.com/SergioBenitez/Rocket/issues/1534
-[`2059a6`]: https://github.com/SergioBenitez/Rocket/commit/2059a6
+[#1534]: https://github.com/rwf2/Rocket/issues/1534
+[`2059a6`]: https://github.com/rwf2/Rocket/commit/2059a6
 
 # Version 0.4.6 (Nov 09, 2020)
 
@@ -784,8 +784,8 @@ The following changes were made to the project's infrastructure:
   * Updated source code for Rust 2018.
   * UI tests now use `trybuild` instead of `compiletest-rs`.
 
-[`86bd7c`]: https://github.com/SergioBenitez/Rocket/commit/86bd7c
-[`c24a96`]: https://github.com/SergioBenitez/Rocket/commit/c24a96
+[`86bd7c`]: https://github.com/rwf2/Rocket/commit/86bd7c
+[`c24a96`]: https://github.com/rwf2/Rocket/commit/c24a96
 [enables flushing]: https://api.rocket.rs/v0.4/rocket/response/struct.Stream.html#buffering-and-blocking
 
 # Version 0.4.5 (May 30, 2020)
@@ -807,10 +807,10 @@ The following changes were made to the project's infrastructure:
 
   * Fixed various typos.
 
-[#1312]: https://github.com/SergioBenitez/Rocket/issues/1312
-[`89150f`]: https://github.com/SergioBenitez/Rocket/commit/89150f
-[#1263]: https://github.com/SergioBenitez/Rocket/issues/1263
-[`376f74`]: https://github.com/SergioBenitez/Rocket/commit/376f74
+[#1312]: https://github.com/rwf2/Rocket/issues/1312
+[`89150f`]: https://github.com/rwf2/Rocket/commit/89150f
+[#1263]: https://github.com/rwf2/Rocket/issues/1263
+[`376f74`]: https://github.com/rwf2/Rocket/commit/376f74
 [`Origin::map_path()`]: https://api.rocket.rs/v0.4/rocket/http/uri/struct.Origin.html#method.map_path
 [`handler::Outcome::from_or_forward()`]: https://api.rocket.rs/v0.4/rocket/handler/type.Outcome.html#method.from_or_forward
 [`Options::NormalizeDirs`]: https://api.rocket.rs/v0.4/rocket_contrib/serve/struct.Options.html#associatedconstant.NormalizeDirs
@@ -1314,7 +1314,7 @@ In addition to new features, Rocket saw the following improvements:
   * The `rustls` dependency was updated to `0.14`.
   * The `cookie` dependency was updated to `0.11`.
 
-[Tera templates example]: https://github.com/SergioBenitez/Rocket/tree/v0.4/examples/tera_templates
+[Tera templates example]: https://github.com/rwf2/Rocket/tree/v0.4/examples/tera_templates
 [`FormItems`]: https://api.rocket.rs/v0.4/rocket/request/enum.FormItems.html
 [`Config::active()`]: https://api.rocket.rs/v0.4/rocket/config/struct.Config.html#method.active
 [`Flash`]: https://api.rocket.rs/v0.4/rocket/response/struct.Flash.html
@@ -1576,7 +1576,7 @@ In addition to new features, Rocket saw the following improvements:
 
   * Ignored named route parameters are now allowed (`_ident`).
   * Fixed issue where certain paths would cause a lint `assert!` to fail
-    ([#367](https://github.com/SergioBenitez/Rocket/issues/367)).
+    ([#367](https://github.com/rwf2/Rocket/issues/367)).
   * Lints were updated for `2017-08-10` nightly.
   * Minimum required `rustc` is `1.21.0-nightly (2017-08-10)`.
 
@@ -1868,7 +1868,7 @@ In addition to new features, Rocket saw the following improvements:
   * Allow `k` and `v` to be used as fields in `FromForm` structures by avoiding
     identifier collisions ([#265]).
 
-[#265]: https://github.com/SergioBenitez/Rocket/issues/265
+[#265]: https://github.com/rwf2/Rocket/issues/265
 
 # Version 0.2.5 (Apr 16, 2017)
 
@@ -2064,7 +2064,7 @@ applications.
 A couple of bugs were fixed in this release:
 
   * Handlebars partials were not properly registered
-    ([#122](https://github.com/SergioBenitez/Rocket/issues/122)).
+    ([#122](https://github.com/rwf2/Rocket/issues/122)).
   * `Rocket::custom` did not set the custom configuration as the `active`
     configuration.
   * Route path segments containing more than one dynamic parameter were
@@ -2168,13 +2168,13 @@ In addition to new features, Rocket saw the following smaller improvements:
 ## Codegen
 
   * Fix `get_raw_segments` index argument in route codegen
-    ([#41](https://github.com/SergioBenitez/Rocket/issues/41)).
+    ([#41](https://github.com/rwf2/Rocket/issues/41)).
   * Segments params (`<param..>`) respect prefixes.
 
 ## Contrib
 
   * Fix nested template name resolution
-    ([#42](https://github.com/SergioBenitez/Rocket/issues/42)).
+    ([#42](https://github.com/rwf2/Rocket/issues/42)).
 
 ## Infrastructure
 

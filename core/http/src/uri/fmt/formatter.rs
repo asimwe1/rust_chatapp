@@ -631,7 +631,7 @@ impl<T> SuffixedRouteUri<T> {
     }
 }
 
-// See https://github.com/SergioBenitez/Rocket/issues/1534.
+// See https://github.com/rwf2/Rocket/issues/1534.
 #[cfg(test)]
 mod prefix_soundness_test {
     use crate::uri::fmt::{Formatter, UriDisplay, Query};

@@ -12,7 +12,7 @@ Rocket repository and run the included examples in the `examples/` directory.
 For instance, the following set of commands runs the `hello` example:
 
 ```sh
-git clone https://github.com/SergioBenitez/Rocket
+git clone https://github.com/rwf2/Rocket
 cd Rocket
 git checkout master
 cd examples/hello

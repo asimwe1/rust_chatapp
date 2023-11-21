@@ -4,8 +4,8 @@
 [crate]: https://crates.io/crates/rocket_sync_db_pools
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
 [crate docs]: https://api.rocket.rs/master/rocket_sync_db_pools
-[ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
-[ci]: https://github.com/SergioBenitez/Rocket/actions
+[ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
+[ci]: https://github.com/rwf2/Rocket/actions
 
 This crate provides traits, utilities, and a procedural macro for configuring
 and accessing database connection pools in Rocket. This implementation is backed

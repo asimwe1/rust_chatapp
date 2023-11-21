@@ -40,7 +40,7 @@ define_log_macro!(launch_meta (launch_meta_): info, "rocket::launch", $);
 define_log_macro!(launch_info (launch_msg_): warn, "rocket::launch", $);
 
 // `print!` panics when stdout isn't available, but this macro doesn't. See
-// SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
+// rwf2/Rocket#2019 and rust-lang/rust#46016 for more.
 //
 // Unfortunately, `libtest` captures output by replacing a special sink that
 // `print!`, and _only_ `print!`, writes to. Using `write!` directly bypasses

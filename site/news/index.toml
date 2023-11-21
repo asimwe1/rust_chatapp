@@ -122,7 +122,7 @@ opportunity to discover issues with Rocket v0.4 and its documentation before its
 general release. We encourage all users to migrate their applications to the
 second release candidate and report any issues to the [GitHub issue tracker].
 
-[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+[GitHub issue tracker]: https://github.com/rwf2/Rocket/issues
 """
 
 [[articles]]
@@ -142,7 +142,7 @@ its documentation before its general release. We encourage all users to migrate
 their applications to the release candidate and report any issues to the [GitHub
 issue tracker].
 
-[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+[GitHub issue tracker]: https://github.com/rwf2/Rocket/issues
 """
 
 [[articles]]
@@ -172,7 +172,7 @@ snippet = """
 Today marks the first major release since Rocket's debut a little over a month
 ago. Rocket v0.2 packs a ton of new features, fixes, and general improvements.
 Much of the development in v0.2 was led by the community, either through reports
-via the [GitHub issue tracker](https://github.com/SergioBenitez/Rocket/issues)
+via the [GitHub issue tracker](https://github.com/rwf2/Rocket/issues)
 or via direct contributions. In fact, there have been **20 unique contributors**
 to Rocket's codebase since Rocket's initial introduction! Community feedback has
 been incredible. As a special thank you, we include the names of these

@@ -7,7 +7,7 @@ Types, traits, and parsers for HTTP requests, responses, and headers.
 """
 documentation = "https://api.rocket.rs/master/rocket_http/"
 homepage = "https://rocket.rs"
-repository = "https://github.com/SergioBenitez/Rocket"
+repository = "https://github.com/rwf2/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "http"]
 license = "MIT OR Apache-2.0"

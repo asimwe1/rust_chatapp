@@ -9,6 +9,6 @@ If you run into any issues upgrading, we encourage you to ask questions via
 bridged [`#rocket`] IRC channel at `irc.libera.chat`. The [FAQ](../faq/) also
 provides answers to commonly asked questions.
 
-[GitHub discussions]: https://github.com/SergioBenitez/Rocket/discussions
+[GitHub discussions]: https://github.com/rwf2/Rocket/discussions
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
 [`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket

@@ -4,7 +4,7 @@ Below you'll find a collection of commonly asked questions and answers. If you
 have suggestions for questions you'd like to see answered here, [comment on the
 discussion thread].
 
-[comment on the discussion thread]: https://github.com/SergioBenitez/Rocket/discussions/1836
+[comment on the discussion thread]: https://github.com/rwf2/Rocket/discussions/1836
 
 ## About Rocket
 
@@ -215,7 +215,7 @@ you'd like to see here!
 [Plume]: https://github.com/Plume-org/Plume
 [Hagrid]: https://gitlab.com/hagrid-keyserver/hagrid/
 [SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/sourcegraph/tree/main/docker-images/syntax-highlighter
-[Let us know]: https://github.com/SergioBenitez/Rocket/discussions/categories/show-and-tell
+[Let us know]: https://github.com/rwf2/Rocket/discussions/categories/show-and-tell
 [Revolt]: https://github.com/revoltchat/backend
 
 </div>
@@ -242,14 +242,14 @@ For example, work for Rocket v0.5 included:
   * [Reporting multiple](https://github.com/bikeshedder/deadpool/issues/114)
     [correctness issues](https://github.com/bikeshedder/deadpool/issues/113) in `deadpool`.
   * [Fixing a major usability issue in `async-stream`.](https://github.com/tokio-rs/async-stream/pull/57)
-  * [Creating a brand new configuration library.](https://github.com/SergioBenitez/Figment)
+  * [Creating a brand new configuration library.](https://github.com/rwf2/Figment)
   * [Updating](https://github.com/rousan/multer-rs/pull/21),
     [fixing](https://github.com/rousan/multer-rs/pull/29), and
     [maintaining](https://github.com/rousan/multer-rs/commit/2758e778e6aa2785b737c82fe45e58026bea2f01) `multer`.
   * [Significantly improving `async_trait` correctness and usability.](https://github.com/dtolnay/async-trait/pull/143)
-  * [Porting `Pattern` APIs to stable.](https://github.com/SergioBenitez/stable-pattern)
-  * [Porting macro diagnostics to stable.](https://github.com/SergioBenitez/proc-macro2-diagnostics)
-  * [Creating a brand new byte unit library.](https://github.com/SergioBenitez/ubyte)
+  * [Porting `Pattern` APIs to stable.](https://github.com/rwf2/stable-pattern)
+  * [Porting macro diagnostics to stable.](https://github.com/rwf2/proc-macro2-diagnostics)
+  * [Creating a brand new byte unit library.](https://github.com/rwf2/ubyte)
   * [Fixing a bug in `rustc`'s `libtest`.](https://github.com/rust-lang/rust/pull/78227)
 
 A version of Rocket is released whenever it is feature-complete and exceeds
@@ -284,7 +284,7 @@ application.
 </div>
 </details>
 
-[working on it]: https://github.com/SergioBenitez/Rocket/issues/90
+[working on it]: https://github.com/rwf2/Rocket/issues/90
 [Server-Sent Events]: @api/rocket/response/stream/struct.EventStream.html
 [chat example]: @example/chat
 
@@ -645,7 +645,7 @@ is to depend on a `contrib` library from git while also depending on a
 
 ```toml
 rocket = "0.6.0-dev"
-rocket_db_pools = { git = "https://github.com/SergioBenitez/Rocket.git" }
+rocket_db_pools = { git = "https://github.com/rwf2/Rocket.git" }
 ```
 
 This is _never_ correct. If libraries or applications interact via types from a

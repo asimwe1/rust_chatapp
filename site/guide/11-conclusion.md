@@ -3,7 +3,7 @@
 We hope you agree that Rocket is a refreshing take on web frameworks. As with
 any software project, Rocket is _alive_. There are always things to improve, and
 we're happy to take the best ideas. If you have something in mind, please
-[submit an issue](https://github.com/SergioBenitez/Rocket/issues).
+[submit an issue](https://github.com/rwf2/Rocket/issues).
 
 ## Getting Help
 

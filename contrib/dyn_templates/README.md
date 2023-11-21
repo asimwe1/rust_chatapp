@@ -4,8 +4,8 @@
 [crate]: https://crates.io/crates/rocket_dyn_templates
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
 [crate docs]: https://api.rocket.rs/master/rocket_dyn_templates
-[ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
-[ci]: https://github.com/SergioBenitez/Rocket/actions
+[ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
+[ci]: https://github.com/rwf2/Rocket/actions
 
 This crate adds support for dynamic template rendering to Rocket. It
 automatically discovers templates, provides a `Responder` to render templates,

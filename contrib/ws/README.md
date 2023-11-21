@@ -4,8 +4,8 @@
 [crate]: https://crates.io/crates/rocket_ws
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
 [crate docs]: https://api.rocket.rs/master/rocket_ws
-[ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
-[ci]: https://github.com/SergioBenitez/Rocket/actions
+[ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
+[ci]: https://github.com/rwf2/Rocket/actions
 
 This crate provides WebSocket support for Rocket via integration with Rocket's
 [connection upgrades] API.

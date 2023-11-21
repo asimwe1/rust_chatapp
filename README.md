@@ -1,6 +1,6 @@
 # Rocket
 
-[![Build Status](https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg)](https://github.com/SergioBenitez/Rocket/actions)
+[![Build Status](https://github.com/rwf2/Rocket/workflows/CI/badge.svg)](https://github.com/rwf2/Rocket/actions)
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
@@ -128,9 +128,9 @@ come in many forms. You could:
   3. Comment on [issues that require feedback].
   4. Contribute code via [pull requests].
 
-[issue]: https://github.com/SergioBenitez/Rocket/issues
-[issues that require feedback]: https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22
-[pull requests]: https://github.com/SergioBenitez/Rocket/pulls
+[issue]: https://github.com/rwf2/Rocket/issues
+[issues that require feedback]: https://github.com/rwf2/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22
+[pull requests]: https://github.com/rwf2/Rocket/pulls
 
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:
