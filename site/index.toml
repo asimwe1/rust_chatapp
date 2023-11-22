@@ -12,14 +12,14 @@ date = "Nov 17, 2023"
 
 [[top_features]]
 title = "Type Safe"
-text = "From request to response Rocket ensures that your types mean something."
+text = "Type safety turned up to 11 means security and robustness come at compile-time."
 image = "helmet"
 button = "Learn More"
 url = "overview/#how-rocket-works"
 
 [[top_features]]
 title = "Boilerplate Free"
-text = "Spend your time writing code that really matters, and let Rocket generate the rest."
+text = "Spend your time writing code that really matters and let Rocket handle the rest."
 image = "robot-free"
 button = "See Examples"
 url = "overview/#anatomy-of-a-rocket-application"
@@ -66,7 +66,7 @@ text = '''
   <span class="callout">Hello, 58 year old named John!</span>
 
   If someone visits a path with an `<age>` that isn’t a `u8`, Rocket doesn’t
-  blindly call `hello`. Instead, it tries other matching routes or returns a
+  just call `hello`. Instead, it tries other matching routes or returns a
   **404**.
 '''
 
@@ -91,14 +91,14 @@ text = '''
   `data` parameter to a `Form` type. Rocket automatically **parses and
   validates** the form data into your structure and calls your function.
 
+  File uploads? A breeze with [`TempFile`](@api/rocket/fs/enum.TempFile.html).
   Bad form request? Rocket doesn’t call your function! Need to know what went
   wrong? Use a `data` parameter of `Result`! Want to rerender the form with user
-  input and errors? Use [`Context`](guide/requests/#context)! File uploads? A
-  breeze with [`TempFile`](@api/rocket/fs/enum.TempFile.html).
+  input and errors? Use [`Context`](guide/requests/#context)!
 '''
 
 [[sections]]
-title = "JSON, out of the box."
+title = "JSON, always on."
 code = '''
   #[derive(Serialize, Deserialize)]
   struct Message<'r> {
@@ -145,11 +145,11 @@ text = "View, add, or remove cookies, with or without encryption, without hassle
 image = 'cookies-icon'
 url = 'guide/requests/#cookies'
 button = 'Learn More'
-color = 'purple'
+color = 'fucsia'
 margin = -6
 
 [[bottom_features]]
-title = 'Async Streams'
+title = 'WebSockets + Streams'
 text = "Create and return potentially infinite async streams of data with ease."
 image = 'streams-icon'
 url = 'guide/responses/#async-streams'
@@ -167,35 +167,240 @@ color = 'yellow'
 margin = -3
 
 [[bottom_features]]
-title = 'Testing Library'
-text = "Unit test your applications with ease using the built-in testing library."
-image = 'testing-icon'
-url = 'guide/testing#testing'
+title = 'Type-Checked URIs'
+text = "Never mistype or forget to update a URI again with Rocket's typed URIs."
+image = 'pencil-icon'
+url = 'guide/requests/#private-cookies'
 button = 'Learn More'
 color = 'orange'
+height = '60px'
+margin = -3
 
 [[bottom_features]]
-title = 'Typed URIs'
-text = "Rocket typechecks route URIs for you so you never mistype a URI again."
+title = 'Structured Middleware'
+text = "Fairings are Rocket's simpler approach to structured middleware."
 image = 'ship-icon'
-url = 'guide/responses/#typed-uris'
+url = 'guide/fairings/#fairings'
 button = 'Learn More'
 color = 'green'
 margin = -20
 
-# [[bottom_features]]
-# title = 'Query Strings'
-# text = "Handling query strings and parameters is type-safe and easy in Rocket."
-# image = 'query-icon'
-# url = 'guide/requests/#query-strings'
-# button = 'Learn More'
-# color = 'red'
-# margin = -3
+[[bottom_features]]
+title = 'Database Support'
+text = "Store data with ease with Rocket's built-in ORM agnostic database support."
+image = 'query-icon'
+url = 'guide/state/#databases'
+button = 'Learn More'
+color = 'pink'
+margin = -3
 
-# [[bottom_features]]
-# title = 'Private Cookies'
-# text = "Safe, secure, private cookies are built-in so your users can stay safe."
-# image = 'sessions-icon'
-# url = 'guide/requests/#private-cookies'
-# button = 'Learn More'
-# color = 'purple'
+[[bottom_features]]
+title = 'Testing'
+text = "Unit and integration test using the comprehensive, built-in testing library."
+image = 'testing-icon'
+url = 'guide/testing#testing'
+button = 'Learn More'
+color = 'aqua'
+
+[[bottom_features]]
+title = 'Community'
+text = "Join an extensive community of 20,000+ Rocketeers that love Rocket."
+image = 'globe'
+url = 'https://github.com/rwf2/Rocket/network/dependents'
+button = 'See Dependents'
+color = 'purple'
+height = '62px'
+
+###############################################################################
+# Panels: displayed in a tabbed arrangement.
+###############################################################################
+
+[[panels]]
+name = "Routing"
+checked = true
+content = '''
+Rocket's main task is to route incoming requests to the appropriate request
+handler using your application's declared routes. Routes are declared using
+Rocket's _route_ attributes. The attribute describes the requests that match the
+route. The attribute is placed on top of a function that is the request handler
+for that route.
+
+As an example, consider the simple route below:
+
+```rust
+#[get("/")]
+fn index() -> &'static str {
+    "Hello, world!"
+}
+```
+
+This `index` route matches any incoming HTTP `GET` request to `/`, the index.
+The handler returns a `String`. Rocket automatically converts the string into a
+well-formed HTTP response that includes the appropriate `Content-Type` and body
+encoding metadata.
+'''
+
+[[panels]]
+name = "Dynamic Params"
+content = '''
+Rocket automatically parses dynamic data in path segments into any desired type.
+To illustrate, let's use the following route:
+
+```rust
+#[get("/hello/<name>/<age>")]
+fn hello(name: &str, age: u8) -> String {
+    format!("Hello, {} year old named {}!", age, name)
+}
+```
+
+This `hello` route has two dynamic parameters, identified with angle brackets,
+declared in the route URI: `<name>` and `<age>`. Rocket maps each parameter to
+an identically named function argument: `name: &str` and `age: u8`. The dynamic
+data in the incoming request is parsed automatically into a value of the
+argument's type. The route is called only when parsing succeeds.
+
+Parsing is directed by the
+[`FromParam`](@api/rocket/request/trait.FromParam.html) trait. Rocket implements
+`FromParam` for many standard types, including both `&str` and `u8`. You can
+implement it for your own types, too!
+'''
+
+[[panels]]
+name = "Handling Data"
+content = '''
+Rocket can automatically parse body data, too!
+
+```rust
+#[post("/login", data = "<login>")]
+fn login(login: Form<UserLogin>) -> String {
+    format!("Hello, {}!", login.name)
+}
+```
+
+The dynamic parameter declared in the `data` route attribute parameter again
+maps to a function argument. Here, `login` maps to `login: Form<UserLogin>`.
+Parsing is again trait-directed, this time by the
+[`FromData`](@api/rocket/data/trait.FromData.html) trait.
+
+The [`Form`](@api/rocket/form/struct.Form.html) type is Rocket's [robust form
+data parser](@guide/requests/#forms). It automatically parses the request body into the internal type,
+here `UserLogin`. Other built-in `FromData` types include
+[`Data`](@api/rocket/struct.Data.html),
+[`Json`](@api/rocket/serde/json/struct.Json.html), and
+[`MsgPack`](@api/rocket/serde/msgpack/struct.MsgPack.html). As always, you can
+implement `FromData` for your own types, too!
+'''
+
+[[panels]]
+name = "Request Guards"
+content = '''
+In addition to dynamic path and data parameters, request handlers can also
+contain a third type of parameter: _request guards_. Request guards aren't
+declared in the route attribute, and any number of them can appear in the
+request handler signature.
+
+Request guards _protect_ the handler from running unless some set of conditions
+are met by the incoming request metadata. For instance, if you are writing an
+API that requires sensitive calls to be accompanied by an API key in the request
+header, Rocket can protect those calls via a custom `ApiKey` request guard:
+
+```rust
+#[get("/sensitive")]
+fn sensitive(key: ApiKey) { ... }
+```
+
+`ApiKey` protects the `sensitive` handler from running incorrectly. In order for
+Rocket to call the `sensitive` handler, the `ApiKey` type needs to be derived
+through a [`FromRequest`](@api/rocket/request/trait.FromRequest.html)
+implementation, which in this case, validates the API key header. Request guards
+are a powerful and unique Rocket concept; they centralize application policy and
+invariants through types.
+'''
+
+[[panels]]
+name = "Responders"
+content = '''
+The return type of a request handler can be any type that implements
+[`Responder`](@api/rocket/response/trait.Responder.html):
+
+```rust
+#[get("/")]
+fn route() -> T { ... }
+```
+
+Above, T must implement `Responder`. Rocket implements `Responder` for many of
+the standard library types including `&str`, `String`, `File`, `Option`, and
+`Result`. Rocket also implements custom responders such as
+[`Redirect`](@api/rocket/response/struct.Redirect.html),
+[`Flash`](@api/rocket/response/struct.Flash.html), and
+[`Template`](@api/rocket_dyn_templates/struct.Template.html).
+
+The task of a `Responder` is to generate a
+[`Response`](@api/rocket/response/struct.Response.html), if possible.
+`Responder`s can fail with a status code. When they do, Rocket calls the
+corresponding error catcher, a `catch` route, which can be declared as follows:
+
+```rust
+#[catch(404)]
+fn not_found() -> T { ... }
+```
+'''
+
+[[panels]]
+name = "Launching"
+content = '''
+Finally, we get to launch our application! Rocket begins dispatching requests to
+routes after they've been _mounted_ and the application has been _launched_.
+These two steps, usually wrtten in a `rocket` function, look like:
+
+```rust
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/base", routes![index, another])
+}
+```
+
+The `mount` call takes a _base_ and a set of routes via the `routes!` macro. The
+base path (`/base` above) is prepended to the path of every route in the list,
+effectively namespacing the routes. `#[launch]` creates a `main` function that
+starts the server. In development, Rocket prints useful information to the
+console to let you know everything is okay.
+
+```sh
+🚀 Rocket has launched from http://127.0.0.1:8000
+```
+'''
+
+###############################################################################
+# Sponsors
+###############################################################################
+
+[sponsors.diamond]
+name = "💎 Diamond"
+tag = "$500/month"
+color = "#addcde"
+height = "70px"
+
+[sponsors.gold]
+name = "💛 Gold"
+tag = "$250/month"
+color = "#fffbba"
+height = "55px"
+
+[[sponsors.gold.sponsors]]
+name = "ohne-makler"
+url = "https://www.ohne-makler.net/"
+img = "ohne-makler.svg"
+
+[[sponsors.gold.sponsors]]
+name = "RWF2: Rocket Web Framework Foundation"
+url = "https://rwf2.org"
+img = "rwf2.gif"
+width = "55px"
+height = "55px"
+
+[sponsors.bronze]
+name = "🤎 Bronze"
+tag = "$50/month"
+color = "#c5a587"
+height = "30px"

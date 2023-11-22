@@ -421,6 +421,44 @@ how to detect and handle graceful shutdown requests.
 [`EventStream`]: @api/rocket/response/stream/struct.EventStream.html
 [`chat` example]: @example/chat
 
+### WebSockets
+
+Enabled by Rocket's support for [HTTP connection upgrades], the official
+[`rocket_ws`] crate implements first-class support for WebSockets. Working with
+`rocket_ws` to implement an echo server looks like this:
+
+```rust
+# use rocket::get;
+use rocket_ws::{WebSocket, Stream};
+
+#[get("/echo")]
+fn echo_compose(ws: WebSocket) -> Stream!['static] {
+    ws.stream(|io| io)
+}
+```
+
+As with `async` streams, `rocket_ws` also supports using generator syntax for
+WebSocket messages:
+
+```rust
+# use rocket::get;
+use rocket_ws::{WebSocket, Stream};
+
+#[get("/echo")]
+fn echo_stream(ws: WebSocket) -> Stream!['static] {
+    Stream! { ws =>
+        for await message in ws {
+            yield message?;
+        }
+    }
+}
+```
+
+For complete usage details, see the [`rocket_ws`] documentation.
+
+[HTTP connection upgrades]: @api-v0.5/rocket/response/struct.Response.html#upgrading
+[`rocket_ws`]: @api-v0.5/rocket_ws
+
 ### JSON
 
 The [`Json`] responder in allows you to easily respond with well-formed JSON
