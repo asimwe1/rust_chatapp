@@ -1,8 +1,9 @@
-use super::EntryAttr;
-
 use devise::{Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
 use proc_macro2::{TokenStream, Span};
+
+use super::EntryAttr;
+use crate::exports::mixed;
 
 /// `#[rocket::launch]`: generates a `main` function that calls the attributed
 /// function to generate a `Rocket` instance. Then calls `.launch()` on the
@@ -78,7 +79,7 @@ impl EntryAttr for Launch {
         };
 
         let block = &f.block;
-        let rocket = quote_spanned!(ty.span() => {
+        let rocket = quote_spanned!(mixed(ty.span()) => {
             let ___rocket: #ty = #block;
             let ___rocket: ::rocket::Rocket<::rocket::Build> = ___rocket;
             ___rocket
