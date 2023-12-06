@@ -475,6 +475,16 @@ impl Event {
 ///
 ///    To send messages losslessly, they must be encoded first, for instance, by
 ///    using [`Event::json()`].
+///
+///  * **Clients reconnect ad-infinitum**
+///
+///    The [SSE standard] stipulates: _"Clients will reconnect if the connection
+///    is closed; a client can be told to stop reconnecting using the HTTP 204
+///    No Content response code."_ As a result, clients will typically reconnect
+///    exhaustively until either they choose to disconnect or they receive a
+///    `204 No Content` response.
+///
+///    [SSE standard]: https://html.spec.whatwg.org/multipage/server-sent-events.html
 pub struct EventStream<S> {
     stream: S,
     heartbeat: Option<Duration>,
