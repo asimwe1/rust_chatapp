@@ -16,6 +16,8 @@ text = "Type safety turned up to 11 means security and robustness come at compil
 image = "helmet"
 button = "Learn More"
 url = "overview/#how-rocket-works"
+width = "69px"
+height = "71px"
 
 [[top_features]]
 title = "Boilerplate Free"
@@ -23,6 +25,8 @@ text = "Spend your time writing code that really matters and let Rocket handle t
 image = "robot-free"
 button = "See Examples"
 url = "overview/#anatomy-of-a-rocket-application"
+width = "78px"
+height = "71px"
 
 [[top_features]]
 title = "Easy To Use"
@@ -31,6 +35,8 @@ image = "sun"
 button = "Get Started"
 url = "guide"
 margin = 2
+width = "68px"
+height = "69px"
 
 [[top_features]]
 title = "Extensible"
@@ -39,6 +45,8 @@ image = "telescope"
 button = "See How"
 url = "overview/#anatomy-of-a-rocket-application"
 margin = 9
+width = "71px"
+height = "62px"
 
 ###############################################################################
 # Sections: make sure there are an odd number so colors work out.
@@ -138,11 +146,15 @@ image = 'templating-icon'
 url = 'guide/responses/#templates'
 button = 'Learn More'
 color = 'blue'
+width = '101px'
+height = '52px'
 
 [[bottom_features]]
 title = 'Cookies'
 text = "View, add, or remove cookies, with or without encryption, without hassle."
 image = 'cookies-icon'
+width = '72px'
+height = '58px'
 url = 'guide/requests/#cookies'
 button = 'Learn More'
 color = 'fucsia'
@@ -155,6 +167,8 @@ image = 'streams-icon'
 url = 'guide/responses/#async-streams'
 button = 'Learn More'
 color = 'red'
+width = '82px'
+height = '81px'
 margin = -29
 
 [[bottom_features]]
@@ -164,6 +178,8 @@ image = 'config-icon'
 url = 'guide/configuration/#profiles'
 button = 'Learn More'
 color = 'yellow'
+width = '57px'
+height = '57px'
 margin = -3
 
 [[bottom_features]]
@@ -173,6 +189,7 @@ image = 'pencil-icon'
 url = 'guide/requests/#private-cookies'
 button = 'Learn More'
 color = 'orange'
+width = '60px'
 height = '60px'
 margin = -3
 
@@ -183,6 +200,8 @@ image = 'ship-icon'
 url = 'guide/fairings/#fairings'
 button = 'Learn More'
 color = 'green'
+width = '98px'
+height = '74px'
 margin = -20
 
 [[bottom_features]]
@@ -192,6 +211,8 @@ image = 'query-icon'
 url = 'guide/state/#databases'
 button = 'Learn More'
 color = 'pink'
+width = '73px'
+height = '57px'
 margin = -3
 
 [[bottom_features]]
@@ -201,6 +222,8 @@ image = 'testing-icon'
 url = 'guide/testing#testing'
 button = 'Learn More'
 color = 'aqua'
+width = '47px'
+height = '54px'
 
 [[bottom_features]]
 title = 'Community'
@@ -209,7 +232,9 @@ image = 'globe'
 url = 'https://github.com/rwf2/Rocket/network/dependents'
 button = 'See Dependents'
 color = 'purple'
-height = '62px'
+width = '55px'
+height = '55px'
+margin = -1
 
 ###############################################################################
 # Panels: displayed in a tabbed arrangement.
