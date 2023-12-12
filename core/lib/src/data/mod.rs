@@ -7,6 +7,8 @@ mod data_stream;
 mod from_data;
 mod limits;
 mod io_stream;
+mod transform;
+mod peekable;
 
 pub use self::data::Data;
 pub use self::data_stream::DataStream;
@@ -15,5 +17,4 @@ pub use self::limits::Limits;
 pub use self::capped::{N, Capped};
 pub use self::io_stream::{IoHandler, IoStream};
 pub use ubyte::{ByteUnit, ToByteUnit};
-
-pub(crate) use self::data_stream::StreamReader;
+pub use self::transform::{Transform, TransformBuf};

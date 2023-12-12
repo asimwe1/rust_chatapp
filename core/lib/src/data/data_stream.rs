@@ -5,13 +5,17 @@ use std::io::{self, Cursor};
 
 use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
-use futures::stream::Stream;
-use futures::ready;
-use yansi::Paint;
+use tokio_util::io::StreamReader;
+use futures::{ready, stream::Stream};
 
 use crate::http::hyper;
 use crate::ext::{PollExt, Chain};
 use crate::data::{Capped, N};
+use crate::http::hyper::body::Bytes;
+use crate::data::transform::Transform;
+
+use super::peekable::Peekable;
+use super::transform::TransformBuf;
 
 /// Raw data stream of a request body.
 ///
@@ -40,47 +44,101 @@ use crate::data::{Capped, N};
 ///
 /// [`DataStream::stream_to(&mut vec)`]: DataStream::stream_to()
 /// [`DataStream::stream_to(&mut file)`]: DataStream::stream_to()
-pub struct DataStream<'r> {
-    pub(crate) chain: Take<Chain<Cursor<Vec<u8>>, StreamReader<'r>>>,
+#[non_exhaustive]
+pub enum DataStream<'r> {
+    #[doc(hidden)]
+    Base(BaseReader<'r>),
+    #[doc(hidden)]
+    Transform(TransformReader<'r>),
 }
 
-/// An adapter: turns a `T: Stream` (in `StreamKind`) into a `tokio::AsyncRead`.
-pub struct StreamReader<'r> {
-    state: State,
-    inner: StreamKind<'r>,
+/// A data stream that has a `transformer` applied to it.
+pub struct TransformReader<'r> {
+    transformer: Pin<Box<dyn Transform + Send + Sync + 'r>>,
+    stream: Pin<Box<DataStream<'r>>>,
+    inner_done: bool,
 }
 
-/// The current state of `StreamReader` `AsyncRead` adapter.
-enum State {
-    Pending,
-    Partial(Cursor<hyper::body::Bytes>),
-    Done,
-}
+/// Limited, pre-buffered reader to the underlying data stream.
+pub type BaseReader<'r> = Take<Chain<Cursor<Vec<u8>>, RawReader<'r>>>;
 
-/// The kinds of streams we accept as `Data`.
-enum StreamKind<'r> {
+/// Direct reader to the underlying data stream. Not limited in any manner.
+pub type RawReader<'r> = StreamReader<RawStream<'r>, Bytes>;
+
+/// Raw underlying data stream.
+pub enum RawStream<'r> {
     Empty,
     Body(&'r mut hyper::Body),
-    Multipart(multer::Field<'r>)
+    Multipart(multer::Field<'r>),
+}
+
+impl<'r> TransformReader<'r> {
+    /// Returns the underlying `BaseReader`.
+    fn base_mut(&mut self) -> &mut BaseReader<'r> {
+        match self.stream.as_mut().get_mut() {
+            DataStream::Base(base) => base,
+            DataStream::Transform(inner) => inner.base_mut(),
+        }
+    }
+
+    /// Returns the underlying `BaseReader`.
+    fn base(&self) -> &BaseReader<'r> {
+        match self.stream.as_ref().get_ref() {
+            DataStream::Base(base) => base,
+            DataStream::Transform(inner) => inner.base(),
+        }
+    }
 }
 
 impl<'r> DataStream<'r> {
-    pub(crate) fn new(buf: Vec<u8>, stream: StreamReader<'r>, limit: u64) -> Self {
-        let chain = Chain::new(Cursor::new(buf), stream).take(limit).into();
-        Self { chain }
+    pub(crate) fn new(
+        transformers: Vec<Pin<Box<dyn Transform + Send + Sync + 'r>>>,
+        Peekable { buffer, reader, .. }: Peekable<512, RawReader<'r>>,
+        limit: u64
+    ) -> Self {
+        let mut stream = DataStream::Base(Chain::new(Cursor::new(buffer), reader).take(limit));
+        for transformer in transformers {
+            stream = DataStream::Transform(TransformReader {
+                transformer,
+                stream: Box::pin(stream),
+                inner_done: false,
+            });
+        }
+
+        stream
+    }
+
+    /// Returns the underlying `BaseReader`.
+    fn base_mut(&mut self) -> &mut BaseReader<'r> {
+        match self {
+            DataStream::Base(base) => base,
+            DataStream::Transform(transform) => transform.base_mut(),
+        }
+    }
+
+    /// Returns the underlying `BaseReader`.
+    fn base(&self) -> &BaseReader<'r> {
+        match self {
+            DataStream::Base(base) => base,
+            DataStream::Transform(transform) => transform.base(),
+        }
     }
 
     /// Whether a previous read exhausted the set limit _and then some_.
     async fn limit_exceeded(&mut self) -> io::Result<bool> {
+        let base = self.base_mut();
+
         #[cold]
-        async fn _limit_exceeded(stream: &mut DataStream<'_>) -> io::Result<bool> {
+        async fn _limit_exceeded(base: &mut BaseReader<'_>) -> io::Result<bool> {
             // Read one more byte after reaching limit to see if we cut early.
-            stream.chain.set_limit(1);
+            base.set_limit(1);
             let mut buf = [0u8; 1];
-            Ok(stream.read(&mut buf).await? != 0)
+            let exceeded = base.read(&mut buf).await? != 0;
+            base.set_limit(0);
+            Ok(exceeded)
         }
 
-        Ok(self.chain.limit() == 0 && _limit_exceeded(self).await?)
+        Ok(base.limit() == 0 && _limit_exceeded(base).await?)
     }
 
     /// Number of bytes a full read from `self` will _definitely_ read.
@@ -95,8 +153,9 @@ impl<'r> DataStream<'r> {
     /// }
     /// ```
     pub fn hint(&self) -> usize {
-        let buf_len = self.chain.get_ref().get_ref().0.get_ref().len();
-        std::cmp::min(buf_len, self.chain.limit() as usize)
+        let base = self.base();
+        let buf_len = base.get_ref().get_ref().0.get_ref().len();
+        std::cmp::min(buf_len, base.limit() as usize)
     }
 
     /// A helper method to write the body of the request to any `AsyncWrite`
@@ -227,97 +286,86 @@ impl<'r> DataStream<'r> {
     }
 }
 
-// TODO.async: Consider implementing `AsyncBufRead`.
-
-impl StreamReader<'_> {
-    pub fn empty() -> Self {
-        Self { inner: StreamKind::Empty, state: State::Done }
-    }
-}
-
-impl<'r> From<&'r mut hyper::Body> for StreamReader<'r> {
-    fn from(body: &'r mut hyper::Body) -> Self {
-        Self { inner: StreamKind::Body(body), state: State::Pending }
-    }
-}
-
-impl<'r> From<multer::Field<'r>> for StreamReader<'r> {
-    fn from(field: multer::Field<'r>) -> Self {
-        Self { inner: StreamKind::Multipart(field), state: State::Pending }
-    }
-}
-
 impl AsyncRead for DataStream<'_> {
-    #[inline(always)]
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match self.get_mut() {
+            DataStream::Base(inner) => Pin::new(inner).poll_read(cx, buf),
+            DataStream::Transform(inner) => Pin::new(inner).poll_read(cx, buf),
+        }
+    }
+}
+
+impl AsyncRead for TransformReader<'_> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        if self.chain.limit() == 0 {
-            let stream: &StreamReader<'_> = &self.chain.get_ref().get_ref().1;
-            let kind = match stream.inner {
-                StreamKind::Empty => "an empty stream (vacuous)",
-                StreamKind::Body(_) => "the request body",
-                StreamKind::Multipart(_) => "a multipart form field",
-            };
-
-            warn_!("Data limit reached while reading {}.", kind.primary().bold());
+        let init_fill = buf.filled().len();
+        if !self.inner_done {
+            ready!(Pin::new(&mut self.stream).poll_read(cx, buf))?;
+            self.inner_done = init_fill == buf.filled().len();
         }
 
-        Pin::new(&mut self.chain).poll_read(cx, buf)
+        if self.inner_done {
+            return self.transformer.as_mut().poll_finish(cx, buf);
+        }
+
+        let mut tbuf = TransformBuf { buf, cursor: init_fill };
+        self.transformer.as_mut().transform(&mut tbuf)?;
+        if buf.filled().len() == init_fill {
+            cx.waker().wake_by_ref();
+            return Poll::Pending;
+        }
+
+        Poll::Ready(Ok(()))
     }
 }
 
-impl Stream for StreamKind<'_> {
-    type Item = io::Result<hyper::body::Bytes>;
+impl Stream for RawStream<'_> {
+    type Item = io::Result<Bytes>;
 
-    fn poll_next(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
-            StreamKind::Body(body) => Pin::new(body).poll_next(cx)
+            RawStream::Body(body) => Pin::new(body).poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
-            StreamKind::Multipart(mp) => Pin::new(mp).poll_next(cx)
+            RawStream::Multipart(mp) => Pin::new(mp).poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
-            StreamKind::Empty => Poll::Ready(None),
+            RawStream::Empty => Poll::Ready(None),
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            StreamKind::Body(body) => body.size_hint(),
-            StreamKind::Multipart(mp) => mp.size_hint(),
-            StreamKind::Empty => (0, Some(0)),
+            RawStream::Body(body) => body.size_hint(),
+            RawStream::Multipart(mp) => mp.size_hint(),
+            RawStream::Empty => (0, Some(0)),
         }
     }
 }
 
-impl AsyncRead for StreamReader<'_> {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
-    ) -> Poll<io::Result<()>> {
-        loop {
-            self.state = match self.state {
-                State::Pending => {
-                    match ready!(Pin::new(&mut self.inner).poll_next(cx)) {
-                        Some(Err(e)) => return Poll::Ready(Err(e)),
-                        Some(Ok(bytes)) => State::Partial(Cursor::new(bytes)),
-                        None => State::Done,
-                    }
-                },
-                State::Partial(ref mut cursor) => {
-                    let rem = buf.remaining();
-                    match ready!(Pin::new(cursor).poll_read(cx, buf)) {
-                        Ok(()) if rem == buf.remaining() => State::Pending,
-                        result => return Poll::Ready(result),
-                    }
-                }
-                State::Done => return Poll::Ready(Ok(())),
-            }
+impl std::fmt::Display for RawStream<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RawStream::Empty => f.write_str("empty stream"),
+            RawStream::Body(_) => f.write_str("request body"),
+            RawStream::Multipart(_) => f.write_str("multipart form field"),
         }
+    }
+}
+
+impl<'r> From<&'r mut hyper::Body> for RawStream<'r> {
+    fn from(value: &'r mut hyper::Body) -> Self {
+        Self::Body(value)
+    }
+}
+
+impl<'r> From<multer::Field<'r>> for RawStream<'r> {
+    fn from(value: multer::Field<'r>) -> Self {
+        Self::Multipart(value)
     }
 }
