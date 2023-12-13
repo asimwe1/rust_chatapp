@@ -404,7 +404,14 @@ console to let you know everything is okay.
 name = "💎 Diamond"
 tag = "$500/month"
 color = "#addcde"
-height = "70px"
+height = "110px"
+
+[[sponsors.diamond.sponsors]]
+name = "Kindness"
+url = "https://kindness.ai"
+img = "kindness.png"
+blurb = "Supporting customers with Kindness"
+width = "110px"
 
 [sponsors.gold]
 name = "💛 Gold"
@@ -416,16 +423,24 @@ height = "55px"
 name = "ohne-makler"
 url = "https://www.ohne-makler.net/"
 img = "ohne-makler.svg"
+width = "173px"
 
 [[sponsors.gold.sponsors]]
-name = "RWF2: Rocket Web Framework Foundation"
+name = "RWF2"
 url = "https://rwf2.org"
 img = "rwf2.gif"
+blurb = "Rocket Web Framework Foundation"
 width = "55px"
-height = "55px"
 
 [sponsors.bronze]
 name = "🤎 Bronze"
 tag = "$50/month"
-color = "#c5a587"
+color = "#c7a483"
 height = "30px"
+
+[[sponsors.bronze.sponsors]]
+name = "1Password"
+url = "https://1password.com"
+img = "1password.svg"
+blurb = "The world’s most-loved password manager"
+width = "30px"
