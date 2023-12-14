@@ -73,7 +73,9 @@ async fn hyper_service_fn(
     // sends the response metadata (and a body channel) prior.
     let (tx, rx) = oneshot::channel();
 
-    debug!("Received request: {:#?}", hyp_req);
+    #[cfg(not(broken_fmt))]
+    debug!("received request: {:#?}", hyp_req);
+
     tokio::spawn(async move {
         // We move the request next, so get the upgrade future now.
         let pending_upgrade = hyper::upgrade::on(&mut hyp_req);
@@ -160,7 +162,9 @@ impl Rocket<Orbit> {
         let hyp_response = hyp_res.body(hyp_body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
+        #[cfg(not(broken_fmt))]
         debug!("sending response: {:#?}", hyp_response);
+
         tx.send(hyp_response).map_err(|_| {
             let msg = "client disconnect before response started";
             io::Error::new(io::ErrorKind::BrokenPipe, msg)

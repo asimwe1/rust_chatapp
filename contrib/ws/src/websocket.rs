@@ -245,8 +245,8 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
 {
     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
         let (mut sink, source) = DuplexStream::new(io, self.ws.config).await.split();
-        let handler = Pin::into_inner(self).handler;
-        let mut stream = std::pin::pin!((handler)(source));
+        let stream = (Pin::into_inner(self).handler)(source);
+        rocket::tokio::pin!(stream);
         while let Some(msg) = stream.next().await {
             let result = match msg {
                 Ok(msg) => sink.send(msg).await,

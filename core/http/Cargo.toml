@@ -13,7 +13,7 @@ keywords = ["rocket", "web", "framework", "http"]
 license = "MIT OR Apache-2.0"
 categories = ["web-programming"]
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.64"
 
 [features]
 default = []
@@ -38,7 +38,7 @@ log = "0.4"
 ref-cast = "1.0"
 uncased = "0.9.6"
 either = "1"
-pear = "0.2.3"
+pear = "0.2.8"
 pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"

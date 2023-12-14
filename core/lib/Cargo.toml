@@ -14,7 +14,7 @@ license = "MIT OR Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.64"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -46,7 +46,7 @@ binascii = "0.1"
 ref-cast = "1.0"
 atomic = "0.5"
 parking_lot = "0.12"
-ubyte = {version = "0.10", features = ["serde"] }
+ubyte = {version = "0.10.2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 figment = { version = "0.10.6", features = ["toml", "env"] }
 rand = "0.8"
@@ -56,7 +56,7 @@ indexmap = { version = "2", features = ["serde"] }
 tempfile = "3"
 async-trait = "0.1.43"
 async-stream = "0.3.2"
-multer = { version = "2", features = ["tokio-io"] }
+multer = { version = "3.0.0", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 state = "0.6"
 
