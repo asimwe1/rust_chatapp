@@ -228,10 +228,10 @@ macro_rules! pub_request_impl {
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
     pub fn identity<C: std::io::Read>(mut self, reader: C) -> Self {
-        use crate::http::{tls::util::load_certs, private::Certificates};
+        use crate::http::{tls::util::load_cert_chain, private::Certificates};
 
         let mut reader = std::io::BufReader::new(reader);
-        let certs = load_certs(&mut reader).map(Certificates::from);
+        let certs = load_cert_chain(&mut reader).map(Certificates::from);
         self._request_mut().connection.client_certificates = certs.ok();
         self
     }

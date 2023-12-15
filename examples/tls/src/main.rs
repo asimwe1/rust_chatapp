@@ -22,5 +22,5 @@ fn rocket() -> _ {
     // Run `./private/gen_certs.sh` to generate a CA and key pairs.
     rocket::build()
         .mount("/", routes![hello, mutual])
-        .attach(redirector::Redirector { port: 3000 })
+        .attach(redirector::Redirector::on(3000))
 }

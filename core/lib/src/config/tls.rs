@@ -631,7 +631,7 @@ mod with_tls_feature {
 
     use crate::http::tls::Config;
     use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
-    use crate::http::tls::rustls::cipher_suite;
+    use crate::http::tls::rustls::crypto::ring::cipher_suite;
 
     use yansi::Paint;
 

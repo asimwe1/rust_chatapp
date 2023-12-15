@@ -7,3 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets"] }
+yansi = "1.0.0-rc.1"

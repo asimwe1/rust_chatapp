@@ -41,7 +41,7 @@ use x509_parser::nom;
 use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error, FromDer};
 use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
 
-use crate::listener::CertificateData;
+use crate::listener::CertificateDer;
 
 /// A type alias for [`Result`](std::result::Result) with the error type set to
 /// [`Error`].
@@ -144,7 +144,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[derive(Debug, PartialEq)]
 pub struct Certificate<'a> {
     x509: X509Certificate<'a>,
-    data: &'a CertificateData,
+    data: &'a CertificateDer,
 }
 
 /// An X.509 Distinguished Name (DN) found in a [`Certificate`].
@@ -224,7 +224,7 @@ impl<'a> Certificate<'a> {
 
     /// PRIVATE: For internal Rocket use only!
     #[doc(hidden)]
-    pub fn parse(chain: &[CertificateData]) -> Result<Certificate<'_>> {
+    pub fn parse(chain: &[CertificateDer]) -> Result<Certificate<'_>> {
         let data = chain.first().ok_or_else(|| Error::Empty)?;
         let x509 = Certificate::parse_one(&data.0)?;
         Ok(Certificate { x509, data })

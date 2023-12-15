@@ -17,36 +17,45 @@ use state::InitCell;
 pub use tokio::net::TcpListener;
 
 /// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-// NOTE: `rustls::Certificate` is exactly isomorphic to `CertificateData`.
-#[doc(inline)]
-#[cfg(feature = "tls")]
-pub use rustls::Certificate as CertificateData;
+#[cfg(not(feature = "tls"))]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CertificateDer(pub(crate) Vec<u8>);
 
 /// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-#[cfg(not(feature = "tls"))]
-#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct CertificateData(pub Vec<u8>);
+#[cfg(feature = "tls")]
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct CertificateDer(pub(crate) rustls::pki_types::CertificateDer<'static>);
 
 /// A collection of raw certificate data.
 #[derive(Clone, Default)]
-pub struct Certificates(Arc<InitCell<Vec<CertificateData>>>);
+pub struct Certificates(Arc<InitCell<Vec<CertificateDer>>>);
 
-impl From<Vec<CertificateData>> for Certificates {
-    fn from(value: Vec<CertificateData>) -> Self {
+impl From<Vec<CertificateDer>> for Certificates {
+    fn from(value: Vec<CertificateDer>) -> Self {
         Certificates(Arc::new(value.into()))
     }
 }
 
+#[cfg(feature = "tls")]
+impl From<Vec<rustls::pki_types::CertificateDer<'static>>> for Certificates {
+    fn from(value: Vec<rustls::pki_types::CertificateDer<'static>>) -> Self {
+        let value: Vec<_> = value.into_iter().map(CertificateDer).collect();
+        Certificates(Arc::new(value.into()))
+    }
+}
+
+#[doc(hidden)]
 impl Certificates {
     /// Set the the raw certificate chain data. Only the first call actually
     /// sets the data; the remaining do nothing.
     #[cfg(feature = "tls")]
-    pub(crate) fn set(&self, data: Vec<CertificateData>) {
+    pub(crate) fn set(&self, data: Vec<CertificateDer>) {
         self.0.set(data);
     }
 
     /// Returns the raw certificate chain data, if any is available.
-    pub fn chain_data(&self) -> Option<&[CertificateData]> {
+    pub fn chain_data(&self) -> Option<&[CertificateDer]> {
         self.0.try_get().map(|v| v.as_slice())
     }
 }

@@ -1,55 +1,47 @@
-use std::io::{self, Cursor, Read};
+use std::io;
 
-use rustls::{Certificate, PrivateKey, RootCertStore};
+use rustls::RootCertStore;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
-fn err(message: impl Into<std::borrow::Cow<'static, str>>) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, message.into())
-}
+use crate::tls::error::{Result, Error, KeyError};
 
 /// Loads certificates from `reader`.
-pub fn load_certs(reader: &mut dyn io::BufRead) -> io::Result<Vec<Certificate>> {
-    let certs = rustls_pemfile::certs(reader).map_err(|_| err("invalid certificate"))?;
-    Ok(certs.into_iter().map(Certificate).collect())
+pub fn load_cert_chain(reader: &mut dyn io::BufRead) -> Result<Vec<CertificateDer<'static>>> {
+    rustls_pemfile::certs(reader)
+        .collect::<Result<_, _>>()
+        .map_err(Error::CertChain)
 }
 
 /// Load and decode the private key  from `reader`.
-pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> {
-    // "rsa" (PKCS1) PEM files have a different first-line header than PKCS8
-    // PEM files, use that to determine the parse function to use.
-    let mut header = String::new();
-    let private_keys_fn = loop {
-        header.clear();
-        if reader.read_line(&mut header)? == 0 {
-            return Err(err("failed to find key header; supported formats are: RSA, PKCS8, SEC1"));
-        }
+pub fn load_key(reader: &mut dyn io::BufRead) -> Result<PrivateKeyDer<'static>> {
+    use rustls_pemfile::Item::*;
 
-        break match header.trim_end() {
-            "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
-            "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
-            "-----BEGIN EC PRIVATE KEY-----" => rustls_pemfile::ec_private_keys,
-            _ => continue,
-        };
-    };
+    let mut keys: Vec<PrivateKeyDer<'static>> = rustls_pemfile::read_all(reader)
+        .map(|result| result.map_err(KeyError::Io)
+            .and_then(|item| match item {
+                Pkcs1Key(key) => Ok(key.into()),
+                Pkcs8Key(key) => Ok(key.into()),
+                Sec1Key(key) => Ok(key.into()),
+                _ => Err(KeyError::BadItem(item))
+            })
+        )
+        .collect::<Result<_, _>>()?;
 
-    let key = private_keys_fn(&mut Cursor::new(header).chain(reader))
-        .map_err(|_| err("invalid key file"))
-        .and_then(|mut keys| match keys.len() {
-            0 => Err(err("no valid keys found; is the file malformed?")),
-            1 => Ok(PrivateKey(keys.remove(0))),
-            n => Err(err(format!("expected 1 key, found {}", n))),
-        })?;
+    if keys.len() != 1 {
+        return Err(KeyError::BadKeyCount(keys.len()).into());
+    }
 
     // Ensure we can use the key.
-    rustls::sign::any_supported_type(&key)
-        .map_err(|_| err("key parsed but is unusable"))
-        .map(|_| key)
+    let key = keys.remove(0);
+    rustls::crypto::ring::sign::any_supported_type(&key).map_err(KeyError::Unsupported)?;
+    Ok(key)
 }
 
 /// Load and decode CA certificates from `reader`.
-pub fn load_ca_certs(reader: &mut dyn io::BufRead) -> io::Result<RootCertStore> {
+pub fn load_ca_certs(reader: &mut dyn io::BufRead) -> Result<RootCertStore> {
     let mut roots = rustls::RootCertStore::empty();
-    for cert in load_certs(reader)? {
-        roots.add(&cert).map_err(|e| err(format!("CA cert error: {}", e)))?;
+    for cert in load_cert_chain(reader)? {
+        roots.add(cert).map_err(Error::CertAuth)?;
     }
 
     Ok(roots)
@@ -66,31 +58,31 @@ mod test {
     }
 
     #[test]
-    fn verify_load_private_keys_of_different_types() -> io::Result<()> {
+    fn verify_load_private_keys_of_different_types() -> Result<()> {
         let rsa_sha256_key = tls_example_key!("rsa_sha256_key.pem");
         let ecdsa_nistp256_sha256_key = tls_example_key!("ecdsa_nistp256_sha256_key_pkcs8.pem");
         let ecdsa_nistp384_sha384_key = tls_example_key!("ecdsa_nistp384_sha384_key_pkcs8.pem");
         let ed2551_key = tls_example_key!("ed25519_key.pem");
 
-        load_private_key(&mut Cursor::new(rsa_sha256_key))?;
-        load_private_key(&mut Cursor::new(ecdsa_nistp256_sha256_key))?;
-        load_private_key(&mut Cursor::new(ecdsa_nistp384_sha384_key))?;
-        load_private_key(&mut Cursor::new(ed2551_key))?;
+        load_key(&mut &rsa_sha256_key[..])?;
+        load_key(&mut &ecdsa_nistp256_sha256_key[..])?;
+        load_key(&mut &ecdsa_nistp384_sha384_key[..])?;
+        load_key(&mut &ed2551_key[..])?;
 
         Ok(())
     }
 
     #[test]
-    fn verify_load_certs_of_different_types() -> io::Result<()> {
+    fn verify_load_certs_of_different_types() -> Result<()> {
         let rsa_sha256_cert = tls_example_key!("rsa_sha256_cert.pem");
         let ecdsa_nistp256_sha256_cert = tls_example_key!("ecdsa_nistp256_sha256_cert.pem");
         let ecdsa_nistp384_sha384_cert = tls_example_key!("ecdsa_nistp384_sha384_cert.pem");
         let ed2551_cert = tls_example_key!("ed25519_cert.pem");
 
-        load_certs(&mut Cursor::new(rsa_sha256_cert))?;
-        load_certs(&mut Cursor::new(ecdsa_nistp256_sha256_cert))?;
-        load_certs(&mut Cursor::new(ecdsa_nistp384_sha384_cert))?;
-        load_certs(&mut Cursor::new(ed2551_cert))?;
+        load_cert_chain(&mut &rsa_sha256_cert[..])?;
+        load_cert_chain(&mut &ecdsa_nistp256_sha256_cert[..])?;
+        load_cert_chain(&mut &ecdsa_nistp384_sha384_cert[..])?;
+        load_cert_chain(&mut &ed2551_cert[..])?;
 
         Ok(())
     }

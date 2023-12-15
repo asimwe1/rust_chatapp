@@ -76,6 +76,9 @@ pub struct Error {
 pub enum ErrorKind {
     /// Binding to the provided address/port failed.
     Bind(io::Error),
+    /// Binding via TLS to the provided address/port failed.
+    #[cfg(feature = "tls")]
+    TlsBind(crate::http::tls::error::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// A valid [`Config`](crate::Config) could not be extracted from the
@@ -234,6 +237,12 @@ impl Error {
 
                 "aborting due to failed shutdown"
             }
+            #[cfg(feature = "tls")]
+            ErrorKind::TlsBind(e) => {
+                error!("Rocket failed to bind via TLS to network socket.");
+                info_!("{}", e);
+                "aborting due to TLS bind error"
+            }
         }
     }
 }
@@ -244,15 +253,17 @@ impl fmt::Display for ErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ErrorKind::Bind(e) => write!(f, "binding failed: {}", e),
-            ErrorKind::Io(e) => write!(f, "I/O error: {}", e),
+            ErrorKind::Bind(e) => write!(f, "binding failed: {e}"),
+            ErrorKind::Io(e) => write!(f, "I/O error: {e}"),
             ErrorKind::Collisions(_) => "collisions detected".fmt(f),
             ErrorKind::FailedFairings(_) => "launch fairing(s) failed".fmt(f),
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
             ErrorKind::Config(_) => "failed to extract configuration".fmt(f),
             ErrorKind::SentinelAborts(_) => "sentinel(s) aborted".fmt(f),
-            ErrorKind::Shutdown(_, Some(e)) => write!(f, "shutdown failed: {}", e),
+            ErrorKind::Shutdown(_, Some(e)) => write!(f, "shutdown failed: {e}"),
             ErrorKind::Shutdown(_, None) => "shutdown failed".fmt(f),
+            #[cfg(feature = "tls")]
+            ErrorKind::TlsBind(e) => write!(f, "TLS bind failed: {e}"),
         }
     }
 }
