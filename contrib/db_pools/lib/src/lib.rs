@@ -107,8 +107,8 @@
 //!
 //! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
 //! |----------|-----------------------------|-----------------------------|--------------------------------------|
-//! | Postgres | `deadpool_postgres` (v0.10) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
-//! | Redis    | `deadpool_redis` (v0.11)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
+//! | Postgres | `deadpool_postgres` (v0.12) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
+//! | Redis    | `deadpool_redis` (v0.14)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
 //!
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.

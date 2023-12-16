@@ -156,9 +156,7 @@ pub trait Pool: Sized + Send + Sync + 'static {
 mod deadpool_postgres {
     use deadpool::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
     use super::{Duration, Error, Config, Figment};
-
-    #[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))]
-    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+    use rocket::Either;
 
     pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
         fn new(config: &Config) -> Result<Self, Self::Error>;
@@ -176,6 +174,50 @@ mod deadpool_postgres {
         fn new(config: &Config) -> Result<Self, Self::Error> {
             Self::new(config.url.as_str())
         }
+    }
+
+    #[rocket::async_trait]
+    impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
+        where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
+    {
+        type Error = Error<Either<M::Error, BuildError>, PoolError<M::Error>>;
+
+        type Connection = C;
+
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            let config: Config = figment.extract()?;
+            let manager = M::new(&config).map_err(|e| Error::Init(Either::Left(e)))?;
+
+            Pool::builder(manager)
+                .max_size(config.max_connections)
+                .wait_timeout(Some(Duration::from_secs(config.connect_timeout)))
+                .create_timeout(Some(Duration::from_secs(config.connect_timeout)))
+                .recycle_timeout(config.idle_timeout.map(Duration::from_secs))
+                .runtime(Runtime::Tokio1)
+                .build()
+                .map_err(|e| Error::Init(Either::Right(e)))
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            self.get().await.map_err(Error::Get)
+        }
+
+        async fn close(&self) {
+            <Pool<M, C>>::close(self)
+        }
+    }
+}
+
+// TODO: Remove when new release of diesel-async with deadpool 0.10 is out.
+#[cfg(all(feature = "deadpool_09", any(feature = "diesel_postgres", feature = "diesel_mysql")))]
+mod deadpool_old {
+    use deadpool_09::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
+    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+
+    use super::{Duration, Error, Config, Figment};
+
+    pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
+        fn new(config: &Config) -> Result<Self, Self::Error>;
     }
 
     #[cfg(feature = "diesel_postgres")]
