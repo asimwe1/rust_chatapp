@@ -27,7 +27,7 @@ values:
 | `ip_header`     | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
 | `keep_alive`    | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
 | `log_level`     | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
-| `cli_colors`    | `bool`            | Whether to use colors and emoji when logging.   | `true`                  |
+| `cli_colors`    | [`CliColors`]     | Whether to use colors and emoji when logging.   | `"auto"`                |
 | `secret_key`    | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
 | `tls`           | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
 | `limits`        | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
@@ -68,6 +68,7 @@ profile supplant any values with the same name in any profile.
 [`Limits`]: @api/rocket/data/struct.Limits.html
 [`Limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
 [`SecretKey`]: @api/rocket/config/struct.SecretKey.html
+[`CliColors`]: @api/rocket/config/enum.CliColors.html
 [`TlsConfig`]: @api/rocket/config/struct.TlsConfig.html
 [`Shutdown`]: @api/rocket/config/struct.Shutdown.html
 [`Shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields

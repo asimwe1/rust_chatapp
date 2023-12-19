@@ -116,7 +116,8 @@ pub struct Config {
     pub shutdown: Shutdown,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
-    /// Whether to use colors and emoji when logging. **(default: `auto`)**
+    /// Whether to use colors and emoji when logging. **(default:
+    /// [`CliColors::Auto`])**
     pub cli_colors: CliColors,
     /// PRIVATE: This structure may grow (but never change otherwise) in a
     /// non-breaking release. As such, constructing this structure should

@@ -268,118 +268,103 @@ mod tests {
                 ..Config::default()
             });
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_cli_colors() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
                 cli_colors = "never"
             "#)?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: CliColors::Never,
-                ..Config::default()
-            });
+            assert_eq!(config.cli_colors, CliColors::Never);
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
                 cli_colors = "auto"
             "#)?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: CliColors::Auto,
-                ..Config::default()
-            });
+            assert_eq!(config.cli_colors, CliColors::Auto);
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
                 cli_colors = "always"
             "#)?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: CliColors::Always,
-                ..Config::default()
-            });
+            assert_eq!(config.cli_colors, CliColors::Always);
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
                 cli_colors = true
             "#)?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: CliColors::Auto,
-                ..Config::default()
-            });
+            assert_eq!(config.cli_colors, CliColors::Auto);
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
+                cli_colors = false
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Never);
+
+            jail.create_file("Rocket.toml", r#"[default]"#)?;
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Auto);
+
+            jail.create_file("Rocket.toml", r#"
+                [default]
                 cli_colors = 1
             "#)?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: CliColors::Auto,
-                ..Config::default()
-            });
+            assert_eq!(config.cli_colors, CliColors::Auto);
+
+            jail.create_file("Rocket.toml", r#"
+                [default]
+                cli_colors = 0
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Never);
+
+            jail.set_env("ROCKET_CLI_COLORS", 1);
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Auto);
+
+            jail.set_env("ROCKET_CLI_COLORS", 0);
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Never);
+
+            jail.set_env("ROCKET_CLI_COLORS", true);
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Auto);
+
+            jail.set_env("ROCKET_CLI_COLORS", false);
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Never);
+
+            jail.set_env("ROCKET_CLI_COLORS", "always");
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Always);
+
+            jail.set_env("ROCKET_CLI_COLORS", "NEveR");
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Never);
+
+            jail.set_env("ROCKET_CLI_COLORS", "auTO");
+            let config = Config::from(Config::figment());
+            assert_eq!(config.cli_colors, CliColors::Auto);
 
             Ok(())
-        });
+        })
     }
 
     #[test]
