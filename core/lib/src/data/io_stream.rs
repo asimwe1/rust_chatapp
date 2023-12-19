@@ -3,8 +3,8 @@ use std::task::{Context, Poll};
 use std::pin::Pin;
 
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-
-use crate::http::hyper::upgrade::Upgraded;
+use hyper::upgrade::Upgraded;
+use hyper_util::rt::TokioIo;
 
 /// A bidirectional, raw stream to the client.
 ///
@@ -28,7 +28,7 @@ pub struct IoStream {
 
 /// Just in case we want to add stream kinds in the future.
 enum IoStreamKind {
-    Upgraded(Upgraded)
+    Upgraded(TokioIo<Upgraded>)
 }
 
 /// An upgraded connection I/O handler.
@@ -51,7 +51,7 @@ enum IoStreamKind {
 ///
 /// #[rocket::async_trait]
 /// impl IoHandler for EchoHandler {
-///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+///     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
 ///         let (mut reader, mut writer) = io::split(io);
 ///         io::copy(&mut reader, &mut writer).await?;
 ///         Ok(())
@@ -68,13 +68,20 @@ enum IoStreamKind {
 #[crate::async_trait]
 pub trait IoHandler: Send {
     /// Performs the raw I/O.
-    async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()>;
+    async fn io(self: Box<Self>, io: IoStream) -> io::Result<()>;
+}
+
+#[crate::async_trait]
+impl IoHandler for () {
+    async fn io(self: Box<Self>, _: IoStream) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[doc(hidden)]
 impl From<Upgraded> for IoStream {
     fn from(io: Upgraded) -> Self {
-        IoStream { kind: IoStreamKind::Upgraded(io) }
+        IoStream { kind: IoStreamKind::Upgraded(TokioIo::new(io)) }
     }
 }
 

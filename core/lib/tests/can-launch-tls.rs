@@ -1,8 +1,9 @@
 #![cfg(feature = "tls")]
 
 use rocket::fs::relative;
-use rocket::config::{Config, TlsConfig, CipherSuite};
 use rocket::local::asynchronous::Client;
+use rocket::tls::{TlsConfig, CipherSuite};
+use rocket::figment::providers::Serialized;
 
 #[rocket::async_test]
 async fn can_launch_tls() {
@@ -15,9 +16,8 @@ async fn can_launch_tls() {
             CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
         ]);
 
-    let rocket = rocket::custom(Config { tls: Some(tls), ..Config::debug_default() });
-    let client = Client::debug(rocket).await.unwrap();
-
+    let config = rocket::Config::figment().merge(Serialized::defaults(tls));
+    let client = Client::debug(rocket::custom(config)).await.unwrap();
     client.rocket().shutdown().notify();
     client.rocket().shutdown().await;
 }

@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 
-use crate::Request;
+use crate::request::{Request, ConnectionMeta};
 use crate::local::blocking::Client;
-use crate::http::hyper;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({
         // Create a new Hyper request. Add all of the passed in headers.
         let mut req = hyper::Request::get("/test").body(()).unwrap();
-        $($(req.headers_mut().append($key, hyper::HeaderValue::from_str($value).unwrap());)+)+
+        $($(
+            req.headers_mut()
+                .append($key, hyper::header::HeaderValue::from_str($value).unwrap());
+        )+)+
 
         // Build up what we expect the headers to actually be.
         let mut expected = HashMap::new();
@@ -17,7 +19,8 @@ macro_rules! assert_headers {
         // Create a valid `Rocket` and convert the hyper req to a Rocket one.
         let client = Client::debug_with(vec![]).unwrap();
         let hyper = req.into_parts().0;
-        let req = Request::from_hyp(client.rocket(), &hyper, None).unwrap();
+        let meta = ConnectionMeta::default();
+        let req = Request::from_hyp(client.rocket(), &hyper, meta).unwrap();
 
         // Dispatch the request and check that the headers match.
         let actual_headers = req.headers();

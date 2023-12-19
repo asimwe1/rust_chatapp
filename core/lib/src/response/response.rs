@@ -1,7 +1,6 @@
 use std::{fmt, str};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::pin::Pin;
 
 use tokio::io::{AsyncRead, AsyncSeek};
 
@@ -146,19 +145,18 @@ impl<'r> Builder<'r> {
     /// potentially different values to be present in the `Response`.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType) and
-    /// [hyper::header types](crate::http::hyper::header).
+    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType)
+    /// and [`Accept`](crate::http::Accept).
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::Header;
-    /// use rocket::http::hyper::header::ACCEPT;
+    /// use rocket::http::{Header, Accept};
     ///
     /// let response = Response::build()
-    ///     .header_adjoin(Header::new(ACCEPT.as_str(), "application/json"))
-    ///     .header_adjoin(Header::new(ACCEPT.as_str(), "text/plain"))
+    ///     .header_adjoin(Header::new("Accept", "application/json"))
+    ///     .header_adjoin(Accept::XML)
     ///     .finalize();
     ///
     /// assert_eq!(response.headers().get("Accept").count(), 2);
@@ -287,7 +285,7 @@ impl<'r> Builder<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -488,7 +486,7 @@ pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
     body: Body<'r>,
-    upgrade: HashMap<Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>>,
+    upgrade: HashMap<Uncased<'r>, Box<dyn IoHandler + 'r>>,
 }
 
 impl<'r> Response<'r> {
@@ -700,23 +698,22 @@ impl<'r> Response<'r> {
     /// name `header.name`, another header with the same name and value
     /// `header.value` is added. The type of `header` can be any type that
     /// implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](crate::http::ContentType) and [`hyper::header`
-    /// types](crate::http::hyper::header).
+    /// [`ContentType`](crate::http::ContentType),
+    /// [`Accept`](crate::http::Accept).
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::Header;
-    /// use rocket::http::hyper::header::ACCEPT;
+    /// use rocket::http::{Header, Accept};
     ///
     /// let mut response = Response::new();
-    /// response.adjoin_header(Header::new(ACCEPT.as_str(), "application/json"));
-    /// response.adjoin_header(Header::new(ACCEPT.as_str(), "text/plain"));
+    /// response.adjoin_header(Accept::JSON);
+    /// response.adjoin_header(Header::new("Accept", "text/plain"));
     ///
     /// let mut accept_headers = response.headers().iter();
-    /// assert_eq!(accept_headers.next(), Some(Header::new(ACCEPT.as_str(), "application/json")));
-    /// assert_eq!(accept_headers.next(), Some(Header::new(ACCEPT.as_str(), "text/plain")));
+    /// assert_eq!(accept_headers.next(), Some(Header::new("Accept", "application/json")));
+    /// assert_eq!(accept_headers.next(), Some(Header::new("Accept", "text/plain")));
     /// assert_eq!(accept_headers.next(), None);
     /// ```
     #[inline(always)]
@@ -801,10 +798,10 @@ impl<'r> Response<'r> {
     /// the comma-separated protocols any of the strings in `I`. Returns
     /// `Ok(None)` if `self` doesn't support any kind of upgrade. Returns
     /// `Err(_)` if `protocols` is non-empty but no match was found in `self`.
-    pub(crate) fn take_upgrade<I: Iterator<Item = &'r str>>(
+    pub(crate) fn search_upgrades<'a, I: Iterator<Item = &'a str>>(
         &mut self,
         protocols: I
-    ) -> Result<Option<(Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>)>, ()> {
+    ) -> Result<Option<(Uncased<'r>, Box<dyn IoHandler + 'r>)>, ()> {
         if self.upgrade.is_empty() {
             return Ok(None);
         }
@@ -839,7 +836,7 @@ impl<'r> Response<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -854,7 +851,7 @@ impl<'r> Response<'r> {
     /// assert!(response.upgrade("raw-echo").is_some());
     /// # })
     /// ```
-    pub fn upgrade(&mut self, proto: &str) -> Option<Pin<&mut (dyn IoHandler + 'r)>> {
+    pub fn upgrade(&mut self, proto: &str) -> Option<&mut (dyn IoHandler + 'r)> {
         self.upgrade.get_mut(proto.as_uncased()).map(|h| h.as_mut())
     }
 
@@ -972,7 +969,7 @@ impl<'r> Response<'r> {
     ///
     /// #[rocket::async_trait]
     /// impl IoHandler for EchoHandler {
-    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
     ///         let (mut reader, mut writer) = io::split(io);
     ///         io::copy(&mut reader, &mut writer).await?;
     ///         Ok(())
@@ -990,7 +987,7 @@ impl<'r> Response<'r> {
     pub fn add_upgrade<N, H>(&mut self, protocol: N, handler: H)
         where N: Into<Uncased<'r>>, H: IoHandler + 'r
     {
-        self.upgrade.insert(protocol.into(), Box::pin(handler));
+        self.upgrade.insert(protocol.into(), Box::new(handler));
     }
 
     /// Sets the body's maximum chunk size to `size` bytes.

@@ -126,10 +126,11 @@ function test_contrib() {
 
 function test_core() {
   FEATURES=(
+    tokio-macros
+    http2
     secrets
     tls
     mtls
-    http2
     json
     msgpack
     uuid

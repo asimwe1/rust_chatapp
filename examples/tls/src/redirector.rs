@@ -1,33 +1,38 @@
 //! Redirect all HTTP requests to HTTPs.
 
-use std::sync::OnceLock;
+use std::net::SocketAddr;
 
 use rocket::http::Status;
 use rocket::log::LogLevel;
-use rocket::{route, Error, Request, Data, Route, Orbit, Rocket, Ignite, Config};
+use rocket::{route, Error, Request, Data, Route, Orbit, Rocket, Ignite};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::response::Redirect;
 
+use yansi::Paint;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Redirector(u16);
+
 #[derive(Debug, Clone)]
-pub struct Redirector {
-    pub listen_port: u16,
-    pub tls_port: OnceLock<u16>,
+pub struct Config {
+    server: rocket::Config,
+    tls_addr: SocketAddr,
 }
 
 impl Redirector {
     pub fn on(port: u16) -> Self {
-        Redirector { listen_port: port, tls_port: OnceLock::new() }
+        Redirector(port)
     }
 
     // Route function that gets called on every single request.
     fn redirect<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
         // FIXME: Check the host against a whitelist!
-        let redirector = req.rocket().state::<Self>().expect("managed Self");
+        let config = req.rocket().state::<Config>().expect("managed Self");
         if let Some(host) = req.host() {
             let domain = host.domain();
-            let https_uri = match redirector.tls_port.get() {
-                Some(443) | None => format!("https://{domain}{}", req.uri()),
-                Some(port) => format!("https://{domain}:{port}{}", req.uri()),
+            let https_uri = match config.tls_addr.port() {
+                443 => format!("https://{domain}{}", req.uri()),
+                port => format!("https://{domain}:{port}{}", req.uri()),
             };
 
             route::Outcome::from(req, Redirect::permanent(https_uri)).pin()
@@ -37,21 +42,12 @@ impl Redirector {
     }
 
     // Launch an instance of Rocket than handles redirection on `self.port`.
-    pub async fn try_launch(self, mut config: Config) -> Result<Rocket<Ignite>, Error> {
-        use yansi::Paint;
+    pub async fn try_launch(self, config: Config) -> Result<Rocket<Ignite>, Error> {
         use rocket::http::Method::*;
 
-        // Determine the port TLS is being served on.
-        let tls_port = self.tls_port.get_or_init(|| config.port);
-
-        // Adjust config for redirector: disable TLS, set port, disable logging.
-        config.tls = None;
-        config.port = self.listen_port;
-        config.log_level = LogLevel::Critical;
-
         info!("{}{}", "🔒 ".mask(), "HTTP -> HTTPS Redirector:".magenta());
-        info_!("redirecting on insecure port {} to TLS port {}",
-            self.listen_port.yellow(), tls_port.green());
+        info_!("redirecting insecure port {} to TLS port {}",
+            self.0.yellow(), config.tls_addr.port().green());
 
         // Build a vector of routes to `redirect` on `<path..>` for each method.
         let redirects = [Get, Put, Post, Delete, Options, Head, Trace, Connect, Patch]
@@ -59,10 +55,11 @@ impl Redirector {
             .map(|m| Route::new(m, "/<path..>", Self::redirect))
             .collect::<Vec<_>>();
 
-        rocket::custom(config)
-            .manage(self)
+        let addr = SocketAddr::new(config.tls_addr.ip(), self.0);
+        rocket::custom(&config.server)
+            .manage(config)
             .mount("/", redirects)
-            .launch()
+            .launch_on(addr)
             .await
     }
 }
@@ -76,8 +73,24 @@ impl Fairing for Redirector {
         }
     }
 
-    async fn on_liftoff(&self, rkt: &Rocket<Orbit>) {
-        let (this, shutdown, config) = (self.clone(), rkt.shutdown(), rkt.config().clone());
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
+        let Some(tls_addr) = rocket.endpoint().tls().and_then(|tls| tls.tcp()) else {
+            info!("{}{}", "🔒 ".mask(), "HTTP -> HTTPS Redirector:".magenta());
+            warn_!("Main instance is not being served over TLS/TCP.");
+            warn_!("Redirector refusing to start.");
+            return;
+        };
+
+        let config = Config {
+            tls_addr,
+            server: rocket::Config {
+                log_level: LogLevel::Critical,
+                ..rocket.config().clone()
+            },
+        };
+
+        let this = *self;
+        let shutdown = rocket.shutdown();
         let _ = rocket::tokio::spawn(async move {
             if let Err(e) = this.try_launch(config).await {
                 error!("Failed to start HTTP -> HTTPS redirector.");

@@ -331,7 +331,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let internal_uri_macro = internal_uri_macro_decl(&route);
     let responder_outcome = responder_outcome_expr(&route);
 
-    let method = route.attr.method;
+    let method = &route.attr.method;
     let uri = route.attr.uri.to_string();
     let rank = Optional(route.attr.rank);
     let format = Optional(route.attr.format.as_ref());

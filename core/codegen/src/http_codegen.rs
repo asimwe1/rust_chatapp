@@ -13,7 +13,7 @@ pub struct Status(pub http::Status);
 #[derive(Debug)]
 pub struct MediaType(pub http::MediaType);
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Method(pub http::Method);
 
 #[derive(Clone, Debug)]
@@ -108,7 +108,7 @@ const VALID_METHODS: &[http::Method] = &[
 impl FromMeta for Method {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let span = meta.value_span();
-        let help_text = format!("method must be one of: {}", VALID_METHODS_STR);
+        let help_text = format!("method must be one of: {VALID_METHODS_STR}");
 
         if let MetaItem::Path(path) = meta {
             if let Some(ident) = path.last_ident() {
@@ -131,19 +131,13 @@ impl FromMeta for Method {
 
 impl ToTokens for Method {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let method_tokens = match self.0 {
-            http::Method::Get => quote!(::rocket::http::Method::Get),
-            http::Method::Put => quote!(::rocket::http::Method::Put),
-            http::Method::Post => quote!(::rocket::http::Method::Post),
-            http::Method::Delete => quote!(::rocket::http::Method::Delete),
-            http::Method::Options => quote!(::rocket::http::Method::Options),
-            http::Method::Head => quote!(::rocket::http::Method::Head),
-            http::Method::Trace => quote!(::rocket::http::Method::Trace),
-            http::Method::Connect => quote!(::rocket::http::Method::Connect),
-            http::Method::Patch => quote!(::rocket::http::Method::Patch),
-        };
+        let mut chars = self.0.as_str().chars();
+        let variant_str = chars.next()
+            .map(|c| c.to_ascii_uppercase().to_string() + &chars.as_str().to_lowercase())
+            .unwrap_or_default();
 
-        tokens.extend(method_tokens);
+        let variant = syn::Ident::new(&variant_str, Span::call_site());
+        tokens.extend(quote!(::rocket::http::Method::#variant));
     }
 }
 

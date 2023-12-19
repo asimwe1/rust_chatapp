@@ -68,7 +68,12 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub $($prefix)? fn tracked<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
-        Self::_new(rocket, true) $(.$suffix)?
+        Self::_new(rocket, true, false) $(.$suffix)?
+    }
+
+    #[inline(always)]
+    pub $($prefix)? fn tracked_secure<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
+        Self::_new(rocket, true, true) $(.$suffix)?
     }
 
     /// Construct a new `Client` from an instance of `Rocket` _without_
@@ -92,7 +97,11 @@ macro_rules! pub_client_impl {
     /// let client = Client::untracked(rocket);
     /// ```
     pub $($prefix)? fn untracked<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
-        Self::_new(rocket, false) $(.$suffix)?
+        Self::_new(rocket, false, false) $(.$suffix)?
+    }
+
+    pub $($prefix)? fn untracked_secure<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
+        Self::_new(rocket, false, true) $(.$suffix)?
     }
 
     /// Terminates `Client` by initiating a graceful shutdown via
@@ -133,15 +142,6 @@ macro_rules! pub_client_impl {
             .select(config::Config::DEBUG_PROFILE);
 
         Self::tracked(rocket.configure(figment)) $(.$suffix)?
-    }
-
-    /// Deprecated alias to [`Client::tracked()`].
-    #[deprecated(
-        since = "0.6.0-dev",
-        note = "choose between `Client::untracked()` and `Client::tracked()`"
-    )]
-    pub $($prefix)? fn new<P: Phase>(rocket: Rocket<P>) -> Result<Self, Error> {
-        Self::tracked(rocket) $(.$suffix)?
     }
 
     /// Returns a reference to the `Rocket` this client is creating requests

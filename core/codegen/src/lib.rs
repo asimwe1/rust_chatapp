@@ -1497,3 +1497,10 @@ pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
 pub fn export(input: TokenStream) -> TokenStream {
     emit!(bang::export_internal(input))
 }
+
+/// Private Rocket attribute: `async_bound(Bounds + On + Returned + Future)`.
+#[doc(hidden)]
+#[proc_macro_attribute]
+pub fn async_bound(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_bound::async_bound(args, input))
+}

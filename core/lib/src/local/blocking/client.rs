@@ -30,7 +30,7 @@ pub struct Client {
 }
 
 impl Client {
-    fn _new<P: Phase>(rocket: Rocket<P>, tracked: bool) -> Result<Client, Error> {
+    fn _new<P: Phase>(rocket: Rocket<P>, tracked: bool, secure: bool) -> Result<Client, Error> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name("rocket-local-client-worker-thread")
             .worker_threads(1)
@@ -39,7 +39,7 @@ impl Client {
             .expect("create tokio runtime");
 
         // Initialize the Rocket instance
-        let inner = Some(runtime.block_on(asynchronous::Client::_new(rocket, tracked))?);
+        let inner = Some(runtime.block_on(asynchronous::Client::_new(rocket, tracked, secure))?);
         Ok(Self { inner, runtime: RefCell::new(runtime) })
     }
 
@@ -73,7 +73,7 @@ impl Client {
 
     #[inline(always)]
     pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
-        where F: FnOnce(&crate::http::private::cookie::CookieJar) -> T
+        where F: FnOnce(&cookie::CookieJar) -> T
     {
         self.inner()._with_raw_cookies(f)
     }

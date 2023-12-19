@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, time::Duration};
 
 #[cfg(unix)]
 use std::collections::HashSet;
@@ -291,6 +291,14 @@ impl Default for Shutdown {
 }
 
 impl Shutdown {
+    pub(crate) fn grace(&self) -> Duration {
+        Duration::from_secs(self.grace as u64)
+    }
+
+    pub(crate) fn mercy(&self) -> Duration {
+        Duration::from_secs(self.mercy as u64)
+    }
+
     #[cfg(unix)]
     pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
         use tokio_stream::{StreamExt, StreamMap, wrappers::SignalStream};

@@ -3,8 +3,6 @@ use std::str::FromStr;
 
 use self::Method::*;
 
-use crate::hyper;
-
 // TODO: Support non-standard methods, here and in codegen?
 
 /// Representation of HTTP methods.
@@ -29,6 +27,7 @@ use crate::hyper;
 /// }
 /// # }
 /// ```
+#[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     /// The `GET` variant.
@@ -52,23 +51,6 @@ pub enum Method {
 }
 
 impl Method {
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
-    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
-        match *method {
-            hyper::Method::GET => Some(Get),
-            hyper::Method::PUT => Some(Put),
-            hyper::Method::POST => Some(Post),
-            hyper::Method::DELETE => Some(Delete),
-            hyper::Method::OPTIONS => Some(Options),
-            hyper::Method::HEAD => Some(Head),
-            hyper::Method::TRACE => Some(Trace),
-            hyper::Method::CONNECT => Some(Connect),
-            hyper::Method::PATCH => Some(Patch),
-            _ => None,
-        }
-    }
-
     /// Returns `true` if an HTTP request with the method represented by `self`
     /// always supports a payload.
     ///

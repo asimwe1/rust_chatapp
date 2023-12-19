@@ -5,7 +5,7 @@ use std::pin::Pin;
 use futures::FutureExt;
 
 use crate::request::{FromRequest, Outcome, Request};
-use crate::trip_wire::TripWire;
+use crate::util::TripWire;
 
 /// A request guard and future for graceful shutdown.
 ///

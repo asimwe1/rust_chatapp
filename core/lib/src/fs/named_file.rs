@@ -2,7 +2,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
 
-use tokio::fs::File;
+use tokio::fs::{File, OpenOptions};
 
 use crate::request::Request;
 use crate::response::{self, Responder};
@@ -60,11 +60,16 @@ impl NamedFile {
     /// }
     /// ```
     pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<NamedFile> {
-        // FIXME: Grab the file size here and prohibit `seek`ing later (or else
+        // TODO: Grab the file size here and prohibit `seek`ing later (or else
         // the file's effective size may change), to save on the cost of doing
         // all of those `seek`s to determine the file size. But, what happens if
         // the file gets changed between now and then?
         let file = File::open(path.as_ref()).await?;
+        Ok(NamedFile(path.as_ref().to_path_buf(), file))
+    }
+
+    pub async fn open_with<P: AsRef<Path>>(path: P, opts: &OpenOptions) -> io::Result<NamedFile> {
+        let file = opts.open(path.as_ref()).await?;
         Ok(NamedFile(path.as_ref().to_path_buf(), file))
     }
 

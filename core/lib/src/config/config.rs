@@ -1,5 +1,3 @@
-use std::net::{IpAddr, Ipv4Addr};
-
 use figment::{Figment, Profile, Provider, Metadata, error::Result};
 use figment::providers::{Serialized, Env, Toml, Format};
 use figment::value::{Map, Dict, magic::RelativePathBuf};
@@ -11,9 +9,6 @@ use crate::config::{LogLevel, Shutdown, Ident, CliColors};
 use crate::request::{self, Request, FromRequest};
 use crate::http::uncased::Uncased;
 use crate::data::Limits;
-
-#[cfg(feature = "tls")]
-use crate::config::TlsConfig;
 
 #[cfg(feature = "secrets")]
 use crate::config::SecretKey;
@@ -66,10 +61,6 @@ pub struct Config {
     /// set to the extracting Figment's selected `Profile`._
     #[serde(skip)]
     pub profile: Profile,
-    /// IP address to serve on. **(default: `127.0.0.1`)**
-    pub address: IpAddr,
-    /// Port to serve on. **(default: `8000`)**
-    pub port: u16,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
     ///
     /// _**Note:** Rocket only reads this value from sources in the [default
@@ -121,10 +112,6 @@ pub struct Config {
     pub temp_dir: RelativePathBuf,
     /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
     pub keep_alive: u32,
-    /// The TLS configuration, if any. **(default: `None`)**
-    #[cfg(feature = "tls")]
-    #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
-    pub tls: Option<TlsConfig>,
     /// The secret key for signing and encrypting. **(default: `0`)**
     ///
     /// _**Note:** This field _always_ serializes as a 256-bit array of `0`s to
@@ -148,7 +135,6 @@ pub struct Config {
     /// use rocket::Config;
     ///
     /// let config = Config {
-    ///     port: 1024,
     ///     keep_alive: 10,
     ///     ..Default::default()
     /// };
@@ -204,8 +190,6 @@ impl Config {
     pub fn debug_default() -> Config {
         Config {
             profile: Self::DEBUG_PROFILE,
-            address: Ipv4Addr::new(127, 0, 0, 1).into(),
-            port: 8000,
             workers: num_cpus::get(),
             max_blocking: 512,
             ident: Ident::default(),
@@ -214,8 +198,6 @@ impl Config {
             limits: Limits::default(),
             temp_dir: std::env::temp_dir().into(),
             keep_alive: 5,
-            #[cfg(feature = "tls")]
-            tls: None,
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
             shutdown: Shutdown::default(),
@@ -331,59 +313,6 @@ impl Config {
         Self::try_from(provider).unwrap_or_else(bail_with_config_error)
     }
 
-    /// Returns `true` if TLS is enabled.
-    ///
-    /// TLS is enabled when the `tls` feature is enabled and TLS has been
-    /// configured with at least one ciphersuite. Note that without changing
-    /// defaults, all supported ciphersuites are enabled in the recommended
-    /// configuration.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let config = rocket::Config::default();
-    /// if config.tls_enabled() {
-    ///     println!("TLS is enabled!");
-    /// } else {
-    ///     println!("TLS is disabled.");
-    /// }
-    /// ```
-    pub fn tls_enabled(&self) -> bool {
-        #[cfg(feature = "tls")] {
-            self.tls.as_ref().map_or(false, |tls| !tls.ciphers.is_empty())
-        }
-
-        #[cfg(not(feature = "tls"))] { false }
-    }
-
-    /// Returns `true` if mTLS is enabled.
-    ///
-    /// mTLS is enabled when TLS is enabled ([`Config::tls_enabled()`]) _and_
-    /// the `mtls` feature is enabled _and_ mTLS has been configured with a CA
-    /// certificate chain.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let config = rocket::Config::default();
-    /// if config.mtls_enabled() {
-    ///     println!("mTLS is enabled!");
-    /// } else {
-    ///     println!("mTLS is disabled.");
-    /// }
-    /// ```
-    pub fn mtls_enabled(&self) -> bool {
-        if !self.tls_enabled() {
-            return false;
-        }
-
-        #[cfg(feature = "mtls")] {
-            self.tls.as_ref().map_or(false, |tls| tls.mutual.is_some())
-        }
-
-        #[cfg(not(feature = "mtls"))] { false }
-    }
-
     #[cfg(feature = "secrets")]
     pub(crate) fn known_secret_key_used(&self) -> bool {
         const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
@@ -420,8 +349,6 @@ impl Config {
 
         self.trace_print(figment);
         launch_meta!("{}Configured for {}.", "🔧 ".emoji(), self.profile.underline());
-        launch_meta_!("address: {}", self.address.paint(VAL));
-        launch_meta_!("port: {}", self.port.paint(VAL));
         launch_meta_!("workers: {}", self.workers.paint(VAL));
         launch_meta_!("max blocking threads: {}", self.max_blocking.paint(VAL));
         launch_meta_!("ident: {}", self.ident.paint(VAL));
@@ -443,12 +370,6 @@ impl Config {
         match self.keep_alive {
             0 => launch_meta_!("keep-alive: {}", "disabled".paint(VAL)),
             ka => launch_meta_!("keep-alive: {}{}", ka.paint(VAL), "s".paint(VAL)),
-        }
-
-        match (self.tls_enabled(), self.mtls_enabled()) {
-            (true, true) => launch_meta_!("tls: {}", "enabled w/mtls".paint(VAL)),
-            (true, false) => launch_meta_!("tls: {} w/o mtls", "enabled".paint(VAL)),
-            (false, _) => launch_meta_!("tls: {}", "disabled".paint(VAL)),
         }
 
         launch_meta_!("shutdown: {}", self.shutdown.paint(VAL));
@@ -519,12 +440,6 @@ impl Config {
     /// This isn't `pub` because setting it directly does nothing.
     const PROFILE: &'static str = "profile";
 
-    /// The stringy parameter name for setting/extracting [`Config::address`].
-    pub const ADDRESS: &'static str = "address";
-
-    /// The stringy parameter name for setting/extracting [`Config::port`].
-    pub const PORT: &'static str = "port";
-
     /// The stringy parameter name for setting/extracting [`Config::workers`].
     pub const WORKERS: &'static str = "workers";
 
@@ -546,9 +461,6 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::limits`].
     pub const LIMITS: &'static str = "limits";
 
-    /// The stringy parameter name for setting/extracting [`Config::tls`].
-    pub const TLS: &'static str = "tls";
-
     /// The stringy parameter name for setting/extracting [`Config::secret_key`].
     pub const SECRET_KEY: &'static str = "secret_key";
 
@@ -566,9 +478,10 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING, Self::KEEP_ALIVE,
-        Self::IDENT, Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS, Self::TLS,
-        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN, Self::CLI_COLORS,
+        Self::WORKERS, Self::MAX_BLOCKING, Self::KEEP_ALIVE, Self::IDENT,
+        Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS,
+        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
+        Self::CLI_COLORS,
     ];
 }
 

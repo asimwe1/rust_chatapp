@@ -167,7 +167,6 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
     }
 }
 
-// FIXME!
 impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///

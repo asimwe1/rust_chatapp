@@ -97,24 +97,40 @@ macro_rules! pub_request_impl {
         self._request_mut().add_header(header.into());
     }
 
-    /// Set the remote address of this request.
+    /// Set the remote address of this request to `address`.
+    ///
+    /// `address` may be any type that [can be converted into a `ListenerAddr`].
+    /// If `address` fails to convert, the remote is left unchanged.
+    ///
+    /// [can be converted into a `ListenerAddr`]: crate::listener::ListenerAddr#conversions
     ///
     /// # Examples
     ///
     /// Set the remote address to "8.8.8.8:80":
     ///
     /// ```rust
+    /// use std::net::{SocketAddrV4, Ipv4Addr};
+    ///
     #[doc = $import]
     ///
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
-    /// let address = "8.8.8.8:80".parse().unwrap();
-    /// let req = request.remote(address);
+    /// let req = request.remote("8.8.8.8:80");
+    ///
+    /// let addr = SocketAddrV4::new(Ipv4Addr::new(8, 8, 8, 8).into(), 80);
+    /// assert_eq!(req.inner().remote().unwrap(), &addr);
     /// # });
     /// ```
     #[inline]
-    pub fn remote(mut self, address: std::net::SocketAddr) -> Self {
-        self.set_remote(address);
+    pub fn remote<T>(mut self, endpoint: T) -> Self
+        where T: TryInto<crate::listener::Endpoint>
+    {
+        if let Ok(endpoint) = endpoint.try_into() {
+            self.set_remote(endpoint);
+        } else {
+            warn!("remote failed to convert");
+        }
+
         self
     }
 
@@ -228,11 +244,13 @@ macro_rules! pub_request_impl {
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
     pub fn identity<C: std::io::Read>(mut self, reader: C) -> Self {
-        use crate::http::{tls::util::load_cert_chain, private::Certificates};
+        use std::sync::Arc;
+        use crate::tls::util::load_cert_chain;
+        use crate::listener::Certificates;
 
         let mut reader = std::io::BufReader::new(reader);
         let certs = load_cert_chain(&mut reader).map(Certificates::from);
-        self._request_mut().connection.client_certificates = certs.ok();
+        self._request_mut().connection.peer_certs = certs.ok().map(Arc::new);
         self
     }
 

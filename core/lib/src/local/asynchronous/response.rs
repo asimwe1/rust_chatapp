@@ -53,9 +53,14 @@ use crate::{Request, Response};
 ///
 /// For more, see [the top-level documentation](../index.html#localresponse).
 pub struct LocalResponse<'c> {
-    _request: Box<Request<'c>>,
+    // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'c>,
     cookies: CookieJar<'c>,
+    _request: Box<Request<'c>>,
+}
+
+impl Drop for LocalResponse<'_> {
+    fn drop(&mut self) { }
 }
 
 impl<'c> LocalResponse<'c> {
@@ -64,7 +69,8 @@ impl<'c> LocalResponse<'c> {
               O: Future<Output = Response<'c>> + Send
     {
         // `LocalResponse` is a self-referential structure. In particular,
-        // `inner` can refer to `_request` and its contents. As such, we must
+        // `response` and `cookies` can refer to `_request` and its contents. As
+        // such, we must
         //   1) Ensure `Request` has a stable address.
         //
         //      This is done by `Box`ing the `Request`, using only the stable
@@ -97,7 +103,7 @@ impl<'c> LocalResponse<'c> {
                 cookies.add_original(cookie.into_owned());
             }
 
-            LocalResponse { cookies, _request: boxed_req, response, }
+            LocalResponse { _request: boxed_req, cookies, response, }
         }
     }
 }

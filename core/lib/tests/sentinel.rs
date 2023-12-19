@@ -155,7 +155,7 @@ fn inner_sentinels_detected() {
 
     impl<'r, 'o: 'r> response::Responder<'r, 'o> for ResponderSentinel {
         fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
-            todo!()
+            unimplemented!()
         }
     }
 

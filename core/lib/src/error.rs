@@ -74,11 +74,8 @@ pub struct Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Binding to the provided address/port failed.
-    Bind(io::Error),
-    /// Binding via TLS to the provided address/port failed.
-    #[cfg(feature = "tls")]
-    TlsBind(crate::http::tls::error::Error),
+    /// Binding to the network interface failed.
+    Bind(Box<dyn StdError + Send>),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// A valid [`Config`](crate::Config) could not be extracted from the
@@ -90,15 +87,10 @@ pub enum ErrorKind {
     FailedFairings(Vec<crate::fairing::Info>),
     /// Sentinels requested abort.
     SentinelAborts(Vec<crate::sentinel::Sentry>),
-    /// The configuration profile is not debug but not secret key is configured.
+    /// The configuration profile is not debug but no secret key is configured.
     InsecureSecretKey(Profile),
-    /// Shutdown failed.
-    Shutdown(
-        /// The instance of Rocket that failed to shutdown.
-        Arc<Rocket<Orbit>>,
-        /// The error that occurred during shutdown, if any.
-        Option<Box<dyn StdError + Send + Sync>>
-    ),
+    /// Shutdown failed. Contains the Rocket instance that failed to shutdown.
+    Shutdown(Arc<Rocket<Orbit>>),
 }
 
 /// An error that occurs when a value was unexpectedly empty.
@@ -111,18 +103,22 @@ impl From<ErrorKind> for Error {
     }
 }
 
+impl From<figment::Error> for Error {
+    fn from(e: figment::Error) -> Self {
+        Error::new(ErrorKind::Config(e))
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Error::new(ErrorKind::Io(e))
+    }
+}
+
 impl Error {
     #[inline(always)]
     pub(crate) fn new(kind: ErrorKind) -> Error {
         Error { handled: AtomicBool::new(false), kind }
-    }
-
-    #[inline(always)]
-    pub(crate) fn shutdown<E>(rocket: Arc<Rocket<Orbit>>, error: E) -> Error
-        where E: Into<Option<crate::http::hyper::Error>>
-    {
-        let error = error.into().map(|e| Box::new(e) as Box<dyn StdError + Sync + Send>);
-        Error::new(ErrorKind::Shutdown(rocket, error))
     }
 
     #[inline(always)]
@@ -176,9 +172,9 @@ impl Error {
         self.mark_handled();
         match self.kind() {
             ErrorKind::Bind(ref e) => {
-                error!("Rocket failed to bind network socket to given address/port.");
+                error!("Binding to the network interface failed.");
                 info_!("{}", e);
-                "aborting due to socket bind error"
+                "aborting due to bind error"
             }
             ErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");
@@ -229,19 +225,9 @@ impl Error {
 
                 "aborting due to sentinel-triggered abort(s)"
             }
-            ErrorKind::Shutdown(_, error) => {
+            ErrorKind::Shutdown(_) => {
                 error!("Rocket failed to shutdown gracefully.");
-                if let Some(e) = error {
-                    info_!("{}", e);
-                }
-
                 "aborting due to failed shutdown"
-            }
-            #[cfg(feature = "tls")]
-            ErrorKind::TlsBind(e) => {
-                error!("Rocket failed to bind via TLS to network socket.");
-                info_!("{}", e);
-                "aborting due to TLS bind error"
             }
         }
     }
@@ -260,10 +246,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
             ErrorKind::Config(_) => "failed to extract configuration".fmt(f),
             ErrorKind::SentinelAborts(_) => "sentinel(s) aborted".fmt(f),
-            ErrorKind::Shutdown(_, Some(e)) => write!(f, "shutdown failed: {e}"),
-            ErrorKind::Shutdown(_, None) => "shutdown failed".fmt(f),
-            #[cfg(feature = "tls")]
-            ErrorKind::TlsBind(e) => write!(f, "TLS bind failed: {e}"),
+            ErrorKind::Shutdown(_) => "shutdown failed".fmt(f),
         }
     }
 }
@@ -308,3 +291,42 @@ impl fmt::Display for Empty {
 }
 
 impl StdError for Empty { }
+
+/// Log an error that occurs during request processing
+pub(crate) fn log_server_error(error: &Box<dyn StdError + Send + Sync>) {
+    struct ServerError<'a>(&'a (dyn StdError + 'static));
+
+    impl fmt::Display for ServerError<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let error = &self.0;
+            if let Some(e) = error.downcast_ref::<hyper::Error>() {
+                write!(f, "request processing failed: {e}")?;
+            } else if let Some(e) = error.downcast_ref::<io::Error>() {
+                write!(f, "connection I/O error: ")?;
+
+                match e.kind() {
+                    io::ErrorKind::NotConnected => write!(f, "remote disconnected")?,
+                    io::ErrorKind::UnexpectedEof => write!(f, "remote sent early eof")?,
+                    io::ErrorKind::ConnectionReset
+                    | io::ErrorKind::ConnectionAborted
+                    | io::ErrorKind::BrokenPipe => write!(f, "terminated by remote")?,
+                    _ => write!(f, "{e}")?,
+                }
+            } else {
+                write!(f, "http server error: {error}")?;
+            }
+
+            if let Some(e) = error.source() {
+                write!(f, " ({})", ServerError(e))?;
+            }
+
+            Ok(())
+        }
+    }
+
+    if error.downcast_ref::<hyper::Error>().is_some() {
+        warn!("{}", ServerError(&**error))
+    } else {
+        error!("{}", ServerError(&**error))
+    }
+}

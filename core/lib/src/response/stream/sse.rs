@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use tokio::io::AsyncRead;
-use tokio::time::Duration;
-use futures::stream::{self, Stream, StreamExt};
-use futures::future::ready;
+use tokio::time::{interval, Duration};
+use futures::{stream::{self, Stream}, future::Either};
+use tokio_stream::{StreamExt, wrappers::IntervalStream};
 
 use crate::request::Request;
 use crate::response::{self, Response, Responder, stream::{ReaderStream, RawLinedEvent}};
@@ -336,7 +336,7 @@ impl Event {
             Some(RawLinedEvent::raw("")),
         ];
 
-        stream::iter(events).filter_map(ready)
+        stream::iter(events).filter_map(|x| x)
     }
 }
 
@@ -528,25 +528,19 @@ impl<S: Stream<Item = Event>> EventStream<S> {
         self
     }
 
-    fn heartbeat_stream(&self) -> Option<impl Stream<Item = RawLinedEvent>> {
-        use tokio::time::interval;
-        use tokio_stream::wrappers::IntervalStream;
-
+    fn heartbeat_stream(&self) -> impl Stream<Item = RawLinedEvent> {
         self.heartbeat
             .map(|beat| IntervalStream::new(interval(beat)))
             .map(|stream| stream.map(|_| RawLinedEvent::raw(":")))
+            .map_or_else(|| Either::Right(stream::empty()), Either::Left)
     }
 
     fn into_stream(self) -> impl Stream<Item = RawLinedEvent> {
-        use futures::future::Either;
-        use crate::ext::StreamExt;
+        use futures::StreamExt;
 
-        let heartbeat_stream = self.heartbeat_stream();
-        let raw_events = self.stream.map(|e| e.into_stream()).flatten();
-        match heartbeat_stream {
-            Some(heartbeat) => Either::Left(raw_events.join(heartbeat)),
-            None => Either::Right(raw_events)
-        }
+        let heartbeats = self.heartbeat_stream();
+        let events = StreamExt::map(self.stream, |e| e.into_stream()).flatten();
+        crate::util::join(events, heartbeats)
     }
 
     fn into_reader(self) -> impl AsyncRead {
@@ -621,10 +615,11 @@ mod sse_tests {
 
     impl<S: Stream<Item = Event>> EventStream<S> {
         fn into_string(self) -> String {
+            use std::pin::pin;
+
             crate::async_test(async move {
                 let mut string = String::new();
-                let reader = self.into_reader();
-                tokio::pin!(reader);
+                let mut reader = pin!(self.into_reader());
                 reader.read_to_string(&mut string).await.expect("event stream -> string");
                 string
             })

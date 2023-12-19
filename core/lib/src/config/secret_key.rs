@@ -1,8 +1,8 @@
 use std::fmt;
 
+use cookie::Key;
 use serde::{de, ser, Deserialize, Serialize};
 
-use crate::http::private::cookie::Key;
 use crate::request::{Outcome, Request, FromRequest};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

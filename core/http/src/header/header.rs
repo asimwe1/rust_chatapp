@@ -745,8 +745,7 @@ impl<'h> HeaderMap<'h> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
     #[inline]
-    pub fn into_iter_raw(self)
-            -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
+    pub fn into_iter_raw(self) -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }
 }

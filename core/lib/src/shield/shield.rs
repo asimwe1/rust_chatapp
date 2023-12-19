@@ -198,7 +198,7 @@ impl Fairing for Shield {
     }
 
     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-        let force_hsts = rocket.config().tls_enabled()
+        let force_hsts = rocket.endpoint().is_tls()
             && rocket.figment().profile() != Config::DEBUG_PROFILE
             && !self.is_enabled::<Hsts>();
 

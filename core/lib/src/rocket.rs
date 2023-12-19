@@ -1,14 +1,14 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::net::SocketAddr;
 
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
 
 use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
+use crate::listener::{Endpoint, Bindable, DefaultListener};
 use crate::router::Router;
-use crate::trip_wire::TripWire;
+use crate::util::TripWire;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, State};
@@ -203,35 +203,31 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Config;
+    /// use rocket::config::{Config, Ident};
     /// # use std::net::Ipv4Addr;
     /// # use std::path::{Path, PathBuf};
     /// # type Result = std::result::Result<(), rocket::Error>;
     ///
     /// let config = Config {
-    ///     port: 7777,
-    ///     address: Ipv4Addr::new(18, 127, 0, 1).into(),
+    ///     ident: Ident::try_new("MyServer").expect("valid ident"),
     ///     temp_dir: "/tmp/config-example".into(),
     ///     ..Config::debug_default()
     /// };
     ///
     /// # let _: Result = rocket::async_test(async move {
     /// let rocket = rocket::custom(&config).ignite().await?;
-    /// assert_eq!(rocket.config().port, 7777);
-    /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
+    /// assert_eq!(rocket.config().ident.as_str(), Some("MyServer"));
     /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     ///
     /// // Create a new figment which modifies _some_ keys the existing figment:
     /// let figment = rocket.figment().clone()
-    ///     .merge((Config::PORT, 8888))
-    ///     .merge((Config::ADDRESS, "171.64.200.10"));
+    ///     .merge((Config::IDENT, "Example"));
     ///
     /// let rocket = rocket::custom(&config)
     ///     .configure(figment)
     ///     .ignite().await?;
     ///
-    /// assert_eq!(rocket.config().port, 8888);
-    /// assert_eq!(rocket.config().address, Ipv4Addr::new(171, 64, 200, 10));
+    /// assert_eq!(rocket.config().ident.as_str(), Some("Example"));
     /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     /// # Ok(())
     /// # });
@@ -664,8 +660,9 @@ impl Rocket<Ignite> {
         self.shutdown.clone()
     }
 
-    fn into_orbit(self) -> Rocket<Orbit> {
+    pub(crate) fn into_orbit(self, address: Endpoint) -> Rocket<Orbit> {
         Rocket(Orbiting {
+            endpoint: address,
             router: self.0.router,
             fairings: self.0.fairings,
             figment: self.0.figment,
@@ -675,28 +672,24 @@ impl Rocket<Ignite> {
         })
     }
 
-    async fn _local_launch(self) -> Rocket<Orbit> {
-        let rocket = self.into_orbit();
-        rocket.fairings.handle_liftoff(&rocket).await;
-        launch_info!("{}{}", "🚀 ".emoji(), "Rocket has launched locally".primary().bold());
+    async fn _local_launch(self, addr: Endpoint) -> Rocket<Orbit> {
+        let rocket = self.into_orbit(addr);
+        Rocket::liftoff(&rocket).await;
         rocket
     }
 
     async fn _launch(self) -> Result<Rocket<Ignite>, Error> {
-        self.into_orbit()
-            .default_tcp_http_server(|rkt| Box::pin(async move {
-                rkt.fairings.handle_liftoff(&rkt).await;
+        let config = self.figment().extract::<DefaultListener>()?;
+        either::for_both!(config.base_bindable()?, base => {
+            either::for_both!(config.tls_bindable(base), bindable => {
+                self._launch_on(bindable).await
+            })
+        })
+    }
 
-                let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
-                let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
-                let addr = format!("{}://{}", proto, socket_addr);
-                launch_info!("{}{} {}",
-                    "🚀 ".emoji(),
-                    "Rocket has launched from".bold().primary().linger(),
-                    addr.underline());
-            }))
-            .await
-            .map(|rocket| rocket.into_ignite())
+    async fn _launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error> {
+        let listener = bindable.bind().await.map_err(|e| ErrorKind::Bind(Box::new(e)))?;
+        self.serve(listener).await
     }
 }
 
@@ -710,6 +703,21 @@ impl Rocket<Orbit> {
             state: self.0.state,
             shutdown: self.0.shutdown,
         })
+    }
+
+    pub(crate) async fn liftoff<R: Deref<Target = Self>>(rocket: R) {
+        let rocket = rocket.deref();
+        rocket.fairings.handle_liftoff(rocket).await;
+
+        if !crate::running_within_rocket_async_rt().await {
+            warn!("Rocket is executing inside of a custom runtime.");
+            info_!("Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.");
+            info_!("Forced shutdown is disabled. Runtime settings may be suboptimal.");
+        }
+
+        launch_info!("{}{} {}", "🚀 ".emoji(),
+            "Rocket has launched on".bold().primary().linger(),
+            rocket.endpoint().underline());
     }
 
     /// Returns the finalized, active configuration. This is guaranteed to
@@ -732,6 +740,10 @@ impl Rocket<Orbit> {
     /// ```
     pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    pub fn endpoint(&self) -> &Endpoint {
+        &self.endpoint
     }
 
     /// Returns a handle which can be used to trigger a shutdown and detect a
@@ -867,10 +879,10 @@ impl<P: Phase> Rocket<P> {
         }
     }
 
-    pub(crate) async fn local_launch(self) -> Result<Rocket<Orbit>, Error> {
+    pub(crate) async fn local_launch(self, l: Endpoint) -> Result<Rocket<Orbit>, Error> {
         let rocket = match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._local_launch().await,
-            State::Ignite(s) => Rocket::from(s)._local_launch().await,
+            State::Build(s) => Rocket::from(s).ignite().await?._local_launch(l).await,
+            State::Ignite(s) => Rocket::from(s)._local_launch(l).await,
             State::Orbit(s) => Rocket::from(s)
         };
 
@@ -925,6 +937,14 @@ impl<P: Phase> Rocket<P> {
         match self.0.into_state() {
             State::Build(s) => Rocket::from(s).ignite().await?._launch().await,
             State::Ignite(s) => Rocket::from(s)._launch().await,
+            State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
+        }
+    }
+
+    pub async fn launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error> {
+        match self.0.into_state() {
+            State::Build(s) => Rocket::from(s).ignite().await?._launch_on(bindable).await,
+            State::Ignite(s) => Rocket::from(s)._launch_on(bindable).await,
             State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
     }

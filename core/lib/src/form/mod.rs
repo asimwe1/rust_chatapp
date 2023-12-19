@@ -341,6 +341,7 @@
 //      `key_contexts: Vec<K::Context>`, a vector of `value_contexts:
 //      Vec<V::Context>`, a `mapping` from a string index to an integer index
 //      into the `contexts`, and a vector of `errors`.
+//
 //   2. **Push.** An index is required; an error is emitted and `push` returns
 //      if they field's first key does not contain an index. If the first key
 //      contains _one_ index, a new `K::Context` and `V::Context` are created.
@@ -356,9 +357,9 @@
 //      to `second` in `mapping`. If the first index is `k`, the field,
 //      stripped of the first key, is pushed to the key's context; the same is
 //      done for the value's context is the first index is `v`.
+//
 //   3. **Finalization.** Every context is finalized; errors and `Ok` values
-//      are collected. TODO: FINISH. Split this into two: one for single-index,
-//      another for two-indices.
+//      are collected.
 
 mod field;
 mod options;

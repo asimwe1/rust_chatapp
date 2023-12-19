@@ -33,7 +33,6 @@ use crate::result::{Result, Error};
 ///
 /// [`StreamExt`]: rocket::futures::StreamExt
 /// [`SinkExt`]: rocket::futures::SinkExt
-
 pub struct DuplexStream(tokio_tungstenite::WebSocketStream<IoStream>);
 
 impl DuplexStream {

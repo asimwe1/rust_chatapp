@@ -1,12 +1,13 @@
 use std::convert::Infallible;
 use std::fmt::Debug;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 
 use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome, Outcome::*};
 
 use crate::http::uri::{Host, Origin};
 use crate::http::{Status, ContentType, Accept, Method, ProxyProto, CookieJar};
+use crate::listener::Endpoint;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
@@ -486,14 +487,22 @@ impl<'r> FromRequest<'r> for ProxyProto<'r> {
 }
 
 #[crate::async_trait]
-impl<'r> FromRequest<'r> for SocketAddr {
+impl<'r> FromRequest<'r> for &'r Endpoint {
     type Error = Infallible;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
-        match request.remote() {
-            Some(addr) => Success(addr),
-            None => Forward(Status::InternalServerError)
-        }
+        request.remote().or_forward(Status::InternalServerError)
+    }
+}
+
+#[crate::async_trait]
+impl<'r> FromRequest<'r> for std::net::SocketAddr {
+    type Error = Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
+        request.remote()
+            .and_then(|r| r.tcp())
+            .or_forward(Status::InternalServerError)
     }
 }
 

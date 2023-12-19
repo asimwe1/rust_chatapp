@@ -2,11 +2,10 @@ use std::fmt;
 
 use parking_lot::Mutex;
 
-use crate::http::private::cookie;
 use crate::{Rocket, Orbit};
 
 #[doc(inline)]
-pub use self::cookie::{Cookie, SameSite, Iter};
+pub use cookie::{Cookie, SameSite, Iter};
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -167,7 +166,7 @@ pub(crate) struct CookieState<'a> {
 #[derive(Clone)]
 enum Op {
     Add(Cookie<'static>, bool),
-    Remove(Cookie<'static>, bool),
+    Remove(Cookie<'static>),
 }
 
 impl<'a> CookieJar<'a> {
@@ -177,7 +176,7 @@ impl<'a> CookieJar<'a> {
             ops: Mutex::new(Vec::new()),
             state: CookieState {
                 // This is updated dynamically when headers are received.
-                secure: rocket.config().tls_enabled(),
+                secure: rocket.endpoint().is_tls(),
                 config: rocket.config(),
             }
         }
@@ -256,7 +255,7 @@ impl<'a> CookieJar<'a> {
         for op in ops.iter().rev().filter(|op| op.cookie().name() == name) {
             match op {
                 Op::Add(c, _) => return Some(c.clone()),
-                Op::Remove(_, _) => return None,
+                Op::Remove(_) => return None,
             }
         }
 
@@ -389,7 +388,7 @@ impl<'a> CookieJar<'a> {
     pub fn remove<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
         Self::set_removal_defaults(&mut cookie);
-        self.ops.lock().push(Op::Remove(cookie, false));
+        self.ops.lock().push(Op::Remove(cookie));
     }
 
     /// Removes the private `cookie` from the collection.
@@ -432,7 +431,7 @@ impl<'a> CookieJar<'a> {
     pub fn remove_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
         Self::set_removal_defaults(&mut cookie);
-        self.ops.lock().push(Op::Remove(cookie, true));
+        self.ops.lock().push(Op::Remove(cookie));
     }
 
     /// Returns an iterator over all of the _original_ cookies present in this
@@ -477,7 +476,7 @@ impl<'a> CookieJar<'a> {
                 Op::Add(c, true) => {
                     jar.private_mut(&self.state.config.secret_key.key).add(c);
                 }
-                Op::Remove(mut c, _) => {
+                Op::Remove(mut c) => {
                     if self.jar.get(c.name()).is_some() {
                         c.make_removal();
                         jar.add(c);
@@ -595,7 +594,7 @@ impl<'a> Clone for CookieJar<'a> {
 impl Op {
     fn cookie(&self) -> &Cookie<'static> {
         match self {
-            Op::Add(c, _) | Op::Remove(c, _) => c
+            Op::Add(c, _) | Op::Remove(c) => c
         }
     }
 }

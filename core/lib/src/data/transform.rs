@@ -178,7 +178,7 @@ impl<'a, 'b> DerefMut for TransformBuf<'a, 'b> {
 #[allow(deprecated)]
 mod tests {
     use std::hash::SipHasher;
-    use std::sync::{Arc, atomic::{AtomicU64, AtomicU8}};
+    use std::sync::{Arc, atomic::{AtomicU8, AtomicU64, Ordering}};
 
     use parking_lot::Mutex;
     use ubyte::ToByteUnit;
@@ -264,41 +264,41 @@ mod tests {
                         assert_eq!(bytes.len(), 8);
                         let bytes: [u8; 8] = bytes.try_into().expect("[u8; 8]");
                         let value = u64::from_be_bytes(bytes);
-                        hash1.store(value, atomic::Ordering::Release);
+                        hash1.store(value, Ordering::Release);
                     })
                     .chain_inspect(move |bytes| {
                         assert_eq!(bytes.len(), 8);
                         let bytes: [u8; 8] = bytes.try_into().expect("[u8; 8]");
                         let value = u64::from_be_bytes(bytes);
-                        let prev = hash2.load(atomic::Ordering::Acquire);
+                        let prev = hash2.load(Ordering::Acquire);
                         assert_eq!(prev, value);
-                        inspect2.fetch_add(1, atomic::Ordering::Release);
+                        inspect2.fetch_add(1, Ordering::Release);
                     });
             })));
 
         // Make sure nothing has happened yet.
         assert!(raw_data.lock().is_empty());
-        assert_eq!(hash.load(atomic::Ordering::Acquire), 0);
-        assert_eq!(inspect2.load(atomic::Ordering::Acquire), 0);
+        assert_eq!(hash.load(Ordering::Acquire), 0);
+        assert_eq!(inspect2.load(Ordering::Acquire), 0);
 
         // Check that nothing happens if the data isn't read.
         let client = Client::debug(rocket).unwrap();
         client.get("/").body("Hello, world!").dispatch();
         assert!(raw_data.lock().is_empty());
-        assert_eq!(hash.load(atomic::Ordering::Acquire), 0);
-        assert_eq!(inspect2.load(atomic::Ordering::Acquire), 0);
+        assert_eq!(hash.load(Ordering::Acquire), 0);
+        assert_eq!(inspect2.load(Ordering::Acquire), 0);
 
         // Check inspect + hash + inspect + inspect.
         client.post("/").body("Hello, world!").dispatch();
         assert_eq!(raw_data.lock().as_slice(), "Hello, world!".as_bytes());
-        assert_eq!(hash.load(atomic::Ordering::Acquire), 0xae5020d7cf49d14f);
-        assert_eq!(inspect2.load(atomic::Ordering::Acquire), 1);
+        assert_eq!(hash.load(Ordering::Acquire), 0xae5020d7cf49d14f);
+        assert_eq!(inspect2.load(Ordering::Acquire), 1);
 
         // Check inspect + hash + inspect + inspect, round 2.
         let string = "Rocket, Rocket, where art thee? Oh, tis in the sky, I see!";
         client.post("/").body(string).dispatch();
         assert_eq!(raw_data.lock().as_slice(), string.as_bytes());
-        assert_eq!(hash.load(atomic::Ordering::Acquire), 0x323f9aa98f907faf);
-        assert_eq!(inspect2.load(atomic::Ordering::Acquire), 2);
+        assert_eq!(hash.load(Ordering::Acquire), 0x323f9aa98f907faf);
+        assert_eq!(inspect2.load(Ordering::Acquire), 2);
     }
 }

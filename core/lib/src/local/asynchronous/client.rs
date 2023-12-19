@@ -4,7 +4,8 @@ use parking_lot::RwLock;
 
 use crate::{Rocket, Phase, Orbit, Ignite, Error};
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
-use crate::http::{Method, uri::Origin, private::cookie};
+use crate::http::{Method, uri::Origin};
+use crate::listener::Endpoint;
 
 /// An `async` client to construct and dispatch local requests.
 ///
@@ -55,9 +56,15 @@ pub struct Client {
 impl Client {
     pub(crate) async fn _new<P: Phase>(
         rocket: Rocket<P>,
-        tracked: bool
+        tracked: bool,
+        secure: bool,
     ) -> Result<Client, Error> {
-        let rocket = rocket.local_launch().await?;
+        let mut listener = Endpoint::new("local client");
+        if secure {
+            listener = listener.assume_tls();
+        }
+
+        let rocket = rocket.local_launch(listener).await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
         Ok(Client { rocket, cookies, tracked })
     }

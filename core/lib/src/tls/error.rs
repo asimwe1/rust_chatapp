@@ -11,6 +11,7 @@ pub enum KeyError {
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
+    Bind(Box<dyn std::error::Error + Send + 'static>),
     Tls(rustls::Error),
     Mtls(rustls::server::VerifierBuilderError),
     CertChain(std::io::Error),
@@ -29,6 +30,7 @@ impl std::fmt::Display for Error {
             CertChain(e) => write!(f, "failed to process certificate chain: {e}"),
             PrivKey(e) => write!(f, "failed to process private key: {e}"),
             CertAuth(e) => write!(f, "failed to process certificate authority: {e}"),
+            Bind(e) => write!(f, "failed to bind to network interface: {e}"),
         }
     }
 }
@@ -66,6 +68,7 @@ impl std::error::Error for Error {
             Error::CertChain(e) => Some(e),
             Error::PrivKey(e) => Some(e),
             Error::CertAuth(e) => Some(e),
+            Error::Bind(e) => Some(&**e),
         }
     }
 }

@@ -1,6 +1,7 @@
 use state::TypeMap;
 use figment::Figment;
 
+use crate::listener::Endpoint;
 use crate::{Catcher, Config, Rocket, Route, Shutdown};
 use crate::router::Router;
 use crate::fairing::Fairings;
@@ -113,5 +114,6 @@ phases! {
         pub(crate) config: Config,
         pub(crate) state: TypeMap![Send + Sync],
         pub(crate) shutdown: Shutdown,
+        pub(crate) endpoint: Endpoint,
     }
 }

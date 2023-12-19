@@ -7,7 +7,9 @@
 #![cfg_attr(nightly, feature(decl_macro))]
 
 #![warn(rust_2018_idioms)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
+#![allow(async_fn_in_trait)]
+#![allow(refining_impl_trait)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -109,18 +111,24 @@
 
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
-#[doc(hidden)] pub use yansi;
-#[doc(hidden)] pub use async_stream;
+#[doc(hidden)]
+pub use yansi;
+#[doc(hidden)]
+pub use async_stream;
 pub use futures;
 pub use tokio;
 pub use figment;
 pub use time;
 
 #[doc(hidden)]
-#[macro_use] pub mod log;
-#[macro_use] pub mod outcome;
-#[macro_use] pub mod data;
-#[doc(hidden)] pub mod sentinel;
+#[macro_use]
+pub mod log;
+#[macro_use]
+pub mod outcome;
+#[macro_use]
+pub mod data;
+#[doc(hidden)]
+pub mod sentinel;
 pub mod local;
 pub mod request;
 pub mod response;
@@ -133,74 +141,41 @@ pub mod route;
 pub mod serde;
 pub mod shield;
 pub mod fs;
-
-// Reexport of HTTP everything.
-pub mod http {
-    //! Types that map to concepts in HTTP.
-    //!
-    //! This module exports types that map to HTTP concepts or to the underlying
-    //! HTTP library when needed.
-
-    #[doc(inline)]
-    pub use rocket_http::*;
-
-    /// Re-exported hyper HTTP library types.
-    ///
-    /// All types that are re-exported from Hyper reside inside of this module.
-    /// These types will, with certainty, be removed with time, but they reside here
-    /// while necessary.
-    pub mod hyper {
-        #[doc(hidden)]
-        pub use rocket_http::hyper::*;
-
-        pub use rocket_http::hyper::header;
-    }
-
-    #[doc(inline)]
-    pub use crate::cookies::*;
-}
-
+pub mod http;
+pub mod listener;
+#[cfg(feature = "tls")]
+#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
+pub mod tls;
 #[cfg(feature = "mtls")]
 #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
 pub mod mtls;
 
-/// TODO: We need a futures mod or something.
-mod trip_wire;
+mod util;
 mod shutdown;
 mod server;
-mod ext;
+mod lifecycle;
 mod state;
-mod cookies;
 mod rocket;
 mod router;
 mod phase;
+mod erased;
+
+#[doc(hidden)] pub use either::Either;
+
+#[doc(inline)] pub use rocket_codegen::*;
 
 #[doc(inline)] pub use crate::response::Response;
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
 #[doc(inline)] pub use crate::route::Route;
-#[doc(hidden)] pub use either::Either;
-#[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
-#[doc(inline)] pub use error::Error;
-#[doc(inline)] pub use sentinel::Sentinel;
+#[doc(inline)] pub use crate::phase::{Phase, Build, Ignite, Orbit};
+#[doc(inline)] pub use crate::error::Error;
+#[doc(inline)] pub use crate::sentinel::Sentinel;
 #[doc(inline)] pub use crate::request::Request;
 #[doc(inline)] pub use crate::rocket::Rocket;
 #[doc(inline)] pub use crate::shutdown::Shutdown;
 #[doc(inline)] pub use crate::state::State;
-#[doc(inline)] pub use rocket_codegen::*;
-
-/// Creates a [`Rocket`] instance with the default config provider: aliases
-/// [`Rocket::build()`].
-pub fn build() -> Rocket<Build> {
-    Rocket::build()
-}
-
-/// Creates a [`Rocket`] instance with a custom config provider: aliases
-/// [`Rocket::custom()`].
-pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
-    Rocket::custom(provider)
-}
 
 /// Retrofits support for `async fn` in trait impls and declarations.
 ///
@@ -231,6 +206,20 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
 #[doc(inline)]
 pub use async_trait::async_trait;
 
+const WORKER_PREFIX: &'static str = "rocket-worker";
+
+/// Creates a [`Rocket`] instance with the default config provider: aliases
+/// [`Rocket::build()`].
+pub fn build() -> Rocket<Build> {
+    Rocket::build()
+}
+
+/// Creates a [`Rocket`] instance with a custom config provider: aliases
+/// [`Rocket::custom()`].
+pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
+    Rocket::custom(provider)
+}
+
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_run<F, R>(fut: F, workers: usize, sync: usize, force_end: bool, name: &str) -> R
@@ -255,7 +244,7 @@ pub fn async_run<F, R>(fut: F, workers: usize, sync: usize, force_end: bool, nam
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
-    async_run(fut, 1, 32, true, "rocket-worker-test-thread")
+    async_run(fut, 1, 32, true, &format!("{WORKER_PREFIX}-test-thread"))
 }
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
@@ -276,7 +265,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     let workers = fig.extract_inner(Config::WORKERS).unwrap_or_else(bail);
     let max_blocking = fig.extract_inner(Config::MAX_BLOCKING).unwrap_or_else(bail);
     let force = fig.focus(Config::SHUTDOWN).extract_inner("force").unwrap_or_else(bail);
-    async_run(fut, workers, max_blocking, force, "rocket-worker-thread")
+    async_run(fut, workers, max_blocking, force, &format!("{WORKER_PREFIX}-thread"))
 }
 
 /// Executes a `future` to completion on a new tokio-based Rocket async runtime.
@@ -358,4 +347,15 @@ pub fn execute<R, F>(future: F) -> R
     where F: std::future::Future<Output = R> + Send
 {
     async_main(future)
+}
+
+/// Returns a future that evalutes to `true` exactly when there is a presently
+/// running tokio async runtime that was likely started by Rocket.
+fn running_within_rocket_async_rt() -> impl std::future::Future<Output = bool> {
+    use futures::FutureExt;
+
+    tokio::task::spawn_blocking(|| {
+        let this = std::thread::current();
+        this.name().map_or(false, |s| s.starts_with(WORKER_PREFIX))
+    }).map(|r| r.unwrap_or(false))
 }

@@ -6,15 +6,11 @@ async fn test_config(profile: &str) {
     let config = rocket.config();
     match &*profile {
         "debug" => {
-            assert_eq!(config.address, std::net::Ipv4Addr::LOCALHOST);
-            assert_eq!(config.port, 8000);
             assert_eq!(config.workers, 1);
             assert_eq!(config.keep_alive, 0);
             assert_eq!(config.log_level, LogLevel::Normal);
         }
         "release" => {
-            assert_eq!(config.address, std::net::Ipv4Addr::LOCALHOST);
-            assert_eq!(config.port, 8000);
             assert_eq!(config.workers, 12);
             assert_eq!(config.keep_alive, 5);
             assert_eq!(config.log_level, LogLevel::Critical);

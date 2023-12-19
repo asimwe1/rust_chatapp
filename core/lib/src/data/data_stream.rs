@@ -3,16 +3,16 @@ use std::task::{Context, Poll};
 use std::path::Path;
 use std::io::{self, Cursor};
 
+use futures::ready;
+use futures::stream::Stream;
 use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
 use tokio_util::io::StreamReader;
-use futures::{ready, stream::Stream};
+use hyper::body::{Body, Bytes, Incoming as HyperBody};
 
-use crate::http::hyper;
-use crate::ext::{PollExt, Chain};
 use crate::data::{Capped, N};
-use crate::http::hyper::body::Bytes;
 use crate::data::transform::Transform;
+use crate::util::Chain;
 
 use super::peekable::Peekable;
 use super::transform::TransformBuf;
@@ -68,7 +68,7 @@ pub type RawReader<'r> = StreamReader<RawStream<'r>, Bytes>;
 /// Raw underlying data stream.
 pub enum RawStream<'r> {
     Empty,
-    Body(&'r mut hyper::Body),
+    Body(&'r mut HyperBody),
     Multipart(multer::Field<'r>),
 }
 
@@ -154,8 +154,14 @@ impl<'r> DataStream<'r> {
     /// ```
     pub fn hint(&self) -> usize {
         let base = self.base();
-        let buf_len = base.get_ref().get_ref().0.get_ref().len();
-        std::cmp::min(buf_len, base.limit() as usize)
+        if let (Some(cursor), _) = base.get_ref().get_ref() {
+            let len = cursor.get_ref().len() as u64;
+            let position = cursor.position().min(len);
+            let remaining = len - position;
+            remaining.min(base.limit()) as usize
+        } else {
+            0
+        }
     }
 
     /// A helper method to write the body of the request to any `AsyncWrite`
@@ -331,17 +337,25 @@ impl Stream for RawStream<'_> {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
-            RawStream::Body(body) => Pin::new(body).poll_next(cx)
-                .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
-            RawStream::Multipart(mp) => Pin::new(mp).poll_next(cx)
-                .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
+            // TODO: Expose trailer headers, somehow.
+            RawStream::Body(body) => {
+                Pin::new(body)
+                    .poll_frame(cx)
+                    .map_ok(|frame| frame.into_data().unwrap_or_else(|_| Bytes::new()))
+                    .map_err(io::Error::other)
+            }
+            RawStream::Multipart(s) => Pin::new(s).poll_next(cx).map_err(io::Error::other),
             RawStream::Empty => Poll::Ready(None),
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            RawStream::Body(body) => body.size_hint(),
+            RawStream::Body(body) => {
+                let hint = body.size_hint();
+                let (lower, upper) = (hint.lower(), hint.upper());
+                (lower as usize, upper.map(|x| x as usize))
+            },
             RawStream::Multipart(mp) => mp.size_hint(),
             RawStream::Empty => (0, Some(0)),
         }
@@ -358,8 +372,8 @@ impl std::fmt::Display for RawStream<'_> {
     }
 }
 
-impl<'r> From<&'r mut hyper::Body> for RawStream<'r> {
-    fn from(value: &'r mut hyper::Body) -> Self {
+impl<'r> From<&'r mut HyperBody> for RawStream<'r> {
+    fn from(value: &'r mut HyperBody) -> Self {
         Self::Body(value)
     }
 }
