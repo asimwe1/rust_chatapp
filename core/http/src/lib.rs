@@ -19,9 +19,6 @@ pub mod uri;
 pub mod ext;
 
 #[macro_use]
-mod docify;
-
-#[macro_use]
 mod header;
 mod method;
 mod status;

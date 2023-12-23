@@ -85,15 +85,13 @@ macro_rules! media_types {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*,)+) => {
     $(
-        docify!([
-            Media Type for @{"**"}! @{$str}! @{"**"}!: @{"`"} @{$t}! @[/]! @{$s}!
-            $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
-        ];
-            #[allow(non_upper_case_globals)]
-            pub const $name: MediaType = MediaType::new_known(
-                concat!($t, "/", $s, $("; ", $k, "=", $v),*),
-                $t, $s, &[$(($k, $v)),*]
-            );
+        /// Media Type for
+        #[doc = concat!("**", $str, "**: ")]
+        #[doc = concat!("`", $t, "/", $s, $("; ", $k, "=", $v,)* "`")]
+        #[allow(non_upper_case_globals)]
+        pub const $name: MediaType = MediaType::new_known(
+            concat!($t, "/", $s, $("; ", $k, "=", $v),*),
+            $t, $s, &[$(($k, $v)),*]
         );
     )+
 
@@ -109,33 +107,32 @@ macro_rules! media_types {
     }
 
     $(
-        docify!([
-            Returns @code{true} if the @[top-level] and sublevel types of
-            @code{self} are the same as those of @{"`MediaType::"}! $name
-            @{"`"}!, i.e @{"`"} @{$t}! @[/]! @{$s}! $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
-        ];
-            #[inline(always)]
-            pub fn $check(&self) -> bool {
-                *self == MediaType::$name
-            }
-        );
+        /// Returns `true` if the top-level and sublevel types of
+        /// `self` are the same as those of
+        #[doc = concat!("`MediaType::", stringify!($name), "`, ")]
+        /// i.e
+        #[doc = concat!("`", $t, "/", $s, "`.")]
+        #[inline(always)]
+        pub fn $check(&self) -> bool {
+            *self == MediaType::$name
+        }
     )+
 }}
 
 macro_rules! from_extension {
     ($($ext:expr => $name:ident,)*) => (
-    docify!([
-        Returns the @[Media-Type] associated with the extension @code{ext}. Not
-        all extensions are recognized. If an extensions is not recognized,
-        @code{None} is returned. The currently recognized extensions are:
-
-        @nl
-        $(* @{$ext} - @{"`MediaType::"}! @[$name]! @{"`"} @nl)*
-        @nl
-
-        This list is likely to grow. Extensions are matched
-        @[case-insensitively.]
-    ];
+        /// Returns the Media Type associated with the extension `ext`.
+        ///
+        /// Extensions are matched case-insensitively. Not all extensions are
+        /// recognized. If an extensions is not recognized, `None` is returned.
+        /// The currently recognized extensions are:
+        ///
+        $(
+            #[doc = concat!("* ", $ext, " - [`MediaType::", stringify!($name), "`]")]
+        )*
+        ///
+        /// This list is likely to grow.
+        ///
         /// # Example
         ///
         /// Recognized media types:
@@ -166,19 +163,18 @@ macro_rules! from_extension {
                 _ => None
             }
         }
-    );)
+    )
 }
 
 macro_rules! extension {
     ($($ext:expr => $name:ident,)*) => (
-    docify!([
-        Returns the most common file extension associated with the @[Media-Type]
-        @code{self} if it is known. Otherwise, returns @code{None}. The
-        currently recognized extensions are identical to those in
-        @{"[`MediaType::from_extension()`]"} with the @{"most common"} extension
-        being the first extension appearing in the list for a given
-        @[Media-Type].
-    ];
+        /// Returns the most common file extension associated with the
+        /// Media-Type `self` if it is known. Otherwise, returns `None`.
+        ///
+        /// The currently recognized extensions are identical to those in
+        /// [`MediaType::from_extension()`] with the most common extension being
+        /// the first extension appearing in the list for a given Content-Type.
+        ///
         /// # Example
         ///
         /// Known extension:
@@ -207,22 +203,20 @@ macro_rules! extension {
             $(if self == &MediaType::$name { return Some($ext.into()) })*
             None
         }
-    );)
+    )
 }
 
 macro_rules! parse_flexible {
     ($($short:expr => $name:ident,)*) => (
-    docify!([
-        Flexibly parses @code{name} into a @code{MediaType}. The parse is
-        @[_flexible_] because, in addition to strictly correct media types, it
-        recognizes the following shorthands:
-
-        @nl
-        $(* $short - @{"`MediaType::"}! @[$name]! @{"`"} @nl)*
-        @nl
-    ];
-        /// For regular parsing, use the
-        /// [`MediaType::from_str()`](#impl-FromStr) method.
+        /// Flexibly parses `name` into a [`MediaType`]. The parse is
+        /// _flexible_ because, in addition to strictly correct content types,
+        /// it recognizes the following shorthands:
+        ///
+        $(
+            #[doc = concat!("* ", $short, " - [`MediaType::", stringify!($name), "`]")]
+        )*
+        ///
+        /// For regular parsing, use [`MediaType::from_str()`].
         ///
         /// # Example
         ///
@@ -273,7 +267,7 @@ macro_rules! parse_flexible {
                 _ => MediaType::from_str(name).ok(),
             }
         }
-    );)
+    )
 }
 
 impl MediaType {

@@ -44,33 +44,37 @@ use crate::ext::IntoCollection;
 pub struct ContentType(pub MediaType);
 
 macro_rules! content_types {
-    ($($name:ident ($check:ident): $str:expr, $t:expr,
-        $s:expr $(; $k:expr => $v:expr)*,)+) => {
+    (
+        $(
+            $name:ident ($check:ident): $str:expr,
+            $t:expr, $s:expr $(; $k:expr => $v:expr)*,
+        )+
+    ) => {
     $(
-        docify!([
-            Content Type for @{"**"}! @{$str}! @{"**"}!: @{"`"} @{$t}! @[/]! @{$s}!
-            $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
-        ];
-            #[allow(non_upper_case_globals)]
-            pub const $name: ContentType = ContentType(MediaType::$name);
-        );
+
+        /// Content Type for
+        #[doc = concat!("**", $str, "**: ")]
+        #[doc = concat!("`", $t, "/", $s, $("; ", $k, "=", $v,)* "`")]
+
+        #[allow(non_upper_case_globals)]
+        pub const $name: ContentType = ContentType(MediaType::$name);
     )+
 }}
 
 macro_rules! from_extension {
     ($($ext:expr => $name:ident,)*) => (
-    docify!([
-        Returns the @[Content-Type] associated with the extension @code{ext}.
-        Not all extensions are recognized. If an extensions is not recognized,
-        @code{None} is returned. The currently recognized extensions are:
-
-        @nl
-        $(* @{$ext} - @{"`ContentType::"}! @[$name]! @{"`"} @nl)*
-        @nl
-
-        This list is likely to grow. Extensions are matched
-        @[case-insensitively.]
-    ];
+        /// Returns the Content-Type associated with the extension `ext`.
+        ///
+        /// Extensions are matched case-insensitively. Not all extensions are
+        /// recognized. If an extensions is not recognized, `None` is returned.
+        /// The currently recognized extensions are:
+        ///
+        $(
+            #[doc = concat!("* ", $ext, " - [`ContentType::", stringify!($name), "`]")]
+        )*
+        ///
+        /// This list is likely to grow.
+        ///
         /// # Example
         ///
         /// Recognized content types:
@@ -99,19 +103,19 @@ macro_rules! from_extension {
         pub fn from_extension(ext: &str) -> Option<ContentType> {
             MediaType::from_extension(ext).map(ContentType)
         }
-    );)
+    )
 }
 
 macro_rules! extension {
     ($($ext:expr => $name:ident,)*) => (
-    docify!([
-        Returns the most common file extension associated with the
-        @[Content-Type] @code{self} if it is known. Otherwise, returns
-        @code{None}. The currently recognized extensions are identical to those
-        in @{"[`ContentType::from_extension()`]"} with the @{"most common"}
-        extension being the first extension appearing in the list for a given
-        @[Content-Type].
-    ];
+        /// Returns the most common file extension associated with the
+        /// Content-Type `self` if it is known. Otherwise, returns `None`.
+        ///
+        /// The currently recognized extensions are identical to those in
+        /// [`ContentType::from_extension()`] with the most common extension
+        /// being the first extension appearing in the list for a given
+        /// Content-Type.
+        ///
         /// # Example
         ///
         /// Known extension:
@@ -140,23 +144,20 @@ macro_rules! extension {
             $(if self == &ContentType::$name { return Some($ext.into()) })*
             None
         }
-    );)
+    )
 }
 
 macro_rules! parse_flexible {
     ($($short:expr => $name:ident,)*) => (
-    docify!([
-        Flexibly parses @code{name} into a @code{ContentType}. The parse is
-        @[_flexible_] because, in addition to strictly correct content types, it
-        recognizes the following shorthands:
-
-        @nl
-        $(* $short - @{"`ContentType::"}! @[$name]! @{"`"} @nl)*
-        @nl
-    ];
+        /// Flexibly parses `name` into a [`ContentType`]. The parse is
+        /// _flexible_ because, in addition to strictly correct content types,
+        /// it recognizes the following shorthands:
         ///
-        /// For regular parsing, use the
-        /// [`ContentType::from_str()`](#impl-FromStr) method.
+        $(
+            #[doc = concat!("* ", $short, " - [`ContentType::", stringify!($name), "`]")]
+        )*
+        ///
+        /// For regular parsing, use [`ContentType::from_str()`].
         ///
         /// # Example
         ///
@@ -205,7 +206,7 @@ macro_rules! parse_flexible {
         pub fn parse_flexible(name: &str) -> Option<ContentType> {
             MediaType::parse_flexible(name).map(ContentType)
         }
-    );)
+    )
 }
 
 impl ContentType {
