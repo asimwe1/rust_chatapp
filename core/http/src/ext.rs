@@ -12,12 +12,6 @@ pub trait IntoCollection<T>: Sized {
 
     #[doc(hidden)]
     fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
-
-    #[doc(hidden)]
-    fn mapped_vec<U, F: FnMut(T) -> U>(self, f: F) -> Vec<U> {
-        let small = self.mapped::<U, F, [U; 0]>(f);
-        small.into_vec()
-    }
 }
 
 impl<T> IntoCollection<T> for T {

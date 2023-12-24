@@ -3,7 +3,6 @@ use std::str::FromStr;
 use std::fmt;
 
 use smallvec::SmallVec;
-use either::Either;
 
 use crate::{Header, MediaType};
 use crate::ext::IntoCollection;
@@ -53,30 +52,21 @@ use crate::parse::parse_accept;
 /// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
 #[derive(Debug, Clone)]
-pub struct Accept(pub(crate) AcceptParams);
+pub struct Accept(pub(crate) SmallVec<[QMediaType; 1]>);
 
 /// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
 pub struct QMediaType(pub MediaType, pub Option<f32>);
 
-// NOTE: `Static` is needed for `const` items. Need `const SmallVec::new`.
-#[derive(Debug, Clone)]
-pub enum AcceptParams {
-    Static(QMediaType),
-    Dynamic(SmallVec<[QMediaType; 1]>)
-}
-
 macro_rules! accept_constructor {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
         $s:expr $(; $k:expr => $v:expr)*,)+) => {
         $(
-            #[doc="An `Accept` header with the single media type for <b>"]
-            #[doc=$str] #[doc="</b>: <i>"]
-            #[doc=$t] #[doc="/"] #[doc=$s]
-            #[doc="</i>"]
+            #[doc="An `Accept` header with the single media type for"]
+            #[doc=concat!("**", $str, "**: ", "_", $t, "/", $s, "_")]
             #[allow(non_upper_case_globals)]
             pub const $name: Accept = Accept(
-                AcceptParams::Static(QMediaType(MediaType::$name, None))
+                SmallVec::from_const([QMediaType(MediaType::$name, None)])
             );
          )+
     };
@@ -111,7 +101,7 @@ impl Accept {
     /// ```
     #[inline(always)]
     pub fn new<T: IntoCollection<QMediaType>>(items: T) -> Accept {
-        Accept(AcceptParams::Dynamic(items.into_collection()))
+        Accept(items.into_collection())
     }
 
     // TODO: Implement this.
@@ -211,10 +201,7 @@ impl Accept {
     /// ```
     #[inline(always)]
     pub fn iter(&self) -> impl Iterator<Item=&'_ QMediaType> + '_ {
-        match self.0 {
-            AcceptParams::Static(ref val) => Either::Left(Some(val).into_iter()),
-            AcceptParams::Dynamic(ref vec) => Either::Right(vec.iter())
-        }
+        self.0.iter()
     }
 
     /// Returns an iterator over all of the (bare) media types in `self`. Media
@@ -249,7 +236,7 @@ impl Accept {
 impl<T: IntoCollection<MediaType>> From<T> for Accept {
     #[inline(always)]
     fn from(items: T) -> Accept {
-        Accept(AcceptParams::Dynamic(items.mapped(|item| item.into())))
+        Accept(items.mapped(|item| item.into()))
     }
 }
 
@@ -358,21 +345,6 @@ impl Deref for QMediaType {
     #[inline(always)]
     fn deref(&self) -> &MediaType {
         &self.0
-    }
-}
-
-impl Default for AcceptParams {
-    fn default() -> Self {
-        AcceptParams::Dynamic(SmallVec::new())
-    }
-}
-
-impl Extend<QMediaType> for AcceptParams {
-    fn extend<T: IntoIterator<Item = QMediaType>>(&mut self, iter: T) {
-        match self {
-            AcceptParams::Static(..) => panic!("can't add to static collection!"),
-            AcceptParams::Dynamic(ref mut v) => v.extend(iter)
-        }
     }
 }
 
