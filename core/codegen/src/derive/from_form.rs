@@ -212,6 +212,12 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             })))
         )
         .inner_mapper(MapperBuild::new()
+            .with_output(|_, _| quote! {
+                fn push_error(__c: &mut Self::Context, __e: #_form::Error<'r>) {
+                    __c.__errors.push(__e);
+                }
+            }))
+        .inner_mapper(MapperBuild::new()
             .with_output(|_, output| quote! {
                 fn finalize(mut __c: Self::Context) -> #_Result<Self, #_form::Errors<'r>> {
                     #[allow(unused_imports)]

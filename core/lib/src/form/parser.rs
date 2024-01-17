@@ -67,10 +67,17 @@ impl<'r, 'i> Parser<'r, 'i> {
             .get("data-form")
             .unwrap_or(Limits::DATA_FORM);
 
+        // Increase internal limit by 1 so multer can limit to `form_limit`.
+        let stream = data.open(form_limit + 1);
+        let constraints = multer::Constraints::new()
+            .size_limit(multer::SizeLimit::new()
+                .whole_stream(form_limit.into())
+                .per_field(form_limit.into()));
+
         Ok(Parser::Multipart(MultipartParser {
             request: req,
             buffer: local_cache_once!(req, SharedStack::new()),
-            source: Multipart::with_reader(data.open(form_limit), boundary),
+            source: Multipart::with_reader_with_constraints(stream, boundary, constraints),
             done: false,
         }))
     }
