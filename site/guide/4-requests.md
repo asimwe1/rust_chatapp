@@ -211,10 +211,11 @@ other matching routes to try. When there are no remaining routes, the [error
 catcher](#error-catchers) associated with the status set by the last forwarding
 guard is called.
 
-Routes are attempted in increasing _rank_ order. Rocket chooses a default
-ranking from -12 to -1, detailed in the next section, but a route's rank can also
-be manually set with the `rank` attribute. To illustrate, consider the following
-routes:
+Routes are attempted in increasing _rank_ order. Every route has an associated
+rank. If one is not specified, Rocket chooses a default rank designed to avoid
+collisions based on a route's _color_, detailed in the [next
+section](#default-ranking), but a route's rank can also be manually set with the
+`rank` attribute. To illustrate, consider the following routes:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -272,16 +273,20 @@ parameter resolves this collision.
 
 ### Default Ranking
 
-If a rank is not explicitly specified, Rocket assigns a default rank. The
+If a rank is not explicitly specified, Rocket assigns a default rank to a route.
+Default ranks range from `-12` to `-1`. This differs from ranks that can be
+assigned manually in a route attribute, which must be positive numbers. The
 default rank prefers static segments over dynamic segments in both paths and
 queries: the _more_ static a route's path and query are, the higher its
 precedence.
 
-There are three "colors" to paths and queries:
+There are three "colors" assignable to each path and query:
 
   1. `static`, meaning all components are static
   2. `partial`, meaning at least one component is dynamic
   3. `wild`, meaning all components are dynamic
+
+Additionally, a query may have _no_ color (`none`) if there is no query.
 
 Static paths carry more weight than static queries. The same is true for partial
 and wild paths. This results in the following default ranking table:
