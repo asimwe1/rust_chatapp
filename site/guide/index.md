@@ -36,13 +36,11 @@ aspect of Rocket. The sections are:
 
 ## Getting Help
 
-The official community support channels are [`#rocket:mozilla.org`] on Matrix
-and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
-recommend joining us on [Matrix via Element]. If you prefer IRC, you can join
-via the [Kiwi IRC client] or a client of your own. The [FAQ](faq/) also
-provides answers to commonly asked questions.
+The official community support channels are via Matrix chat on
+[`#rocket:mozilla.org`] and via [GitHub Discussions]. To join us on Matrix, we
+recommend the browser-based [Element] client. The [FAQ](faq/) also provides
+answers to commonly asked questions.
 
+[GitHub Discussions]: https://github.com/rwf2/Rocket/discussions
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket
-[Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Kiwi IRC Client]: https://kiwiirc.com/client/irc.libera.chat/#rocket
+[Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
