@@ -37,7 +37,9 @@ fn _async_bound(
         ReturnType::Type(arrow, ty) => parse_quote_spanned!(ty.span() =>
             #arrow impl ::core::future::Future<Output = #ty> + #bounds
         ),
-        default@ReturnType::Default => default
+        default@ReturnType::Default => parse_quote_spanned!(default.span() =>
+            -> impl ::core::future::Future<Output = ()> + #bounds
+        ),
     };
 
     Ok(quote! {
