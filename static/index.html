@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+
+    <link rel="stylesheet" href="../../../../E:/bootstrap-4.0.0-dist/css/bootstrap.min.css">
+    <script src="../../../../E:/bootstrap-4.0.0-dist/js/bootstrap.min.js"></script>
+
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6172208143098274"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <title>Rocket Rooms</title>
+    <link rel="stylesheet" href="reset.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" charset="utf-8" defer></script>
+  </head>
+  <body>
+    <main>
+      <div id="sidebar">
+        <div id="status" class="pending"></div>
+
+        <div id="room-list">
+          <template id="room">
+            <button class="room"></button>
+          </template>
+        </div>
+
+        <form id="new-room">
+          <input type="text" name="name" id="name" autocomplete="off"
+              placeholder="new room..." maxlength="29"></input>
+          <button type="submit">+</button>
+        </form>
+      </div>
+
+      <div id="content">
+
+        <div id="messages">
+          <template id="message">
+            <div class="message">
+              <span class="username"></span>
+              <span class="text"></span>
+            </div>
+          </template>
+        </div>
+
+        <form id="new-message">
+          <input type="text" name="username" id="username" maxlength="19"
+            placeholder="guest" autocomplete="off">
+          <input type="text" name="message" id="message" autocomplete="on"
+              placeholder="Send a message..." autofocus>
+          <button type="submit" id="send">Send</button>
+        </form>
+      </div>
+    </main>
+  </body>
+</html>
