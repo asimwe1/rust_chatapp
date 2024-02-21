@@ -22,7 +22,7 @@ pushd "${PROJECT_ROOT}" > /dev/null 2>&1
   # Set the crate version and fill in missing doc URLs with docs.rs links.
   RUSTDOCFLAGS="-Z unstable-options \
       --crate-version ${DOC_VERSION} \
-      --enable-index-page" \
+      --generate-link-to-definition" \
       cargo doc -Zrustdoc-map --no-deps --all-features \
         -p rocket \
         -p rocket_db_pools \
