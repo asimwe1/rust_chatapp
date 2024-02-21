@@ -17,7 +17,7 @@ if [ "${1}" != "-d" ]; then
 fi
 
 # Generate the rustdocs for all of the crates.
-echo ":::: Generating the docs..."
+echo ":::: Generating docs (${DOC_VERSION})..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
   # Set the crate version and fill in missing doc URLs with docs.rs links.
   RUSTDOCFLAGS="-Z unstable-options \
@@ -31,5 +31,19 @@ pushd "${PROJECT_ROOT}" > /dev/null 2>&1
         -p rocket_ws
 popd > /dev/null 2>&1
 
-# Blank index, for redirection.
-touch "${DOC_DIR}/index.html"
+# Generating redirection list: from    to.
+echo ":::: Generating redirects..."
+REDIRECTS="
+/               /v0.5/rocket/                                302!
+/v0.4           https://docs.rs/rocket/0.4/rocket/
+/v0.4/:crate/*  https://docs.rs/:crate/0.4/:crate/:splat
+/:v             /:v/rocket/
+/v0.5/*         https://v0-5--rocket-docs.netlify.app/:splat 200
+/:v/*           https://:v--rocket-docs.netlify.app/:splat   200
+"
+
+if [ "${GIT_BRANCH}" = "master" ]; then
+  echo "${REDIRECTS}" | tee "${DOC_DIR}/_redirects"
+else
+  echo "-> '${GIT_BRANCH}' branch does not require redirects"
+fi

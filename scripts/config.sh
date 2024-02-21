@@ -56,19 +56,18 @@ DOC_DIR=$(relative "target/doc") || exit $?
 # Versioning information. These are changed as versions change.
 VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2)
 MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
-VIRTUAL_CODENAME="$(git branch --show-current)"
-PHYSICAL_CODENAME="v${MAJOR_VERSION}"
-CURRENT_RELEASE=false
-PRE_RELEASE=true
+GIT_BRANCH="$(git branch --show-current)"
+GIT_BRANCH=${GIT_BRANCH:-$BRANCH}
+IS_RELEASE_BRANCH=$( [[ $GIT_BRANCH == "v"* ]]; echo $? )
 
 # A generated codename for this version. Use the git branch for pre-releases.
-case $PRE_RELEASE in
-  true)
-    CODENAME="${VIRTUAL_CODENAME}"
-    DOC_VERSION="${VERSION}-$(future_date)"
+case $IS_RELEASE_BRANCH in
+  1)
+    CODENAME="${GIT_BRANCH}"
+    DOC_VERSION="${GIT_BRANCH}-$(future_date)"
     ;;
-  false)
-    CODENAME="${PHYSICAL_CODENAME}"
+  *)
+    CODENAME="${MAJOR_VERSION}"
     DOC_VERSION="${VERSION}"
     ;;
 esac
@@ -104,12 +103,10 @@ ALL_CRATE_ROOTS=(
 function print_environment() {
   echo "  VERSION: ${VERSION}"
   echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
+  echo "  GIT_BRANCH: ${GIT_BRANCH}"
+  echo "  IS_RELEASE_BRANCH: ${IS_RELEASE_BRANCH}"
   echo "  CODENAME: ${CODENAME}"
-  echo "  PHYSICAL_CODENAME: ${PHYSICAL_CODENAME}"
-  echo "  VIRTUAL_CODENAME: ${VIRTUAL_CODENAME}"
   echo "  DOC_VERSION: ${DOC_VERSION}"
-  echo "  CURRENT_RELEASE: ${CURRENT_RELEASE}"
-  echo "  PRE_RELEASE: ${PRE_RELEASE}"
   echo "  SCRIPT_DIR: ${SCRIPT_DIR}"
   echo "  PROJECT_ROOT: ${PROJECT_ROOT}"
   echo "  CORE_ROOT: ${CORE_ROOT}"
