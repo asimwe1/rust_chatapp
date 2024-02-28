@@ -21,7 +21,9 @@ echo ":::: Generating docs (${DOC_VERSION})..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
   # Set the crate version and fill in missing doc URLs with docs.rs links.
   RUSTDOCFLAGS="-Z unstable-options \
+      --extern-html-root-url rocket=https://api.rocket.rs/${GIT_BRANCH}/rocket/ \
       --crate-version ${DOC_VERSION} \
+      --enable-index-page \
       --generate-link-to-definition" \
       cargo doc -Zrustdoc-map --no-deps --all-features \
         -p rocket \
@@ -31,17 +33,16 @@ pushd "${PROJECT_ROOT}" > /dev/null 2>&1
         -p rocket_ws
 popd > /dev/null 2>&1
 
-# Generating redirection list: from    to.
-echo ":::: Generating redirects..."
 REDIRECTS="
 /               /v0.5/rocket/                                302!
 /rocket/        /v0.5/rocket/                                302!
 /:v             /:v/rocket/
 /:v/*           https://:v--rocket-docs.netlify.app/:splat   200
 "
-
+# Generating redirection list: from    to.
 if [ "${GIT_BRANCH}" = "master" ]; then
+  echo ":::: Generating redirects..."
   echo "${REDIRECTS}" | tee "${DOC_DIR}/_redirects"
 else
-  echo "-> '${GIT_BRANCH}' branch does not require redirects"
+  echo ":: Skipping redirects for branch '${GIT_BRANCH}'"
 fi

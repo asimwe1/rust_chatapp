@@ -37,9 +37,7 @@ function future_date() {
 
 # Root of workspace-like directories.
 PROJECT_ROOT=$(relative "") || exit $?
-CORE_ROOT=$(relative "core") || exit $?
 CONTRIB_ROOT=$(relative "contrib") || exit $?
-SITE_ROOT=$(relative "site") || exit $?
 BENCHMARKS_ROOT=$(relative "benchmarks") || exit $?
 FUZZ_ROOT=$(relative "core/lib/fuzz") || exit $?
 
@@ -47,35 +45,11 @@ FUZZ_ROOT=$(relative "core/lib/fuzz") || exit $?
 CORE_LIB_ROOT=$(relative "core/lib") || exit $?
 CORE_CODEGEN_ROOT=$(relative "core/codegen") || exit $?
 CORE_HTTP_ROOT=$(relative "core/http") || exit $?
-GUIDE_TESTS_ROOT=$(relative "site/tests") || exit $?
-
-# Root of infrastructure directories.
-EXAMPLES_DIR=$(relative "examples") || exit $?
-DOC_DIR=$(relative "target/doc") || exit $?
-
-# Versioning information. These are changed as versions change.
-VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2)
-MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
-GIT_BRANCH="$(git branch --show-current)"
-GIT_BRANCH=${GIT_BRANCH:-$BRANCH}
-IS_RELEASE_BRANCH=$( [[ $GIT_BRANCH == "v"* ]]; echo $? )
-
-# A generated codename for this version. Use the git branch for pre-releases.
-case $IS_RELEASE_BRANCH in
-  1)
-    CODENAME="${GIT_BRANCH}"
-    DOC_VERSION="${GIT_BRANCH}-$(future_date)"
-    ;;
-  *)
-    CODENAME="${MAJOR_VERSION}"
-    DOC_VERSION="${VERSION}"
-    ;;
-esac
 
 CORE_CRATE_ROOTS=(
-    "${CORE_HTTP_ROOT}"
-    "${CORE_CODEGEN_ROOT}"
     "${CORE_LIB_ROOT}"
+    "${CORE_CODEGEN_ROOT}"
+    "${CORE_HTTP_ROOT}"
 )
 
 CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS=(
@@ -88,38 +62,38 @@ CONTRIB_DB_POOLS_CRATE_ROOTS=(
     "${CONTRIB_ROOT}/db_pools/codegen"
 )
 
-ALL_CRATE_ROOTS=(
-    "${CORE_HTTP_ROOT}"
-    "${CORE_CODEGEN_ROOT}"
-    "${CORE_LIB_ROOT}"
-    "${CONTRIB_ROOT}/sync_db_pools/codegen"
-    "${CONTRIB_ROOT}/sync_db_pools/lib"
-    "${CONTRIB_ROOT}/db_pools/codegen"
-    "${CONTRIB_ROOT}/db_pools/lib"
-    "${CONTRIB_ROOT}/dyn_templates"
-    "${CONTRIB_ROOT}/ws"
-)
+# Root of infrastructure directories.
+EXAMPLES_DIR=$(relative "examples") || exit $?
+DOC_DIR=$(relative "target/doc") || exit $?
+
+# Versioning information.
+VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2)
+GIT_BRANCH="$(git branch --show-current)"
+GIT_BRANCH=${GIT_BRANCH:-$BRANCH}
+IS_DEV_BRANCH=$( [[ $GIT_BRANCH == "v"* ]]; echo $? )
+
+case $IS_DEV_BRANCH in
+  1) DOC_VERSION="${GIT_BRANCH}-$(future_date)" ;;
+  *) DOC_VERSION="${VERSION}" ;;
+esac
 
 function print_environment() {
   echo "  VERSION: ${VERSION}"
-  echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
   echo "  GIT_BRANCH: ${GIT_BRANCH}"
-  echo "  IS_RELEASE_BRANCH: ${IS_RELEASE_BRANCH}"
-  echo "  CODENAME: ${CODENAME}"
+  echo "  IS_DEV_BRANCH: ${IS_DEV_BRANCH}"
   echo "  DOC_VERSION: ${DOC_VERSION}"
   echo "  SCRIPT_DIR: ${SCRIPT_DIR}"
   echo "  PROJECT_ROOT: ${PROJECT_ROOT}"
-  echo "  CORE_ROOT: ${CORE_ROOT}"
   echo "  CONTRIB_ROOT: ${CONTRIB_ROOT}"
-  echo "  SITE_ROOT: ${SITE_ROOT}"
+  echo "  FUZZ_ROOT: ${FUZZ_ROOT}"
   echo "  BENCHMARKS_ROOT: ${BENCHMARKS_ROOT}"
   echo "  CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
   echo "  CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
   echo "  CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
-  echo "  GUIDE_TESTS_ROOT: ${GUIDE_TESTS_ROOT}"
+  echo "  CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS: ${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[*]}"
+  echo "  CONTRIB_DB_POOLS_CRATE_ROOTS: ${CONTRIB_DB_POOLS_CRATE_ROOTS[*]}"
   echo "  EXAMPLES_DIR: ${EXAMPLES_DIR}"
   echo "  DOC_DIR: ${DOC_DIR}"
-  echo "  ALL_CRATE_ROOTS: ${ALL_CRATE_ROOTS[*]}"
   echo "  date(): $(future_date)"
 }
 
