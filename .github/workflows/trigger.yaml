@@ -1,0 +1,17 @@
+name: Trigger
+on: [push]
+jobs:
+  trigger:
+    name: api.rocket.rs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.API_DOCS_DEPLOY_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'rwf2',
+              repo: 'api.rocket.rs',
+              workflow_id: 'deploy.yaml',
+              ref: 'master'
+            })
