@@ -42,7 +42,7 @@ Rocket is extensively documented:
 [Getting Started]: https://rocket.rs/guide/getting-started
 [Overview]: https://rocket.rs/overview/
 [Guide]: https://rocket.rs/guide/
-[API Documentation]: https://api.rocket.rs/rocket/
+[API Documentation]: https://api.rocket.rs
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
 and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
