@@ -68,7 +68,7 @@ jobs:
       - name: Install Native Dependencies (Windows)
         if: matrix.platform.name == 'Windows'
         run: |
-          curl -fsS -o vcpkg.7z https://rocket.rs/static/vcpkg-2019-07-05.7z
+          curl -fsLS -o vcpkg.7z https://blob.rocket.rs/vcpkg-2019-07-05.7z
           7z x vcpkg.7z -y -bb0
           xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
           vcpkg integrate install
