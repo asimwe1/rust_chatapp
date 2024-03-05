@@ -144,14 +144,14 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///
 ///   * **&ContentType**
 ///
-///     Extracts the [`ContentType`] from the incoming request via
+///     Extracts the [`ContentType`] header from the incoming request via
 ///     [`Request::content_type()`]. If the request didn't specify a
 ///     Content-Type, the request is forwarded with a 500 Internal Server Error
 ///     status.
 ///
-///   * **&ContentType**
+///   * **&Accept**
 ///
-///     Extracts the [`Accept`] from the incoming request via
+///     Extracts the [`Accept`] header from the incoming request via
 ///     [`Request::accept()`]. If the request didn't specify an `Accept`, the
 ///     request is forwarded with a 500 Internal Server Error status.
 ///
