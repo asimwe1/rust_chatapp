@@ -81,7 +81,7 @@ type SizedBody<'r> = Pin<Box<dyn AsyncReadSeek + Send + 'r>>;
 type UnsizedBody<'r> = Pin<Box<dyn AsyncRead + Send + 'r>>;
 
 enum Inner<'r> {
-    /// A body that can be seeked to determine it's size.
+    /// A body that can be `seek()`ed to determine its size.
     Seekable(SizedBody<'r>),
     /// A body that has no known size.
     Unsized(UnsizedBody<'r>),

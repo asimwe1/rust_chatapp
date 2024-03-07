@@ -1,7 +1,7 @@
 use std::io;
 use std::os::fd::AsRawFd;
 
-pub fn lock_exlusive_nonblocking<T: AsRawFd>(file: &T) -> io::Result<()> {
+pub fn lock_exclusive_nonblocking<T: AsRawFd>(file: &T) -> io::Result<()> {
     let raw_fd = file.as_raw_fd();
     let res = unsafe {
         libc::flock(raw_fd, libc::LOCK_EX | libc::LOCK_NB)

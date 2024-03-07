@@ -40,7 +40,7 @@ impl Bindable for UdsConfig {
             let lock_path = self.path.with_extension(lock_ext);
             let lock_file = NamedFile::open_with(lock_path, &opts).await?;
 
-            unix::lock_exlusive_nonblocking(lock_file.file())?;
+            unix::lock_exclusive_nonblocking(lock_file.file())?;
             if self.path.exists() {
                 tokio::fs::remove_file(&self.path).await?;
             }
