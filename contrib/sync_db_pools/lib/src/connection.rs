@@ -226,10 +226,10 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
         if rocket.state::<ConnectionPool<K, C>>().is_none() {
             let conn = std::any::type_name::<K>().primary().bold();
             error!("requesting `{}` DB connection without attaching `{}{}`.",
-                conn, conn.linger(), "::fairing()".clear());
+                conn, conn.linger(), "::fairing()".resetting());
 
             info_!("Attach `{}{}` to use database connection pooling.",
-                conn.linger(), "::fairing()".clear());
+                conn.linger(), "::fairing()".resetting());
 
             return true;
         }

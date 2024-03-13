@@ -1195,7 +1195,7 @@ impl fmt::Display for Request<'_> {
         // Print the requests media type when the route specifies a format.
         if let Some(mime) = self.format() {
             if !mime.is_any() {
-                write!(f, " {}/{}", mime.top().yellow().linger(), mime.sub().clear())?;
+                write!(f, " {}/{}", mime.top().yellow().linger(), mime.sub().resetting())?;
             }
         }
 

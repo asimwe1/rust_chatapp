@@ -125,7 +125,7 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
         let dbtype = std::any::type_name::<Self>().bold().primary();
         error!("Attempted to fetch unattached database `{}`.", dbtype);
         info_!("`{}{}` fairing must be attached prior to using this database.",
-            dbtype.linger(), "::init()".clear());
+            dbtype.linger(), "::init()".resetting());
         None
     }
 }
