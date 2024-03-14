@@ -16,15 +16,16 @@ use crate::uri::fmt::{self, Part};
 ///
 /// In the rare case that `UriDisplay` is implemented manually, this trait, too,
 /// must be implemented explicitly. In the majority of cases, implementation can
-/// be automated. Rocket provides [`impl_from_uri_param_identity`] to generate
+/// be automated. Rocket provides [`impl_from_uri_param_identity!`] to generate
 /// the _identity_ implementations automatically. For a type `T`, these are:
 ///
 ///   * `impl<P: Part> FromUriParam<P, T> for T`
 ///   * `impl<'x, P: Part> FromUriParam<P, &'x T> for T`
 ///   * `impl<'x, P: Part> FromUriParam<P, &'x mut T> for T`
 ///
-/// See [`impl_from_uri_param_identity!`](crate::impl_from_uri_param_identity!)
-/// for usage details.
+/// See [`impl_from_uri_param_identity!`] for usage details.
+///
+/// [`impl_from_uri_param_identity!`]: crate::impl_from_uri_param_identity!
 ///
 /// # Code Generation
 ///
@@ -316,7 +317,31 @@ impl_from_uri_param_identity!([fmt::Path] PathBuf);
 
 impl_conversion_ref! {
     [fmt::Path] ('a) &'a Path => PathBuf,
-    [fmt::Path] ('a) PathBuf => &'a Path
+    [fmt::Path] ('a) PathBuf => &'a Path,
+}
+
+// TODO: A specialized `RawBytes` instead of `&[u8]`. Then impl [T] => Vec<T>.
+impl_from_uri_param_identity!([fmt::Query] ('a) &'a [u8]);
+
+impl_conversion_ref! {
+    [fmt::Query] (T, A: FromUriParam<fmt::Query, T> + UriDisplay<fmt::Query>) Vec<A> => Vec<T>,
+    [fmt::Query] (
+            T,
+            A: FromUriParam<fmt::Query, T> + UriDisplay<fmt::Query>,
+            const N: usize
+        ) Vec<A> => [T; N],
+
+    [fmt::Query] (
+            T,
+            A: FromUriParam<fmt::Query, T> + UriDisplay<fmt::Query>,
+            const N: usize
+        ) [A; N] => Vec<T>,
+
+    [fmt::Query] (
+            T,
+            A: FromUriParam<fmt::Query, T> + UriDisplay<fmt::Query>,
+            const N: usize
+        ) [A; N] => [T; N],
 }
 
 /// A no cost conversion allowing an `&str` to be used in place of a `PathBuf`.

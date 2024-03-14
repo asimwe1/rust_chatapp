@@ -453,11 +453,19 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 
 impl<T: UriDisplay<Query>> UriDisplay<Query> for Vec<T> {
     fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
-        for value in self {
-            f.write_value(value)?;
-        }
+        self.iter().try_for_each(|v| f.write_value(v))
+    }
+}
 
-        Ok(())
+impl<T: UriDisplay<Query>, const N: usize> UriDisplay<Query> for [T; N] {
+    fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
+        self.iter().try_for_each(|v| f.write_value(v))
+    }
+}
+
+impl UriDisplay<Query> for [u8] {
+    fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
+        f.write_raw(RawStr::percent_encode_bytes(self).as_str())
     }
 }
 
