@@ -155,6 +155,38 @@ impl WebSocket {
     {
         MessageStream { ws: self, handler: Box::new(stream), }
     }
+
+    /// Returns the server's fully computed and encoded WebSocket handshake
+    /// accept key.
+    ///
+    /// > The server takes the value of the `Sec-WebSocket-Key` sent in the
+    /// > handshake request, appends `258EAFA5-E914-47DA-95CA-C5AB0DC85B11`,
+    /// > SHA-1 of the new value, and is then base64 encoded.
+    /// >
+    /// > -- [`Sec-WebSocket-Accept`]
+    ///
+    /// This is the value returned via the [`Sec-WebSocket-Accept`] header
+    /// during the acceptance response.
+    ///
+    /// [`Sec-WebSocket-Accept`]:
+    /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-WebSocket-Accept
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::get;
+    /// # use rocket_ws as ws;
+    /// #
+    /// #[get("/echo")]
+    /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
+    ///     let accept_key = ws.accept_key();
+    ///     ws.stream(|io| io)
+    /// }
+    /// ```
+    pub fn accept_key(&self) -> &str {
+        &self.key
+    }
+
 }
 
 /// A streaming channel, returned by [`WebSocket::channel()`].
