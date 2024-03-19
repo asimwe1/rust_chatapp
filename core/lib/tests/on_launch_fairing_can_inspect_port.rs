@@ -10,7 +10,8 @@ async fn on_ignite_fairing_can_inspect_port() {
     let rocket = rocket::custom(Config::debug_default())
         .attach(AdHoc::on_liftoff("Send Port -> Channel", move |rocket| {
             Box::pin(async move {
-                tx.send(rocket.endpoint().tcp().unwrap().port()).unwrap();
+                let tcp = rocket.endpoints().find_map(|v| v.tcp());
+                tx.send(tcp.unwrap().port()).expect("send okay");
             })
         }));
 

@@ -6,19 +6,18 @@ use std::task::{Poll, Context};
 
 use futures::future::BoxFuture;
 use http::request::Parts;
-use hyper::body::Incoming;
 use tokio::io::{AsyncRead, ReadBuf};
 
-use crate::data::{Data, IoHandler};
+use crate::data::{Data, IoHandler, RawStream};
 use crate::{Request, Response, Rocket, Orbit};
 
 // TODO: Magic with trait async fn to get rid of the box pin.
 // TODO: Write safety proofs.
 
 macro_rules! static_assert_covariance {
-    ($T:tt) => (
+    ($($T:tt)*) => (
         const _: () = {
-            fn _assert_covariance<'x: 'y, 'y>(x: &'y $T<'x>) -> &'y $T<'y> { x }
+            fn _assert_covariance<'x: 'y, 'y>(x: &'y $($T)*<'x>) -> &'y $($T)*<'y> { x }
         };
     )
 }
@@ -40,7 +39,6 @@ pub struct ErasedResponse {
     // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'static>,
     _request: Arc<ErasedRequest>,
-    _incoming: Box<Incoming>,
 }
 
 impl Drop for ErasedResponse {
@@ -79,10 +77,9 @@ impl ErasedRequest {
         ErasedRequest { _rocket: rocket, _parts: parts, request, }
     }
 
-    pub async fn into_response<T: Send + Sync + 'static>(
+    pub async fn into_response<T, D>(
         self,
-        incoming: Incoming,
-        data_builder: impl for<'r> FnOnce(&'r mut Incoming) -> Data<'r>,
+        raw_stream: D,
         preprocess: impl for<'r, 'x> FnOnce(
             &'r Rocket<Orbit>,
             &'r mut Request<'x>,
@@ -94,14 +91,11 @@ impl ErasedRequest {
             &'r Request<'r>,
             Data<'r>
         ) -> BoxFuture<'r, Response<'r>>,
-    ) -> ErasedResponse {
-        let mut incoming = Box::new(incoming);
-        let mut data: Data<'_> = {
-            let incoming: &mut Incoming = &mut *incoming;
-            let incoming: &'static mut Incoming = unsafe { transmute(incoming) };
-            data_builder(incoming)
-        };
-
+    ) -> ErasedResponse
+        where T: Send + Sync + 'static,
+              D: for<'r> Into<RawStream<'r>>
+    {
+        let mut data: Data<'_> = Data::from(raw_stream);
         let mut parent = Arc::new(self);
         let token: T = {
             let parent: &mut ErasedRequest = Arc::get_mut(&mut parent).unwrap();
@@ -122,7 +116,6 @@ impl ErasedRequest {
 
         ErasedResponse {
             _request: parent,
-            _incoming: incoming,
             response: response,
         }
     }

@@ -427,7 +427,7 @@ impl TlsConfig {
     }
 
     pub fn validate(&self) -> Result<(), crate::tls::Error> {
-        self.acceptor().map(|_| ())
+        self.server_config().map(|_| ())
     }
 }
 

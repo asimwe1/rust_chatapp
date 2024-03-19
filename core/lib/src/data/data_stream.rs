@@ -68,7 +68,9 @@ pub type RawReader<'r> = StreamReader<RawStream<'r>, Bytes>;
 /// Raw underlying data stream.
 pub enum RawStream<'r> {
     Empty,
-    Body(&'r mut HyperBody),
+    Body(HyperBody),
+    #[cfg(feature = "http3-preview")]
+    H3Body(crate::listener::Cancellable<crate::listener::quic::QuicRx>),
     Multipart(multer::Field<'r>),
 }
 
@@ -343,7 +345,9 @@ impl Stream for RawStream<'_> {
                     .poll_frame(cx)
                     .map_ok(|frame| frame.into_data().unwrap_or_else(|_| Bytes::new()))
                     .map_err(io::Error::other)
-            }
+            },
+            #[cfg(feature = "http3-preview")]
+            RawStream::H3Body(stream) => Pin::new(stream).poll_next(cx),
             RawStream::Multipart(s) => Pin::new(s).poll_next(cx).map_err(io::Error::other),
             RawStream::Empty => Poll::Ready(None),
         }
@@ -356,6 +360,8 @@ impl Stream for RawStream<'_> {
                 let (lower, upper) = (hint.lower(), hint.upper());
                 (lower as usize, upper.map(|x| x as usize))
             },
+            #[cfg(feature = "http3-preview")]
+            RawStream::H3Body(_) => (0, Some(0)),
             RawStream::Multipart(mp) => mp.size_hint(),
             RawStream::Empty => (0, Some(0)),
         }
@@ -367,14 +373,23 @@ impl std::fmt::Display for RawStream<'_> {
         match self {
             RawStream::Empty => f.write_str("empty stream"),
             RawStream::Body(_) => f.write_str("request body"),
+            #[cfg(feature = "http3-preview")]
+            RawStream::H3Body(_) => f.write_str("http3 quic stream"),
             RawStream::Multipart(_) => f.write_str("multipart form field"),
         }
     }
 }
 
-impl<'r> From<&'r mut HyperBody> for RawStream<'r> {
-    fn from(value: &'r mut HyperBody) -> Self {
+impl<'r> From<HyperBody> for RawStream<'r> {
+    fn from(value: HyperBody) -> Self {
         Self::Body(value)
+    }
+}
+
+#[cfg(feature = "http3-preview")]
+impl<'r> From<crate::listener::Cancellable<crate::listener::quic::QuicRx>> for RawStream<'r> {
+    fn from(value: crate::listener::Cancellable<crate::listener::quic::QuicRx>) -> Self {
+        Self::H3Body(value)
     }
 }
 

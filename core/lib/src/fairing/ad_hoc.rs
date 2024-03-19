@@ -187,7 +187,7 @@ impl AdHoc {
     /// Constructs an `AdHoc` shutdown fairing named `name`. The function `f`
     /// will be called by Rocket when [shutdown is triggered].
     ///
-    /// [shutdown is triggered]: crate::config::Shutdown#triggers
+    /// [shutdown is triggered]: crate::config::ShutdownConfig#triggers
     ///
     /// # Example
     ///

@@ -39,7 +39,7 @@ pub struct Request<'r> {
 /// Information derived from an incoming connection, if any.
 #[derive(Clone, Default)]
 pub(crate) struct ConnectionMeta {
-    pub peer_address: Option<Arc<Endpoint>>,
+    pub peer_endpoint: Option<Endpoint>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
     pub peer_certs: Option<Arc<Certificates<'static>>>,
 }
@@ -47,8 +47,8 @@ pub(crate) struct ConnectionMeta {
 impl<C: Connection> From<&C> for ConnectionMeta {
     fn from(conn: &C) -> Self {
         ConnectionMeta {
-            peer_address: conn.peer_address().ok().map(Arc::new),
-            peer_certs: conn.peer_certificates().map(|c| c.into_owned()).map(Arc::new),
+            peer_endpoint: conn.endpoint().ok(),
+            peer_certs: conn.certificates().map(|c| c.into_owned()).map(Arc::new),
         }
     }
 }
@@ -316,20 +316,21 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use std::net::{SocketAddrV4, Ipv4Addr};
+    /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    /// use rocket::listener::Endpoint;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
     /// assert_eq!(request.remote(), None);
     ///
-    /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000);
-    /// request.set_remote(localhost);
-    /// assert_eq!(request.remote().unwrap(), &localhost);
+    /// let localhost = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8111);
+    /// request.set_remote(Endpoint::Tcp(localhost));
+    /// assert_eq!(request.remote().unwrap().tcp().unwrap(), localhost);
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<&Endpoint> {
-        self.connection.peer_address.as_deref()
+        self.connection.peer_endpoint.as_ref()
     }
 
     /// Sets the remote address of `self` to `address`.
@@ -339,20 +340,21 @@ impl<'r> Request<'r> {
     /// Set the remote address to be 127.0.0.1:8111:
     ///
     /// ```rust
-    /// use std::net::{SocketAddrV4, Ipv4Addr};
+    /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    /// use rocket::listener::Endpoint;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
     /// assert_eq!(request.remote(), None);
     ///
-    /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8111);
-    /// request.set_remote(localhost);
-    /// assert_eq!(request.remote().unwrap(), &localhost);
+    /// let localhost = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8111);
+    /// request.set_remote(Endpoint::Tcp(localhost));
+    /// assert_eq!(request.remote().unwrap().tcp().unwrap(), localhost);
     /// ```
     #[inline(always)]
-    pub fn set_remote<A: Into<Endpoint>>(&mut self, address: A) {
-        self.connection.peer_address = Some(Arc::new(address.into()));
+    pub fn set_remote(&mut self, endpoint: Endpoint) {
+        self.connection.peer_endpoint = Some(endpoint.into());
     }
 
     /// Returns the IP address of the configured
@@ -491,14 +493,15 @@ impl<'r> Request<'r> {
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
-    /// # use std::net::{SocketAddrV4, Ipv4Addr};
+    /// # use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    /// # use rocket::listener::Endpoint;
     ///
     /// // starting without an "X-Real-IP" header or remote address
     /// assert!(request.client_ip().is_none());
     ///
     /// // add a remote address; this is done by Rocket automatically
-    /// let localhost_9190 = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 9190);
-    /// request.set_remote(localhost_9190);
+    /// let localhost_9190 = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 9190);
+    /// request.set_remote(Endpoint::Tcp(localhost_9190));
     /// assert_eq!(request.client_ip().unwrap(), Ipv4Addr::LOCALHOST);
     ///
     /// // now with an X-Real-IP header, the default value for `ip_header`.
@@ -507,7 +510,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn client_ip(&self) -> Option<IpAddr> {
-        self.real_ip().or_else(|| Some(self.remote()?.tcp()?.ip()))
+        self.real_ip().or_else(|| self.remote()?.ip())
     }
 
     /// Returns a wrapped borrow to the cookies in `self`.

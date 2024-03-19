@@ -1,6 +1,7 @@
+use std::io;
 use futures::TryFutureExt;
 
-use crate::listener::Listener;
+use crate::listener::{Listener, Endpoint};
 
 pub trait Bindable: Sized {
     type Listener: Listener + 'static;
@@ -8,6 +9,9 @@ pub trait Bindable: Sized {
     type Error: std::error::Error + Send + 'static;
 
     async fn bind(self) -> Result<Self::Listener, Self::Error>;
+
+    /// The endpoint that `self` binds on.
+    fn candidate_endpoint(&self) -> io::Result<Endpoint>;
 }
 
 impl<L: Listener + 'static> Bindable for L {
@@ -17,6 +21,10 @@ impl<L: Listener + 'static> Bindable for L {
 
     async fn bind(self) -> Result<Self::Listener, Self::Error> {
         Ok(self)
+    }
+
+    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+        L::endpoint(self)
     }
 }
 
@@ -36,5 +44,9 @@ impl<A: Bindable, B: Bindable> Bindable for either::Either<A, B> {
                 .map_err(either::Either::Right)
                 .await,
         }
+    }
+
+    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+        either::for_both!(self, a => a.candidate_endpoint())
     }
 }

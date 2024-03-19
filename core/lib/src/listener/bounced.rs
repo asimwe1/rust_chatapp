@@ -52,7 +52,7 @@ impl<L: Listener + Sync> Listener for Bounced<L> {
         self.listener.connect(accept).await
     }
 
-    fn socket_addr(&self) -> io::Result<Endpoint> {
-        self.listener.socket_addr()
+    fn endpoint(&self) -> io::Result<Endpoint> {
+        self.listener.endpoint()
     }
 }

@@ -191,8 +191,8 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     ***Note: Shutdown fairings are only run during testing if the `Client`
 ///     is terminated using [`Client::terminate()`].***
 ///
-///     [shutdown is triggered]: crate::config::Shutdown#triggers
-///     [grace and mercy periods]: crate::config::Shutdown#summary
+///     [shutdown is triggered]: crate::config::ShutdownConfig#triggers
+///     [grace and mercy periods]: crate::config::ShutdownConfig#summary
 ///     [`Client::terminate()`]: crate::local::blocking::Client::terminate()
 ///
 /// # Singletons
@@ -525,7 +525,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// is in the `kind` field of the `Info` structure for this fairing. The
     /// `Rocket` parameter corresponds to the running application.
     ///
-    /// [shutdown is triggered]: crate::config::Shutdown#triggers
+    /// [shutdown is triggered]: crate::config::ShutdownConfig#triggers
     ///
     /// ## Default Implementation
     ///

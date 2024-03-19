@@ -10,12 +10,13 @@ pub trait Listener: Send + Sync {
 
     type Connection: Connection;
 
+    #[crate::async_bound(Send)]
     async fn accept(&self) -> io::Result<Self::Accept>;
 
     #[crate::async_bound(Send)]
     async fn connect(&self, accept: Self::Accept) -> io::Result<Self::Connection>;
 
-    fn socket_addr(&self) -> io::Result<Endpoint>;
+    fn endpoint(&self) -> io::Result<Endpoint>;
 }
 
 impl<L: Listener> Listener for &L {
@@ -31,8 +32,8 @@ impl<L: Listener> Listener for &L {
         <L as Listener>::connect(self, accept).await
     }
 
-    fn socket_addr(&self) -> io::Result<Endpoint> {
-        <L as Listener>::socket_addr(self)
+    fn endpoint(&self) -> io::Result<Endpoint> {
+        <L as Listener>::endpoint(self)
     }
 }
 
@@ -56,10 +57,10 @@ impl<A: Listener, B: Listener> Listener for Either<A, B> {
         }
     }
 
-    fn socket_addr(&self) -> io::Result<Endpoint> {
+    fn endpoint(&self) -> io::Result<Endpoint> {
         match self {
-            Either::Left(l) => l.socket_addr(),
-            Either::Right(l) => l.socket_addr(),
+            Either::Left(l) => l.endpoint(),
+            Either::Right(l) => l.endpoint(),
         }
     }
 }

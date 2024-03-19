@@ -21,24 +21,24 @@ is configured with. This means that no matter which configuration provider
 Rocket is asked to use, it must be able to read the following configuration
 values:
 
-| key                  | kind              | description                                     | debug/release default   |
-|----------------------|-------------------|-------------------------------------------------|-------------------------|
-| `address`            | `IpAddr`          | IP address to serve on.                         | `127.0.0.1`             |
-| `port`               | `u16`             | Port to serve on.                               | `8000`                  |
-| `workers`*           | `usize`           | Number of threads to use for executing futures. | cpu core count          |
-| `max_blocking`*      | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
-| `ident`              | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
-| `ip_header`          | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
-| `proxy_proto_header` | `string`, `false` | Header identifying [client to proxy protocol].  | `None`                  |
-| `keep_alive`         | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
-| `log_level`          | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
-| `cli_colors`         | [`CliColors`]     | Whether to use colors and emoji when logging.   | `"auto"`                |
-| `secret_key`         | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
-| `tls`                | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
-| `limits`             | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
-| `limits.$name`       | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"          |
-| `ctrlc`              | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
-| `shutdown`*          | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+| key                  | kind               | description                                     | debug/release default         |
+|----------------------|--------------------|-------------------------------------------------|-------------------------------|
+| `address`            | `IpAddr`           | IP address to serve on.                         | `127.0.0.1`                   |
+| `port`               | `u16`              | Port to serve on.                               | `8000`                        |
+| `workers`*           | `usize`            | Number of threads to use for executing futures. | cpu core count                |
+| `max_blocking`*      | `usize`            | Limit on threads to start for blocking tasks.   | `512`                         |
+| `ident`              | `string`, `false`  | If and how to identify via the `Server` header. | `"Rocket"`                    |
+| `ip_header`          | `string`, `false`  | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`                 |
+| `proxy_proto_header` | `string`, `false`  | Header identifying [client to proxy protocol].  | `None`                        |
+| `keep_alive`         | `u32`              | Keep-alive timeout seconds; disabled when `0`.  | `5`                           |
+| `log_level`          | [`LogLevel`]       | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`           |
+| `cli_colors`         | [`CliColors`]      | Whether to use colors and emoji when logging.   | `"auto"`                      |
+| `secret_key`         | [`SecretKey`]      | Secret key for signing and encrypting values.   | `None`                        |
+| `tls`                | [`TlsConfig`]      | TLS configuration, if any.                      | `None`                        |
+| `limits`             | [`Limits`]         | Streaming read size limits.                     | [`Limits::default()`]         |
+| `limits.$name`       | `&str`/`uint`      | Read limit for `$name`.                         | form = "32KiB"                |
+| `ctrlc`              | `bool`             | Whether `ctrl-c` initiates a server shutdown.   | `true`                        |
+| `shutdown`*          | [`ShutdownConfig`] | Graceful shutdown configuration.                | [`ShutdownConfig::default()`] |
 
 
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
@@ -77,8 +77,8 @@ profile supplant any values with the same name in any profile.
 [`SecretKey`]: @api/master/rocket/config/struct.SecretKey.html
 [`CliColors`]: @api/master/rocket/config/enum.CliColors.html
 [`TlsConfig`]: @api/master/rocket/tls/struct.TlsConfig.html
-[`Shutdown`]: @api/master/rocket/config/struct.Shutdown.html
-[`Shutdown::default()`]: @api/master/rocket/config/struct.Shutdown.html#fields
+[`ShutdownConfig`]: @api/master/rocket/shutdown/struct.ShutdownConfig.html
+[`ShutdownConfig::default()`]: @api/master/rocket/shutdown/struct.ShutdownConfig.html#fields
 
 ## Default Provider
 

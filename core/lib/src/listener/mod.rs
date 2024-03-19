@@ -13,6 +13,8 @@ pub mod unix;
 #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 pub mod tls;
 pub mod tcp;
+#[cfg(feature = "http3-preview")]
+pub mod quic;
 
 pub use endpoint::*;
 pub use listener::*;

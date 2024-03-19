@@ -7,7 +7,8 @@ use std::error::Error as StdError;
 use yansi::Paint;
 use figment::Profile;
 
-use crate::{Rocket, Orbit};
+use crate::listener::Endpoint;
+use crate::{Ignite, Orbit, Rocket};
 
 /// An error that occurs during launch.
 ///
@@ -74,8 +75,8 @@ pub struct Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Binding to the network interface failed.
-    Bind(Box<dyn StdError + Send>),
+    /// Binding to the network interface at `.0` failed with error `.1`.
+    Bind(Option<Endpoint>, Box<dyn StdError + Send>),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// A valid [`Config`](crate::Config) could not be extracted from the
@@ -89,6 +90,11 @@ pub enum ErrorKind {
     SentinelAborts(Vec<crate::sentinel::Sentry>),
     /// The configuration profile is not debug but no secret key is configured.
     InsecureSecretKey(Profile),
+    /// Liftoff failed. Contains the Rocket instance that failed to shutdown.
+    Liftoff(
+        Result<Rocket<Ignite>, Arc<Rocket<Orbit>>>,
+        Box<dyn StdError + Send + 'static>
+    ),
     /// Shutdown failed. Contains the Rocket instance that failed to shutdown.
     Shutdown(Arc<Rocket<Orbit>>),
 }
@@ -171,8 +177,12 @@ impl Error {
     pub fn pretty_print(&self) -> &'static str {
         self.mark_handled();
         match self.kind() {
-            ErrorKind::Bind(ref e) => {
-                error!("Binding to the network interface failed.");
+            ErrorKind::Bind(ref a, ref e) => {
+                match a {
+                    Some(a) => error!("Binding to {} failed.", a.primary().underline()),
+                    None => error!("Binding to network interface failed."),
+                }
+
                 info_!("{}", e);
                 "aborting due to bind error"
             }
@@ -225,6 +235,11 @@ impl Error {
 
                 "aborting due to sentinel-triggered abort(s)"
             }
+            ErrorKind::Liftoff(_, error) => {
+                error!("Rocket liftoff failed due to panicking liftoff fairing(s).");
+                error_!("{error}");
+                "aborting due to failed liftoff"
+            }
             ErrorKind::Shutdown(_) => {
                 error!("Rocket failed to shutdown gracefully.");
                 "aborting due to failed shutdown"
@@ -239,13 +254,14 @@ impl fmt::Display for ErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ErrorKind::Bind(e) => write!(f, "binding failed: {e}"),
+            ErrorKind::Bind(_, e) => write!(f, "binding failed: {e}"),
             ErrorKind::Io(e) => write!(f, "I/O error: {e}"),
             ErrorKind::Collisions(_) => "collisions detected".fmt(f),
             ErrorKind::FailedFairings(_) => "launch fairing(s) failed".fmt(f),
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
             ErrorKind::Config(_) => "failed to extract configuration".fmt(f),
             ErrorKind::SentinelAborts(_) => "sentinel(s) aborted".fmt(f),
+            ErrorKind::Liftoff(_, _) => "liftoff failed".fmt(f),
             ErrorKind::Shutdown(_) => "shutdown failed".fmt(f),
         }
     }
@@ -293,40 +309,45 @@ impl fmt::Display for Empty {
 impl StdError for Empty { }
 
 /// Log an error that occurs during request processing
-pub(crate) fn log_server_error(error: &Box<dyn StdError + Send + Sync>) {
+#[track_caller]
+pub(crate) fn log_server_error(error: &(dyn StdError + 'static)) {
     struct ServerError<'a>(&'a (dyn StdError + 'static));
 
     impl fmt::Display for ServerError<'_> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             let error = &self.0;
             if let Some(e) = error.downcast_ref::<hyper::Error>() {
-                write!(f, "request processing failed: {e}")?;
+                write!(f, "request failed: {e}")?;
             } else if let Some(e) = error.downcast_ref::<io::Error>() {
-                write!(f, "connection I/O error: ")?;
+                write!(f, "connection error: ")?;
 
                 match e.kind() {
                     io::ErrorKind::NotConnected => write!(f, "remote disconnected")?,
                     io::ErrorKind::UnexpectedEof => write!(f, "remote sent early eof")?,
                     io::ErrorKind::ConnectionReset
-                    | io::ErrorKind::ConnectionAborted
-                    | io::ErrorKind::BrokenPipe => write!(f, "terminated by remote")?,
+                    | io::ErrorKind::ConnectionAborted => write!(f, "terminated by remote")?,
                     _ => write!(f, "{e}")?,
                 }
             } else {
                 write!(f, "http server error: {error}")?;
             }
 
-            if let Some(e) = error.source() {
-                write!(f, " ({})", ServerError(e))?;
-            }
-
             Ok(())
         }
     }
 
+    let mut error: &(dyn StdError + 'static) = &*error;
     if error.downcast_ref::<hyper::Error>().is_some() {
-        warn!("{}", ServerError(&**error))
+        warn!("{}", ServerError(error));
+        while let Some(source) = error.source() {
+            error = source;
+            warn_!("{}", ServerError(error));
+        }
     } else {
-        error!("{}", ServerError(&**error))
+        error!("{}", ServerError(error));
+        while let Some(source) = error.source() {
+            error = source;
+            error_!("{}", ServerError(error));
+        }
     }
 }

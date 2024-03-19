@@ -213,8 +213,8 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::route::{Route, dummy_handler};
-    use crate::http::{Method, Method::*, MediaType};
+    use crate::route::dummy_handler;
+    use crate::http::{Method, Method::*};
 
     fn dummy_route(ranked: bool, method: impl Into<Option<Method>>, uri: &'static str) -> Route {
         let method = method.into().unwrap_or(Get);

@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::TlsAcceptor;
 
 use crate::tls::{TlsConfig, Error};
@@ -27,7 +28,7 @@ pub struct TlsBindable<I> {
 }
 
 impl TlsConfig {
-    pub(crate) fn acceptor(&self) -> Result<tokio_rustls::TlsAcceptor, Error> {
+    pub(crate) fn server_config(&self) -> Result<ServerConfig, Error> {
         let provider = rustls::crypto::CryptoProvider {
             cipher_suites: self.ciphers().map(|c| c.into()).collect(),
             ..rustls::crypto::ring::default_provider()
@@ -64,52 +65,60 @@ impl TlsConfig {
             tls_config.alpn_protocols.insert(0, b"h2".to_vec());
         }
 
-        Ok(TlsAcceptor::from(Arc::new(tls_config)))
+        Ok(tls_config)
     }
 }
 
-impl<I: Bindable> Bindable for TlsBindable<I> {
+impl<I: Bindable> Bindable for TlsBindable<I>
+    where I::Listener: Listener<Accept = <I::Listener as Listener>::Connection>,
+          <I::Listener as Listener>::Connection: AsyncRead + AsyncWrite
+{
     type Listener = TlsListener<I::Listener>;
 
     type Error = Error;
 
     async fn bind(self) -> Result<Self::Listener, Self::Error> {
         Ok(TlsListener {
-            acceptor: self.tls.acceptor()?,
+            acceptor: TlsAcceptor::from(Arc::new(self.tls.server_config()?)),
             listener: self.inner.bind().await.map_err(|e| Error::Bind(Box::new(e)))?,
             config: self.tls,
         })
     }
+
+    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+        let inner = self.inner.candidate_endpoint()?;
+        Ok(inner.with_tls(&self.tls))
+    }
 }
 
-impl<L: Listener + Sync> Listener for TlsListener<L>
-    where L::Connection: Unpin
+impl<L> Listener for TlsListener<L>
+    where L: Listener<Accept = <L as Listener>::Connection>,
+          L::Connection: AsyncRead + AsyncWrite
 {
-    type Accept = L::Accept;
+    type Accept = L::Connection;
 
     type Connection = TlsStream<L::Connection>;
 
     async fn accept(&self) -> io::Result<Self::Accept> {
-        self.listener.accept().await
+        Ok(self.listener.accept().await?)
     }
 
-    async fn connect(&self, accept: L::Accept) -> io::Result<Self::Connection> {
-        let conn = self.listener.connect(accept).await?;
+    async fn connect(&self, conn: L::Connection) -> io::Result<Self::Connection> {
         self.acceptor.accept(conn).await
     }
 
-    fn socket_addr(&self) -> io::Result<Endpoint> {
-        Ok(self.listener.socket_addr()?.with_tls(self.config.clone()))
+    fn endpoint(&self) -> io::Result<Endpoint> {
+        Ok(self.listener.endpoint()?.with_tls(&self.config))
     }
 }
 
-impl<C: Connection + Unpin> Connection for TlsStream<C> {
-    fn peer_address(&self) -> io::Result<Endpoint> {
-        Ok(self.get_ref().0.peer_address()?.assume_tls())
+impl<C: Connection> Connection for TlsStream<C> {
+    fn endpoint(&self) -> io::Result<Endpoint> {
+        Ok(self.get_ref().0.endpoint()?.assume_tls())
     }
 
     #[cfg(feature = "mtls")]
-    fn peer_certificates(&self) -> Option<Certificates<'_>> {
+    fn certificates(&self) -> Option<Certificates<'_>> {
         let cert_chain = self.get_ref().1.peer_certificates()?;
         Some(Certificates::from(cert_chain))
     }

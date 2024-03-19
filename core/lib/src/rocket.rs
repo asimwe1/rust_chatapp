@@ -1,14 +1,17 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
+use std::time::Duration;
 
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
+use tokio::io::{AsyncRead, AsyncWrite};
 
-use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
-use crate::listener::{Endpoint, Bindable, DefaultListener};
+use crate::shutdown::{Stages, Shutdown};
+use crate::{sentinel, shield::Shield, Catcher, Config, Route};
+use crate::listener::{Bindable, DefaultListener, Endpoint, Listener};
 use crate::router::Router;
-use crate::util::TripWire;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, State};
@@ -575,11 +578,11 @@ impl Rocket<Build> {
 
         // Ignite the rocket.
         let rocket: Rocket<Ignite> = Rocket(Igniting {
-            router, config,
-            shutdown: Shutdown(TripWire::new()),
+            shutdown: Stages::new(),
             figment: self.0.figment,
             fairings: self.0.fairings,
             state: self.0.state,
+            router, config,
         });
 
         // Query the sentinels, abort if requested.
@@ -630,7 +633,7 @@ impl Rocket<Ignite> {
     /// A completed graceful shutdown resolves the future returned by
     /// [`Rocket::launch()`]. If [`Shutdown::notify()`] is called _before_ an
     /// instance is launched, it will be immediately shutdown after liftoff. See
-    /// [`Shutdown`] and [`config::Shutdown`](crate::config::Shutdown) for
+    /// [`Shutdown`] and [`ShutdownConfig`](crate::config::ShutdownConfig) for
     /// details on graceful shutdown.
     ///
     /// # Example
@@ -657,12 +660,12 @@ impl Rocket<Ignite> {
     /// }
     /// ```
     pub fn shutdown(&self) -> Shutdown {
-        self.shutdown.clone()
+        self.shutdown.start.clone()
     }
 
-    pub(crate) fn into_orbit(self, address: Endpoint) -> Rocket<Orbit> {
+    pub(crate) fn into_orbit(self, endpoints: Vec<Endpoint>) -> Rocket<Orbit> {
         Rocket(Orbiting {
-            endpoint: address,
+            endpoints,
             router: self.0.router,
             fairings: self.0.fairings,
             figment: self.0.figment,
@@ -672,8 +675,8 @@ impl Rocket<Ignite> {
         })
     }
 
-    async fn _local_launch(self, addr: Endpoint) -> Rocket<Orbit> {
-        let rocket = self.into_orbit(addr);
+    async fn _local_launch(self, endpoint: Endpoint) -> Rocket<Orbit> {
+        let rocket = self.into_orbit(vec![endpoint]);
         Rocket::liftoff(&rocket).await;
         rocket
     }
@@ -687,13 +690,72 @@ impl Rocket<Ignite> {
         })
     }
 
-    async fn _launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error> {
-        let listener = bindable.bind().await.map_err(|e| ErrorKind::Bind(Box::new(e)))?;
-        self.serve(listener).await
+    async fn _launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error>
+        where <B::Listener as Listener>::Connection: AsyncRead + AsyncWrite
+    {
+        let rocket = self.bind_and_serve(bindable, |rocket| async move {
+            let rocket = Arc::new(rocket);
+
+            rocket.shutdown.spawn_listener(&rocket.config.shutdown);
+            if let Err(e) = tokio::spawn(Rocket::liftoff(rocket.clone())).await {
+                let rocket = rocket.try_wait_shutdown().await;
+                return Err(ErrorKind::Liftoff(rocket, Box::new(e)).into());
+            }
+
+            Ok(rocket)
+        }).await?;
+
+        Ok(rocket.try_wait_shutdown().await.map_err(ErrorKind::Shutdown)?)
     }
 }
 
 impl Rocket<Orbit> {
+    /// Rocket wraps all connections in a `CancellableIo` struct, an internal
+    /// structure that gracefully closes I/O when it receives a signal. That
+    /// signal is the `shutdown` future. When the future resolves,
+    /// `CancellableIo` begins to terminate in grace, mercy, and finally force
+    /// close phases. Since all connections are wrapped in `CancellableIo`, this
+    /// eventually ends all I/O.
+    ///
+    /// At that point, unless a user spawned an infinite, stand-alone task that
+    /// isn't monitoring `Shutdown`, all tasks should resolve. This means that
+    /// all instances of the shared `Arc<Rocket>` are dropped and we can return
+    /// the owned instance of `Rocket`.
+    ///
+    /// Unfortunately, the Hyper `server` future resolves as soon as it has
+    /// finished processing requests without respect for ongoing responses. That
+    /// is, `server` resolves even when there are running tasks that are
+    /// generating a response. So, `server` resolving implies little to nothing
+    /// about the state of connections. As a result, we depend on the timing of
+    /// grace + mercy + some buffer to determine when all connections should be
+    /// closed, thus all tasks should be complete, thus all references to
+    /// `Arc<Rocket>` should be dropped and we can get back a unique reference.
+    async fn try_wait_shutdown(self: Arc<Self>) -> Result<Rocket<Ignite>, Arc<Self>> {
+        info!("Shutting down. Waiting for shutdown fairings and pending I/O...");
+        tokio::spawn({
+            let rocket = self.clone();
+            async move { rocket.fairings.handle_shutdown(&*rocket).await }
+        });
+
+        let config = &self.config.shutdown;
+        let wait = Duration::from_micros(250);
+        for period in [wait, config.grace(), wait, config.mercy(), wait * 4] {
+            if Arc::strong_count(&self) == 1 { break }
+            tokio::time::sleep(period).await;
+        }
+
+        match Arc::try_unwrap(self) {
+            Ok(rocket) => {
+                info!("Graceful shutdown completed successfully.");
+                Ok(rocket.into_ignite())
+            }
+            Err(rocket) => {
+                warn!("Shutdown failed: outstanding background I/O.");
+                Err(rocket)
+            }
+        }
+    }
+
     pub(crate) fn into_ignite(self) -> Rocket<Ignite> {
         Rocket(Igniting {
             router: self.0.router,
@@ -717,7 +779,7 @@ impl Rocket<Orbit> {
 
         launch_info!("{}{} {}", "🚀 ".emoji(),
             "Rocket has launched on".bold().primary().linger(),
-            rocket.endpoint().underline());
+            rocket.endpoints[0].underline());
     }
 
     /// Returns the finalized, active configuration. This is guaranteed to
@@ -742,8 +804,8 @@ impl Rocket<Orbit> {
         &self.config
     }
 
-    pub fn endpoint(&self) -> &Endpoint {
-        &self.endpoint
+    pub fn endpoints(&self) -> impl Iterator<Item = &Endpoint> {
+        self.endpoints.iter()
     }
 
     /// Returns a handle which can be used to trigger a shutdown and detect a
@@ -751,8 +813,8 @@ impl Rocket<Orbit> {
     ///
     /// A completed graceful shutdown resolves the future returned by
     /// [`Rocket::launch()`]. See [`Shutdown`] and
-    /// [`config::Shutdown`](crate::config::Shutdown) for details on graceful
-    /// shutdown.
+    /// [`ShutdownConfig`](crate::config::ShutdownConfig) for details on
+    /// graceful shutdown.
     ///
     /// # Example
     ///
@@ -774,7 +836,7 @@ impl Rocket<Orbit> {
     /// }
     /// ```
     pub fn shutdown(&self) -> Shutdown {
-        self.shutdown.clone()
+        self.shutdown.start.clone()
     }
 }
 
@@ -879,10 +941,10 @@ impl<P: Phase> Rocket<P> {
         }
     }
 
-    pub(crate) async fn local_launch(self, l: Endpoint) -> Result<Rocket<Orbit>, Error> {
+    pub(crate) async fn local_launch(self, e: Endpoint) -> Result<Rocket<Orbit>, Error> {
         let rocket = match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._local_launch(l).await,
-            State::Ignite(s) => Rocket::from(s)._local_launch(l).await,
+            State::Build(s) => Rocket::from(s).ignite().await?._local_launch(e).await,
+            State::Ignite(s) => Rocket::from(s)._local_launch(e).await,
             State::Orbit(s) => Rocket::from(s)
         };
 
@@ -941,7 +1003,9 @@ impl<P: Phase> Rocket<P> {
         }
     }
 
-    pub async fn launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error> {
+    pub async fn launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error>
+        where <B::Listener as Listener>::Connection: AsyncRead + AsyncWrite
+    {
         match self.0.into_state() {
             State::Build(s) => Rocket::from(s).ignite().await?._launch_on(bindable).await,
             State::Ignite(s) => Rocket::from(s)._launch_on(bindable).await,

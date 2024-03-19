@@ -102,7 +102,7 @@ mod test {
 
     use crate::route::dummy_handler;
     use crate::local::blocking::Client;
-    use crate::http::{Method, Method::*, uri::Origin};
+    use crate::http::{Method::*, uri::Origin};
 
     impl Router {
         fn has_collisions(&self) -> bool {

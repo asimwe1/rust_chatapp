@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use yansi::{Paint, Style, Color::Primary};
 
 use crate::log::PaintExt;
-use crate::config::{LogLevel, Shutdown, Ident, CliColors};
+use crate::config::{LogLevel, ShutdownConfig, Ident, CliColors};
 use crate::request::{self, Request, FromRequest};
 use crate::http::uncased::Uncased;
 use crate::data::Limits;
@@ -120,8 +120,8 @@ pub struct Config {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[serde(serialize_with = "SecretKey::serialize_zero")]
     pub secret_key: SecretKey,
-    /// Graceful shutdown configuration. **(default: [`Shutdown::default()`])**
-    pub shutdown: Shutdown,
+    /// Graceful shutdown configuration. **(default: [`ShutdownConfig::default()`])**
+    pub shutdown: ShutdownConfig,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
     /// Whether to use colors and emoji when logging. **(default:
@@ -200,7 +200,7 @@ impl Config {
             keep_alive: 5,
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
-            shutdown: Shutdown::default(),
+            shutdown: ShutdownConfig::default(),
             log_level: LogLevel::Normal,
             cli_colors: CliColors::Auto,
             __non_exhaustive: (),
@@ -408,9 +408,10 @@ impl Config {
         #[cfg(feature = "secrets")] {
             launch_meta_!("secret key: {}", self.secret_key.paint(VAL));
             if !self.secret_key.is_provided() {
-                warn!("secrets enabled without a stable `secret_key`");
-                launch_meta_!("disable `secrets` feature or configure a `secret_key`");
-                launch_meta_!("this becomes an {} in non-debug profiles", "error".red());
+                warn!("secrets enabled without configuring a stable `secret_key`");
+                warn_!("private/signed cookies will become unreadable after restarting");
+                launch_meta_!("disable the `secrets` feature or configure a `secret_key`");
+                launch_meta_!("this becomes a {} in non-debug profiles", "hard error".red());
             }
         }
     }

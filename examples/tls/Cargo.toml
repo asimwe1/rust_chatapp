@@ -6,5 +6,5 @@ edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets"] }
+rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets", "http3-preview"] }
 yansi = "1.0.1"

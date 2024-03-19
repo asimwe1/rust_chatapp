@@ -32,15 +32,15 @@ impl DefaultListener {
                 Ok(BaseBindable::Right(uds))
             },
             #[cfg(not(unix))]
-            Endpoint::Unix(_) => {
+            e@Endpoint::Unix(_) => {
                 let msg = "Unix domain sockets unavailable on non-unix platforms.";
                 let boxed = Box::<dyn std::error::Error + Send + Sync>::from(msg);
-                Err(Error::new(ErrorKind::Bind(boxed)))
+                Err(Error::new(ErrorKind::Bind(Some(e.clone()), boxed)))
             },
             other => {
                 let msg = format!("unsupported default listener address: {other}");
                 let boxed = Box::<dyn std::error::Error + Send + Sync>::from(msg);
-                Err(Error::new(ErrorKind::Bind(boxed)))
+                Err(Error::new(ErrorKind::Bind(Some(other.clone()), boxed)))
             }
         }
     }

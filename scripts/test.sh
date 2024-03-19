@@ -128,6 +128,7 @@ function test_core() {
   FEATURES=(
     tokio-macros
     http2
+    http3-preview
     secrets
     tls
     mtls

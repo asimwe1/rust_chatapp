@@ -2,7 +2,8 @@ use state::TypeMap;
 use figment::Figment;
 
 use crate::listener::Endpoint;
-use crate::{Catcher, Config, Rocket, Route, Shutdown};
+use crate::shutdown::Stages;
+use crate::{Catcher, Config, Rocket, Route};
 use crate::router::Router;
 use crate::fairing::Fairings;
 
@@ -99,7 +100,7 @@ phases! {
         pub(crate) figment: Figment,
         pub(crate) config: Config,
         pub(crate) state: TypeMap![Send + Sync],
-        pub(crate) shutdown: Shutdown,
+        pub(crate) shutdown: Stages,
     }
 
     /// The final launch [`Phase`]. See [Rocket#orbit](`Rocket#orbit`) for
@@ -113,7 +114,7 @@ phases! {
         pub(crate) figment: Figment,
         pub(crate) config: Config,
         pub(crate) state: TypeMap![Send + Sync],
-        pub(crate) shutdown: Shutdown,
-        pub(crate) endpoint: Endpoint,
+        pub(crate) shutdown: Stages,
+        pub(crate) endpoints: Vec<Endpoint>,
     }
 }

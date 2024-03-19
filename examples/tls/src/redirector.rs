@@ -74,7 +74,7 @@ impl Fairing for Redirector {
     }
 
     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-        let Some(tls_addr) = rocket.endpoint().tls().and_then(|tls| tls.tcp()) else {
+        let Some(tls_addr) = rocket.endpoints().find_map(|e| e.tls()?.tcp()) else {
             info!("{}{}", "🔒 ".mask(), "HTTP -> HTTPS Redirector:".magenta());
             warn_!("Main instance is not being served over TLS/TCP.");
             warn_!("Redirector refusing to start.");

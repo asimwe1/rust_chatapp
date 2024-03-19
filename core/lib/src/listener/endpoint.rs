@@ -1,7 +1,7 @@
 use std::fmt;
-use std::path::{Path, PathBuf};
 use std::any::Any;
-use std::net::{SocketAddr as TcpAddr, Ipv4Addr, AddrParseError};
+use std::net::{self, AddrParseError, IpAddr, Ipv4Addr};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -9,23 +9,23 @@ use serde::de;
 
 use crate::http::uncased::AsUncased;
 
+#[cfg(feature = "tls")]      type TlsInfo = Option<Box<crate::tls::TlsConfig>>;
+#[cfg(not(feature = "tls"))] type TlsInfo = Option<()>;
+
 pub trait EndpointAddr: fmt::Display + fmt::Debug + Sync + Send + Any { }
 
 impl<T: fmt::Display + fmt::Debug + Sync + Send + Any> EndpointAddr for T {}
 
-#[cfg(not(feature = "tls"))] type TlsInfo = Option<()>;
-#[cfg(feature = "tls")]      type TlsInfo = Option<crate::tls::TlsConfig>;
-
 /// # Conversions
 ///
 /// * [`&str`] - parse with [`FromStr`]
-/// * [`tokio::net::unix::SocketAddr`] - must be path: [`ListenerAddr::Unix`]
-/// * [`std::net::SocketAddr`] - infallibly as [ListenerAddr::Tcp]
-/// * [`PathBuf`] - infallibly as [`ListenerAddr::Unix`]
-// TODO: Rename to something better. `Endpoint`?
-#[derive(Debug)]
+/// * [`tokio::net::unix::SocketAddr`] - must be path: [`Endpoint::Unix`]
+/// * [`PathBuf`] - infallibly as [`Endpoint::Unix`]
+#[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum Endpoint {
-    Tcp(TcpAddr),
+    Tcp(net::SocketAddr),
+    Quic(net::SocketAddr),
     Unix(PathBuf),
     Tls(Arc<Endpoint>, TlsInfo),
     Custom(Arc<dyn EndpointAddr>),
@@ -36,9 +36,45 @@ impl Endpoint {
         Endpoint::Custom(Arc::new(value))
     }
 
-    pub fn tcp(&self) -> Option<TcpAddr> {
+    pub fn tcp(&self) -> Option<net::SocketAddr> {
         match self {
             Endpoint::Tcp(addr) => Some(*addr),
+            Endpoint::Tls(addr, _) => addr.tcp(),
+            _ => None,
+        }
+    }
+
+    pub fn quic(&self) -> Option<net::SocketAddr> {
+        match self {
+            Endpoint::Quic(addr) => Some(*addr),
+            Endpoint::Tls(addr, _) => addr.tcp(),
+            _ => None,
+        }
+    }
+
+    pub fn socket_addr(&self) -> Option<net::SocketAddr> {
+        match self {
+            Endpoint::Quic(addr) => Some(*addr),
+            Endpoint::Tcp(addr) => Some(*addr),
+            Endpoint::Tls(inner, _) => inner.socket_addr(),
+            _ => None,
+        }
+    }
+
+    pub fn ip(&self) -> Option<IpAddr> {
+        match self {
+            Endpoint::Quic(addr) => Some(addr.ip()),
+            Endpoint::Tcp(addr) => Some(addr.ip()),
+            Endpoint::Tls(inner, _) => inner.ip(),
+            _ => None,
+        }
+    }
+
+    pub fn port(&self) -> Option<u16> {
+        match self {
+            Endpoint::Quic(addr) => Some(addr.port()),
+            Endpoint::Tcp(addr) => Some(addr.port()),
+            Endpoint::Tls(inner, _) => inner.port(),
             _ => None,
         }
     }
@@ -46,6 +82,7 @@ impl Endpoint {
     pub fn unix(&self) -> Option<&Path> {
         match self {
             Endpoint::Unix(addr) => Some(addr),
+            Endpoint::Tls(addr, _) => addr.unix(),
             _ => None,
         }
     }
@@ -76,6 +113,7 @@ impl Endpoint {
     pub fn downcast<T: 'static>(&self) -> Option<&T> {
         match self {
             Endpoint::Tcp(addr) => (&*addr as &dyn Any).downcast_ref(),
+            Endpoint::Quic(addr) => (&*addr as &dyn Any).downcast_ref(),
             Endpoint::Unix(addr) => (&*addr as &dyn Any).downcast_ref(),
             Endpoint::Custom(addr) => (&*addr as &dyn Any).downcast_ref(),
             Endpoint::Tls(inner, ..) => inner.downcast(),
@@ -84,6 +122,10 @@ impl Endpoint {
 
     pub fn is_tcp(&self) -> bool {
         self.tcp().is_some()
+    }
+
+    pub fn is_quic(&self) -> bool {
+        self.quic().is_some()
     }
 
     pub fn is_unix(&self) -> bool {
@@ -95,12 +137,12 @@ impl Endpoint {
     }
 
     #[cfg(feature = "tls")]
-    pub fn with_tls(self, config: crate::tls::TlsConfig) -> Endpoint {
+    pub fn with_tls(self, tls: &crate::tls::TlsConfig) -> Endpoint {
         if self.is_tls() {
             return self;
         }
 
-        Self::Tls(Arc::new(self), Some(config))
+        Self::Tls(Arc::new(self), Some(Box::new(tls.clone())))
     }
 
     pub fn assume_tls(self) -> Endpoint {
@@ -117,36 +159,24 @@ impl fmt::Display for Endpoint {
         use Endpoint::*;
 
         match self {
-            Tcp(addr) => write!(f, "http://{addr}"),
+            Tcp(addr) | Quic(addr) => write!(f, "http://{addr}"),
             Unix(addr) => write!(f, "unix:{}", addr.display()),
             Custom(inner) => inner.fmt(f),
-            Tls(inner, c) => match (&**inner, c.as_ref()) {
+            Tls(inner, _c) => {
+                match (inner.tcp(), inner.quic()) {
+                    (Some(addr), _) => write!(f, "https://{addr} (TCP")?,
+                    (_, Some(addr)) => write!(f, "https://{addr} (QUIC")?,
+                    (None, None) => write!(f, "{inner} (TLS")?,
+                }
+
                 #[cfg(feature = "mtls")]
-                (Tcp(i), Some(c)) if c.mutual().is_some() => write!(f, "https://{i} (TLS + MTLS)"),
-                (Tcp(i), _) => write!(f, "https://{i} (TLS)"),
-                #[cfg(feature = "mtls")]
-                (i, Some(c)) if c.mutual().is_some() => write!(f, "{i} (TLS + MTLS)"),
-                (inner, _) => write!(f, "{inner} (TLS)"),
-            },
+                if _c.as_ref().and_then(|c| c.mutual()).is_some() {
+                    write!(f, " + mTLS")?;
+                }
+
+                write!(f, ")")
+            }
         }
-    }
-}
-
-impl From<std::net::SocketAddr> for Endpoint {
-    fn from(value: std::net::SocketAddr) -> Self {
-        Self::Tcp(value)
-    }
-}
-
-impl From<std::net::SocketAddrV4> for Endpoint {
-    fn from(value: std::net::SocketAddrV4) -> Self {
-        Self::Tcp(value.into())
-    }
-}
-
-impl From<std::net::SocketAddrV6> for Endpoint {
-    fn from(value: std::net::SocketAddrV6) -> Self {
-        Self::Tcp(value.into())
     }
 }
 
@@ -177,36 +207,38 @@ impl TryFrom<&str> for Endpoint {
 
 impl Default for Endpoint {
     fn default() -> Self {
-        Endpoint::Tcp(TcpAddr::new(Ipv4Addr::LOCALHOST.into(), 8000))
+        Endpoint::Tcp(net::SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 8000))
     }
 }
 
-/// Parses an address into a `ListenerAddr`.
+/// Parses an address into a `Endpoint`.
 ///
 /// The syntax is:
 ///
 /// ```text
-/// listener_addr = 'tcp' ':' tcp_addr | 'unix' ':' unix_addr | tcp_addr
-/// tcp_addr := IP_ADDR | SOCKET_ADDR
-/// unix_addr := PATH
+/// endpoint = 'tcp' ':' socket | 'quic' ':' socket | 'unix' ':' path | socket
+/// socket := IP_ADDR | SOCKET_ADDR
+/// path := PATH
 ///
 /// IP_ADDR := `std::net::IpAddr` string as defined by Rust
 /// SOCKET_ADDR := `std::net::SocketAddr` string as defined by Rust
 /// PATH := `PathBuf` (any UTF-8) string as defined by Rust
 /// ```
 ///
-/// If `IP_ADDR` is specified, the port defaults to `8000`.
+/// If `IP_ADDR` is specified in socket, port defaults to `8000`.
 impl FromStr for Endpoint {
     type Err = AddrParseError;
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
-        fn parse_tcp(string: &str, def_port: u16) -> Result<TcpAddr, AddrParseError> {
-            string.parse().or_else(|_| string.parse().map(|ip| TcpAddr::new(ip, def_port)))
+        fn parse_tcp(str: &str, def_port: u16) -> Result<net::SocketAddr, AddrParseError> {
+            str.parse().or_else(|_| str.parse().map(|ip| net::SocketAddr::new(ip, def_port)))
         }
 
         if let Some((proto, string)) = string.split_once(':') {
             if proto.trim().as_uncased() == "tcp" {
                 return parse_tcp(string.trim(), 8000).map(Self::Tcp);
+            } else if proto.trim().as_uncased() == "quic" {
+                return parse_tcp(string.trim(), 8000).map(Self::Quic);
             } else if proto.trim().as_uncased() == "unix" {
                 return Ok(Self::Unix(PathBuf::from(string.trim())));
             }
@@ -242,29 +274,12 @@ impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Tcp(l0), Self::Tcp(r0)) => l0 == r0,
+            (Self::Quic(l0), Self::Quic(r0)) => l0 == r0,
             (Self::Unix(l0), Self::Unix(r0)) => l0 == r0,
             (Self::Tls(l0, _), Self::Tls(r0, _)) => l0 == r0,
             (Self::Custom(l0), Self::Custom(r0)) => l0.to_string() == r0.to_string(),
             _ => false,
         }
-    }
-}
-
-impl PartialEq<std::net::SocketAddr> for Endpoint {
-    fn eq(&self, other: &std::net::SocketAddr) -> bool {
-        self.tcp() == Some(*other)
-    }
-}
-
-impl PartialEq<std::net::SocketAddrV4> for Endpoint {
-    fn eq(&self, other: &std::net::SocketAddrV4) -> bool {
-        self.tcp() == Some((*other).into())
-    }
-}
-
-impl PartialEq<std::net::SocketAddrV6> for Endpoint {
-    fn eq(&self, other: &std::net::SocketAddrV6) -> bool {
-        self.tcp() == Some((*other).into())
     }
 }
 

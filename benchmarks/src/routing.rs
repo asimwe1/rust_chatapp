@@ -82,7 +82,7 @@ fn client(routes: Vec<Route>) -> Client {
         profile: Config::RELEASE_PROFILE,
         log_level: rocket::config::LogLevel::Off,
         cli_colors: config::CliColors::Never,
-        shutdown: config::Shutdown {
+        shutdown: config::ShutdownConfig {
             ctrlc: false,
             #[cfg(unix)]
             signals: HashSet::new(),

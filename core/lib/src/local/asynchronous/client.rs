@@ -59,12 +59,12 @@ impl Client {
         tracked: bool,
         secure: bool,
     ) -> Result<Client, Error> {
-        let mut listener = Endpoint::new("local client");
+        let mut endpoint = Endpoint::new("local client");
         if secure {
-            listener = listener.assume_tls();
+            endpoint = endpoint.assume_tls();
         }
 
-        let rocket = rocket.local_launch(listener).await?;
+        let rocket = rocket.local_launch(endpoint).await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
         Ok(Client { rocket, cookies, tracked })
     }

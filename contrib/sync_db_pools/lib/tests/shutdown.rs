@@ -12,6 +12,7 @@ mod sqlite_shutdown_test {
 
         let options = map!["url" => ":memory:"];
         let config = Figment::from(rocket::Config::debug_default())
+            .merge(("port", 0))
             .merge(("databases", map!["test" => &options]));
 
         rocket::custom(config).attach(Pool::fairing())

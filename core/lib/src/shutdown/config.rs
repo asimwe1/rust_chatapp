@@ -6,60 +6,7 @@ use std::collections::HashSet;
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
-/// A Unix signal for triggering graceful shutdown.
-///
-/// Each variant corresponds to a Unix process signal which can be used to
-/// trigger a graceful shutdown. See [`Shutdown`] for details.
-///
-/// ## (De)serialization
-///
-/// A `Sig` variant serializes and deserializes as a lowercase string equal to
-/// the name of the variant: `"alrm"` for [`Sig::Alrm`], `"chld"` for
-/// [`Sig::Chld`], and so on.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-#[cfg_attr(nightly, doc(cfg(unix)))]
-pub enum Sig {
-    /// The `SIGALRM` Unix signal.
-    Alrm,
-    /// The `SIGCHLD` Unix signal.
-    Chld,
-    /// The `SIGHUP` Unix signal.
-    Hup,
-    /// The `SIGINT` Unix signal.
-    Int,
-    /// The `SIGIO` Unix signal.
-    Io,
-    /// The `SIGPIPE` Unix signal.
-    Pipe,
-    /// The `SIGQUIT` Unix signal.
-    Quit,
-    /// The `SIGTERM` Unix signal.
-    Term,
-    /// The `SIGUSR1` Unix signal.
-    Usr1,
-    /// The `SIGUSR2` Unix signal.
-    Usr2
-}
-
-impl fmt::Display for Sig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Sig::Alrm => "SIGALRM",
-            Sig::Chld => "SIGCHLD",
-            Sig::Hup => "SIGHUP",
-            Sig::Int => "SIGINT",
-            Sig::Io => "SIGIO",
-            Sig::Pipe => "SIGPIPE",
-            Sig::Quit => "SIGQUIT",
-            Sig::Term => "SIGTERM",
-            Sig::Usr1 => "SIGUSR1",
-            Sig::Usr2 => "SIGUSR2",
-        };
-
-        s.fmt(f)
-    }
-}
+use crate::shutdown::Sig;
 
 /// Graceful shutdown configuration.
 ///
@@ -94,10 +41,12 @@ impl fmt::Display for Sig {
 ///
 /// Once a shutdown is triggered, Rocket stops accepting new connections and
 /// waits at most `grace` seconds before initiating connection shutdown.
-/// Applications can `await` the [`Shutdown`](crate::Shutdown) future to detect
+/// Applications can `await` the [`Shutdown`] future to detect
 /// a shutdown and cancel any server-initiated I/O, such as from [infinite
 /// responders](crate::response::stream#graceful-shutdown), to avoid abrupt I/O
 /// cancellation.
+///
+/// [`Shutdown`]: crate::Shutdown
 ///
 /// # Mercy Period
 ///
@@ -125,7 +74,8 @@ impl fmt::Display for Sig {
 /// prevent _buggy_ code, such as an unintended infinite loop or unknown use of
 /// blocking I/O, from preventing shutdown.
 ///
-/// This behavior can be disabled by setting [`Shutdown::force`] to `false`.
+/// This behavior can be disabled by setting [`ShutdownConfig::force`] to
+/// `false`.
 ///
 /// # Example
 ///
@@ -169,13 +119,13 @@ impl fmt::Display for Sig {
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
-/// use rocket::config::{Config, Shutdown};
+/// use rocket::config::{Config, ShutdownConfig};
 ///
 /// #[cfg(unix)]
 /// use rocket::config::Sig;
 ///
 /// let config = Config {
-///     shutdown: Shutdown {
+///     shutdown: ShutdownConfig {
 ///         ctrlc: false,
 ///         #[cfg(unix)]
 ///         signals: {
@@ -204,7 +154,7 @@ impl fmt::Display for Sig {
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Shutdown {
+pub struct ShutdownConfig {
     /// Whether `ctrl-c` (`SIGINT`) initiates a server shutdown.
     ///
     /// **default: `true`**
@@ -245,9 +195,9 @@ pub struct Shutdown {
     /// _always_ be done using a public constructor or update syntax:
     ///
     /// ```rust
-    /// use rocket::config::Shutdown;
+    /// use rocket::config::ShutdownConfig;
     ///
-    /// let config = Shutdown {
+    /// let config = ShutdownConfig {
     ///     grace: 5,
     ///     mercy: 10,
     ///     ..Default::default()
@@ -258,7 +208,7 @@ pub struct Shutdown {
     pub __non_exhaustive: (),
 }
 
-impl fmt::Display for Shutdown {
+impl fmt::Display for ShutdownConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "ctrlc = {}, force = {}, ", self.ctrlc, self.force)?;
 
@@ -276,9 +226,9 @@ impl fmt::Display for Shutdown {
     }
 }
 
-impl Default for Shutdown {
+impl Default for ShutdownConfig {
     fn default() -> Self {
-        Shutdown {
+        ShutdownConfig {
             ctrlc: true,
             #[cfg(unix)]
             signals: { let mut set = HashSet::new(); set.insert(Sig::Term); set },
@@ -290,7 +240,7 @@ impl Default for Shutdown {
     }
 }
 
-impl Shutdown {
+impl ShutdownConfig {
     pub(crate) fn grace(&self) -> Duration {
         Duration::from_secs(self.grace as u64)
     }

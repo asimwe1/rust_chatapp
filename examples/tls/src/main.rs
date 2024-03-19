@@ -1,10 +1,12 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(test)]
 mod tests;
 mod redirector;
 
 use rocket::mtls::Certificate;
+use rocket::listener::Endpoint;
 
 #[get("/")]
 fn mutual(cert: Certificate<'_>) -> String {
@@ -12,8 +14,11 @@ fn mutual(cert: Certificate<'_>) -> String {
 }
 
 #[get("/", rank = 2)]
-fn hello() -> &'static str {
-    "Hello, world!"
+fn hello(endpoint: Option<&Endpoint>) -> String {
+    match endpoint {
+        Some(endpoint) => format!("Hello, {endpoint}!"),
+        None => "Hello, world!".into(),
+    }
 }
 
 #[launch]

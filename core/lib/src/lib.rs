@@ -61,15 +61,17 @@
 //! To avoid compiling unused dependencies, Rocket gates certain features. With
 //! the exception of `http2`, all are disabled by default:
 //!
-//! | Feature   | Description                                             |
-//! |-----------|---------------------------------------------------------|
-//! | `secrets` | Support for authenticated, encrypted [private cookies]. |
-//! | `tls`     | Support for [TLS] encrypted connections.                |
-//! | `mtls`    | Support for verified clients via [mutual TLS].          |
-//! | `http2`   | Support for HTTP/2 (enabled by default).                |
-//! | `json`    | Support for [JSON (de)serialization].                   |
-//! | `msgpack` | Support for [MessagePack (de)serialization].            |
-//! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
+//! | Feature         | Description                                             |
+//! |-----------------|---------------------------------------------------------|
+//! | `secrets`       | Support for authenticated, encrypted [private cookies]. |
+//! | `tls`           | Support for [TLS] encrypted connections.                |
+//! | `mtls`          | Support for verified clients via [mutual TLS].          |
+//! | `http2`         | Support for HTTP/2 (enabled by default).                |
+//! | `json`          | Support for [JSON (de)serialization].                   |
+//! | `msgpack`       | Support for [MessagePack (de)serialization].            |
+//! | `uuid`          | Support for [UUID value parsing and (de)serialization]. |
+//! | `tokio-macros`  | Enables the `macros` feature in the exported `tokio`    |
+//! | `http3-preview` | Experimental preview support for [HTTP/3].              |
 //!
 //! Disabled features can be selectively enabled in `Cargo.toml`:
 //!
@@ -91,6 +93,7 @@
 //! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //! [mutual TLS]: crate::mtls
+//! [HTTP/3]: crate::listener::quic
 //!
 //! ## Configuration
 //!
@@ -143,6 +146,7 @@ pub mod shield;
 pub mod fs;
 pub mod http;
 pub mod listener;
+pub mod shutdown;
 #[cfg(feature = "tls")]
 #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 pub mod tls;
@@ -151,7 +155,6 @@ pub mod tls;
 pub mod mtls;
 
 mod util;
-mod shutdown;
 mod server;
 mod lifecycle;
 mod state;

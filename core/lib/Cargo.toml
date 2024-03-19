@@ -22,6 +22,7 @@ all-features = true
 [features]
 default = ["http2", "tokio-macros"]
 http2 = ["hyper/http2", "hyper-util/http2"]
+http3-preview = ["s2n-quic", "s2n-quic-h3", "tls"]
 secrets = ["cookie/private", "cookie/key-expansion"]
 json = ["serde_json"]
 msgpack = ["rmp-serde"]
@@ -76,8 +77,7 @@ futures = { version = "0.3.30", default-features = false, features = ["std"] }
 state = "0.6"
 
 [dependencies.hyper-util]
-git = "https://github.com/SergioBenitez/hyper-util.git"
-branch = "fix-readversion"
+version = "0.1.3"
 default-features = false
 features = ["http1", "server", "tokio"]
 
@@ -98,6 +98,16 @@ path = "../codegen"
 version = "0.6.0-dev"
 path = "../http"
 features = ["serde"]
+
+[dependencies.s2n-quic]
+version = "1.32"
+default-features = false
+features = ["provider-address-token-default", "provider-tls-rustls"]
+optional = true
+
+[dependencies.s2n-quic-h3]
+git = "https://github.com/SergioBenitez/s2n-quic-h3.git"
+optional = true
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.149"

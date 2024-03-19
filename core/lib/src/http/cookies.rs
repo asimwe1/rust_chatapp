@@ -176,7 +176,7 @@ impl<'a> CookieJar<'a> {
             ops: Mutex::new(Vec::new()),
             state: CookieState {
                 // This is updated dynamically when headers are received.
-                secure: rocket.endpoint().is_tls(),
+                secure: rocket.endpoints().all(|e| e.is_tls()),
                 config: rocket.config(),
             }
         }

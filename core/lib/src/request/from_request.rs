@@ -501,7 +501,7 @@ impl<'r> FromRequest<'r> for std::net::SocketAddr {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         request.remote()
-            .and_then(|r| r.tcp())
+            .and_then(|r| r.socket_addr())
             .or_forward(Status::InternalServerError)
     }
 }

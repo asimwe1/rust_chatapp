@@ -68,6 +68,10 @@ impl Bindable for UdsConfig {
 
         Ok(UdsListener { lock, listener, path: self.path, })
     }
+
+    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+        Ok(Endpoint::Unix(self.path.clone()))
+    }
 }
 
 impl Listener for UdsListener {
@@ -83,13 +87,13 @@ impl Listener for UdsListener {
         Ok(accept)
     }
 
-    fn socket_addr(&self) -> io::Result<Endpoint> {
+    fn endpoint(&self) -> io::Result<Endpoint> {
         self.listener.local_addr()?.try_into()
     }
 }
 
 impl Connection for UnixStream {
-    fn peer_address(&self) -> io::Result<Endpoint> {
+    fn endpoint(&self) -> io::Result<Endpoint> {
         self.local_addr()?.try_into()
     }
 }
