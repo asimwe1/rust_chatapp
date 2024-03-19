@@ -4,8 +4,7 @@ use crate::Request;
 use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
 use crate::http::{RawStr, ext::IntoOwned};
-use crate::form::{SharedStack, parser::{Parser, RawStrParser}};
-use crate::form::prelude::*;
+use crate::form::prelude::{*, parser::{Parser, RawStrParser}};
 
 /// A data guard for [`FromForm`] types.
 ///

@@ -1,4 +1,3 @@
-use crate::uri::{Origin, Authority, Absolute, Asterisk};
 use crate::parse::uri::*;
 
 macro_rules! assert_parse_eq {

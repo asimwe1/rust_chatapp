@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 use std::borrow::Cow;
 
-use syn::{self, Ident, ext::IdentExt as _, visit::Visit};
+use syn::{Ident, ext::IdentExt as _, visit::Visit};
 use proc_macro2::{Span, TokenStream};
 use devise::ext::{PathExt, TypeExt as _};
 use rocket_http::ext::IntoOwned;
@@ -21,17 +21,12 @@ pub trait ReturnTypeExt {
     fn ty(&self) -> Option<&syn::Type>;
 }
 
-pub trait TokenStreamExt {
-    fn respanned(&self, span: Span) -> Self;
-}
-
 pub trait FnArgExt {
     fn typed(&self) -> Option<(&syn::Ident, &syn::Type)>;
     fn wild(&self) -> Option<&syn::PatWild>;
 }
 
 pub trait TypeExt {
-    fn unfold(&self) -> Vec<Child<'_>>;
     fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>>;
     fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
 }
@@ -112,15 +107,6 @@ impl ReturnTypeExt for syn::ReturnType {
     }
 }
 
-impl TokenStreamExt for TokenStream {
-    fn respanned(&self, span: Span) -> Self {
-        self.clone().into_iter().map(|mut token| {
-            token.set_span(span);
-            token
-        }).collect()
-    }
-}
-
 impl FnArgExt for syn::FnArg {
     fn typed(&self) -> Option<(&Ident, &syn::Type)> {
         match self {
@@ -154,10 +140,6 @@ fn macro_inner_ty(t: &syn::TypeMacro, names: &[&str], m: MacTyMapFn) -> Option<s
 }
 
 impl TypeExt for syn::Type {
-    fn unfold(&self) -> Vec<Child<'_>> {
-        self.unfold_with_ty_macros(&[], |_| None)
-    }
-
     fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>> {
         struct Visitor<'a, 'm> {
             parents: Vec<Cow<'a, syn::Type>>,
@@ -240,10 +222,10 @@ impl GenericsExt for syn::Generics {
 mod tests {
     #[test]
     fn test_type_unfold_is_generic() {
-        use super::{TypeExt, syn};
+        use super::TypeExt;
 
         let ty: syn::Type = syn::parse_quote!(A<B, C<impl Foo>, Box<dyn Foo>, Option<T>>);
-        let children = ty.unfold();
+        let children = ty.unfold_with_ty_macros(&[], |_| None);
         assert_eq!(children.len(), 8);
 
         let gen_ident = format_ident!("T");

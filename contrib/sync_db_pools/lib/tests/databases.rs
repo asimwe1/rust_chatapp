@@ -1,6 +1,8 @@
 #[cfg(all(feature = "diesel_sqlite_pool", feature = "diesel_postgres_pool"))]
 mod databases_tests {
-    use rocket_sync_db_pools::{database, diesel};
+    #![allow(dead_code)]
+
+    use rocket_sync_db_pools::database;
 
     #[database("example")]
     struct ExampleDb(diesel::SqliteConnection);

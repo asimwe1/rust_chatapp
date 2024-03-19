@@ -1,6 +1,6 @@
 use crate::http::uncased::UncasedStr;
 
-use syn::{self, Ident, ext::IdentExt};
+use syn::{Ident, ext::IdentExt};
 use proc_macro2::{Span, TokenStream};
 
 /// A "name" read by codegen, which may or may not be an identifier. A `Name` is

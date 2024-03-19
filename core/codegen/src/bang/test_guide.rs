@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::error::Error;
 
-use syn::{self, Ident, LitStr};
+use syn::{Ident, LitStr};
 use devise::ext::SpanDiagnosticExt;
 use proc_macro2::TokenStream;
 

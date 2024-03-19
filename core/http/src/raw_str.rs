@@ -1,14 +1,13 @@
+use std::fmt;
 use std::borrow::{Borrow, Cow};
-use std::convert::AsRef;
 use std::cmp::Ordering;
 use std::str::Utf8Error;
-use std::fmt;
 
 use ref_cast::RefCast;
 use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
-use crate::uri::fmt::{DEFAULT_ENCODE_SET, percent_encode, percent_encode_bytes};
 
 use crate::uncased::UncasedStr;
+use crate::uri::fmt::{DEFAULT_ENCODE_SET, percent_encode, percent_encode_bytes};
 
 /// A reference to a string inside of a raw HTTP message.
 ///

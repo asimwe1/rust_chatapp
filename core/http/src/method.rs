@@ -135,7 +135,6 @@ impl fmt::Display for Method {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use std::fmt;
     use super::*;
 
     use serde_::ser::{Serialize, Serializer};

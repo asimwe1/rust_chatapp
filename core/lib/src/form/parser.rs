@@ -3,8 +3,8 @@ use either::Either;
 
 use crate::request::{Request, local_cache_once};
 use crate::data::{Data, Limits, Outcome};
-use crate::form::{SharedStack, prelude::*};
 use crate::http::{RawStr, Status};
+use crate::form::prelude::*;
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
 

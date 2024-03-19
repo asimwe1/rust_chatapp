@@ -23,7 +23,7 @@ mod head_handling_tests {
 
     use rocket::Route;
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
+    use rocket::http::ContentType;
 
     fn routes() -> Vec<Route> {
         routes![index, empty, other]
