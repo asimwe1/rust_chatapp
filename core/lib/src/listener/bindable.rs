@@ -11,7 +11,7 @@ pub trait Bindable: Sized {
     async fn bind(self) -> Result<Self::Listener, Self::Error>;
 
     /// The endpoint that `self` binds on.
-    fn candidate_endpoint(&self) -> io::Result<Endpoint>;
+    fn bind_endpoint(&self) -> io::Result<Endpoint>;
 }
 
 impl<L: Listener + 'static> Bindable for L {
@@ -23,7 +23,7 @@ impl<L: Listener + 'static> Bindable for L {
         Ok(self)
     }
 
-    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+    fn bind_endpoint(&self) -> io::Result<Endpoint> {
         L::endpoint(self)
     }
 }
@@ -46,7 +46,7 @@ impl<A: Bindable, B: Bindable> Bindable for either::Either<A, B> {
         }
     }
 
-    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
-        either::for_both!(self, a => a.candidate_endpoint())
+    fn bind_endpoint(&self) -> io::Result<Endpoint> {
+        either::for_both!(self, a => a.bind_endpoint())
     }
 }

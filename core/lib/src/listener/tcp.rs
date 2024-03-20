@@ -14,7 +14,7 @@ impl Bindable for std::net::SocketAddr {
         TcpListener::bind(self).await
     }
 
-    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+    fn bind_endpoint(&self) -> io::Result<Endpoint> {
         Ok(Endpoint::Tcp(*self))
     }
 }

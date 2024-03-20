@@ -69,7 +69,7 @@ impl Bindable for UdsConfig {
         Ok(UdsListener { lock, listener, path: self.path, })
     }
 
-    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
+    fn bind_endpoint(&self) -> io::Result<Endpoint> {
         Ok(Endpoint::Unix(self.path.clone()))
     }
 }

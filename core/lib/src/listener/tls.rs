@@ -85,8 +85,8 @@ impl<I: Bindable> Bindable for TlsBindable<I>
         })
     }
 
-    fn candidate_endpoint(&self) -> io::Result<Endpoint> {
-        let inner = self.inner.candidate_endpoint()?;
+    fn bind_endpoint(&self) -> io::Result<Endpoint> {
+        let inner = self.inner.bind_endpoint()?;
         Ok(inner.with_tls(&self.tls))
     }
 }

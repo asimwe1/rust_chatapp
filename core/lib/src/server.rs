@@ -111,7 +111,7 @@ impl Rocket<Ignite> {
               <B::Listener as Listener>::Connection: AsyncRead + AsyncWrite,
               R: Future<Output = Result<Arc<Rocket<Orbit>>>>
     {
-        let binding_endpoint = bindable.candidate_endpoint().ok();
+        let binding_endpoint = bindable.bind_endpoint().ok();
         let h12listener = bindable.bind()
             .map_err(|e| ErrorKind::Bind(binding_endpoint, Box::new(e)))
             .await?;
