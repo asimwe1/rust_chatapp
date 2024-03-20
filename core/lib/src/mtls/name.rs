@@ -6,11 +6,12 @@ use ref_cast::RefCast;
 use crate::mtls::x509::X509Name;
 use crate::mtls::oid;
 
-/// An X.509 Distinguished Name (DN) found in a [`Certificate`].
+/// An X.509 Distinguished Name (DN) found in a
+/// [`Certificate`](crate::mtls::Certificate).
 ///
-/// This type is a wrapper over [`x509::X509Name`] with convenient methods and
+/// This type is a wrapper over [`X509Name`] with convenient methods and
 /// complete documentation. Should the data exposed by the inherent methods not
-/// suffice, this type derefs to [`x509::X509Name`].
+/// suffice, this type derefs to [`X509Name`].
 #[repr(transparent)]
 #[derive(Debug, PartialEq, RefCast)]
 pub struct Name<'a>(X509Name<'a>);
@@ -113,7 +114,9 @@ impl<'a> Name<'a> {
     /// Returns `true` if `self` has no data.
     ///
     /// When this is the case for a `subject()`, the subject data can be found
-    /// in the `subjectAlt` [`extension()`](Certificate::extensions()).
+    /// in the `subjectAlt` [`extension`].
+    ///
+    /// [`extension`]: crate::mtls::Certificate::extensions()
     ///
     /// # Example
     ///

@@ -1,9 +1,8 @@
 //! Support for mutual TLS client certificates.
 //!
-//! For details on how to configure mutual TLS, see
-//! [`MutualTls`](crate::config::MutualTls) and the [TLS
+//! For details on how to configure mutual TLS, see [`MtlsConfig`] and the [TLS
 //! guide](https://rocket.rs/master/guide/configuration/#tls). See
-//! [`Certificate`] for a request guard that validated, verifies, and retrieves
+//! [`Certificate`] for a request guard that validates, verifies, and retrieves
 //! client certificates.
 
 pub mod oid {
@@ -28,17 +27,7 @@ pub mod x509 {
     //! Lack of documentation is directly inherited from the source crate.
     //! Prefer to use Rocket's wrappers when possible.
 
-    pub(crate) use x509_parser::nom;
-    pub use x509_parser::certificate::*;
-    pub use x509_parser::cri_attributes::*;
-    pub use x509_parser::error::*;
-    pub use x509_parser::extensions::*;
-    pub use x509_parser::revocation_list::*;
-    pub use x509_parser::time::*;
-    pub use x509_parser::x509::*;
-    pub use x509_parser::der_parser::der;
-    pub use x509_parser::der_parser::ber;
-    pub use x509_parser::traits::*;
+    pub use x509_parser::prelude::*;
 }
 
 mod certificate;
@@ -51,6 +40,5 @@ pub use name::Name;
 pub use config::MtlsConfig;
 pub use certificate::{Certificate, CertificateDer};
 
-/// A type alias for [`Result`](std::result::Result) with the error type set to
-/// [`Error`].
+/// A type alias for `Result` with the error type set to [`Error`].
 pub type Result<T, E = Error> = std::result::Result<T, E>;

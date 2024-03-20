@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 
 use crate::mtls::x509::{self, nom};
 
-/// An error returned by the [`Certificate`] request guard.
+/// An error returned by the [`Certificate`](crate::mtls::Certificate) guard.
 ///
 /// To retrieve this error in a handler, use an `mtls::Result<Certificate>`
 /// guard type:
@@ -65,10 +65,10 @@ impl From<nom::Err<x509::X509Error>> for Error {
 }
 
 impl std::error::Error for Error {
-    // fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-    //     match self {
-    //         Error::Parse(e) => Some(e),
-    //         _ => None
-    //     }
-    // }
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Parse(e) => Some(e),
+            _ => None
+        }
+    }
 }

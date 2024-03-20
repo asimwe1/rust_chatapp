@@ -133,7 +133,7 @@ impl<'a> Certificate<'a> {
 
     fn parse_one(raw: &[u8]) -> Result<x509::X509Certificate<'_>> {
         use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
-        use x509_parser::traits::FromDer;
+        use x509::FromDer;
 
         let (left, x509) = x509::X509Certificate::from_der(raw)?;
         if !left.is_empty() {
