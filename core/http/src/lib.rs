@@ -33,7 +33,6 @@ pub mod uncased {
 #[path = "."]
 pub mod private {
     pub use crate::parse::Indexed;
-    pub use smallvec::{SmallVec, Array};
 }
 
 pub use crate::method::Method;

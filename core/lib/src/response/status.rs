@@ -53,7 +53,7 @@ use crate::http::Status;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Created<R>(Cow<'static, str>, Option<R>, Option<u64>);
 
-impl<'r, R> Created<R> {
+impl<R> Created<R> {
     /// Constructs a `Created` response with a `location` and no body.
     ///
     /// # Example

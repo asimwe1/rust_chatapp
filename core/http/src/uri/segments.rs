@@ -235,7 +235,7 @@ impl<'a> Segments<'a, Path> {
             } else if cfg!(windows) && segment.contains(':') {
                 return Err(PathError::BadChar(':'))
             } else {
-                buf.push(&*segment)
+                buf.push(segment)
             }
         }
 

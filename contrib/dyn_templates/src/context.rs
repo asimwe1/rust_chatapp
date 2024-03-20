@@ -84,7 +84,7 @@ impl Context {
             if !templates.contains_key(name) {
                 let data_type = Path::new(name).extension()
                     .and_then(|osstr| osstr.to_str())
-                    .and_then(|ext| ContentType::from_extension(ext))
+                    .and_then(ContentType::from_extension)
                     .unwrap_or(ContentType::Text);
 
                 let info = TemplateInfo { path: None, engine_ext, data_type };
@@ -183,7 +183,7 @@ mod manager {
             if let Some(true) = templates_changes {
                 info_!("Change detected: reloading templates.");
                 let root = self.context().root.clone();
-                if let Some(new_ctxt) = Context::initialize(&root, &callback) {
+                if let Some(new_ctxt) = Context::initialize(&root, callback) {
                     *self.context_mut() = new_ctxt;
                 } else {
                     warn_!("An error occurred while reloading templates.");
@@ -217,7 +217,7 @@ fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
 
     // Ensure template name consistency on Windows systems
     if cfg!(windows) {
-        name = name.replace("\\", "/");
+        name = name.replace('\\', "/");
     }
 
     (name, data_type.map(|d| d.to_string_lossy().into_owned()))

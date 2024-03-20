@@ -10,7 +10,7 @@ fn test_hello() {
     let response = client.get(uri).dispatch();
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.into_string().unwrap(), super::hello(name.into(), age));
+    assert_eq!(response.into_string().unwrap(), super::hello(name, age));
 }
 
 #[test]
@@ -54,7 +54,8 @@ fn test_hello_invalid_age() {
         assert_eq!(response.into_string().unwrap(), expected.1);
     }
 
-    for path in &["foo/bar/baz"] {
+    {
+        let path = &"foo/bar/baz";
         let request = client.get(format!("/hello/{}", path));
         let expected = super::hello_not_found(request.inner());
         let response = request.dispatch();

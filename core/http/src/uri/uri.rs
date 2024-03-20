@@ -334,6 +334,24 @@ macro_rules! impl_uri_from {
                 }
             }
         }
+
+        impl<'b, $($lt)?> PartialEq<&$T $(<$lt>)?> for Uri<'b> {
+            fn eq(&self, other: &&$T $(<$lt>)?) -> bool {
+                match self {
+                    Uri::$T(inner) => inner == *other,
+                    _ => false
+                }
+            }
+        }
+
+        impl<'b, $($lt)?> PartialEq<Uri<'b>> for &$T $(<$lt>)? {
+            fn eq(&self, other: &Uri<'b>) -> bool {
+                match other {
+                    Uri::$T(inner) => inner == *self,
+                    _ => false
+                }
+            }
+        }
     )
 }
 

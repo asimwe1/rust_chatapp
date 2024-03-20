@@ -7,7 +7,7 @@ fn test_count() {
 
     fn get_count(client: &Client) -> usize {
         let response = client.get("/count").dispatch().into_string().unwrap();
-        let count = response.split(" ").last().unwrap();
+        let count = response.split(' ').last().unwrap();
         count.parse().unwrap()
     }
 

@@ -140,7 +140,7 @@ mod serde {
     use serde_::ser::{Serialize, Serializer};
     use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
-    impl<'a> Serialize for Method {
+    impl Serialize for Method {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             serializer.serialize_str(self.as_str())
         }

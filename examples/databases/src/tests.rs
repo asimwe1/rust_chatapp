@@ -46,7 +46,7 @@ fn test(base: &str, stage: AdHoc) {
     for _ in 1..=N {
         // Get a valid ID from the index.
         let list = client.get(base).dispatch().into_json::<Vec<i64>>().unwrap();
-        let id = list.get(0).expect("have post");
+        let id = list.first().expect("have post");
 
         // Delete that post.
         let response = client.delete(format!("{}/{}", base, id)).dispatch();

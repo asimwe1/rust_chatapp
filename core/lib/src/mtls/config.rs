@@ -154,7 +154,7 @@ impl MtlsConfig {
     pub fn ca_certs(&self) -> either::Either<std::path::PathBuf, &[u8]> {
         match &self.ca_certs {
             Either::Left(path) => either::Either::Left(path.relative()),
-            Either::Right(bytes) => either::Either::Right(&bytes),
+            Either::Right(bytes) => either::Either::Right(bytes),
         }
     }
 

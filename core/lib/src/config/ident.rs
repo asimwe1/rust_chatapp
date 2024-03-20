@@ -80,7 +80,7 @@ pub struct Ident(Option<String>);
 macro_rules! ident {
     ($value:expr) => {
         {
-            #[allow(unknown_lints, eq_op)]
+            #[allow(unknown_lints)]
             const _: [(); 0 - !{
                 const ASSERT: bool = $crate::http::Header::is_valid_value($value, false);
                 ASSERT

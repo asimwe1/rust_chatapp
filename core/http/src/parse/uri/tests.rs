@@ -79,7 +79,7 @@ fn test_assert_parse_eq() {
 #[should_panic]
 fn test_assert_parse_eq_consecutive() {
     assert_parse_eq! {
-        "/" => Origin::ROOT,
+        "/" => Origin::root(),
         "/" => Asterisk
     };
 }
@@ -130,7 +130,7 @@ fn test_parse_issue_924_samples() {
 fn single_byte() {
     assert_parse_eq!(
         "*" => Asterisk,
-        "/" => Origin::ROOT,
+        "/" => Origin::root(),
         "." => Authority::new(None, ".", None),
         "_" => Authority::new(None, "_", None),
         "1" => Authority::new(None, "1", None),

@@ -31,7 +31,7 @@ impl Dynamic {
         segment: &str,
         span: Span,
     ) -> Result<Self, Error<'_>>  {
-        match Parameter::parse::<P>(&segment, span)? {
+        match Parameter::parse::<P>(segment, span)? {
             Parameter::Dynamic(d) | Parameter::Ignored(d) => Ok(d),
             Parameter::Guard(g) => Ok(g.source),
             Parameter::Static(_) => Err(Error::new(segment, span, ErrorKind::Static)),

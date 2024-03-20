@@ -20,7 +20,7 @@ impl Engine for Handlebars<'static> {
             }
         }
 
-        ok.then(|| hb)
+        ok.then_some(hb)
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {

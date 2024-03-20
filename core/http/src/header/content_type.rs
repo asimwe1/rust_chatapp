@@ -5,7 +5,6 @@ use std::fmt;
 
 use crate::header::{Header, MediaType};
 use crate::uncased::UncasedStr;
-use crate::ext::IntoCollection;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -247,7 +246,7 @@ impl ContentType {
     /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
-    /// let id = ContentType::new("application", "x-id").with_params(("id", "1"));
+    /// let id = ContentType::new("application", "x-id").with_params([("id", "1")]);
     /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
     /// ```
     ///
@@ -265,7 +264,7 @@ impl ContentType {
     pub fn with_params<K, V, P>(self, parameters: P) -> ContentType
         where K: Into<Cow<'static, str>>,
               V: Into<Cow<'static, str>>,
-              P: IntoCollection<(K, V)>
+              P: IntoIterator<Item = (K, V)>
     {
         ContentType(self.0.with_params(parameters))
     }

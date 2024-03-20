@@ -150,10 +150,8 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     }
 
     // requests with longer paths only match if we have dynamic trail (<a..>).
-    if req_segments.num() > route_segments.len() {
-        if !route.uri.metadata.dynamic_trail {
-            return false;
-        }
+    if req_segments.num() > route_segments.len() && !route.uri.metadata.dynamic_trail {
+        return false;
     }
 
     // We've checked everything beyond the zip of their lengths already.

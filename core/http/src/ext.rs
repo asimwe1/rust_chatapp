@@ -1,74 +1,8 @@
 //! Extension traits implemented by several HTTP types.
 
-use smallvec::{Array, SmallVec};
-use state::InitCell;
-
-// TODO: It would be nice if we could somehow have one trait that could give us
-// either SmallVec or Vec.
-/// Trait implemented by types that can be converted into a collection.
-pub trait IntoCollection<T>: Sized {
-    /// Converts `self` into a collection.
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A>;
-
-    #[doc(hidden)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
-}
-
-impl<T> IntoCollection<T> for T {
-    #[inline]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
-        let mut vec = SmallVec::new();
-        vec.push(self);
-        vec
-    }
-
-    #[inline(always)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
-        f(self).into_collection()
-    }
-}
-
-impl<T> IntoCollection<T> for Vec<T> {
-    #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
-        SmallVec::from_vec(self)
-    }
-
-    #[inline]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A> {
-        self.into_iter().map(f).collect()
-    }
-}
-
-impl<T: Clone> IntoCollection<T> for &[T] {
-    #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
-        self.iter().cloned().collect()
-    }
-
-    #[inline]
-    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-        where F: FnMut(T) -> U
-    {
-        self.iter().cloned().map(f).collect()
-    }
-}
-
-impl<T, const N: usize> IntoCollection<T> for [T; N] {
-    #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
-        self.into_iter().collect()
-    }
-
-    #[inline]
-    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-        where F: FnMut(T) -> U
-    {
-        self.into_iter().map(f).collect()
-    }
-}
-
 use std::borrow::Cow;
+
+use state::InitCell;
 
 /// Trait implemented by types that can be converted into owned versions of
 /// themselves.

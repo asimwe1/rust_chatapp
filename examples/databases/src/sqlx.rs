@@ -3,7 +3,7 @@ use rocket::fairing::{self, AdHoc};
 use rocket::response::status::Created;
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
-use rocket_db_pools::{sqlx, Database, Connection};
+use rocket_db_pools::{Database, Connection};
 
 use futures::{stream::TryStreamExt, future::TryFutureExt};
 
@@ -63,7 +63,7 @@ async fn delete(mut db: Connection<Db>, id: i64) -> Result<Option<()>> {
         .execute(&mut **db)
         .await?;
 
-    Ok((result.rows_affected() == 1).then(|| ()))
+    Ok((result.rows_affected() == 1).then_some(()))
 }
 
 #[delete("/")]

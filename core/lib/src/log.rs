@@ -120,7 +120,7 @@ impl log::Log for RocketLogger {
 
         // Downgrade a physical launch `warn` to logical `info`.
         let level = is_launch_record(record.metadata())
-            .then(|| log::Level::Info)
+            .then_some(log::Level::Info)
             .unwrap_or_else(|| record.level());
 
         match level {

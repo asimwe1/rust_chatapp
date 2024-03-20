@@ -4,7 +4,7 @@ use rocket::request::Request;
 use rocket::http::CookieJar;
 
 #[catch(404)]
-fn not_found(request: &Request) -> &'static str {
+fn not_found(request: &Request<'_>) -> &'static str {
     request.cookies().add(("not_found", "404"));
     "404 - Not Found"
 }

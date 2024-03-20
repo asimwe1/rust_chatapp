@@ -41,7 +41,7 @@ impl<A: Connection, B: Connection> Connection for Either<A, B> {
 
 impl Certificates<'_> {
     pub fn into_owned(self) -> Certificates<'static> {
-        let cow = self.0.into_iter()
+        let cow = self.0.iter()
             .map(|der| der.clone().into_owned())
             .collect::<Vec<_>>()
             .into();

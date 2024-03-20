@@ -1,7 +1,7 @@
 #[macro_use] extern crate rocket;
 
 #[get("/")]
-fn inspect_proto(proto: rocket::http::ProxyProto) -> String {
+fn inspect_proto(proto: rocket::http::ProxyProto<'_>) -> String {
     proto.to_string()
 }
 

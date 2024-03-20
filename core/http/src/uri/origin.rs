@@ -121,7 +121,10 @@ pub struct Origin<'a> {
 impl<'a> Origin<'a> {
     /// The root: `'/'`.
     #[doc(hidden)]
-    pub const ROOT: Origin<'static> = Origin::const_new("/", None);
+    pub fn root() -> &'static Origin<'static> {
+        static ROOT_ORIGIN: Origin<'static> = Origin::const_new("/", None);
+        &ROOT_ORIGIN
+    }
 
     /// SAFETY: `source` must be UTF-8.
     #[inline]
@@ -218,7 +221,7 @@ impl<'a> Origin<'a> {
 
         if !string.starts_with('/') {
             return Err(Error {
-                expected: Expected::token(Some(&b'/'), string.as_bytes().get(0).cloned()),
+                expected: Expected::token(Some(&b'/'), string.as_bytes().first().cloned()),
                 index: 0,
             });
         }

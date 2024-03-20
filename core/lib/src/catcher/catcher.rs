@@ -134,7 +134,7 @@ pub struct Catcher {
 // The rank is computed as -(number of nonempty segments in base) => catchers
 // with more nonempty segments have lower ranks => higher precedence.
 fn rank(base: Path<'_>) -> isize {
-    -1 * (base.segments().filter(|s| !s.is_empty()).count() as isize)
+    -(base.segments().filter(|s| !s.is_empty()).count() as isize)
 }
 
 impl Catcher {
@@ -184,9 +184,9 @@ impl Catcher {
 
         Catcher {
             name: None,
-            base: uri::Origin::ROOT,
+            base: uri::Origin::root().clone(),
             handler: Box::new(handler),
-            rank: rank(uri::Origin::ROOT.path()),
+            rank: rank(uri::Origin::root().path()),
             code
         }
     }

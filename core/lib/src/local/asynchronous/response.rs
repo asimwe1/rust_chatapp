@@ -126,15 +126,15 @@ impl LocalResponse<'_> {
     }
 
     #[cfg(feature = "json")]
-    async fn _into_json<T: Send + 'static>(self) -> Option<T>
-        where T: serde::de::DeserializeOwned
+    async fn _into_json<T>(self) -> Option<T>
+        where T: Send + serde::de::DeserializeOwned + 'static
     {
         self.blocking_read(|r| serde_json::from_reader(r)).await?.ok()
     }
 
     #[cfg(feature = "msgpack")]
-    async fn _into_msgpack<T: Send + 'static>(self) -> Option<T>
-        where T: serde::de::DeserializeOwned
+    async fn _into_msgpack<T>(self) -> Option<T>
+        where T: Send + serde::de::DeserializeOwned + 'static
     {
         self.blocking_read(|r| rmp_serde::from_read(r)).await?.ok()
     }
@@ -180,7 +180,7 @@ impl LocalResponse<'_> {
             // TODO: Try to fill as much as the buffer before send it off?
             let mut buf = Vec::with_capacity(1024);
             match self.read_buf(&mut buf).await {
-                Ok(n) if n == 0 => break,
+                Ok(0) => break,
                 Ok(_) => tx.send(Ok(buf)).await.ok()?,
                 Err(e) => {
                     tx.send(Err(e)).await.ok()?;

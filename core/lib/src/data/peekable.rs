@@ -22,7 +22,7 @@ impl<const N: usize, R: AsyncRead + Unpin> Peekable<N, R> {
 
         let to_read = std::cmp::min(N, num);
         if self.buffer.len() >= to_read {
-            return &self.buffer.as_slice();
+            return self.buffer.as_slice();
         }
 
         if self.buffer.capacity() == 0 {

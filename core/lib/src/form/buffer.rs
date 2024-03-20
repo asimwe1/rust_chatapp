@@ -10,18 +10,21 @@ mod private {
     /// [`local_cache`](crate::request::local_cache) must implement this trait.
     /// Since this trait is sealed, the types implementing this trait are known
     /// and finite: `String` and `Vec<T> for all T: Sync + Send + 'static`.
-    // UNSAFE: Needs to have a stable address when deref'd.
+    ///
+    /// # Safety
+    ///
+    /// Types implementing this trait must have a stable address when deref'd.
     pub unsafe trait Shareable: std::ops::Deref + Sync + Send + 'static {
-        /// The current length of the owned shareable.
-        fn len(&self) -> usize;
+        /// The current size of the owned shareable.
+        fn size(&self) -> usize;
     }
 
     unsafe impl Shareable for String {
-        fn len(&self) -> usize { self.len() }
+        fn size(&self) -> usize { self.len() }
     }
 
     unsafe impl<T: Send + Sync + 'static> Shareable for Vec<T> {
-        fn len(&self) -> usize { self.len() }
+        fn size(&self) -> usize { self.len() }
     }
 }
 
@@ -36,8 +39,8 @@ pub struct SharedStack<T: Shareable> {
 }
 
 impl<T: Shareable> SharedStack<T>
-    where T::Target: Index<RangeFrom<usize>, Output = T::Target> +
-                     Index<RangeTo<usize>, Output = T::Target>
+    where T::Target: Index<RangeFrom<usize>, Output = T::Target>
+                     + Index<RangeTo<usize>, Output = T::Target>
 {
     /// Creates a new stack.
     pub fn new() -> Self {
@@ -101,11 +104,11 @@ impl<T: Shareable> SharedStack<T>
 
     /// Pushes the strings `a` and `b` onto the stack without allocating for
     /// both strings. Returns references to the two strings on the stack.
-    pub(crate) fn push_two<'a, V>(&'a self, a: V, b: V) -> (&'a T::Target, &'a T::Target)
+    pub(crate) fn push_two<V>(&self, a: V, b: V) -> (&T::Target, &T::Target)
         where T: From<V> + Extend<V>,
     {
         let mut value = T::from(a);
-        let split_len = value.len();
+        let split_len = value.size();
         value.extend(Some(b));
         self.push_split(value, split_len)
     }

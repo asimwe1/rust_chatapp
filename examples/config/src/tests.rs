@@ -4,7 +4,7 @@ async fn test_config(profile: &str) {
     let provider = Config::figment().select(profile);
     let rocket = rocket::custom(provider).ignite().await.unwrap();
     let config = rocket.config();
-    match &*profile {
+    match profile {
         "debug" => {
             assert_eq!(config.workers, 1);
             assert_eq!(config.keep_alive, 0);

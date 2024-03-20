@@ -1,5 +1,5 @@
 use rocket::serde::Serialize;
-use diesel::{self, result::QueryResult, prelude::*};
+use diesel::{self, prelude::*};
 
 mod schema {
     table! {

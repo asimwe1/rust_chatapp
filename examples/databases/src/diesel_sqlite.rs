@@ -73,7 +73,7 @@ async fn delete(db: Db, id: i32) -> Result<Option<()>> {
             .execute(conn)
     }).await?;
 
-    Ok((affected == 1).then(|| ()))
+    Ok((affected == 1).then_some(()))
 }
 
 #[delete("/")]

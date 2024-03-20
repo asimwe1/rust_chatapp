@@ -63,7 +63,7 @@ impl<R: AsyncRead> ReaderStream<R> {
     /// [`Stream`]: futures_core::Stream
     pub fn with_capacity(reader: R, capacity: usize) -> Self {
         ReaderStream {
-            reader: reader,
+            reader,
             buf: BytesMut::with_capacity(capacity),
             capacity,
             done: false,

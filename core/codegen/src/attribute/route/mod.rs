@@ -293,7 +293,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
 
     let eligible_types = route.guards()
         .map(|guard| &guard.ty)
-        .chain(ret_ty.as_ref().into_iter())
+        .chain(ret_ty.as_ref())
         .flat_map(|ty| ty.unfold_with_ty_macros(TY_MACS, ty_mac_mapper))
         .filter(|ty| ty.is_concrete(&generic_idents))
         .map(|child| (child.parent, child.ty));

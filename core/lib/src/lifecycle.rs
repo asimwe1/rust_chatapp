@@ -33,7 +33,7 @@ async fn catch_handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
     }
 
     let run = std::panic::AssertUnwindSafe(run);
-    let fut = std::panic::catch_unwind(move || run())
+    let fut = std::panic::catch_unwind(run)
         .map_err(|e| panic_info!(name, e))
         .ok()?;
 

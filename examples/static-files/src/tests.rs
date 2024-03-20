@@ -16,17 +16,16 @@ fn test_query_file<T> (path: &str, file: T, status: Status)
 
     let body_data = response.into_bytes();
     if let Some(filename) = file.into() {
-        let expected_data = read_file_content(filename);
+        let expected_data = read_file_content(filename).expect(filename);
         assert!(body_data.map_or(false, |s| s == expected_data));
     }
 }
 
-fn read_file_content(path: &str) -> Vec<u8> {
-    let mut fp = File::open(&path).expect(&format!("Can't open {}", path));
+fn read_file_content(path: &str) -> std::io::Result<Vec<u8>> {
     let mut file_content = vec![];
-
-    fp.read_to_end(&mut file_content).expect(&format!("Reading {} failed.", path));
-    file_content
+    let mut fp = File::open(path)?;
+    fp.read_to_end(&mut file_content)?;
+    Ok(file_content)
 }
 
 #[test]

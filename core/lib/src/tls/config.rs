@@ -316,7 +316,7 @@ impl TlsConfig {
     pub fn certs(&self) -> either::Either<std::path::PathBuf, &[u8]> {
         match &self.certs {
             Either::Left(path) => either::Either::Left(path.relative()),
-            Either::Right(bytes) => either::Either::Right(&bytes),
+            Either::Right(bytes) => either::Either::Right(bytes),
         }
     }
 
@@ -344,7 +344,7 @@ impl TlsConfig {
     pub fn key(&self) -> either::Either<std::path::PathBuf, &[u8]> {
         match &self.key {
             Either::Left(path) => either::Either::Left(path.relative()),
-            Either::Right(bytes) => either::Either::Right(&bytes),
+            Either::Right(bytes) => either::Either::Right(bytes),
         }
     }
 

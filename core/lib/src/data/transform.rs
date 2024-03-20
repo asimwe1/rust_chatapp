@@ -157,13 +157,13 @@ impl<'a, 'b> Deref for TransformBuf<'a, 'b> {
     type Target = ReadBuf<'b>;
 
     fn deref(&self) -> &Self::Target {
-        &self.buf
+        self.buf
     }
 }
 
 impl<'a, 'b> DerefMut for TransformBuf<'a, 'b> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.buf
+        self.buf
     }
 }
 

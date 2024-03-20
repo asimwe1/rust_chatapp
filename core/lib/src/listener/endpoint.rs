@@ -112,10 +112,10 @@ impl Endpoint {
 
     pub fn downcast<T: 'static>(&self) -> Option<&T> {
         match self {
-            Endpoint::Tcp(addr) => (&*addr as &dyn Any).downcast_ref(),
-            Endpoint::Quic(addr) => (&*addr as &dyn Any).downcast_ref(),
-            Endpoint::Unix(addr) => (&*addr as &dyn Any).downcast_ref(),
-            Endpoint::Custom(addr) => (&*addr as &dyn Any).downcast_ref(),
+            Endpoint::Tcp(addr) => (addr as &dyn Any).downcast_ref(),
+            Endpoint::Quic(addr) => (addr as &dyn Any).downcast_ref(),
+            Endpoint::Unix(addr) => (addr as &dyn Any).downcast_ref(),
+            Endpoint::Custom(addr) => (addr as &dyn Any).downcast_ref(),
             Endpoint::Tls(inner, ..) => inner.downcast(),
         }
     }

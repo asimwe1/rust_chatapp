@@ -421,10 +421,7 @@ impl RoutedUri {
 
 impl Arg {
     fn is_named(&self) -> bool {
-        match *self {
-            Arg::Named(..) => true,
-            _ => false
-        }
+        matches!(self, Arg::Named(..))
     }
 
     fn unnamed(&self) -> &ArgExpr {
@@ -484,7 +481,7 @@ impl UriExpr {
         let lit = input.parse::<StringLit>()?;
         let uri = Uri::parse::<Origin<'_>>(&lit)
             .or_else(|e| Uri::parse::<Absolute<'_>>(&lit).map_err(|e2| (e, e2)))
-            .map_err(|(e1, e2)| lit.starts_with('/').then(|| e1).unwrap_or(e2))
+            .map_err(|(e1, e2)| if lit.starts_with('/') { e1 } else { e2 })
             .or_else(|e| uri_err(&lit, e))?;
 
         if matches!(&uri, Uri::Origin(o) if o.query().is_some())

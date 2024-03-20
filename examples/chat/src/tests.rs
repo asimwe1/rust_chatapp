@@ -77,7 +77,7 @@ async fn messages() {
             }
 
             let data: Message = json::from_str(&line[5..]).expect("message JSON");
-            if &data == &shutdown_message {
+            if data == shutdown_message {
                 // Test shutdown listening: this should end the stream.
                 client.rocket().shutdown().notify();
                 continue;

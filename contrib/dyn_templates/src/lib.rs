@@ -412,7 +412,7 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        let string = ctxt.engines.render(name, &info, value).ok_or_else(|| {
+        let string = ctxt.engines.render(name, info, value).ok_or_else(|| {
             error_!("Template '{}' failed to render.", name);
             Status::InternalServerError
         })?;

@@ -180,7 +180,7 @@ impl Route {
         // Collect all of the declared dynamic route parameters.
         let all_dyn_params = path_params.iter().filter_map(|p| p.dynamic())
             .chain(query_params.iter().filter_map(|p| p.dynamic()))
-            .chain(data_guard.as_ref().map(|g| &g.source).into_iter());
+            .chain(data_guard.as_ref().map(|g| &g.source));
 
         // Check for any duplicates in the dynamic route parameters.
         let mut dyn_params: IndexSet<&Dynamic> = IndexSet::new();
@@ -196,7 +196,7 @@ impl Route {
             .filter(|(name, _)| {
                 let mut all_other_guards = path_params.iter().filter_map(|p| p.guard())
                     .chain(query_params.iter().filter_map(|p| p.guard()))
-                    .chain(data_guard.as_ref().into_iter());
+                    .chain(data_guard.as_ref());
 
                 all_other_guards.all(|g| &g.name != *name)
             })

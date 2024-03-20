@@ -20,15 +20,20 @@ default = []
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
 
+[lints.clippy]
+module_inception = "allow"
+multiple_bound_locations = "allow"
+manual_range_contains = "allow"
+
 [dependencies]
-smallvec = { version = "1.11", features = ["const_generics", "const_new"] }
+tinyvec = { version = "1.6", features = ["std", "rustc_1_57"] }
 percent-encoding = "2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = "2"
 ref-cast = "1.0"
 uncased = "0.9.10"
 either = "1"
-pear = "0.2.8"
+pear = "0.2.9"
 memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.18", features = ["percent-encode"] }

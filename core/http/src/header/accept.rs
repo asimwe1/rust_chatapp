@@ -1,11 +1,9 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-use smallvec::SmallVec;
-
 use crate::{Header, MediaType};
-use crate::ext::IntoCollection;
 use crate::parse::parse_accept;
 
 /// The HTTP Accept header.
@@ -52,7 +50,7 @@ use crate::parse::parse_accept;
 /// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
 #[derive(Debug, Clone)]
-pub struct Accept(pub(crate) SmallVec<[QMediaType; 1]>);
+pub struct Accept(pub(crate) Cow<'static, [QMediaType]>);
 
 /// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
@@ -65,9 +63,10 @@ macro_rules! accept_constructor {
             #[doc="An `Accept` header with the single media type for"]
             #[doc=concat!("**", $str, "**: ", "_", $t, "/", $s, "_")]
             #[allow(non_upper_case_globals)]
-            pub const $name: Accept = Accept(
-                SmallVec::from_const([QMediaType(MediaType::$name, None)])
-            );
+            pub const $name: Accept = Accept({
+                const INNER: &[QMediaType] = &[QMediaType(MediaType::$name, None)];
+                Cow::Borrowed(INNER)
+            });
          )+
     };
 }
@@ -86,29 +85,48 @@ impl Accept {
     /// # extern crate rocket;
     /// use rocket::http::{QMediaType, MediaType, Accept};
     ///
-    /// // Construct an `Accept` via a `Vec<QMediaType>`.
-    /// let json_then_html = vec![MediaType::JSON.into(), MediaType::HTML.into()];
+    /// // Construct an `Accept` via a `Vec<MediaType>`.
+    /// let json_then_html = vec![MediaType::JSON, MediaType::HTML];
     /// let accept = Accept::new(json_then_html);
     /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
     ///
-    /// // Construct an `Accept` via an `[QMediaType]`.
-    /// let accept = Accept::new([MediaType::JSON.into(), MediaType::HTML.into()]);
+    /// // Construct an `Accept` via an `[MediaType]`.
+    /// let accept = Accept::new([MediaType::JSON, MediaType::HTML]);
     /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
     ///
-    /// // Construct an `Accept` via a `QMediaType`.
-    /// let accept = Accept::new(QMediaType(MediaType::JSON, None));
+    /// // Construct an `Accept` via a single `QMediaType`.
+    /// let accept = Accept::new(QMediaType(MediaType::JSON, Some(0.4)));
     /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
     /// ```
     #[inline(always)]
-    pub fn new<T: IntoCollection<QMediaType>>(items: T) -> Accept {
-        Accept(items.into_collection())
+    pub fn new<T: IntoIterator<Item = M>, M: Into<QMediaType>>(items: T) -> Accept {
+        Accept(items.into_iter().map(|v| v.into()).collect())
     }
 
-    // TODO: Implement this.
-    // #[inline(always)]
-    // pub fn add<M: Into<QMediaType>>(&mut self, media_type: M) {
-    //     self.0.push(media_type.into());
-    // }
+    /// Adds `media_type` to `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::{QMediaType, MediaType, Accept};
+    ///
+    /// let mut accept = Accept::new(QMediaType(MediaType::JSON, Some(0.1)));
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::JSON);
+    /// assert_eq!(accept.iter().count(), 1);
+    ///
+    /// accept.add(QMediaType(MediaType::HTML, Some(0.7)));
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::HTML);
+    /// assert_eq!(accept.iter().count(), 2);
+    ///
+    /// accept.add(QMediaType(MediaType::XML, Some(0.6)));
+    /// assert_eq!(accept.preferred().media_type(), &MediaType::HTML);
+    /// assert_eq!(accept.iter().count(), 3);
+    /// ```
+    #[inline(always)]
+    pub fn add<M: Into<QMediaType>>(&mut self, media_type: M) {
+        self.0.to_mut().push(media_type.into());
+    }
 
     /// Retrieve the client's preferred media type. This method follows [RFC
     /// 7231 5.3.2]. If the list of media types is empty, this method returns a
@@ -233,10 +251,10 @@ impl Accept {
     known_media_types!(accept_constructor);
 }
 
-impl<T: IntoCollection<MediaType>> From<T> for Accept {
+impl<T: IntoIterator<Item = MediaType>> From<T> for Accept {
     #[inline(always)]
     fn from(items: T) -> Accept {
-        Accept(items.mapped(|item| item.into()))
+        Accept::new(items.into_iter().map(QMediaType::from))
     }
 }
 
@@ -329,6 +347,16 @@ impl QMediaType {
     #[inline(always)]
     pub fn media_type(&self) -> &MediaType {
         &self.0
+    }
+}
+
+impl IntoIterator for QMediaType {
+    type Item = Self;
+
+    type IntoIter = std::iter::Once<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        std::iter::once(self)
     }
 }
 

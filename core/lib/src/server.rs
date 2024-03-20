@@ -47,7 +47,7 @@ impl Rocket<Orbit> {
             })
         ).await;
 
-        let io_handler = response.to_io_handler(Rocket::extract_io_handler);
+        let io_handler = response.make_io_handler(Rocket::extract_io_handler);
         if let (Some(handler), Some(upgrade)) = (io_handler, upgrade) {
             let upgrade = upgrade.map_ok(IoStream::from).map_err(io::Error::other);
             tokio::task::spawn(io_handler_task(upgrade, handler));
@@ -208,7 +208,7 @@ impl Rocket<Orbit> {
                         let meta = ConnectionMeta::from(&conn);
                         let rx = conn.rx.cancellable(rocket.shutdown.clone());
                         let response = rocket.clone()
-                            .service(conn.parts, rx, None, ConnectionMeta::from(meta))
+                            .service(conn.parts, rx, None, meta)
                             .map_err(io::Error::other)
                             .io_unless(rocket.shutdown.mercy.clone())
                             .await?;

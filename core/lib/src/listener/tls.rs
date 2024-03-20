@@ -100,7 +100,7 @@ impl<L> Listener for TlsListener<L>
     type Connection = TlsStream<L::Connection>;
 
     async fn accept(&self) -> io::Result<Self::Accept> {
-        Ok(self.listener.accept().await?)
+        self.listener.accept().await
     }
 
     async fn connect(&self, conn: L::Connection) -> io::Result<Self::Connection> {

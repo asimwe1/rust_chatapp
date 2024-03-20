@@ -91,7 +91,7 @@ impl Fairing for Redirector {
 
         let this = *self;
         let shutdown = rocket.shutdown();
-        let _ = rocket::tokio::spawn(async move {
+        rocket::tokio::spawn(async move {
             if let Err(e) = this.try_launch(config).await {
                 error!("Failed to start HTTP -> HTTPS redirector.");
                 info_!("Error: {}", e);

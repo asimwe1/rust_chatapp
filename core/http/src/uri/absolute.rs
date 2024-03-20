@@ -309,10 +309,8 @@ impl<'a> Absolute<'a> {
             if !self.path().is_normalized(true) {
                 self.path = self.path().to_normalized(true, true);
             }
-        } else {
-            if !self.path().is_normalized(false) {
-                self.path = self.path().to_normalized(false, true);
-            }
+        } else if !self.path().is_normalized(false) {
+            self.path = self.path().to_normalized(false, true);
         }
 
         if let Some(query) = self.query() {

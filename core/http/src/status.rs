@@ -370,7 +370,7 @@ impl Eq for Status { }
 
 impl PartialOrd for Status {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.code.partial_cmp(&other.code)
+        Some(self.cmp(other))
     }
 }
 
@@ -387,7 +387,7 @@ mod serde {
     use serde_::ser::{Serialize, Serializer};
     use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
-    impl<'a> Serialize for Status {
+    impl Serialize for Status {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             serializer.serialize_u16(self.code)
         }

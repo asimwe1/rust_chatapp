@@ -16,7 +16,7 @@ fn _async_bound(
 
     let mut func: TraitItemFn = syn::parse(input)?;
     let original: TraitItemFn = func.clone();
-    if !func.sig.asyncness.is_some() {
+    if func.sig.asyncness.is_none() {
         let diag = Span::call_site()
             .error("attribute can only be applied to async fns")
             .span_help(func.sig.span(), "this fn declaration must be `async`");

@@ -80,7 +80,7 @@ async fn delete(mut db: Connection<Db>, id: i64) -> Result<Option<()>> {
         .execute(&mut db)
         .await?;
 
-    Ok((affected == 1).then(|| ()))
+    Ok((affected == 1).then_some(()))
 }
 
 #[delete("/")]

@@ -79,7 +79,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
 
                 let responder = fields.iter().next().map(|f| {
                     let (accessor, ty) = (f.accessor(), f.ty.with_stripped_lifetimes());
-                    quote_spanned! { f.span().into() =>
+                    quote_spanned! { f.span() =>
                         let mut __res = <#ty as #_response::Responder>::respond_to(
                             #accessor, __req
                         )?;

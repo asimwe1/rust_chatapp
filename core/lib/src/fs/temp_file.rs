@@ -356,6 +356,27 @@ impl<'v> TempFile<'v> {
         }
     }
 
+    /// Returns whether the file is empty.
+    ///
+    /// This is equivalent to `file.len() == 0`.
+    ///
+    /// This method does not perform any system calls.
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::TempFile;
+    ///
+    /// #[post("/", data = "<file>")]
+    /// fn handler(file: TempFile<'_>) {
+    ///     if file.is_empty() {
+    ///         assert_eq!(file.len(), 0);
+    ///     }
+    /// }
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the size, in bytes, of the file.
     ///
     /// This method does not perform any system calls.
@@ -490,7 +511,7 @@ impl<'v> TempFile<'v> {
     ) -> io::Result<Capped<TempFile<'a>>> {
         let limit = content_type.as_ref()
             .and_then(|ct| ct.extension())
-            .and_then(|ext| req.limits().find(&["file", ext.as_str()]))
+            .and_then(|ext| req.limits().find(["file", ext.as_str()]))
             .or_else(|| req.limits().get("file"))
             .unwrap_or(Limits::FILE);
 

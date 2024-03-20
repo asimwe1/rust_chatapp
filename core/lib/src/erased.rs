@@ -67,11 +67,11 @@ impl ErasedRequest {
         let rocket: Arc<Rocket<Orbit>> = rocket;
         let parts: Box<Parts> = Box::new(parts);
         let request: Request<'_> = {
-            let rocket: &Rocket<Orbit> = &*rocket;
+            let rocket: &Rocket<Orbit> = &rocket;
             let rocket: &'static Rocket<Orbit> = unsafe { transmute(rocket) };
-            let parts: &Parts = &*parts;
+            let parts: &Parts = &parts;
             let parts: &'static Parts = unsafe { transmute(parts) };
-            constructor(&rocket, &parts)
+            constructor(rocket, parts)
         };
 
         ErasedRequest { _rocket: rocket, _parts: parts, request, }
@@ -99,7 +99,7 @@ impl ErasedRequest {
         let mut parent = Arc::new(self);
         let token: T = {
             let parent: &mut ErasedRequest = Arc::get_mut(&mut parent).unwrap();
-            let rocket: &Rocket<Orbit> = &*parent._rocket;
+            let rocket: &Rocket<Orbit> = &parent._rocket;
             let request: &mut Request<'_> = &mut parent.request;
             let data: &mut Data<'_> = &mut data;
             preprocess(rocket, request, data).await
@@ -107,22 +107,22 @@ impl ErasedRequest {
 
         let parent = parent;
         let response: Response<'_> = {
-            let parent: &ErasedRequest = &*parent;
+            let parent: &ErasedRequest = &parent;
             let parent: &'static ErasedRequest = unsafe { transmute(parent) };
-            let rocket: &Rocket<Orbit> = &*parent._rocket;
+            let rocket: &Rocket<Orbit> = &parent._rocket;
             let request: &Request<'_> = &parent.request;
             dispatch(token, rocket, request, data).await
         };
 
         ErasedResponse {
             _request: parent,
-            response: response,
+            response,
         }
     }
 }
 
 impl ErasedResponse {
-    pub fn inner<'a>(&'a self) -> &'a Response<'a> {
+    pub fn inner(&self) -> &Response<'_> {
         static_assert_covariance!(Response);
         &self.response
     }
@@ -135,7 +135,7 @@ impl ErasedResponse {
         f(&mut self.response)
     }
 
-    pub fn to_io_handler<'a>(
+    pub fn make_io_handler<'a>(
         &'a mut self,
         constructor: impl for<'r> FnOnce(
             &'r Request<'r>,
@@ -144,7 +144,7 @@ impl ErasedResponse {
     ) -> Option<ErasedIoHandler> {
         let parent: Arc<ErasedRequest> = self._request.clone();
         let io: Option<Box<dyn IoHandler + '_>> = {
-            let parent: &ErasedRequest = &*parent;
+            let parent: &ErasedRequest = &parent;
             let parent: &'static ErasedRequest = unsafe { transmute(parent) };
             let request: &Request<'_> = &parent.request;
             constructor(request, &mut self.response)

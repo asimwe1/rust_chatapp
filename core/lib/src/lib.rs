@@ -6,11 +6,6 @@
 #![cfg_attr(nightly, feature(doc_cfg))]
 #![cfg_attr(nightly, feature(decl_macro))]
 
-#![warn(rust_2018_idioms)]
-// #![warn(missing_docs)]
-#![allow(async_fn_in_trait)]
-#![allow(refining_impl_trait)]
-
 //! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!
@@ -209,7 +204,7 @@ mod erased;
 #[doc(inline)]
 pub use async_trait::async_trait;
 
-const WORKER_PREFIX: &'static str = "rocket-worker";
+const WORKER_PREFIX: &str = "rocket-worker";
 
 /// Creates a [`Rocket`] instance with the default config provider: aliases
 /// [`Rocket::build()`].

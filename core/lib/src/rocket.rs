@@ -698,7 +698,7 @@ impl Rocket<Ignite> {
 
             rocket.shutdown.spawn_listener(&rocket.config.shutdown);
             if let Err(e) = tokio::spawn(Rocket::liftoff(rocket.clone())).await {
-                let rocket = rocket.try_wait_shutdown().await;
+                let rocket = rocket.try_wait_shutdown().await.map(Box::new);
                 return Err(ErrorKind::Liftoff(rocket, Box::new(e)).into());
             }
 
@@ -734,7 +734,7 @@ impl Rocket<Orbit> {
         info!("Shutting down. Waiting for shutdown fairings and pending I/O...");
         tokio::spawn({
             let rocket = self.clone();
-            async move { rocket.fairings.handle_shutdown(&*rocket).await }
+            async move { rocket.fairings.handle_shutdown(&rocket).await }
         });
 
         let config = &self.config.shutdown;

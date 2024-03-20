@@ -71,7 +71,7 @@ impl Key {
     /// assert_eq!(key.as_str(), "a:b:c");
     /// ```
     pub fn as_str(&self) -> &str {
-        &*self
+        self
     }
 }
 

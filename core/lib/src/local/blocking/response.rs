@@ -56,7 +56,7 @@ pub struct LocalResponse<'c> {
 
 impl LocalResponse<'_> {
     fn _response(&self) -> &Response<'_> {
-        &self.inner._response()
+        self.inner._response()
     }
 
     pub(crate) fn _cookies(&self) -> &CookieJar<'_> {

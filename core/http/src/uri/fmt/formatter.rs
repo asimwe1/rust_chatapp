@@ -2,8 +2,6 @@ use std::fmt::{self, Write};
 use std::marker::PhantomData;
 use std::borrow::Cow;
 
-use smallvec::SmallVec;
-
 use crate::uri::{Absolute, Origin, Reference};
 use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 
@@ -143,7 +141,7 @@ use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 /// [`write_raw()`]: Formatter::write_raw()
 /// [`refresh()`]: Formatter::refresh()
 pub struct Formatter<'i, P: Part> {
-    prefixes: SmallVec<[&'static str; 3]>,
+    prefixes: tinyvec::TinyVec<[&'static str; 3]>,
     inner: &'i mut (dyn Write + 'i),
     previous: bool,
     fresh: bool,
@@ -155,7 +153,7 @@ impl<'i, P: Part> Formatter<'i, P> {
     pub(crate) fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
         Formatter {
             inner,
-            prefixes: SmallVec::new(),
+            prefixes: Default::default(),
             previous: false,
             fresh: true,
             _marker: PhantomData,
@@ -357,7 +355,7 @@ impl Formatter<'_, Query> {
             }
         }
 
-        f(&mut PrefixGuard::new(prefix, self).0)
+        f(PrefixGuard::new(prefix, self).0)
     }
 
     /// Writes the named value `value` by prefixing `name` followed by `=` to

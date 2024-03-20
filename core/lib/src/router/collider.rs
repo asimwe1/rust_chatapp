@@ -148,14 +148,14 @@ impl Catcher {
 impl Collide for Route {
     #[inline(always)]
     fn collides_with(&self, other: &Route) -> bool {
-        Route::collides_with(&self, other)
+        Route::collides_with(self, other)
     }
 }
 
 impl Collide for Catcher {
     #[inline(always)]
     fn collides_with(&self, other: &Self) -> bool {
-        Catcher::collides_with(&self, other)
+        Catcher::collides_with(self, other)
     }
 }
 

@@ -109,8 +109,8 @@ impl WebSocket {
     ///     }))
     /// }
     /// ```
-    pub fn channel<'r, F: Send + 'r>(self, handler: F) -> Channel<'r>
-        where F: FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r
+    pub fn channel<'r, F>(self, handler: F) -> Channel<'r>
+        where F: FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + Send + 'r
     {
         Channel { ws: self, handler: Box::new(handler), }
     }

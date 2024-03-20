@@ -99,7 +99,6 @@ define_exported_paths! {
     StaticCatcherInfo => ::rocket::StaticCatcherInfo,
     Route => ::rocket::Route,
     Catcher => ::rocket::Catcher,
-    SmallVec => ::rocket::http::private::SmallVec,
     Status => ::rocket::http::Status,
 }
 

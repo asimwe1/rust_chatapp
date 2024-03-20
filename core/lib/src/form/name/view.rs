@@ -158,7 +158,7 @@ impl<'v> NameView<'v> {
 
         let string = &self.name[self.end..];
         let bytes = string.as_bytes();
-        let shift = match bytes.get(0) {
+        let shift = match bytes.first() {
             None | Some(b'=') => 0,
             Some(b'[') => match memchr::memchr(b']', bytes) {
                 Some(j) => j + 1,
@@ -243,7 +243,7 @@ impl<'v> NameView<'v> {
     /// ```
     pub fn key_lossy(&self) -> &'v Key {
         let view = &self.name[self.start..self.end];
-        let key = match view.as_bytes().get(0) {
+        let key = match view.as_bytes().first() {
             Some(b'.') => &view[1..],
             Some(b'[') if view.ends_with(']') => &view[1..view.len() - 1],
             Some(b'[') if self.is_at_last() => &view[1..],

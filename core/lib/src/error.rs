@@ -92,7 +92,7 @@ pub enum ErrorKind {
     InsecureSecretKey(Profile),
     /// Liftoff failed. Contains the Rocket instance that failed to shutdown.
     Liftoff(
-        Result<Rocket<Ignite>, Arc<Rocket<Orbit>>>,
+        Result<Box<Rocket<Ignite>>, Arc<Rocket<Orbit>>>,
         Box<dyn StdError + Send + 'static>
     ),
     /// Shutdown failed. Contains the Rocket instance that failed to shutdown.
@@ -196,7 +196,7 @@ impl Error {
                     if collisions.is_empty() { return }
 
                     error!("Rocket failed to launch due to the following {} collisions:", kind);
-                    for &(ref a, ref b) in collisions {
+                    for (a, b) in collisions {
                         info_!("{} {} {}", a, "collides with".red().italic(), b)
                     }
                 }
@@ -336,7 +336,7 @@ pub(crate) fn log_server_error(error: &(dyn StdError + 'static)) {
         }
     }
 
-    let mut error: &(dyn StdError + 'static) = &*error;
+    let mut error: &(dyn StdError + 'static) = error;
     if error.downcast_ref::<hyper::Error>().is_some() {
         warn!("{}", ServerError(error));
         while let Some(source) = error.source() {

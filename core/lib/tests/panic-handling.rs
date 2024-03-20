@@ -73,7 +73,7 @@ fn catches_early_route_panic() {
 
 #[test]
 fn catches_early_catcher_panic() {
-    fn pre_future_catcher<'r>(_: Status, _: &'r Request) -> catcher::BoxFuture<'r> {
+    fn pre_future_catcher<'r>(_: Status, _: &'r Request<'_>) -> catcher::BoxFuture<'r> {
         panic!("a panicking pre-future catcher")
     }
 

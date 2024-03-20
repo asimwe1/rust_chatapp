@@ -23,7 +23,10 @@ impl DefaultListener {
     pub(crate) fn base_bindable(&self) -> Result<BaseBindable, crate::Error> {
         match &self.address {
             Endpoint::Tcp(mut address) => {
-                self.port.map(|port| address.set_port(port));
+                if let Some(port) = self.port {
+                    address.set_port(port);
+                }
+
                 Ok(BaseBindable::Left(address))
             },
             #[cfg(unix)]

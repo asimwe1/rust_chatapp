@@ -19,6 +19,18 @@ rust-version = "1.75"
 [package.metadata.docs.rs]
 all-features = true
 
+[lints.rust]
+rust_2018_idioms = "warn"
+# missing_docs = "warn"
+async_fn_in_trait = "allow"
+refining_impl_trait = "allow"
+
+[lints.clippy]
+type_complexity = "allow"
+module_inception = "allow"
+multiple_bound_locations = "allow"
+manual_range_contains = "allow"
+
 [features]
 default = ["http2", "tokio-macros"]
 http2 = ["hyper/http2", "hyper-util/http2"]

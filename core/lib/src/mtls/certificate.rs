@@ -126,8 +126,8 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
 impl<'a> Certificate<'a> {
     /// PRIVATE: For internal Rocket use only!
     fn parse<'r>(chain: &'r [CertificateDer<'r>]) -> Result<Certificate<'r>> {
-        let data = chain.first().ok_or_else(|| Error::Empty)?;
-        let x509 = Certificate::parse_one(&*data)?;
+        let data = chain.first().ok_or(Error::Empty)?;
+        let x509 = Certificate::parse_one(data)?;
         Ok(Certificate { x509, data })
     }
 
@@ -267,7 +267,7 @@ impl<'a> Certificate<'a> {
     /// }
     /// ```
     pub fn extensions(&self) -> &[x509::X509Extension<'a>] {
-        &self.inner().extensions()
+        self.inner().extensions()
     }
 
     /// Checks if the certificate has the serial number `number`.
@@ -318,7 +318,7 @@ impl<'a> Certificate<'a> {
     /// }
     /// ```
     pub fn as_bytes(&self) -> &'a [u8] {
-        &*self.data
+        self.data
     }
 }
 

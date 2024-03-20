@@ -61,7 +61,7 @@ async fn delete(db: Db, id: i64) -> Result<Option<()>> {
         conn.execute("DELETE FROM posts WHERE id = ?1", params![id])
     }).await?;
 
-    Ok((affected == 1).then(|| ()))
+    Ok((affected == 1).then_some(()))
 }
 
 #[delete("/")]

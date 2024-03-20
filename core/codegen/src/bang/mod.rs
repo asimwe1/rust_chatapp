@@ -47,19 +47,19 @@ pub fn catchers_macro(input: proc_macro::TokenStream) -> TokenStream {
 pub fn uri_macro(input: proc_macro::TokenStream) -> TokenStream {
     uri::_uri_macro(input.into())
         .unwrap_or_else(|diag| diag.emit_as_expr_tokens_or(quote! {
-            rocket::http::uri::Origin::ROOT
+            rocket::http::uri::Origin::root()
         }))
 }
 
 pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
-    // TODO: Ideally we would generate a perfect `Origin::ROOT` so that we don't
+    // TODO: Ideally we would generate a perfect `Origin::root()` so that we don't
     // assist in propagating further errors. Alas, we can't set the span to the
     // invocation of `uri!` without access to `span.parent()`, and
     // `Span::call_site()` here points to the `#[route]`, immediate caller,
     // generating a rather confusing error message when there's a type-mismatch.
     uri::_uri_internal_macro(input.into())
         .unwrap_or_else(|diag| diag.emit_as_expr_tokens_or(quote! {
-            rocket::http::uri::Origin::ROOT
+            rocket::http::uri::Origin::root()
         }))
 }
 

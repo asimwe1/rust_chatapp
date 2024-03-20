@@ -68,12 +68,12 @@ fn test_form_validation_context() {
         count(c, n, kind, false)
     }
 
-    let c = errors::<Cat>("name=littlebobby");
+    let c = errors::<Cat<'_>>("name=littlebobby");
     assert_eq!(exact(&c, "nick", Missing), 1);
     assert_eq!(fuzzy(&c, "nick", Missing), 1);
     assert_eq!(fuzzy(&c, "nick", None), 1);
 
-    let c = errors::<Person>("cats[0].name=Bob");
+    let c = errors::<Person<'_>>("cats[0].name=Bob");
     assert_eq!(exact(&c, "kitty", None), 1);
     assert_eq!(exact(&c, "kitty", Missing), 1);
     assert_eq!(exact(&c, "cats[0].nick", None), 1);
@@ -91,7 +91,7 @@ fn test_form_validation_context() {
     assert_eq!(fuzzy(&c, "dog.name", Missing), 1);
     assert_eq!(fuzzy(&c, "dog", None), 1);
 
-    let c = errors::<Person>("cats[0].name=Bob&cats[0].nick=kit&kitty.name=Hi");
+    let c = errors::<Person<'_>>("cats[0].name=Bob&cats[0].nick=kit&kitty.name=Hi");
     assert_eq!(exact(&c, "kitty.nick", Missing), 1);
     assert_eq!(exact(&c, "kitty", None), 0);
     assert_eq!(exact(&c, "dog", Missing), 1);
@@ -109,7 +109,7 @@ fn test_form_validation_context() {
     assert_eq!(fuzzy(&c, "cats[0].nick", None), 1);
     assert_eq!(exact(&c, "cats[0].name", None), 1);
 
-    let c = errors::<Person>("kitty.name=Michael");
+    let c = errors::<Person<'_>>("kitty.name=Michael");
     assert_eq!(exact(&c, "kitty.nick", Missing), 1);
     assert_eq!(exact(&c, "dog", Missing), 1);
     assert_eq!(exact(&c, "cats[0].name", None), 0);
@@ -125,7 +125,7 @@ fn test_form_validation_context() {
     assert_eq!(exact(&c, "cats[0].name", None), 0);
     assert_eq!(exact(&c, "cats[0].nick", None), 0);
 
-    let c = errors::<Person>("kitty.name=Michael&kitty.nick=kittykat&dog.name=woofy");
+    let c = errors::<Person<'_>>("kitty.name=Michael&kitty.nick=kittykat&dog.name=woofy");
     assert_eq!(c.iter().count(), 1);
     assert_eq!(exact(&c, "cats", None), 1);
     assert_eq!(exact(&c, "cats", InvalidLength { min: Some(1), max: None }), 1);

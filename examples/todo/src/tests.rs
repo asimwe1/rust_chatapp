@@ -54,7 +54,7 @@ fn test_insertion_deletion() {
 
         // Ensure the task is what we expect.
         assert_eq!(new_tasks[0].description, "My first task");
-        assert_eq!(new_tasks[0].completed, false);
+        assert!(!new_tasks[0].completed);
 
         // Issue a request to delete the task.
         let id = new_tasks[0].id.unwrap();
@@ -63,7 +63,7 @@ fn test_insertion_deletion() {
         // Ensure it's gone.
         let final_tasks = Task::all(&conn).await.unwrap();
         assert_eq!(final_tasks.len(), init_tasks.len());
-        if final_tasks.len() > 0 {
+        if !final_tasks.is_empty() {
             assert_ne!(final_tasks[0].description, "My first task");
         }
     })
@@ -80,15 +80,15 @@ fn test_toggle() {
             .await;
 
         let task = Task::all(&conn).await.unwrap()[0].clone();
-        assert_eq!(task.completed, false);
+        assert!(!task.completed);
 
         // Issue a request to toggle the task; ensure it is completed.
         client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn).await.unwrap()[0].completed, true);
+        assert!(Task::all(&conn).await.unwrap()[0].completed);
 
         // Issue a request to toggle the task; ensure it's not completed again.
         client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn).await.unwrap()[0].completed, false);
+        assert!(!Task::all(&conn).await.unwrap()[0].completed);
     })
 }
 

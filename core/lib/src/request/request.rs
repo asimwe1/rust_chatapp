@@ -354,7 +354,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, endpoint: Endpoint) {
-        self.connection.peer_endpoint = Some(endpoint.into());
+        self.connection.peer_endpoint = Some(endpoint);
     }
 
     /// Returns the IP address of the configured
@@ -723,7 +723,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn rocket(&self) -> &'r Rocket<Orbit> {
-        &self.state.rocket
+        self.state.rocket
     }
 
     /// Returns the configured application data limits.
@@ -988,7 +988,7 @@ impl<'r> Request<'r> {
     pub fn query_value<'a, T>(&'a self, name: &str) -> Option<form::Result<'a, T>>
         where T: FromForm<'a>
     {
-        if self.query_fields().find(|f| f.name == name).is_none() {
+        if !self.query_fields().any(|f| f.name == name) {
             return None;
         }
 
@@ -1112,7 +1112,7 @@ impl<'r> Request<'r> {
             })
             .unwrap_or_else(|| {
                 errors.push(RequestError::InvalidUri(hyper.uri.clone()));
-                Origin::ROOT
+                Origin::root().clone()
             });
 
         // Construct the request object; fill in metadata and headers next.

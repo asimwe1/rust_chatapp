@@ -92,14 +92,14 @@ impl Client {
     pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
         where F: FnOnce(&cookie::CookieJar) -> T
     {
-        f(&*self.cookies.read())
+        f(&self.cookies.read())
     }
 
     #[inline(always)]
     pub(crate) fn _with_raw_cookies_mut<F, T>(&self, f: F) -> T
         where F: FnOnce(&mut cookie::CookieJar) -> T
     {
-        f(&mut *self.cookies.write())
+        f(&mut self.cookies.write())
     }
 
     #[inline(always)]

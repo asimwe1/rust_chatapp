@@ -315,7 +315,7 @@ impl Config {
 
     #[cfg(feature = "secrets")]
     pub(crate) fn known_secret_key_used(&self) -> bool {
-        const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
+        const KNOWN_SECRET_KEYS: &[&str] = &[
             "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
         ];
 
@@ -363,7 +363,7 @@ impl Config {
             None => launch_meta_!("Proxy-Proto header: {}", "disabled".paint(VAL))
         }
 
-        launch_meta_!("limits: {}", (&self.limits).paint(VAL));
+        launch_meta_!("limits: {}", self.limits.paint(VAL));
         launch_meta_!("temp dir: {}", self.temp_dir.relative().display().paint(VAL));
         launch_meta_!("http/2: {}", (cfg!(feature = "http2").paint(VAL)));
 
