@@ -28,7 +28,6 @@ impl Rocket<Orbit> {
         upgrade: Option<hyper::upgrade::OnUpgrade>,
         connection: ConnectionMeta,
     ) -> Result<hyper::Response<ReaderStream<ErasedResponse>>, http::Error> {
-        let alt_svc = self.alt_svc();
         let request = ErasedRequest::new(self, parts, |rocket, parts| {
             Request::from_hyp(rocket, parts, connection).unwrap_or_else(|e| e)
         });
@@ -41,12 +40,11 @@ impl Rocket<Orbit> {
                     return rocket.dispatch_error(Status::BadRequest, request).await;
                 }
 
-                let mut response = rocket.dispatch(token, request, data).await;
-                response.body_mut().size().await;
-                response
+                rocket.dispatch(token, request, data).await
             })
         ).await;
 
+        // TODO: Should upgrades be handled in dispatch?
         let io_handler = response.make_io_handler(Rocket::extract_io_handler);
         if let (Some(handler), Some(upgrade)) = (io_handler, upgrade) {
             let upgrade = upgrade.map_ok(IoStream::from).map_err(io::Error::other);
@@ -59,20 +57,11 @@ impl Rocket<Orbit> {
             builder = builder.header(header.name().as_str(), header.value());
         }
 
-        if let Some(size) = response.inner().body().preset_size() {
-            builder = builder.header(http::header::CONTENT_TYPE, size);
-        }
-
-        if let Some(alt_svc) = alt_svc {
-            let value = http::HeaderValue::from_static(alt_svc);
-            builder = builder.header(http::header::ALT_SVC, value);
-        }
-
         let chunk_size = response.inner().body().max_chunk_size();
         builder.body(ReaderStream::with_capacity(response, chunk_size))
     }
 
-    fn alt_svc(&self) -> Option<&'static str> {
+    pub(crate) fn alt_svc(&self) -> Option<&'static str> {
         cfg!(feature = "http3-preview").then(|| {
             static ALT_SVC: state::InitCell<Option<String>> = state::InitCell::new();
 

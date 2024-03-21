@@ -145,6 +145,14 @@ impl Rocket<Orbit> {
             response.strip_body();
         }
 
+        if let Some(size) = response.body_mut().size().await {
+            response.set_raw_header("Content-Length", size.to_string());
+        }
+
+        if let Some(alt_svc) = request.rocket().alt_svc() {
+            response.set_raw_header("Alt-Svc", alt_svc);
+        }
+
         // TODO: Should upgrades be handled here? We miss them on local clients.
         response
     }
