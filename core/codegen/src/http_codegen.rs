@@ -2,7 +2,7 @@ use quote::ToTokens;
 use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
 use proc_macro2::{TokenStream, Span};
 
-use crate::http;
+use crate::{http, attribute::suppress::Lint};
 
 #[derive(Debug)]
 pub struct ContentType(pub http::ContentType);
@@ -73,10 +73,11 @@ impl FromMeta for MediaType {
         let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
             .ok_or_else(|| meta.value_span().error("invalid or unknown media type"))?;
 
-        if !mt.is_known() {
-            // FIXME(diag: warning)
+        let lint = Lint::UnknownFormat;
+        if !mt.is_known() && lint.enabled(meta.value_span()) {
             meta.value_span()
-                .warning(format!("'{}' is not a known media type", mt))
+                .warning(format!("'{}' is not a known format or media type", mt))
+                .note(lint.how_to_suppress())
                 .emit_as_item_tokens();
         }
 

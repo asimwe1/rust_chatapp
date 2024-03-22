@@ -14,6 +14,8 @@ use crate::exports::mixed;
 
 use self::parse::{Route, Attribute, MethodAttribute};
 
+use super::suppress::Lint;
+
 impl Route {
     pub fn guards(&self) -> impl Iterator<Item = &Guard> {
         self.param_guards()
@@ -399,17 +401,18 @@ fn incomplete_route(
     args: TokenStream,
     input: TokenStream
 ) -> Result<TokenStream> {
-    let method_str = method.to_string().to_lowercase();
     // FIXME(proc_macro): there should be a way to get this `Span`.
+    let method_str = method.to_string().to_lowercase();
     let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
         .subspan(2..2 + method_str.len());
 
-    let method_ident = syn::Ident::new(&method_str, method_span);
-
+    let full_span = args.span().join(input.span()).unwrap_or(input.span());
     let function: syn::ItemFn = syn::parse2(input)
         .map_err(Diagnostic::from)
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
+    Lint::suppress_attrs(&function.attrs, full_span);
+    let method_ident = syn::Ident::new(&method_str, method_span);
     let full_attr = quote!(#method_ident(#args));
     let method_attribute = MethodAttribute::from_meta(&syn::parse2(full_attr)?)?;
 

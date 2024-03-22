@@ -3,6 +3,7 @@ use devise::ext::SpanDiagnosticExt;
 use proc_macro2::{TokenStream, Span};
 
 use super::EntryAttr;
+use crate::attribute::suppress::Lint;
 use crate::exports::mixed;
 
 /// `#[rocket::launch]`: generates a `main` function that calls the attributed
@@ -90,13 +91,15 @@ impl EntryAttr for Launch {
             None => quote_spanned!(ty.span() => #rocket.launch()),
         };
 
-        if f.sig.asyncness.is_none() {
+        let lint = Lint::SyncSpawn;
+        if f.sig.asyncness.is_none() && lint.enabled(f.sig.asyncness.span()) {
             if let Some(call) = likely_spawns(f) {
                 call.span()
                     .warning("task is being spawned outside an async context")
                     .span_help(f.sig.span(), "declare this function as `async fn` \
                                               to require async execution")
                     .span_note(Span::call_site(), "`#[launch]` call is here")
+                    .note(lint.how_to_suppress())
                     .emit_as_expr_tokens();
             }
         }

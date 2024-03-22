@@ -1,3 +1,5 @@
+use crate::attribute::suppress::Lint;
+
 use super::EntryAttr;
 
 use devise::{Spanned, Result};
@@ -12,11 +14,12 @@ impl EntryAttr for Main {
 
     fn function(f: &mut syn::ItemFn) -> Result<TokenStream> {
         let (attrs, vis, block, sig) = (&f.attrs, &f.vis, &f.block, &mut f.sig);
-        if sig.ident != "main" {
-            // FIXME(diag): warning!
+        let lint = Lint::ArbitraryMain;
+        if sig.ident != "main" && lint.enabled(sig.ident.span()) {
             Span::call_site()
                 .warning("attribute is typically applied to `main` function")
                 .span_note(sig.ident.span(), "this function is not `main`")
+                .note(lint.how_to_suppress())
                 .emit_as_item_tokens();
         }
 
