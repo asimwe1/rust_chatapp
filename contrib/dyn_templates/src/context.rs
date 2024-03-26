@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::{Engines, TemplateInfo};
+use crate::engine::Engines;
+use crate::template::TemplateInfo;
 
 use rocket::http::ContentType;
 use normpath::PathExt;
@@ -99,7 +100,7 @@ impl Context {
 #[cfg(not(debug_assertions))]
 mod manager {
     use std::ops::Deref;
-    use crate::Context;
+    use super::Context;
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.

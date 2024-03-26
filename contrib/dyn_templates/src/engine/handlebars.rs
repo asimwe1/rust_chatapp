@@ -1,9 +1,9 @@
 use std::path::Path;
 
+use handlebars::Handlebars;
 use rocket::serde::Serialize;
 
 use crate::engine::Engine;
-pub use crate::handlebars::Handlebars;
 
 impl Engine for Handlebars<'static> {
     const EXT: &'static str = "hbs";

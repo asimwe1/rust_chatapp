@@ -3,10 +3,22 @@ use std::collections::HashMap;
 
 use rocket::serde::Serialize;
 
-use crate::TemplateInfo;
+use crate::template::TemplateInfo;
 
-#[cfg(feature = "tera")] use crate::tera::Tera;
-#[cfg(feature = "handlebars")] use crate::handlebars::Handlebars;
+#[cfg(feature = "tera")]
+mod tera;
+#[cfg(feature = "tera")]
+use ::tera::Tera;
+
+#[cfg(feature = "handlebars")]
+mod handlebars;
+#[cfg(feature = "handlebars")]
+use ::handlebars::Handlebars;
+
+#[cfg(feature = "minijinja")]
+mod minijinja;
+#[cfg(feature = "minijinja")]
+use ::minijinja::Environment;
 
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
@@ -52,24 +64,38 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// [`tera::Value`]: crate::tera::Value
 /// [`tera::Result`]: crate::tera::Result
 pub struct Engines {
-    /// A `Tera` templating engine. This field is only available when the
-    /// `tera_templates` feature is enabled. When calling methods on the `Tera`
-    /// instance, ensure you use types imported from
-    /// `rocket_dyn_templates::tera` to avoid version mismatches.
+    /// A `Tera` templating engine.
+    ///
+    /// This field is only available when the `tera` feature is enabled. When
+    /// calling methods on the `Tera` instance, ensure you use types imported
+    /// from `rocket_dyn_templates::tera` to avoid version mismatches.
     #[cfg(feature = "tera")]
     pub tera: Tera,
-    /// The Handlebars templating engine. This field is only available when the
-    /// `handlebars_templates` feature is enabled. When calling methods on the
-    /// `Handlebars` instance, ensure you use types imported from
-    /// `rocket_dyn_templates::handlebars` to avoid version mismatches.
+
+    /// The Handlebars templating engine.
+    ///
+    /// This field is only available when the `handlebars` feature is enabled.
+    /// When calling methods on the `Handlebars` instance, ensure you use types
+    /// imported from `rocket_dyn_templates::handlebars` to avoid version
+    /// mismatches.
     #[cfg(feature = "handlebars")]
     pub handlebars: Handlebars<'static>,
+
+    /// The minijinja templating engine.
+    ///
+    /// This field is only available when the `minijinja` feature is enabled.
+    /// When calling methods on the [`Environment`] instance, ensure you use
+    /// types imported from `rocket_dyn_templates::minijinja` to avoid version
+    /// mismatches.
+    #[cfg(feature = "minijinja")]
+    pub minijinja: Environment<'static>,
 }
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
         #[cfg(feature = "tera")] Tera::EXT,
         #[cfg(feature = "handlebars")] Handlebars::EXT,
+        #[cfg(feature = "minijinja")] Environment::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
@@ -93,6 +119,11 @@ impl Engines {
                 Some(hb) => hb,
                 None => return None
             },
+            #[cfg(feature = "minijinja")]
+            minijinja: match inner::<Environment<'static>>(templates) {
+                Some(hb) => hb,
+                None => return None
+            },
         })
     }
 
@@ -100,7 +131,7 @@ impl Engines {
         &self,
         name: &str,
         info: &TemplateInfo,
-        context: C
+        context: C,
     ) -> Option<String> {
         #[cfg(feature = "tera")] {
             if info.engine_ext == Tera::EXT {
@@ -111,6 +142,12 @@ impl Engines {
         #[cfg(feature = "handlebars")] {
             if info.engine_ext == Handlebars::EXT {
                 return Engine::render(&self.handlebars, name, context);
+            }
+        }
+
+        #[cfg(feature = "minijinja")] {
+            if info.engine_ext == Environment::EXT {
+                return Engine::render(&self.minijinja, name, context);
             }
         }
 

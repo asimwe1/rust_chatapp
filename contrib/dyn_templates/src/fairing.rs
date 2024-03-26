@@ -1,8 +1,9 @@
-use crate::{DEFAULT_TEMPLATE_DIR, Context, Engines};
-use crate::context::{Callback, ContextManager};
-
 use rocket::{Rocket, Build, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
+
+use crate::context::{Callback, Context, ContextManager};
+use crate::template::DEFAULT_TEMPLATE_DIR;
+use crate::engine::Engines;
 
 /// The TemplateFairing initializes the template system on attach, running
 /// custom_callback after templates have been loaded. In debug mode, the fairing

@@ -97,6 +97,7 @@ function test_contrib() {
   DYN_TEMPLATES_FEATURES=(
     tera
     handlebars
+    minijinja
   )
 
   WS_FEATURES=(

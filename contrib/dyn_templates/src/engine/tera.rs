@@ -1,11 +1,10 @@
 use std::path::Path;
 use std::error::Error;
 
+use tera::{Context, Tera};
 use rocket::serde::Serialize;
 
 use crate::engine::Engine;
-
-pub use crate::tera::{Context, Tera};
 
 impl Engine for Tera {
     const EXT: &'static str = "tera";

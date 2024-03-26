@@ -1,3 +1,4 @@
+use std::fmt;
 use std::borrow::Cow;
 
 use rocket::{Request, Rocket, Ignite, Sentinel};
@@ -121,6 +122,14 @@ impl Metadata<'_> {
         where S: Into<Cow<'static, str>>, C: Serialize
     {
         Template::render(name.into(), context).finalize(&self.0.context()).ok()
+    }
+}
+
+impl fmt::Debug for Metadata<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entries(&self.0.context().templates)
+            .finish()
     }
 }
 
