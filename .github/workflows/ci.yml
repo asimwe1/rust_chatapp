@@ -29,6 +29,8 @@ jobs:
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+            test: { name: Testbench, flag: "--testbench" }
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: UI, flag: "--ui" }
             fallible: true
           # Allow tests on nightly to fail.

@@ -184,6 +184,12 @@ function run_benchmarks() {
   indir "${BENCHMARKS_ROOT}" $CARGO bench $@
 }
 
+function run_testbench() {
+  echo ":: Running testbench..."
+  indir "${TESTBENCH_ROOT}" $CARGO update
+  indir "${TESTBENCH_ROOT}" $CARGO run $@
+}
+
 if [[ $1 == +* ]]; then
   CARGO="$CARGO $1"
   shift
@@ -191,7 +197,7 @@ fi
 
 # The kind of test we'll be running.
 TEST_KIND="default"
-KINDS=("contrib" "benchmarks" "core" "examples" "default" "ui" "all")
+KINDS=("contrib" "benchmarks" "testbench" "core" "examples" "default" "ui" "all")
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
   TEST_KIND=${1#"--"}
@@ -226,12 +232,14 @@ case $TEST_KIND in
   examples) test_examples $@ ;;
   default) test_default $@ ;;
   benchmarks) run_benchmarks $@ ;;
+  testbench) run_testbench $@ ;;
   ui) test_ui $@ ;;
   all)
     test_default $@ & default=$!
     test_examples $@ & examples=$!
     test_core $@ & core=$!
     test_contrib $@ & contrib=$!
+    run_testbench $@ & testbench=$!
     test_ui $@ & ui=$!
 
     failures=()
@@ -239,6 +247,7 @@ case $TEST_KIND in
     if ! wait $examples ; then failures+=("EXAMPLES"); fi
     if ! wait $core ; then failures+=("CORE"); fi
     if ! wait $contrib ; then failures+=("CONTRIB"); fi
+    if ! wait $testbench ; then failures+=("TESTBENCH"); fi
     if ! wait $ui ; then failures+=("UI"); fi
 
     if [ ${#failures[@]} -ne 0 ]; then

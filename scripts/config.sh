@@ -39,6 +39,7 @@ function future_date() {
 PROJECT_ROOT=$(relative "") || exit $?
 CONTRIB_ROOT=$(relative "contrib") || exit $?
 BENCHMARKS_ROOT=$(relative "benchmarks") || exit $?
+TESTBENCH_ROOT=$(relative "testbench") || exit $?
 FUZZ_ROOT=$(relative "core/lib/fuzz") || exit $?
 
 # Root of project-like directories.
@@ -87,6 +88,7 @@ function print_environment() {
   echo "  CONTRIB_ROOT: ${CONTRIB_ROOT}"
   echo "  FUZZ_ROOT: ${FUZZ_ROOT}"
   echo "  BENCHMARKS_ROOT: ${BENCHMARKS_ROOT}"
+  echo "  TESTBENCH_ROOT: ${TESTBENCH_ROOT}"
   echo "  CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
   echo "  CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
   echo "  CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"

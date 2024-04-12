@@ -1,0 +1,27 @@
+[package]
+name = "rocket-testbench"
+description = "end-to-end HTTP testbench for Rocket"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+thiserror = "1.0"
+procspawn = "1"
+pretty_assertions = "1.4.0"
+ipc-channel = "0.18"
+
+[dependencies.nix]
+version = "0.28"
+features = ["signal"]
+
+[dependencies.rocket]
+path = "../core/lib/"
+features = ["secrets", "tls", "mtls"]
+
+[dependencies.reqwest]
+version = "0.12.3"
+default-features = false
+features = ["rustls-tls-manual-roots", "charset", "cookies", "blocking", "http2"]
