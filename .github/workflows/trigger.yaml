@@ -4,6 +4,7 @@ jobs:
   trigger:
     name: api.rocket.rs
     runs-on: ubuntu-latest
+    if: github.repository == 'rwf2/Rocket'
     steps:
       - uses: actions/github-script@v7
         with:
