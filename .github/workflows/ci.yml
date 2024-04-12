@@ -26,6 +26,7 @@ jobs:
         include:
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
             test: { name: Core, flag: "--core" }
+            fallible: true
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
