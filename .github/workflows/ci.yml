@@ -13,34 +13,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fallible: [false]
         platform:
           - { name: Linux, distro: ubuntu-latest, toolchain: stable }
           - { name: Windows, distro: windows-latest, toolchain: stable }
           - { name: macOS, distro: macOS-latest, toolchain: stable }
           - { name: Linux, distro: ubuntu-latest, toolchain: nightly }
         test:
-          - { name: Debug, flag: }
-          - { name: Contrib, flag: "--contrib" }
+          - { name: Debug }
           - { name: Examples, flag: "--examples" }
+          - { name: Contrib, flag: "--contrib" }
         include:
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+          # Additional tests on Linux/stable.
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Core, flag: "--core" }
-            fallible: true
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: UI, flag: "--ui" }
             fallible: true
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
-            test: { name: UI, flag: "--ui" }
+          # Allow tests on nightly to fail.
+          - platform: { toolchain: nightly }
             fallible: true
+          # Use the bigger 'C:/' from the "Switch Disk" step
           - platform: { name: Windows }
-            working-directory: "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
+            working-directory:
+              "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
 
     steps:
       - name: Checkout Sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Free Disk Space (Linux)
         if: matrix.platform.name == 'Linux'
@@ -112,7 +113,7 @@ jobs:
           Get-PSDrive
 
       - name: Run Tests
-        continue-on-error: ${{ matrix.fallible }}
+        continue-on-error: ${{ matrix.fallible || false }}
         working-directory: ${{ matrix.working-directory || github.workspace }}
-        run: ./scripts/test.sh ${{ matrix.test.flag }} -q
+        run: ./scripts/test.sh ${{ matrix.test.flag || '' }} -q
         shell: bash
