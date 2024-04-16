@@ -137,9 +137,6 @@ mod secret_key;
 #[cfg(unix)]
 pub use crate::shutdown::Sig;
 
-#[cfg(unix)]
-pub use crate::listener::unix::UdsConfig;
-
 #[cfg(feature = "secrets")]
 pub use secret_key::SecretKey;
 

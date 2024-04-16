@@ -1,6 +1,9 @@
 mod error;
+mod resolver;
+mod listener;
 pub(crate) mod config;
 
-pub use error::Result;
+pub use error::{Error, Result};
 pub use config::{TlsConfig, CipherSuite};
-pub use error::Error;
+pub use resolver::{Resolver, ClientHello, ServerConfig};
+pub use listener::{TlsListener, TlsStream};

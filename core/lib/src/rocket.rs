@@ -2,15 +2,16 @@ use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Duration;
+use std::any::Any;
 
+use futures::TryFutureExt;
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
-use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::shutdown::{Stages, Shutdown};
 use crate::{sentinel, shield::Shield, Catcher, Config, Route};
-use crate::listener::{Bindable, DefaultListener, Endpoint, Listener};
+use crate::listener::{Bind, DefaultListener, Endpoint, Listener};
 use crate::router::Router;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
@@ -681,19 +682,34 @@ impl Rocket<Ignite> {
         rocket
     }
 
-    async fn _launch(self) -> Result<Rocket<Ignite>, Error> {
-        let config = self.figment().extract::<DefaultListener>()?;
-        either::for_both!(config.base_bindable()?, base => {
-            either::for_both!(config.tls_bindable(base), bindable => {
-                self._launch_on(bindable).await
-            })
-        })
+    async fn _launch_with<B>(self) -> Result<Rocket<Ignite>, Error>
+        where B: for<'r> Bind<&'r Rocket<Ignite>>
+    {
+        let bind_endpoint = B::bind_endpoint(&&self).ok();
+        let listener: B = B::bind(&self).await
+            .map_err(|e| ErrorKind::Bind(bind_endpoint, Box::new(e)))?;
+
+        let any: Box<dyn Any + Send + Sync> = Box::new(listener);
+        match any.downcast::<DefaultListener>() {
+            Ok(listener) => {
+                let listener = *listener;
+                crate::util::for_both!(listener, listener => {
+                    crate::util::for_both!(listener, listener => {
+                        self._launch_on(listener).await
+                    })
+                })
+            }
+            Err(any) => {
+                let listener = *any.downcast::<B>().unwrap();
+                self._launch_on(listener).await
+            }
+        }
     }
 
-    async fn _launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error>
-        where <B::Listener as Listener>::Connection: AsyncRead + AsyncWrite
+    async fn _launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
+        where L: Listener + 'static,
     {
-        let rocket = self.bind_and_serve(bindable, |rocket| async move {
+        let rocket = self.listen_and_serve(listener, |rocket| async move {
             let rocket = Arc::new(rocket);
 
             rocket.shutdown.spawn_listener(&rocket.config.shutdown);
@@ -996,19 +1012,31 @@ impl<P: Phase> Rocket<P> {
     /// }
     /// ```
     pub async fn launch(self) -> Result<Rocket<Ignite>, Error> {
+        self.launch_with::<DefaultListener>().await
+    }
+
+    pub async fn bind_launch<T, B: Bind<T>>(self, value: T) -> Result<Rocket<Ignite>, Error> {
+        let endpoint = B::bind_endpoint(&value).ok();
+        let listener = B::bind(value).map_err(|e| ErrorKind::Bind(endpoint, Box::new(e)));
+        self.launch_on(listener.await?).await
+    }
+
+    pub async fn launch_with<B>(self) -> Result<Rocket<Ignite>, Error>
+        where B: for<'r> Bind<&'r Rocket<Ignite>>
+    {
         match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._launch().await,
-            State::Ignite(s) => Rocket::from(s)._launch().await,
+            State::Build(s) => Rocket::from(s).ignite().await?._launch_with::<B>().await,
+            State::Ignite(s) => Rocket::from(s)._launch_with::<B>().await,
             State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
     }
 
-    pub async fn launch_on<B: Bindable>(self, bindable: B) -> Result<Rocket<Ignite>, Error>
-        where <B::Listener as Listener>::Connection: AsyncRead + AsyncWrite
+    pub async fn launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
+        where L: Listener + 'static,
     {
         match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._launch_on(bindable).await,
-            State::Ignite(s) => Rocket::from(s)._launch_on(bindable).await,
+            State::Build(s) => Rocket::from(s).ignite().await?._launch_on(listener).await,
+            State::Ignite(s) => Rocket::from(s)._launch_on(listener).await,
             State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
     }

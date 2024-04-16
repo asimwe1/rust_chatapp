@@ -38,7 +38,7 @@ use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
 use crate::tls::{TlsConfig, Error};
-use crate::listener::{Listener, Connection, Endpoint};
+use crate::listener::Endpoint;
 
 type H3Conn = h3::server::Connection<quic_h3::Connection, bytes::Bytes>;
 
@@ -51,14 +51,16 @@ pub struct QuicListener {
 pub struct H3Stream(H3Conn);
 
 pub struct H3Connection {
-    pub handle: quic::connection::Handle,
-    pub parts: http::request::Parts,
-    pub tx: QuicTx,
-    pub rx: QuicRx,
+    pub(crate) handle: quic::connection::Handle,
+    pub(crate) parts: http::request::Parts,
+    pub(crate) tx: QuicTx,
+    pub(crate) rx: QuicRx,
 }
 
+#[doc(hidden)]
 pub struct QuicRx(h3::server::RequestStream<quic_h3::RecvStream, Bytes>);
 
+#[doc(hidden)]
 pub struct QuicTx(h3::server::RequestStream<quic_h3::SendStream<Bytes>, Bytes>);
 
 impl QuicListener {
@@ -94,25 +96,20 @@ impl QuicListener {
     }
 }
 
-impl Listener for QuicListener {
-    type Accept = quic::Connection;
-
-    type Connection = H3Stream;
-
-    async fn accept(&self) -> io::Result<Self::Accept> {
+impl QuicListener {
+    pub async fn accept(&self) -> Option<quic::Connection> {
         self.listener
             .lock().await
             .accept().await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::BrokenPipe, "closed"))
     }
 
-    async fn connect(&self, accept: Self::Accept) -> io::Result<Self::Connection> {
+    pub async fn connect(&self, accept: quic::Connection) -> io::Result<H3Stream> {
         let quic_conn = quic_h3::Connection::new(accept);
         let conn = H3Conn::new(quic_conn).await.map_err(io::Error::other)?;
         Ok(H3Stream(conn))
     }
 
-    fn endpoint(&self) -> io::Result<Endpoint> {
+    pub fn endpoint(&self) -> io::Result<Endpoint> {
         Ok(Endpoint::Quic(self.endpoint).with_tls(&self.tls))
     }
 }
@@ -159,16 +156,8 @@ impl QuicTx {
 }
 
 // FIXME: Expose certificates when possible.
-impl Connection for H3Stream {
-    fn endpoint(&self) -> io::Result<Endpoint> {
-        let addr = self.0.inner.conn.handle().remote_addr()?;
-        Ok(Endpoint::Quic(addr).assume_tls())
-    }
-}
-
-// FIXME: Expose certificates when possible.
-impl Connection for H3Connection {
-    fn endpoint(&self) -> io::Result<Endpoint> {
+impl H3Connection {
+    pub fn endpoint(&self) -> io::Result<Endpoint> {
         let addr = self.handle.remote_addr()?;
         Ok(Endpoint::Quic(addr).assume_tls())
     }

@@ -3,15 +3,12 @@ mod bounced;
 mod listener;
 mod endpoint;
 mod connection;
-mod bindable;
+mod bind;
 mod default;
 
 #[cfg(unix)]
 #[cfg_attr(nightly, doc(cfg(unix)))]
 pub mod unix;
-#[cfg(feature = "tls")]
-#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
-pub mod tls;
 pub mod tcp;
 #[cfg(feature = "http3-preview")]
 pub mod quic;
@@ -19,7 +16,7 @@ pub mod quic;
 pub use endpoint::*;
 pub use listener::*;
 pub use connection::*;
-pub use bindable::*;
+pub use bind::*;
 pub use default::*;
 
 pub(crate) use cancellable::*;

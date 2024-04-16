@@ -140,11 +140,12 @@ impl Template {
     }
 
     /// Render the template named `name` with the context `context`. The
-    /// `context` is typically created using the [`context!`] macro, but it can
-    /// be of any type that implements `Serialize`, such as `HashMap` or a
-    /// custom `struct`.
+    /// `context` is typically created using the [`context!()`](crate::context!)
+    /// macro, but it can be of any type that implements `Serialize`, such as
+    /// `HashMap` or a custom `struct`.
     ///
-    /// To render a template directly into a string, use [`Metadata::render()`].
+    /// To render a template directly into a string, use
+    /// [`Metadata::render()`](crate::Metadata::render()).
     ///
     /// # Examples
     ///
@@ -291,8 +292,8 @@ impl Sentinel for Template {
 /// A macro to easily create a template rendering context.
 ///
 /// Invocations of this macro expand to a value of an anonymous type which
-/// implements [`serde::Serialize`]. Fields can be literal expressions or
-/// variables captured from a surrounding scope, as long as all fields implement
+/// implements [`Serialize`]. Fields can be literal expressions or variables
+/// captured from a surrounding scope, as long as all fields implement
 /// `Serialize`.
 ///
 /// # Examples

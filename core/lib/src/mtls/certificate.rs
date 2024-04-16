@@ -14,8 +14,9 @@ use crate::http::Status;
 ///
 /// The request guard implementation succeeds if:
 ///
+///   * MTLS is [configured](crate::mtls).
 ///   * The client presents certificates.
-///   * The certificates are active and not yet expired.
+///   * The certificates are valid and not expired.
 ///   * The client's certificate chain was signed by the CA identified by the
 ///     configured `ca_certs` and with respect to SNI, if any. See [module level
 ///     docs](crate::mtls) for configuration details.
@@ -24,7 +25,7 @@ use crate::http::Status;
 /// status of 401 Unauthorized.
 ///
 /// If the certificate chain fails to validate or verify, the guard _fails_ with
-/// the respective [`Error`].
+/// the respective [`Error`] a status of 401 Unauthorized.
 ///
 /// # Wrapping
 ///

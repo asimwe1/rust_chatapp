@@ -178,13 +178,17 @@ impl Error {
         self.mark_handled();
         match self.kind() {
             ErrorKind::Bind(ref a, ref e) => {
-                match a {
-                    Some(a) => error!("Binding to {} failed.", a.primary().underline()),
-                    None => error!("Binding to network interface failed."),
-                }
+                if let Some(e) = e.downcast_ref::<Self>() {
+                    e.pretty_print()
+                } else {
+                    match a {
+                        Some(a) => error!("Binding to {} failed.", a.primary().underline()),
+                        None => error!("Binding to network interface failed."),
+                    }
 
-                info_!("{}", e);
-                "aborting due to bind error"
+                    info_!("{}", e);
+                    "aborting due to bind error"
+                }
             }
             ErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");

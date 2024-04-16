@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use figment::Figment;
 use serde::de;
 
 use crate::http::uncased::AsUncased;
@@ -12,27 +13,43 @@ use crate::http::uncased::AsUncased;
 #[cfg(feature = "tls")]      type TlsInfo = Option<Box<crate::tls::TlsConfig>>;
 #[cfg(not(feature = "tls"))] type TlsInfo = Option<()>;
 
-pub trait EndpointAddr: fmt::Display + fmt::Debug + Sync + Send + Any { }
+pub trait CustomEndpoint: fmt::Display + fmt::Debug + Sync + Send + Any { }
 
-impl<T: fmt::Display + fmt::Debug + Sync + Send + Any> EndpointAddr for T {}
+impl<T: fmt::Display + fmt::Debug + Sync + Send + Any> CustomEndpoint for T {}
 
 /// # Conversions
 ///
 /// * [`&str`] - parse with [`FromStr`]
 /// * [`tokio::net::unix::SocketAddr`] - must be path: [`Endpoint::Unix`]
 /// * [`PathBuf`] - infallibly as [`Endpoint::Unix`]
-#[derive(Debug, Clone)]
+///
+/// # Syntax
+///
+/// The string syntax is:
+///
+/// ```text
+/// endpoint = 'tcp' ':' socket | 'quic' ':' socket | 'unix' ':' path | socket
+/// socket := IP_ADDR | SOCKET_ADDR
+/// path := PATH
+///
+/// IP_ADDR := `std::net::IpAddr` string as defined by Rust
+/// SOCKET_ADDR := `std::net::SocketAddr` string as defined by Rust
+/// PATH := `PathBuf` (any UTF-8) string as defined by Rust
+/// ```
+///
+/// If `IP_ADDR` is specified in socket, port defaults to `8000`.
+#[derive(Clone)]
 #[non_exhaustive]
 pub enum Endpoint {
     Tcp(net::SocketAddr),
     Quic(net::SocketAddr),
     Unix(PathBuf),
     Tls(Arc<Endpoint>, TlsInfo),
-    Custom(Arc<dyn EndpointAddr>),
+    Custom(Arc<dyn CustomEndpoint>),
 }
 
 impl Endpoint {
-    pub fn new<T: EndpointAddr>(value: T) -> Endpoint {
+    pub fn new<T: CustomEndpoint>(value: T) -> Endpoint {
         Endpoint::Custom(Arc::new(value))
     }
 
@@ -152,6 +169,29 @@ impl Endpoint {
 
         Self::Tls(Arc::new(self), None)
     }
+
+    /// Fetch the endpoint at `path` in `figment` of kind `kind` (e.g, "tcp")
+    /// then map the value using `f(Some(value))` if present and `f(None)` if
+    /// missing into a different value of typr `T`.
+    ///
+    /// If the conversion succeeds, returns `Ok(value)`. If the conversion fails
+    /// and `Some` value was passed in, returns an error indicating the endpoint
+    /// was an invalid `kind` and otherwise returns a "missing field" error.
+    pub(crate) fn fetch<T, F>(figment: &Figment, kind: &str, path: &str, f: F) -> figment::Result<T>
+        where F: FnOnce(Option<&Endpoint>) -> Option<T>
+    {
+        match figment.extract_inner::<Endpoint>(path) {
+            Ok(endpoint) => f(Some(&endpoint)).ok_or_else(|| {
+                let msg = format!("invalid {kind} endpoint: {endpoint:?}");
+                let mut error = figment::Error::from(msg).with_path(path);
+                error.profile = Some(figment.profile().clone());
+                error.metadata = figment.find_metadata(path).cloned();
+                error
+            }),
+            Err(e) if e.missing() => f(None).ok_or(e),
+            Err(e) => Err(e)
+        }
+    }
 }
 
 impl fmt::Display for Endpoint {
@@ -180,28 +220,15 @@ impl fmt::Display for Endpoint {
     }
 }
 
-impl From<PathBuf> for Endpoint {
-    fn from(value: PathBuf) -> Self {
-        Self::Unix(value)
-    }
-}
-
-#[cfg(unix)]
-impl TryFrom<tokio::net::unix::SocketAddr> for Endpoint {
-    type Error = std::io::Error;
-
-    fn try_from(v: tokio::net::unix::SocketAddr) -> Result<Self, Self::Error> {
-        v.as_pathname()
-            .ok_or_else(|| std::io::Error::other("unix socket is not path"))
-            .map(|path| Endpoint::Unix(path.to_path_buf()))
-    }
-}
-
-impl TryFrom<&str> for Endpoint {
-    type Error = AddrParseError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        value.parse()
+impl fmt::Debug for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Tcp(a) => write!(f, "tcp:{a}"),
+            Self::Quic(a) => write!(f, "quic:{a}]"),
+            Self::Unix(a) => write!(f, "unix:{}", a.display()),
+            Self::Tls(e, _) => write!(f, "unix:{:?}", &**e),
+            Self::Custom(e) => e.fmt(f),
+        }
     }
 }
 
@@ -211,21 +238,6 @@ impl Default for Endpoint {
     }
 }
 
-/// Parses an address into a `Endpoint`.
-///
-/// The syntax is:
-///
-/// ```text
-/// endpoint = 'tcp' ':' socket | 'quic' ':' socket | 'unix' ':' path | socket
-/// socket := IP_ADDR | SOCKET_ADDR
-/// path := PATH
-///
-/// IP_ADDR := `std::net::IpAddr` string as defined by Rust
-/// SOCKET_ADDR := `std::net::SocketAddr` string as defined by Rust
-/// PATH := `PathBuf` (any UTF-8) string as defined by Rust
-/// ```
-///
-/// If `IP_ADDR` is specified in socket, port defaults to `8000`.
 impl FromStr for Endpoint {
     type Err = AddrParseError;
 
@@ -237,8 +249,6 @@ impl FromStr for Endpoint {
         if let Some((proto, string)) = string.split_once(':') {
             if proto.trim().as_uncased() == "tcp" {
                 return parse_tcp(string.trim(), 8000).map(Self::Tcp);
-            } else if proto.trim().as_uncased() == "quic" {
-                return parse_tcp(string.trim(), 8000).map(Self::Quic);
             } else if proto.trim().as_uncased() == "unix" {
                 return Ok(Self::Unix(PathBuf::from(string.trim())));
             }
@@ -256,7 +266,7 @@ impl<'de> de::Deserialize<'de> for Endpoint {
             type Value = Endpoint;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("TCP or Unix address")
+                formatter.write_str("valid TCP (ip) or unix (path) endpoint")
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
@@ -294,3 +304,37 @@ impl PartialEq<Path> for Endpoint {
         self.unix() == Some(other)
     }
 }
+
+#[cfg(unix)]
+impl TryFrom<tokio::net::unix::SocketAddr> for Endpoint {
+    type Error = std::io::Error;
+
+    fn try_from(v: tokio::net::unix::SocketAddr) -> Result<Self, Self::Error> {
+        v.as_pathname()
+            .ok_or_else(|| std::io::Error::other("unix socket is not path"))
+            .map(|path| Endpoint::Unix(path.to_path_buf()))
+    }
+}
+
+impl TryFrom<&str> for Endpoint {
+    type Error = AddrParseError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value.parse()
+    }
+}
+
+macro_rules! impl_from {
+    ($T:ty => $V:ident) => {
+        impl From<$T> for Endpoint {
+            fn from(value: $T) -> Self {
+                Self::$V(value.into())
+            }
+        }
+    }
+}
+
+impl_from!(std::net::SocketAddr => Tcp);
+impl_from!(std::net::SocketAddrV4 => Tcp);
+impl_from!(std::net::SocketAddrV6 => Tcp);
+impl_from!(PathBuf => Unix);

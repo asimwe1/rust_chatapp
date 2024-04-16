@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{io, fmt};
 use std::ops::RangeFrom;
 use std::sync::{Arc, atomic::Ordering};
 use std::borrow::Cow;
@@ -18,7 +18,7 @@ use crate::data::Limits;
 use crate::http::ProxyProto;
 use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
-use crate::listener::{Certificates, Endpoint, Connection};
+use crate::listener::{Certificates, Endpoint};
 
 /// The type of an incoming web request.
 ///
@@ -44,11 +44,11 @@ pub(crate) struct ConnectionMeta {
     pub peer_certs: Option<Arc<Certificates<'static>>>,
 }
 
-impl<C: Connection> From<&C> for ConnectionMeta {
-    fn from(conn: &C) -> Self {
+impl ConnectionMeta {
+    pub fn new(endpoint: io::Result<Endpoint>, certs: Option<Certificates<'_>>) -> Self {
         ConnectionMeta {
-            peer_endpoint: conn.endpoint().ok(),
-            peer_certs: conn.certificates().map(|c| c.into_owned()).map(Arc::new),
+            peer_endpoint: endpoint.ok(),
+            peer_certs: certs.map(|c| c.into_owned()).map(Arc::new),
         }
     }
 }

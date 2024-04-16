@@ -17,6 +17,7 @@ pub enum Error {
     CertChain(std::io::Error),
     PrivKey(KeyError),
     CertAuth(rustls::Error),
+    Config(figment::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -31,6 +32,7 @@ impl std::fmt::Display for Error {
             PrivKey(e) => write!(f, "failed to process private key: {e}"),
             CertAuth(e) => write!(f, "failed to process certificate authority: {e}"),
             Bind(e) => write!(f, "failed to bind to network interface: {e}"),
+            Config(e) => write!(f, "failed to read tls configuration: {e}"),
         }
     }
 }
@@ -69,6 +71,7 @@ impl std::error::Error for Error {
             Error::PrivKey(e) => Some(e),
             Error::CertAuth(e) => Some(e),
             Error::Bind(e) => Some(&**e),
+            Error::Config(e) => Some(e),
         }
     }
 }
@@ -100,5 +103,11 @@ impl From<KeyError> for Error {
 impl From<std::convert::Infallible> for Error {
     fn from(v: std::convert::Infallible) -> Self {
         v.into()
+    }
+}
+
+impl From<figment::Error> for Error {
+    fn from(value: figment::Error) -> Self {
+        Error::Config(value)
     }
 }

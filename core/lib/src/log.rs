@@ -154,13 +154,15 @@ impl log::Log for RocketLogger {
     }
 }
 
+static ROCKET_LOGGER_SET: AtomicBool = AtomicBool::new(false);
+
 pub(crate) fn init_default() {
-    crate::log::init(&crate::Config::debug_default())
+    if !ROCKET_LOGGER_SET.load(Ordering::Acquire) {
+        crate::log::init(&crate::Config::debug_default())
+    }
 }
 
 pub(crate) fn init(config: &crate::Config) {
-    static ROCKET_LOGGER_SET: AtomicBool = AtomicBool::new(false);
-
     // Try to initialize Rocket's logger, recording if we succeeded.
     if log::set_boxed_logger(Box::new(RocketLogger)).is_ok() {
         ROCKET_LOGGER_SET.store(true, Ordering::Release);

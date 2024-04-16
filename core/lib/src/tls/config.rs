@@ -1,11 +1,15 @@
 use std::io;
+use std::sync::Arc;
 
-use rustls::crypto::{ring, CryptoProvider};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use futures::TryFutureExt;
 use figment::value::magic::{Either, RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use indexmap::IndexSet;
+use rustls::crypto::{ring, CryptoProvider};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
 
+use crate::tls::resolver::DynResolver;
 use crate::tls::error::{Result, Error, KeyError};
 
 /// TLS configuration: certificate chain, key, and ciphersuites.
@@ -35,7 +39,8 @@ use crate::tls::error::{Result, Error, KeyError};
 ///
 /// Additionally, the `mutual` parameter controls if and how the server
 /// authenticates clients via mutual TLS. It works in concert with the
-/// [`mtls`](crate::mtls) module. See [`MtlsConfig`] for configuration details.
+/// [`mtls`](crate::mtls) module. See [`MtlsConfig`](crate::mtls::MtlsConfig)
+/// for configuration details.
 ///
 /// In `Rocket.toml`, configuration might look like:
 ///
@@ -78,7 +83,7 @@ use crate::tls::error::{Result, Error, KeyError};
 /// # assert_eq!(tls_config.ciphers().count(), 9);
 /// # assert!(!tls_config.prefer_server_cipher_order());
 /// ```
-#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct TlsConfig {
     /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
     /// certificate chain.
@@ -97,6 +102,8 @@ pub struct TlsConfig {
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
     pub(crate) mutual: Option<crate::mtls::MtlsConfig>,
+    #[serde(skip)]
+    pub(crate) resolver: Option<DynResolver>,
 }
 
 /// A supported TLS cipher suite.
@@ -134,6 +141,7 @@ impl Default for TlsConfig {
             prefer_server_cipher_order: false,
             #[cfg(feature = "mtls")]
             mutual: None,
+            resolver: None,
         }
     }
 }
@@ -430,8 +438,57 @@ impl TlsConfig {
         self.mutual.as_ref()
     }
 
-    pub fn validate(&self) -> Result<(), crate::tls::Error> {
-        self.server_config().map(|_| ())
+    /// Try to convert `self` into a [rustls] [`ServerConfig`].
+    ///
+    /// [`ServerConfig`]: rustls::server::ServerConfig
+    pub async fn server_config(&self) -> Result<rustls::server::ServerConfig> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this._server_config())
+            .map_err(io::Error::other)
+            .await?
+    }
+
+    /// Try to convert `self` into a [rustls] [`ServerConfig`].
+    ///
+    /// [`ServerConfig`]: rustls::server::ServerConfig
+    pub(crate) fn _server_config(&self) -> Result<rustls::server::ServerConfig> {
+        let provider = Arc::new(self.default_crypto_provider());
+
+        #[cfg(feature = "mtls")]
+        let verifier = match self.mutual {
+            Some(ref mtls) => {
+                let ca = Arc::new(mtls.load_ca_certs()?);
+                let verifier = WebPkiClientVerifier::builder_with_provider(ca, provider.clone());
+                match mtls.mandatory {
+                    true => verifier.build()?,
+                    false => verifier.allow_unauthenticated().build()?,
+                }
+            },
+            None => WebPkiClientVerifier::no_client_auth(),
+        };
+
+        #[cfg(not(feature = "mtls"))]
+        let verifier = WebPkiClientVerifier::no_client_auth();
+
+        let mut tls_config = ServerConfig::builder_with_provider(provider)
+            .with_safe_default_protocol_versions()?
+            .with_client_cert_verifier(verifier)
+            .with_single_cert(self.load_certs()?, self.load_key()?)?;
+
+        tls_config.ignore_client_order = self.prefer_server_cipher_order;
+        tls_config.session_storage = ServerSessionMemoryCache::new(1024);
+        tls_config.ticketer = rustls::crypto::ring::Ticketer::new()?;
+        tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        if cfg!(feature = "http2") {
+            tls_config.alpn_protocols.insert(0, b"h2".to_vec());
+        }
+
+        Ok(tls_config)
+    }
+
+    /// NOTE: This is a blocking function.
+    pub fn validate(&self) -> Result<()> {
+        self._server_config().map(|_| ())
     }
 }
 

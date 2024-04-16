@@ -1,6 +1,6 @@
 [package]
-name = "rocket-testbench"
-description = "end-to-end HTTP testbench for Rocket"
+name = "testbench"
+description = "End-to-end HTTP Rocket testbench."
 version = "0.0.0"
 edition = "2021"
 publish = false
@@ -12,6 +12,7 @@ thiserror = "1.0"
 procspawn = "1"
 pretty_assertions = "1.4.0"
 ipc-channel = "0.18"
+rustls-pemfile = "2.1"
 
 [dependencies.nix]
 version = "0.28"

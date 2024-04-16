@@ -1,6 +1,6 @@
-use std::convert::Infallible;
 use std::fmt::Debug;
-use std::net::IpAddr;
+use std::convert::Infallible;
+use std::net::{IpAddr, SocketAddr};
 
 use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome, Outcome::*};
@@ -496,7 +496,7 @@ impl<'r> FromRequest<'r> for &'r Endpoint {
 }
 
 #[crate::async_trait]
-impl<'r> FromRequest<'r> for std::net::SocketAddr {
+impl<'r> FromRequest<'r> for SocketAddr {
     type Error = Infallible;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {

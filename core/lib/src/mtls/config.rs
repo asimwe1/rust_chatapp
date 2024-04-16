@@ -79,8 +79,8 @@ pub struct MtlsConfig {
 impl MtlsConfig {
     /// Constructs a `MtlsConfig` from a path to a PEM file with a certificate
     /// authority `ca_certs` DER-encoded X.509 TLS certificate chain. This
-    /// method does no validation; it simply creates a structure suitable for
-    /// passing into a [`TlsConfig`].
+    /// method does no validation; it simply creates an [`MtlsConfig`] for later
+    /// use.
     ///
     /// These certificates will be used to verify client-presented certificates
     /// in TLS connections.
@@ -101,8 +101,7 @@ impl MtlsConfig {
 
     /// Constructs a `MtlsConfig` from a byte buffer to a certificate authority
     /// `ca_certs` DER-encoded X.509 TLS certificate chain. This method does no
-    /// validation; it simply creates a structure suitable for passing into a
-    /// [`TlsConfig`].
+    /// validation; it simply creates an [`MtlsConfig`] for later use.
     ///
     /// These certificates will be used to verify client-presented certificates
     /// in TLS connections.

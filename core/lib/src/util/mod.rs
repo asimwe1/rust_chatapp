@@ -22,39 +22,39 @@ pub fn spawn_inspect<E, F, Fut>(or: F, future: Fut)
 use std::io;
 use std::pin::pin;
 use std::future::Future;
-use futures::future::{select, Either};
+use either::Either;
+use futures::future;
 
 pub trait FutureExt: Future + Sized {
     /// Await `self` or `other`, whichever finishes first.
-    async fn or<B: Future>(self, other: B) -> Either<Self::Output, B::Output> {
-        match futures::future::select(pin!(self), pin!(other)).await {
-            Either::Left((v, _)) => Either::Left(v),
-            Either::Right((v, _)) => Either::Right(v),
+    async fn race<B: Future>(self, other: B) -> Either<Self::Output, B::Output> {
+        match future::select(pin!(self), pin!(other)).await {
+            future::Either::Left((v, _)) => Either::Left(v),
+            future::Either::Right((v, _)) => Either::Right(v),
         }
     }
 
-    /// Await `self` unless `trigger` completes. Returns `Ok(Some(T))` if `self`
-    /// completes successfully before `trigger`, `Err(E)` if `self` completes
-    /// unsuccessfully, and `Ok(None)` if `trigger` completes before `self`.
-    async fn unless<T, E, K: Future>(self, trigger: K) -> Result<Option<T>, E>
-        where Self: Future<Output = Result<T, E>>
+    async fn race_io<T, K: Future>(self, trigger: K) -> io::Result<T>
+        where Self: Future<Output = io::Result<T>>
     {
-        match select(pin!(self), pin!(trigger)).await {
-            Either::Left((v, _)) => Ok(Some(v?)),
-            Either::Right((_, _)) => Ok(None),
-        }
-    }
-
-    /// Await `self` unless `trigger` completes. If `self` completes before
-    /// `trigger`, returns the result. Otherwise, always returns an `Err`.
-    async fn io_unless<T, K: Future>(self, trigger: K) -> std::io::Result<T>
-        where Self: Future<Output = std::io::Result<T>>
-    {
-        match select(pin!(self), pin!(trigger)).await {
-            Either::Left((v, _)) => v,
-            Either::Right((_, _)) => Err(io::Error::other("I/O terminated")),
+        match future::select(pin!(self), pin!(trigger)).await {
+            future::Either::Left((v, _)) => v,
+            future::Either::Right((_, _)) => Err(io::Error::other("i/o terminated")),
         }
     }
 }
 
 impl<F: Future + Sized> FutureExt for F { }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! for_both {
+    ($value:expr, $pattern:pat => $result:expr) => {
+        match $value {
+            tokio_util::either::Either::Left($pattern) => $result,
+            tokio_util::either::Either::Right($pattern) => $result,
+        }
+    };
+}
+
+pub use for_both;

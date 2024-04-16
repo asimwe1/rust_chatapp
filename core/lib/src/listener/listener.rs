@@ -5,7 +5,7 @@ use tokio_util::either::Either;
 
 use crate::listener::{Connection, Endpoint};
 
-pub trait Listener: Send + Sync {
+pub trait Listener: Sized + Send + Sync {
     type Accept: Send;
 
     type Connection: Connection;

@@ -1,64 +1,190 @@
+use core::fmt;
+
+use serde::Deserialize;
+use tokio_util::either::Either::{Left, Right};
 use either::Either;
 
-use crate::listener::{Bindable, Endpoint};
-use crate::error::{Error, ErrorKind};
+use crate::{Ignite, Rocket};
+use crate::listener::{Bind, Endpoint, tcp::TcpListener};
 
-#[derive(serde::Deserialize)]
-pub struct DefaultListener {
-    #[serde(default)]
-    pub address: Endpoint,
-    pub port: Option<u16>,
-    pub reuse: Option<bool>,
-    #[cfg(feature = "tls")]
-    pub tls: Option<crate::tls::TlsConfig>,
+#[cfg(unix)] use crate::listener::unix::UnixListener;
+#[cfg(feature = "tls")] use crate::tls::{TlsListener, TlsConfig};
+
+mod private {
+    use super::*;
+    use tokio_util::either::Either;
+
+    #[cfg(feature = "tls")] type TlsListener<T> = super::TlsListener<T>;
+    #[cfg(not(feature = "tls"))] type TlsListener<T> = T;
+    #[cfg(unix)] type UnixListener = super::UnixListener;
+    #[cfg(not(unix))] type UnixListener = TcpListener;
+
+    pub type Listener = Either<
+        Either<TlsListener<TcpListener>, TlsListener<UnixListener>>,
+        Either<TcpListener, UnixListener>,
+    >;
+
+    /// The default connection listener.
+    ///
+    /// # Configuration
+    ///
+    /// Reads the following optional configuration parameters:
+    ///
+    /// | parameter   | type              | default               |
+    /// | ----------- | ----------------- | --------------------- |
+    /// | `address`   | [`Endpoint`]      | `tcp:127.0.0.1:8000`  |
+    /// | `tls`       | [`TlsConfig`]     | None                  |
+    /// | `reuse`     | boolean           | `true`                |
+    ///
+    /// # Listener
+    ///
+    /// Based on the above configuration, this listener defers to one of the
+    /// following existing listeners:
+    ///
+    /// | listener                      | `address` type     | `tls` enabled |
+    /// |-------------------------------|--------------------|---------------|
+    /// | [`TcpListener`]               | [`Endpoint::Tcp`]  | no            |
+    /// | [`UnixListener`]              | [`Endpoint::Unix`] | no            |
+    /// | [`TlsListener<TcpListener>`]  | [`Endpoint::Tcp`]  | yes           |
+    /// | [`TlsListener<UnixListener>`] | [`Endpoint::Unix`] | yes           |
+    ///
+    /// [`UnixListener`]: crate::listener::unix::UnixListener
+    /// [`TlsListener<TcpListener>`]: crate::tls::TlsListener
+    /// [`TlsListener<UnixListener>`]: crate::tls::TlsListener
+    ///
+    ///  * **address type** is the variant the `address` parameter parses as.
+    ///  * **`tls` enabled** is `yes` when the `tls` feature is enabled _and_ a
+    ///    `tls` configuration is provided.
+    #[cfg(doc)]
+    pub struct DefaultListener(());
 }
 
-#[cfg(not(unix))] type BaseBindable = Either<std::net::SocketAddr, std::net::SocketAddr>;
-#[cfg(unix)]      type BaseBindable = Either<std::net::SocketAddr, super::unix::UdsConfig>;
+#[derive(Deserialize)]
+struct Config {
+    #[serde(default)]
+    address: Endpoint,
+    #[cfg(feature = "tls")]
+    tls: Option<TlsConfig>,
+}
 
-#[cfg(not(feature = "tls"))] type TlsBindable<T> = Either<T, T>;
-#[cfg(feature = "tls")]      type TlsBindable<T> = Either<super::tls::TlsBindable<T>, T>;
+#[cfg(doc)]
+pub use private::DefaultListener;
 
-impl DefaultListener {
-    pub(crate) fn base_bindable(&self) -> Result<BaseBindable, crate::Error> {
-        match &self.address {
-            Endpoint::Tcp(mut address) => {
-                if let Some(port) = self.port {
-                    address.set_port(port);
-                }
+#[cfg(doc)]
+type Connection = crate::listener::tcp::TcpStream;
 
-                Ok(BaseBindable::Left(address))
-            },
-            #[cfg(unix)]
-            Endpoint::Unix(path) => {
-                let uds = super::unix::UdsConfig { path: path.clone(), reuse: self.reuse, };
-                Ok(BaseBindable::Right(uds))
-            },
-            #[cfg(not(unix))]
-            e@Endpoint::Unix(_) => {
-                let msg = "Unix domain sockets unavailable on non-unix platforms.";
-                let boxed = Box::<dyn std::error::Error + Send + Sync>::from(msg);
-                Err(Error::new(ErrorKind::Bind(Some(e.clone()), boxed)))
-            },
-            other => {
-                let msg = format!("unsupported default listener address: {other}");
-                let boxed = Box::<dyn std::error::Error + Send + Sync>::from(msg);
-                Err(Error::new(ErrorKind::Bind(Some(other.clone()), boxed)))
+#[cfg(doc)]
+impl<'r> Bind<&'r Rocket<Ignite>> for DefaultListener {
+    type Error = Error;
+    async fn bind(_: &'r Rocket<Ignite>) -> Result<Self, Error>  { unreachable!() }
+    fn bind_endpoint(_: &&'r Rocket<Ignite>) -> Result<Endpoint, Error> { unreachable!() }
+}
+
+#[cfg(doc)]
+impl super::Listener for DefaultListener {
+    #[doc(hidden)] type Accept = Connection;
+    #[doc(hidden)] type Connection = Connection;
+    #[doc(hidden)]
+    async fn accept(&self) -> std::io::Result<Connection>  { unreachable!() }
+    #[doc(hidden)]
+    async fn connect(&self, _: Self::Accept) -> std::io::Result<Connection>  { unreachable!() }
+    #[doc(hidden)]
+    fn endpoint(&self) -> std::io::Result<Endpoint> { unreachable!() }
+}
+
+#[cfg(not(doc))]
+pub type DefaultListener = private::Listener;
+
+#[cfg(not(doc))]
+impl<'r> Bind<&'r Rocket<Ignite>> for DefaultListener {
+    type Error = Error;
+
+    async fn bind(rocket: &'r Rocket<Ignite>) -> Result<Self, Self::Error> {
+        let config: Config = rocket.figment().extract()?;
+        match config.address {
+            #[cfg(feature = "tls")]
+            Endpoint::Tcp(_) if config.tls.is_some() => {
+                let listener = <TlsListener<TcpListener> as Bind<_>>::bind(rocket).await?;
+                Ok(Left(Left(listener)))
             }
+            Endpoint::Tcp(_) => {
+                let listener = <TcpListener as Bind<_>>::bind(rocket).await?;
+                Ok(Right(Left(listener)))
+            }
+            #[cfg(all(unix, feature = "tls"))]
+            Endpoint::Unix(_) if config.tls.is_some() => {
+                let listener = <TlsListener<UnixListener> as Bind<_>>::bind(rocket).await?;
+                Ok(Left(Right(listener)))
+            }
+            #[cfg(unix)]
+            Endpoint::Unix(_) => {
+                let listener = <UnixListener as Bind<_>>::bind(rocket).await?;
+                Ok(Right(Right(listener)))
+            }
+            endpoint => Err(Error::Unsupported(endpoint)),
         }
     }
 
-    pub(crate) fn tls_bindable<T>(&self, inner: T) -> TlsBindable<T> {
-        #[cfg(feature = "tls")]
-        if let Some(tls) = self.tls.clone() {
-            return TlsBindable::Left(super::tls::TlsBindable { inner, tls });
-        }
-
-        TlsBindable::Right(inner)
+    fn bind_endpoint(rocket: &&'r Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
+        let config: Config = rocket.figment().extract()?;
+        Ok(config.address)
     }
+}
 
-    pub fn bindable(&self) -> Result<impl Bindable, crate::Error> {
-        self.base_bindable()
-            .map(|b| b.map_either(|b| self.tls_bindable(b), |b| self.tls_bindable(b)))
+#[derive(Debug)]
+pub enum Error {
+    Config(figment::Error),
+    Io(std::io::Error),
+    Unsupported(Endpoint),
+    #[cfg(feature = "tls")]
+    Tls(crate::tls::Error),
+}
+
+impl From<figment::Error> for Error {
+    fn from(value: figment::Error) -> Self {
+        Error::Config(value)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Error::Io(value)
+    }
+}
+
+#[cfg(feature = "tls")]
+impl From<crate::tls::Error> for Error {
+    fn from(value: crate::tls::Error) -> Self {
+        Error::Tls(value)
+    }
+}
+
+impl From<Either<figment::Error, std::io::Error>> for Error {
+    fn from(value: Either<figment::Error, std::io::Error>) -> Self {
+        value.either(Error::Config, Error::Io)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Config(e) => e.fmt(f),
+            Error::Io(e) => e.fmt(f),
+            Error::Unsupported(e) => write!(f, "unsupported endpoint: {e:?}"),
+            #[cfg(feature = "tls")]
+            Error::Tls(error) => error.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Config(e) => Some(e),
+            Error::Io(e) => Some(e),
+            Error::Unsupported(_) => None,
+            #[cfg(feature = "tls")]
+            Error::Tls(e) => Some(e),
+        }
     }
 }

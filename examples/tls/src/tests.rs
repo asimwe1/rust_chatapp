@@ -66,8 +66,7 @@ fn insecure_cookies() {
 }
 
 fn validate_profiles(profiles: &[&str]) {
-    use rocket::listener::DefaultListener;
-    use rocket::config::{Config, SecretKey};
+    use rocket::config::{Config, TlsConfig, SecretKey};
 
     for profile in profiles {
         let config = Config {
@@ -81,9 +80,8 @@ fn validate_profiles(profiles: &[&str]) {
         assert_eq!(response.into_string().unwrap(), "Hello, world!");
 
         let figment = client.rocket().figment();
-        let listener: DefaultListener = figment.extract().unwrap();
-        assert_eq!(figment.profile(), profile);
-        listener.tls.as_ref().unwrap().validate().expect("valid TLS config");
+        let config: TlsConfig = figment.extract_inner("tls").unwrap();
+        config.validate().expect("valid TLS config");
     }
 }
 

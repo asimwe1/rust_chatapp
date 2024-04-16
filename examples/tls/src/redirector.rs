@@ -7,6 +7,7 @@ use rocket::log::LogLevel;
 use rocket::{route, Error, Request, Data, Route, Orbit, Rocket, Ignite};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::response::Redirect;
+use rocket::listener::tcp::TcpListener;
 
 use yansi::Paint;
 
@@ -59,7 +60,7 @@ impl Redirector {
         rocket::custom(&config.server)
             .manage(config)
             .mount("/", redirects)
-            .launch_on(addr)
+            .bind_launch::<_, TcpListener>(addr)
             .await
     }
 }

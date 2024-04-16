@@ -114,9 +114,8 @@ impl<'r> Builder<'r> {
     /// the same name exist, they are all removed, and only the new header and
     /// value will remain.
     ///
-    /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType) and
-    /// [hyper::header types](crate::http::hyper::header).
+    /// The type of `header` can be any type that implements `Into<Header>`. See
+    /// [trait implementations](Header#trait-implementations).
     ///
     /// # Example
     ///
@@ -144,9 +143,8 @@ impl<'r> Builder<'r> {
     /// `Response`. This allows for multiple headers with the same name and
     /// potentially different values to be present in the `Response`.
     ///
-    /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType)
-    /// and [`Accept`](crate::http::Accept).
+    /// The type of `header` can be any type that implements `Into<Header>`. See
+    /// [trait implementations](Header#trait-implementations).
     ///
     /// # Example
     ///
@@ -641,9 +639,8 @@ impl<'r> Response<'r> {
 
     /// Sets the header `header` in `self`. Any existing headers with the name
     /// `header.name` will be lost, and only `header` will remain. The type of
-    /// `header` can be any type that implements `Into<Header>`. This includes
-    /// `Header` itself, [`ContentType`](crate::http::ContentType) and
-    /// [`hyper::header` types](crate::http::hyper::header).
+    /// `header` can be any type that implements `Into<Header>`. See [trait
+    /// implementations](Header#trait-implementations).
     ///
     /// # Example
     ///
@@ -723,10 +720,7 @@ impl<'r> Response<'r> {
 
     /// Adds a custom header with name `name` and value `value` to `self`. If
     /// `self` already contains headers with the name `name`, another header
-    /// with the same `name` and `value` is added. The type of `header` can be
-    /// any type implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](crate::http::ContentType) and [`hyper::header`
-    /// types](crate::http::hyper::header).
+    /// with the same `name` and `value` is added.
     ///
     /// # Example
     ///

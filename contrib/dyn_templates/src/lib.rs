@@ -117,6 +117,8 @@
 //! to an `Object` (a dictionary) value. The [`context!`] macro can be used to
 //! create inline `Serialize`-able context objects.
 //!
+//! [`Serialize`]: rocket::serde::Serialize
+//!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
 //! use rocket::serde::Serialize;
@@ -165,7 +167,7 @@
 //! builds, template reloading is disabled to improve performance and cannot be
 //! enabled.
 //!
-//! [attached]: Rocket::attach()
+//! [attached]: rocket::Rocket::attach()
 //!
 //! ### Metadata and Rendering to `String`
 //!

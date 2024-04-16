@@ -171,6 +171,15 @@ function test_default() {
   echo ":: Checking fuzzers..."
   indir "${FUZZ_ROOT}" $CARGO update
   indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
+
+  case "$OSTYPE" in
+      darwin* | linux*)
+          echo ":: Checking testbench..."
+          indir "${TESTBENCH_ROOT}" $CARGO update
+          indir "${TESTBENCH_ROOT}" $CARGO check $@
+          ;;
+      *) echo ":: Skipping testbench [$OSTYPE]" ;;
+  esac
 }
 
 function test_ui() {

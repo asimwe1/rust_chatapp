@@ -88,7 +88,7 @@ impl Shutdown {
     /// This function returns immediately; pending requests will continue to run
     /// until completion or expiration of the grace period, which ever comes
     /// first, before the actual shutdown occurs. The grace period can be
-    /// configured via [`Shutdown::grace`](crate::config::ShutdownConfig::grace).
+    /// configured via [`ShutdownConfig`]'s `grace` field.
     ///
     /// ```rust
     /// # use rocket::*;

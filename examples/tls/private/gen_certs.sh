@@ -9,6 +9,7 @@
 #   ecdsa_nistp256_sha256
 #   ecdsa_nistp384_sha384
 #   ecdsa_nistp521_sha512
+#   client
 #
 # Generate a certificate of the [cert-kind] key type, or if no cert-kind is
 # specified, all of the certificates.
@@ -136,12 +137,23 @@ function gen_ecdsa_nistp521_sha512() {
   rm ca_cert.srl server.csr ecdsa_nistp521_sha512_key.pem
 }
 
+function gen_client_cert() {
+    openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr
+    openssl x509 -req -extfile <(printf "subjectAltName=DNS:${ALT}") -days 365 \
+        -in client.csr -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+        -out client.crt
+
+    cat client.key client.crt ca_cert.pem > client.pem
+    rm client.key client.crt client.csr ca_cert.srl
+}
+
 case $1 in
   ed25519) gen_ed25519 ;;
   rsa_sha256) gen_rsa_sha256 ;;
   ecdsa_nistp256_sha256) gen_ecdsa_nistp256_sha256 ;;
   ecdsa_nistp384_sha384) gen_ecdsa_nistp384_sha384 ;;
   ecdsa_nistp521_sha512) gen_ecdsa_nistp521_sha512 ;;
+  client) gen_client_cert ;;
   *)
     gen_ed25519
     gen_rsa_sha256

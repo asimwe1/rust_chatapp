@@ -1,6 +1,7 @@
 use std::io;
 use std::borrow::Cow;
 
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::either::Either;
 
 use super::Endpoint;
@@ -9,7 +10,7 @@ use super::Endpoint;
 #[derive(Clone)]
 pub struct Certificates<'r>(Cow<'r, [der::CertificateDer<'r>]>);
 
-pub trait Connection: Send + Unpin {
+pub trait Connection: AsyncRead + AsyncWrite + Send + Unpin {
     fn endpoint(&self) -> io::Result<Endpoint>;
 
     /// DER-encoded X.509 certificate chain presented by the client, if any.
