@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::any::Any;
 
-use futures::TryFutureExt;
+use futures::{Future, TryFutureExt};
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
@@ -682,9 +682,7 @@ impl Rocket<Ignite> {
         rocket
     }
 
-    async fn _launch_with<B>(self) -> Result<Rocket<Ignite>, Error>
-        where B: for<'r> Bind<&'r Rocket<Ignite>>
-    {
+    async fn _launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
         let bind_endpoint = B::bind_endpoint(&&self).ok();
         let listener: B = B::bind(&self).await
             .map_err(|e| ErrorKind::Bind(bind_endpoint, Box::new(e)))?;
@@ -1015,20 +1013,21 @@ impl<P: Phase> Rocket<P> {
         self.launch_with::<DefaultListener>().await
     }
 
-    pub async fn bind_launch<T, B: Bind<T>>(self, value: T) -> Result<Rocket<Ignite>, Error> {
-        let endpoint = B::bind_endpoint(&value).ok();
-        let listener = B::bind(value).map_err(|e| ErrorKind::Bind(endpoint, Box::new(e)));
-        self.launch_on(listener.await?).await
-    }
-
-    pub async fn launch_with<B>(self) -> Result<Rocket<Ignite>, Error>
-        where B: for<'r> Bind<&'r Rocket<Ignite>>
-    {
+    pub async fn launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
         match self.0.into_state() {
             State::Build(s) => Rocket::from(s).ignite().await?._launch_with::<B>().await,
             State::Ignite(s) => Rocket::from(s)._launch_with::<B>().await,
             State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
+    }
+
+    pub async fn try_launch_on<L, F, E>(self, listener: F) -> Result<Rocket<Ignite>, Error>
+        where L: Listener + 'static,
+              F: Future<Output = Result<L, E>>,
+              E: std::error::Error + Send + 'static
+    {
+        let listener = listener.map_err(|e| ErrorKind::Bind(None, Box::new(e))).await?;
+        self.launch_on(listener).await
     }
 
     pub async fn launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>

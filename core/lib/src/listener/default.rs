@@ -74,10 +74,10 @@ pub use private::DefaultListener;
 type Connection = crate::listener::tcp::TcpStream;
 
 #[cfg(doc)]
-impl<'r> Bind<&'r Rocket<Ignite>> for DefaultListener {
+impl Bind for DefaultListener {
     type Error = Error;
-    async fn bind(_: &'r Rocket<Ignite>) -> Result<Self, Error>  { unreachable!() }
-    fn bind_endpoint(_: &&'r Rocket<Ignite>) -> Result<Endpoint, Error> { unreachable!() }
+    async fn bind(_: &Rocket<Ignite>) -> Result<Self, Error>  { unreachable!() }
+    fn bind_endpoint(_: &Rocket<Ignite>) -> Result<Endpoint, Error> { unreachable!() }
 }
 
 #[cfg(doc)]
@@ -96,36 +96,36 @@ impl super::Listener for DefaultListener {
 pub type DefaultListener = private::Listener;
 
 #[cfg(not(doc))]
-impl<'r> Bind<&'r Rocket<Ignite>> for DefaultListener {
+impl Bind for DefaultListener {
     type Error = Error;
 
-    async fn bind(rocket: &'r Rocket<Ignite>) -> Result<Self, Self::Error> {
+    async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let config: Config = rocket.figment().extract()?;
         match config.address {
             #[cfg(feature = "tls")]
             Endpoint::Tcp(_) if config.tls.is_some() => {
-                let listener = <TlsListener<TcpListener> as Bind<_>>::bind(rocket).await?;
+                let listener = <TlsListener<TcpListener> as Bind>::bind(rocket).await?;
                 Ok(Left(Left(listener)))
             }
             Endpoint::Tcp(_) => {
-                let listener = <TcpListener as Bind<_>>::bind(rocket).await?;
+                let listener = <TcpListener as Bind>::bind(rocket).await?;
                 Ok(Right(Left(listener)))
             }
             #[cfg(all(unix, feature = "tls"))]
             Endpoint::Unix(_) if config.tls.is_some() => {
-                let listener = <TlsListener<UnixListener> as Bind<_>>::bind(rocket).await?;
+                let listener = <TlsListener<UnixListener> as Bind>::bind(rocket).await?;
                 Ok(Left(Right(listener)))
             }
             #[cfg(unix)]
             Endpoint::Unix(_) => {
-                let listener = <UnixListener as Bind<_>>::bind(rocket).await?;
+                let listener = <UnixListener as Bind>::bind(rocket).await?;
                 Ok(Right(Right(listener)))
             }
             endpoint => Err(Error::Unsupported(endpoint)),
         }
     }
 
-    fn bind_endpoint(rocket: &&'r Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
+    fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
         let config: Config = rocket.figment().extract()?;
         Ok(config.address)
     }

@@ -71,10 +71,10 @@ impl UnixListener {
     }
 }
 
-impl<'r> Bind<&'r Rocket<Ignite>> for UnixListener {
+impl Bind for UnixListener {
     type Error = Either<figment::Error, io::Error>;
 
-    async fn bind(rocket: &'r Rocket<Ignite>) -> Result<Self, Self::Error> {
+    async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let endpoint = Self::bind_endpoint(&rocket)?;
         let path = endpoint.unix()
             .ok_or_else(|| Right(io::Error::other("internal error: invalid endpoint")))?;
@@ -83,7 +83,7 @@ impl<'r> Bind<&'r Rocket<Ignite>> for UnixListener {
         Ok(Self::bind(path, reuse.unwrap_or(true)).await.map_err(Right)?)
     }
 
-    fn bind_endpoint(rocket: &&'r Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
+    fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
         let as_pathbuf = |e: Option<&Endpoint>| e.and_then(|e| e.unix().map(|p| p.to_path_buf()));
         Endpoint::fetch(rocket.figment(), "unix", "address", as_pathbuf)
             .map(Endpoint::Unix)

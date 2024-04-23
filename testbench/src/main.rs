@@ -1,11 +1,15 @@
+use std::net::{Ipv4Addr, SocketAddr};
 use std::process::ExitCode;
 use std::time::Duration;
 
-use rocket::listener::unix::UnixListener;
 use rocket::tokio::net::TcpListener;
 use rocket::yansi::Paint;
 use rocket::{get, routes, Build, Rocket, State};
+use rocket::listener::{unix::UnixListener, Endpoint};
+use rocket::tls::TlsListener;
+
 use reqwest::{tls::TlsInfo, Identity};
+
 use testbench::*;
 
 static DEFAULT_CONFIG: &str = r#"
@@ -112,12 +116,12 @@ fn infinite() -> Result<()> {
 }
 
 fn tls_info() -> Result<()> {
-    let mut server = spawn! {
-        #[get("/")]
-        fn hello_world() -> &'static str {
-            "Hello, world!"
-        }
+    #[get("/")]
+    fn hello_world(endpoint: &Endpoint) -> String {
+        format!("Hello, {endpoint}!")
+    }
 
+    let mut server = spawn! {
         Rocket::tls_default().mount("/", routes![hello_world])
     }?;
 
@@ -125,13 +129,35 @@ fn tls_info() -> Result<()> {
     let response = client.get(&server, "/")?.send()?;
     let tls = response.extensions().get::<TlsInfo>().unwrap();
     assert!(!tls.peer_certificate().unwrap().is_empty());
-    assert_eq!(response.text()?, "Hello, world!");
+    assert!(response.text()?.starts_with("Hello, https://127.0.0.1"));
 
     server.terminate()?;
     let stdout = server.read_stdout()?;
     assert!(stdout.contains("Rocket has launched on https"));
     assert!(stdout.contains("Graceful shutdown completed"));
     assert!(stdout.contains("GET /"));
+
+    let server = Server::spawn((), |(token, _)| {
+        let rocket = rocket::build()
+            .configure_with_toml(TLS_CONFIG)
+            .mount("/", routes![hello_world]);
+
+        token.with_launch(rocket, |rocket| {
+            let config = rocket.figment().extract_inner("tls");
+            rocket.try_launch_on(async move {
+                let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+                let listener = TcpListener::bind(addr).await?;
+                TlsListener::from(listener, config?).await
+            })
+        })
+    }).unwrap();
+
+    let client = Client::default();
+    let response = client.get(&server, "/")?.send()?;
+    let tls = response.extensions().get::<TlsInfo>().unwrap();
+    assert!(!tls.peer_certificate().unwrap().is_empty());
+    assert!(response.text()?.starts_with("Hello, https://127.0.0.1"));
+
     Ok(())
 }
 

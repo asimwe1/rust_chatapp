@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use std::sync::Once;
@@ -111,8 +112,9 @@ impl Server {
 }
 
 impl Token {
-    pub fn launch_with<B>(self, rocket: Rocket<Build>) -> Launched
-        where B: for<'r> Bind<&'r Rocket<Ignite>> + Sync + Send + 'static
+    pub fn with_launch<F, Fut>(self, rocket: Rocket<Build>, launch: F) -> Launched
+        where F: FnOnce(Rocket<Ignite>) -> Fut + Send + Sync + 'static,
+              Fut: Future<Output = Result<Rocket<Ignite>, rocket::Error>> + Send
     {
         let server = self.0.clone();
         let rocket = rocket.attach(AdHoc::on_liftoff("Liftoff", move |rocket| Box::pin(async move {
@@ -124,7 +126,12 @@ impl Token {
         })));
 
         let server = self.0.clone();
-        if let Err(e) = rocket::execute(rocket.launch_with::<B>()) {
+        let launch = async move {
+            let rocket = rocket.ignite().await?;
+            launch(rocket).await
+        };
+
+        if let Err(e) = rocket::execute(launch) {
             let sender = IpcSender::<Message>::connect(server).unwrap();
             let _ = sender.send(Message::Failure);
             let _ = sender.send(Message::Failure);
@@ -133,6 +140,12 @@ impl Token {
         }
 
         Launched(())
+    }
+
+    pub fn launch_with<B: Bind>(self, rocket: Rocket<Build>) -> Launched
+        where B: Send + Sync + 'static
+    {
+        self.with_launch(rocket, |rocket| rocket.launch_with::<B>())
     }
 
     pub fn launch(self, rocket: Rocket<Build>) -> Launched {

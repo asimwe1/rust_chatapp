@@ -20,22 +20,10 @@ pub use tokio::net::{TcpListener, TcpStream};
 use crate::{Ignite, Rocket};
 use crate::listener::{Bind, Connection, Endpoint, Listener};
 
-impl Bind<SocketAddr> for TcpListener {
-    type Error = std::io::Error;
-
-    async fn bind(addr: SocketAddr) -> Result<Self, Self::Error> {
-        Self::bind(addr).await
-    }
-
-    fn bind_endpoint(addr: &SocketAddr) -> Result<Endpoint, Self::Error> {
-        Ok(Endpoint::Tcp(*addr))
-    }
-}
-
-impl<'r> Bind<&'r Rocket<Ignite>> for TcpListener {
+impl Bind for TcpListener {
     type Error = Either<figment::Error, io::Error>;
 
-    async fn bind(rocket: &'r Rocket<Ignite>) -> Result<Self, Self::Error> {
+    async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let endpoint = Self::bind_endpoint(&rocket)?;
         let addr = endpoint.tcp()
             .ok_or_else(|| io::Error::other("internal error: invalid endpoint"))
@@ -44,7 +32,7 @@ impl<'r> Bind<&'r Rocket<Ignite>> for TcpListener {
         Self::bind(addr).await.map_err(Right)
     }
 
-    fn bind_endpoint(rocket: &&'r Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
+    fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
         let figment = rocket.figment();
         let mut address = Endpoint::fetch(figment, "tcp", "address", |e| {
             let default = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 8000);

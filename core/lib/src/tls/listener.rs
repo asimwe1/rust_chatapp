@@ -8,7 +8,7 @@ use rustls::server::{Acceptor, ServerConfig};
 
 use crate::{Ignite, Rocket};
 use crate::listener::{Bind, Certificates, Connection, Endpoint, Listener};
-use crate::tls::{Error, TlsConfig};
+use crate::tls::{TlsConfig, Result, Error};
 use super::resolver::DynResolver;
 
 #[doc(inline)]
@@ -21,40 +21,35 @@ pub struct TlsListener<L> {
     default: Arc<ServerConfig>,
 }
 
-impl<T: Send, L: Bind<T>> Bind<(T, TlsConfig)> for TlsListener<L>
+impl<L> TlsListener<L>
     where L: Listener<Accept = <L as Listener>::Connection>,
 {
-    type Error = Error;
-
-    async fn bind((inner, config): (T, TlsConfig)) -> Result<Self, Self::Error> {
+    pub async fn from(listener: L, config: TlsConfig) -> Result<TlsListener<L>> {
         Ok(TlsListener {
             default: Arc::new(config.server_config().await?),
-            listener: L::bind(inner).map_err(|e| Error::Bind(Box::new(e))).await?,
+            listener,
             config,
         })
     }
-
-    fn bind_endpoint((inner, config): &(T, TlsConfig)) -> Result<Endpoint, Self::Error> {
-        L::bind_endpoint(inner)
-            .map(|e| e.with_tls(config))
-            .map_err(|e| Error::Bind(Box::new(e)))
-    }
 }
 
-impl<'r, L> Bind<&'r Rocket<Ignite>> for TlsListener<L>
-    where L: Bind<&'r Rocket<Ignite>> + Listener<Accept = <L as Listener>::Connection>
+impl<L: Bind> Bind for TlsListener<L>
+    where L: Listener<Accept = <L as Listener>::Connection>
 {
     type Error = Error;
 
-    async fn bind(rocket: &'r Rocket<Ignite>) -> Result<Self, Self::Error> {
+    async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
+        let listener = L::bind(rocket).map_err(|e| Error::Bind(Box::new(e))).await?;
         let mut config: TlsConfig = rocket.figment().extract_inner("tls")?;
         config.resolver = DynResolver::extract(rocket);
-        <Self as Bind<_>>::bind((rocket, config)).await
+        Self::from(listener, config).await
     }
 
-    fn bind_endpoint(rocket: &&'r Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
+    fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
         let config: TlsConfig = rocket.figment().extract_inner("tls")?;
-        <Self as Bind<_>>::bind_endpoint(&(*rocket, config))
+        L::bind_endpoint(rocket)
+            .map(|e| e.with_tls(&config))
+            .map_err(|e| Error::Bind(Box::new(e)))
     }
 }
 

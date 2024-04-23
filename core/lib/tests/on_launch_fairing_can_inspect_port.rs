@@ -17,6 +17,6 @@ async fn on_ignite_fairing_can_inspect_port() {
         }));
 
     let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
-    rocket::tokio::spawn(rocket.bind_launch::<_, TcpListener>(addr));
+    rocket::tokio::spawn(rocket.try_launch_on(TcpListener::bind(addr)));
     assert_ne!(rx.await.unwrap(), 0);
 }
