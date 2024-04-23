@@ -60,7 +60,7 @@ impl Redirector {
         rocket::custom(&config.server)
             .manage(config)
             .mount("/", redirects)
-            .bind_launch::<_, TcpListener>(addr)
+            .try_launch_on(TcpListener::bind(addr))
             .await
     }
 }
