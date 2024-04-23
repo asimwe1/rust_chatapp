@@ -113,7 +113,7 @@ impl Client {
         let rocket = self.rocket;
         rocket.shutdown().notify();
         rocket.fairings.handle_shutdown(&rocket).await;
-        rocket.into_ignite()
+        rocket.deorbit()
     }
 
     // Generates the public API methods, which call the private methods above.

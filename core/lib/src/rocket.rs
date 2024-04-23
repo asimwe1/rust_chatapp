@@ -3,11 +3,12 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Duration;
 use std::any::Any;
+use std::future::Future;
 
-use futures::{Future, TryFutureExt};
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
+use futures::TryFutureExt;
 
 use crate::shutdown::{Stages, Shutdown};
 use crate::{sentinel, shield::Shield, Catcher, Config, Route};
@@ -682,31 +683,7 @@ impl Rocket<Ignite> {
         rocket
     }
 
-    async fn _launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
-        let bind_endpoint = B::bind_endpoint(&&self).ok();
-        let listener: B = B::bind(&self).await
-            .map_err(|e| ErrorKind::Bind(bind_endpoint, Box::new(e)))?;
-
-        let any: Box<dyn Any + Send + Sync> = Box::new(listener);
-        match any.downcast::<DefaultListener>() {
-            Ok(listener) => {
-                let listener = *listener;
-                crate::util::for_both!(listener, listener => {
-                    crate::util::for_both!(listener, listener => {
-                        self._launch_on(listener).await
-                    })
-                })
-            }
-            Err(any) => {
-                let listener = *any.downcast::<B>().unwrap();
-                self._launch_on(listener).await
-            }
-        }
-    }
-
-    async fn _launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
-        where L: Listener + 'static,
-    {
+    async fn _launch<L: Listener + 'static>(self, listener: L) -> Result<Rocket<Ignite>, Error> {
         let rocket = self.listen_and_serve(listener, |rocket| async move {
             let rocket = Arc::new(rocket);
 
@@ -761,7 +738,7 @@ impl Rocket<Orbit> {
         match Arc::try_unwrap(self) {
             Ok(rocket) => {
                 info!("Graceful shutdown completed successfully.");
-                Ok(rocket.into_ignite())
+                Ok(rocket.deorbit())
             }
             Err(rocket) => {
                 warn!("Shutdown failed: outstanding background I/O.");
@@ -770,7 +747,7 @@ impl Rocket<Orbit> {
         }
     }
 
-    pub(crate) fn into_ignite(self) -> Rocket<Ignite> {
+    pub(crate) fn deorbit(self) -> Rocket<Ignite> {
         Rocket(Igniting {
             router: self.0.router,
             fairings: self.0.fairings,
@@ -955,14 +932,16 @@ impl<P: Phase> Rocket<P> {
         }
     }
 
-    pub(crate) async fn local_launch(self, e: Endpoint) -> Result<Rocket<Orbit>, Error> {
-        let rocket = match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._local_launch(e).await,
-            State::Ignite(s) => Rocket::from(s)._local_launch(e).await,
-            State::Orbit(s) => Rocket::from(s)
-        };
+    async fn into_ignite(self) -> Result<Rocket<Ignite>, Error> {
+        match self.0.into_state() {
+            State::Build(s) => Rocket::from(s).ignite().await,
+            State::Ignite(s) => Ok(Rocket::from(s)),
+            State::Orbit(s) => Ok(Rocket::from(s).deorbit()),
+        }
+    }
 
-        Ok(rocket)
+    pub(crate) async fn local_launch(self, e: Endpoint) -> Result<Rocket<Orbit>, Error> {
+        Ok(self.into_ignite().await?._local_launch(e).await)
     }
 
     /// Returns a `Future` that transitions this instance of `Rocket` from any
@@ -1014,10 +993,25 @@ impl<P: Phase> Rocket<P> {
     }
 
     pub async fn launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
-        match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._launch_with::<B>().await,
-            State::Ignite(s) => Rocket::from(s)._launch_with::<B>().await,
-            State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
+        let rocket = self.into_ignite().await?;
+        let bind_endpoint = B::bind_endpoint(&rocket).ok();
+        let listener: B = B::bind(&rocket).await
+            .map_err(|e| ErrorKind::Bind(bind_endpoint, Box::new(e)))?;
+
+        let any: Box<dyn Any + Send + Sync> = Box::new(listener);
+        match any.downcast::<DefaultListener>() {
+            Ok(listener) => {
+                let listener = *listener;
+                crate::util::for_both!(listener, listener => {
+                    crate::util::for_both!(listener, listener => {
+                        rocket._launch(listener).await
+                    })
+                })
+            }
+            Err(any) => {
+                let listener = *any.downcast::<B>().unwrap();
+                rocket._launch(listener).await
+            }
         }
     }
 
@@ -1027,17 +1021,13 @@ impl<P: Phase> Rocket<P> {
               E: std::error::Error + Send + 'static
     {
         let listener = listener.map_err(|e| ErrorKind::Bind(None, Box::new(e))).await?;
-        self.launch_on(listener).await
+        self.into_ignite().await?._launch(listener).await
     }
 
     pub async fn launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
         where L: Listener + 'static,
     {
-        match self.0.into_state() {
-            State::Build(s) => Rocket::from(s).ignite().await?._launch_on(listener).await,
-            State::Ignite(s) => Rocket::from(s)._launch_on(listener).await,
-            State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
-        }
+        self.into_ignite().await?._launch(listener).await
     }
 }
 
