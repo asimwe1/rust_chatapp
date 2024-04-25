@@ -34,28 +34,28 @@ static TLS_CONFIG: &str = r#"
 trait RocketExt {
     fn default() -> Self;
     fn tls_default() -> Self;
-    fn configure_with_toml(self, toml: &str) -> Self;
+    fn reconfigure_with_toml(self, toml: &str) -> Self;
 }
 
 impl RocketExt for Rocket<Build> {
     fn default() -> Self {
-        rocket::build().configure_with_toml(DEFAULT_CONFIG)
+        rocket::build().reconfigure_with_toml(DEFAULT_CONFIG)
     }
 
     fn tls_default() -> Self {
         rocket::build()
-            .configure_with_toml(DEFAULT_CONFIG)
-            .configure_with_toml(TLS_CONFIG)
+            .reconfigure_with_toml(DEFAULT_CONFIG)
+            .reconfigure_with_toml(TLS_CONFIG)
     }
 
-    fn configure_with_toml(self, toml: &str) -> Self {
+    fn reconfigure_with_toml(self, toml: &str) -> Self {
         use rocket::figment::{Figment, providers::{Format, Toml}};
 
         let toml = toml.replace("{ROCKET}", rocket::fs::relative!("../"));
         let config = Figment::from(self.figment())
             .merge(Toml::string(&toml).nested());
 
-        self.configure(config)
+        self.reconfigure(config)
     }
 }
 
@@ -139,7 +139,7 @@ fn tls_info() -> Result<()> {
 
     let server = Server::spawn((), |(token, _)| {
         let rocket = rocket::build()
-            .configure_with_toml(TLS_CONFIG)
+            .reconfigure_with_toml(TLS_CONFIG)
             .mount("/", routes![hello_world]);
 
         token.with_launch(rocket, |rocket| {
@@ -229,7 +229,7 @@ fn test_mtls(mandatory: bool) -> Result<()> {
         }
 
         Rocket::tls_default()
-            .configure_with_toml(&mtls_config)
+            .reconfigure_with_toml(&mtls_config)
             .mount("/", routes![hello, hi])
     })?;
 
@@ -318,7 +318,7 @@ fn sni_resolver() -> Result<()> {
         #[get("/")] fn index() { }
 
         Rocket::default()
-            .configure_with_toml(SNI_TLS_CONFIG)
+            .reconfigure_with_toml(SNI_TLS_CONFIG)
             .mount("/", routes![index])
             .attach(SniResolver::fairing())
     }?;
@@ -348,7 +348,7 @@ fn sni_resolver() -> Result<()> {
 
 fn tcp_unix_listener_fail() -> Result<()> {
     let server = spawn! {
-        Rocket::default().configure_with_toml("[default]\naddress = 123")
+        Rocket::default().reconfigure_with_toml("[default]\naddress = 123")
     };
 
     if let Err(Error::Liftoff(stdout, _)) = server {
@@ -359,7 +359,7 @@ fn tcp_unix_listener_fail() -> Result<()> {
     }
 
     let server = Server::spawn((), |(token, _)| {
-        let rocket = Rocket::default().configure_with_toml("[default]\naddress = \"unix:foo\"");
+        let rocket = Rocket::default().reconfigure_with_toml("[default]\naddress = \"unix:foo\"");
         token.launch_with::<TcpListener>(rocket)
     });
 

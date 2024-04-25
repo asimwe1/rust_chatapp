@@ -101,7 +101,7 @@ async fn async_slow_shutdown_doesnt_elongate_grace() {
 
     let rocket = rocket::build()
         .manage(Flags::default())
-        .configure(config)
+        .reconfigure(config)
         .attach(AdHoc::on_shutdown("Slow Shutdown", |rocket| Box::pin(async move {
             tokio::time::sleep(std::time::Duration::from_secs(4)).await;
             let flags = rocket.state::<Flags>().unwrap();
@@ -141,7 +141,7 @@ fn background_tasks_dont_prevent_terminate() {
     config.shutdown.grace = 1;
     config.shutdown.mercy = 1;
 
-    let rocket = rocket::build().configure(config).mount("/", routes![index]);
+    let rocket = rocket::build().reconfigure(config).mount("/", routes![index]);
 
     let client = Client::debug(rocket).unwrap();
     let response = client.get("/").dispatch();

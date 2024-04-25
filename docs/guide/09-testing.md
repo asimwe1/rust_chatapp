@@ -180,7 +180,7 @@ testing: we _want_ our tests to panic when something goes wrong.
 ```rust
 # #[rocket::launch]
 # fn rocket() -> _ {
-#     rocket::build().configure(rocket::Config::debug_default())
+#     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 # use rocket::local::blocking::Client;
 
@@ -194,7 +194,7 @@ application's response:
 # use rocket::uri;
 # #[rocket::launch]
 # fn rocket() -> _ {
-#     rocket::build().configure(rocket::Config::debug_default())
+#     rocket::build().reconfigure(rocket::Config::debug_default())
 # }
 
 # #[rocket::get("/")]

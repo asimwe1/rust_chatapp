@@ -9,7 +9,7 @@ fn one_state<'r>(_three: &'r State<u8>, s: &'r str) -> &'r str { s }
 #[async_test]
 async fn state_sentinel_works() {
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .ignite().await
         .unwrap_err();
@@ -17,7 +17,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .manage(String::new())
         .ignite().await
@@ -26,7 +26,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .manage(1 as u32)
         .ignite().await
@@ -35,7 +35,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     let result = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .manage(String::new())
         .manage(1 as u32)
@@ -44,7 +44,7 @@ async fn state_sentinel_works() {
     assert!(result.is_ok());
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state])
         .ignite().await
         .unwrap_err();
@@ -52,7 +52,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     let result = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state])
         .manage(1 as u8)
         .ignite().await;
@@ -60,7 +60,7 @@ async fn state_sentinel_works() {
     assert!(result.is_ok());
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
         .ignite().await
         .unwrap_err();
@@ -68,7 +68,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 3));
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
         .manage(1 as u32)
         .ignite().await
@@ -77,7 +77,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
         .manage(1 as u8)
         .ignite().await
@@ -86,7 +86,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
 
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
         .manage(1 as u32)
         .manage(1 as u8)
@@ -96,7 +96,7 @@ async fn state_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     let result = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
         .manage(1 as u32)
         .manage(1 as u8)
@@ -128,7 +128,7 @@ fn with_data(_data: Data) {}
 #[async_test]
 async fn data_sentinel_works() {
     let err = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![with_data])
         .ignite().await
         .unwrap_err();
@@ -136,7 +136,7 @@ async fn data_sentinel_works() {
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     let result = rocket::build()
-        .configure(Config::debug_default())
+        .reconfigure(Config::debug_default())
         .mount("/", routes![with_data])
         .manage(Data)
         .ignite().await;

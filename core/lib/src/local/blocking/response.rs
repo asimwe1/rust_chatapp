@@ -27,7 +27,7 @@ use super::Client;
 /// #[launch]
 /// fn rocket() -> _ {
 ///     rocket::build().mount("/", routes![hello_world])
-///     #    .configure(rocket::Config::debug_default())
+///     #    .reconfigure(rocket::Config::debug_default())
 /// }
 ///
 /// # fn read_body_manually() -> io::Result<()> {

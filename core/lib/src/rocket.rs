@@ -197,13 +197,11 @@ impl Rocket<Build> {
         rocket.attach(Shield::default())
     }
 
-    /// Sets the configuration provider in `self` to `provider`.
+    /// Overrides the current configuration provider with `provider`.
     ///
-    /// A [`Figment`] generated from the current `provider` can _always_ be
-    /// retrieved via [`Rocket::figment()`]. However, because the provider can
-    /// be changed at any point prior to ignition, a [`Config`] can only be
-    /// retrieved in the ignite or orbit phases, or by manually extracting one
-    /// from a particular figment.
+    /// The default provider, or a provider previously set with
+    /// [`Rocket::custom()`] or [`Rocket::reconfigure()`], is overriden by
+    /// `provider`.
     ///
     /// # Example
     ///
@@ -229,7 +227,7 @@ impl Rocket<Build> {
     ///     .merge((Config::IDENT, "Example"));
     ///
     /// let rocket = rocket::custom(&config)
-    ///     .configure(figment)
+    ///     .reconfigure(figment)
     ///     .ignite().await?;
     ///
     /// assert_eq!(rocket.config().ident.as_str(), Some("Example"));
@@ -238,7 +236,7 @@ impl Rocket<Build> {
     /// # });
     /// ```
     #[must_use]
-    pub fn configure<T: Provider>(mut self, provider: T) -> Self {
+    pub fn reconfigure<T: Provider>(mut self, provider: T) -> Self {
         self.figment = Figment::from(provider);
         self
     }
@@ -522,7 +520,7 @@ impl Rocket<Build> {
     /// #[rocket::main]
     /// async fn main() -> Result<(), rocket::Error> {
     ///     let rocket = rocket::build()
-    ///         # .configure(rocket::Config::debug_default())
+    ///         # .reconfigure(rocket::Config::debug_default())
     ///         .attach(AdHoc::on_ignite("Manage State", |rocket| async move {
     ///             rocket.manage(String::from("managed string"))
     ///         }));
@@ -917,6 +915,12 @@ impl<P: Phase> Rocket<P> {
     /// Returns the figment derived from the configuration provider set for
     /// `self`. To extract a typed config, prefer to use
     /// [`AdHoc::config()`](crate::fairing::AdHoc::config()).
+    ///
+    /// Note; A [`Figment`] generated from the current `provider` can _always_
+    /// be retrieved via this method. However, because the provider can be
+    /// changed at any point prior to ignition, a [`Config`] can only be
+    /// retrieved in the ignite or orbit phases, or by manually extracting one
+    /// from a particular figment.
     ///
     /// # Example
     ///

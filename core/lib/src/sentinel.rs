@@ -41,7 +41,7 @@ use crate::{Rocket, Ignite};
 ///
 /// # use rocket::{Config, error::ErrorKind};
 /// # rocket::async_test(async {
-/// #    let result = rocket().configure(Config::debug_default()).ignite().await;
+/// #    let result = rocket().reconfigure(Config::debug_default()).ignite().await;
 /// #    assert!(matches!(result.unwrap_err().kind(), ErrorKind::SentinelAborts(..)));
 /// # })
 /// ```
@@ -76,7 +76,7 @@ use crate::{Rocket, Ignite};
 ///
 /// # use rocket::{Config, error::ErrorKind};
 /// # rocket::async_test(async {
-/// #    rocket().configure(Config::debug_default()).ignite().await.unwrap();
+/// #    rocket().reconfigure(Config::debug_default()).ignite().await.unwrap();
 /// # })
 /// ```
 ///

@@ -75,7 +75,7 @@ fn validate_profiles(profiles: &[&str]) {
         };
 
         let figment = Config::figment().merge(config).select(profile);
-        let client = Client::tracked_secure(super::rocket().configure(figment)).unwrap();
+        let client = Client::tracked_secure(super::rocket().reconfigure(figment)).unwrap();
         let response = client.get("/").dispatch();
         assert_eq!(response.into_string().unwrap(), "Hello, world!");
 

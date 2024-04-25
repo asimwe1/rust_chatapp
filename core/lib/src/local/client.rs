@@ -141,7 +141,7 @@ macro_rules! pub_client_impl {
             .merge((config::Config::LOG_LEVEL, config::LogLevel::Debug))
             .select(config::Config::DEBUG_PROFILE);
 
-        Self::tracked(rocket.configure(figment)) $(.$suffix)?
+        Self::tracked(rocket.reconfigure(figment)) $(.$suffix)?
     }
 
     /// Returns a reference to the `Rocket` this client is creating requests
