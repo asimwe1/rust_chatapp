@@ -129,12 +129,19 @@ impl Route {
         // Emit a warning if a `data` param was supplied for non-payload methods.
         if let Some(ref data) = attr.data {
             let lint = Lint::DubiousPayload;
-            if !attr.method.0.supports_payload() && lint.enabled(handler.span()) {
-                // FIXME(diag: warning)
-                data.full_span.warning("`data` used with non-payload-supporting method")
-                    .note(format!("'{}' does not typically support payloads", attr.method.0))
-                    .note(lint.how_to_suppress())
-                    .emit_as_item_tokens();
+            match attr.method.0.allows_request_body() {
+                None if lint.enabled(handler.span()) => {
+                    data.full_span.warning("`data` used with non-payload-supporting method")
+                        .note(format!("'{}' does not typically support payloads", attr.method.0))
+                        .note(lint.how_to_suppress())
+                        .emit_as_item_tokens();
+                }
+                Some(false) => {
+                    diags.push(data.full_span
+                        .error("`data` cannot be used on this route")
+                        .span_note(attr.method.span, "method does not support request payloads"))
+                }
+                _ => { /* okay */ },
             }
         }
 

@@ -59,11 +59,8 @@ impl Rocket<Orbit> {
     ) -> RequestToken {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
-        let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
-        let peek_buffer = data.peek(max_len).await;
-        let is_form = req.content_type().map_or(false, |ct| ct.is_form());
-
-        if is_form && req.method() == Method::Post && peek_buffer.len() >= min_len {
+        if req.method() == Method::Post && req.content_type().map_or(false, |v| v.is_form()) {
+            let peek_buffer = data.peek(32).await;
             let method = std::str::from_utf8(peek_buffer).ok()
                 .and_then(|raw_form| Form::values(raw_form).next())
                 .filter(|field| field.name == "_method")

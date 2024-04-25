@@ -199,13 +199,12 @@ fn formats_match(route: &Route, req: &Request<'_>) -> bool {
         None => return true,
     };
 
-    if route.method.supports_payload() {
-        match req.format() {
+    match route.method.allows_request_body() {
+        Some(true) => match req.format() {
             Some(f) if f.specificity() == 2 => route_format.collides_with(f),
             _ => false
-        }
-    } else {
-        match req.format() {
+        },
+        _ => match req.format() {
             Some(f) => route_format.collides_with(f),
             None => true
         }
@@ -287,7 +286,7 @@ mod tests {
         let client = Client::debug_with(vec![]).expect("client");
         let mut req = client.req(m, "/");
         if let Some(mt_str) = mt1.into() {
-            if m.supports_payload() {
+            if m.allows_request_body() == Some(true) {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
             } else {
                 req.replace_header(mt_str.parse::<Accept>().unwrap());

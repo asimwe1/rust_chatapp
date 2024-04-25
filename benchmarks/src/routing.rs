@@ -62,7 +62,7 @@ fn generate_matching_requests<'c>(client: &'c Client, routes: &[Route]) -> Vec<L
         let uri = format!("/{}?{}", path, query);
         let mut req = client.req(route.method, uri);
         if let Some(ref format) = route.format {
-            if route.method.supports_payload() {
+            if let Some(true) = route.method.allows_request_body() {
                 req.add_header(ContentType::from(format.clone()));
             } else {
                 req.add_header(Accept::from(format.clone()));

@@ -656,10 +656,20 @@ impl<'r> Request<'r> {
 
     /// Returns the media type "format" of the request.
     ///
-    /// The "format" of a request is either the Content-Type, if the request
-    /// methods indicates support for a payload, or the preferred media type in
-    /// the Accept header otherwise. If the method indicates no payload and no
-    /// Accept header is specified, a media type of `Any` is returned.
+    /// The returned `MediaType` is derived from either the `Content-Type` or
+    /// the `Accept` header of the request, based on whether the request's
+    /// method allows a body (see [`Method::allows_request_body()`]). The table
+    /// below summarized this:
+    ///
+    /// | Method Allows Body | Returned Format                 |
+    /// |--------------------|---------------------------------|
+    /// | Always             | `Option<ContentType>`           |
+    /// | Maybe or Never     | `Some(Preferred Accept or Any)` |
+    ///
+    /// In short, if the request's method indicates support for a payload, the
+    /// request's `Content-Type` header value, if any, is returned. Otherwise
+    /// the [preferred](Accept::preferred()) `Accept` header value is returned,
+    /// or if none is present, [`Accept::Any`].
     ///
     /// The media type returned from this method is used to match against the
     /// `format` route attribute.
@@ -691,7 +701,7 @@ impl<'r> Request<'r> {
     /// ```
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
-        if self.method().supports_payload() {
+        if self.method().allows_request_body().unwrap_or(false) {
             self.content_type().map(|ct| ct.media_type())
         } else {
             // TODO: Should we be using `accept_first` or `preferred`? Or

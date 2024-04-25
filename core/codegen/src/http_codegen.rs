@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
+use devise::{FromMeta, MetaItem, Result, ext::{Split2, SpanDiagnosticExt}};
 use proc_macro2::{TokenStream, Span};
 
 use crate::{http, attribute::suppress::Lint};
@@ -97,47 +97,34 @@ impl ToTokens for MediaType {
     }
 }
 
-const VALID_METHODS_STR: &str = "`GET`, `PUT`, `POST`, `DELETE`, `HEAD`, \
-    `PATCH`, `OPTIONS`";
-
-const VALID_METHODS: &[http::Method] = &[
-    http::Method::Get, http::Method::Put, http::Method::Post,
-    http::Method::Delete, http::Method::Head, http::Method::Patch,
-    http::Method::Options,
-];
-
 impl FromMeta for Method {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let span = meta.value_span();
-        let help_text = format!("method must be one of: {VALID_METHODS_STR}");
+        let help = format!("known methods: {}", http::Method::ALL.join(", "));
 
-        if let MetaItem::Path(path) = meta {
-            if let Some(ident) = path.last_ident() {
-                let method = ident.to_string().parse()
-                    .map_err(|_| span.error("invalid HTTP method").help(&*help_text))?;
+        let string = meta.path().ok()
+            .and_then(|p| p.get_ident().cloned())
+            .map(|ident| (ident.span(), ident.to_string()))
+            .or_else(|| match meta.lit() {
+                Ok(syn::Lit::Str(s)) => Some((s.span(), s.value())),
+                _ => None
+            });
 
-                if !VALID_METHODS.contains(&method) {
-                    return Err(span.error("invalid HTTP method for route handlers")
-                               .help(&*help_text));
-                }
-
-                return Ok(Method(method));
-            }
+        if let Some((span, string)) = string {
+            string.to_ascii_uppercase()
+                .parse()
+                .map(Method)
+                .map_err(|_| span.error("invalid or unknown HTTP method").help(help))
+        } else {
+            let err = format!("expected method ident or string, found {}", meta.description());
+            Err(span.error(err).help(help))
         }
-
-        Err(span.error(format!("expected identifier, found {}", meta.description()))
-                .help(&*help_text))
     }
 }
 
 impl ToTokens for Method {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let mut chars = self.0.as_str().chars();
-        let variant_str = chars.next()
-            .map(|c| c.to_ascii_uppercase().to_string() + &chars.as_str().to_lowercase())
-            .unwrap_or_default();
-
-        let variant = syn::Ident::new(&variant_str, Span::call_site());
+        let variant = syn::Ident::new(self.0.variant_str(), Span::call_site());
         tokens.extend(quote!(::rocket::http::Method::#variant));
     }
 }

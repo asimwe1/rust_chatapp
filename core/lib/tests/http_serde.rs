@@ -133,7 +133,7 @@ fn method_serde() {
         jail.create_file("Rocket.toml", r#"
             [default]
             mget = "GET"
-            mput = "PuT"
+            mput = "PUT"
             mpost = "post"
         "#)?;
 
