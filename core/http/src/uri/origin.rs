@@ -93,19 +93,19 @@ use crate::{RawStr, RawStrBuf};
 /// `Origin` is both `Serialize` and `Deserialize`:
 ///
 /// ```rust
-/// # #[cfg(feature = "serde")] mod serde {
-/// # use serde_ as serde;
+/// # #[cfg(feature = "serde")] mod serde_impl {
+/// # use serde as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::uri::Origin;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "serde_")]
+/// # #[serde(crate = "serde")]
 /// struct UriOwned {
 ///     uri: Origin<'static>,
 /// }
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "serde_")]
+/// # #[serde(crate = "serde")]
 /// struct UriBorrowed<'a> {
 ///     uri: Origin<'a>,
 /// }

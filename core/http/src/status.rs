@@ -100,13 +100,13 @@ impl StatusClass {
 /// range `[100, 600)` is allowed to deserialize into a `Status`.`
 ///
 /// ```rust
-/// # #[cfg(feature = "serde")] mod serde {
-/// # use serde_ as serde;
+/// # #[cfg(feature = "serde")] mod serde_impl {
+/// # use serde as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::Status;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "serde_")]
+/// # #[serde(crate = "serde")]
 /// struct Foo {
 ///     status: Status,
 /// }
@@ -381,11 +381,11 @@ impl Ord for Status {
 }
 
 #[cfg(feature = "serde")]
-mod serde {
+mod serde_impl {
     use super::*;
 
-    use serde_::ser::{Serialize, Serializer};
-    use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
+    use serde::ser::{Serialize, Serializer};
+    use serde::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
     impl Serialize for Status {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

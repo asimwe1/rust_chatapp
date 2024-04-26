@@ -51,19 +51,19 @@ use crate::parse::{Extent, IndexedStr};
 /// `Reference` is both `Serialize` and `Deserialize`:
 ///
 /// ```rust
-/// # #[cfg(feature = "serde")] mod serde {
-/// # use serde_ as serde;
+/// # #[cfg(feature = "serde")] mod serde_impl {
+/// # use serde as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::uri::Reference;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "serde_")]
+/// # #[serde(crate = "serde")]
 /// struct UriOwned {
 ///     uri: Reference<'static>,
 /// }
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "serde_")]
+/// # #[serde(crate = "serde")]
 /// struct UriBorrowed<'a> {
 ///     uri: Reference<'a>,
 /// }

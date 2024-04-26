@@ -73,13 +73,12 @@ macro_rules! define_methods {
         /// from either `"GET"` or `"get"` but not `"GeT"`.
         ///
         /// ```rust
-        /// # #[cfg(feature = "serde")] mod serde {
-        /// # use serde_ as serde;
-        /// use serde::{Serialize, Deserialize};
+        /// # #[cfg(feature = "serde")] mod serde_impl {
         /// use rocket::http::Method;
+        /// use rocket::serde::{Serialize, Deserialize};
         ///
         /// #[derive(Deserialize, Serialize)]
-        /// # #[serde(crate = "serde_")]
+        /// #[serde(crate = "rocket::serde")]
         /// struct Foo {
         ///     method: Method,
         /// }
@@ -357,11 +356,11 @@ impl PartialEq<Method> for &Method {
 }
 
 #[cfg(feature = "serde")]
-mod serde {
+mod serde_impl {
     use super::*;
 
-    use serde_::ser::{Serialize, Serializer};
-    use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
+    use serde::ser::{Serialize, Serializer};
+    use serde::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
     impl Serialize for Method {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

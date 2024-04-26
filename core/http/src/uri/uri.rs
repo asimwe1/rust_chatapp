@@ -365,13 +365,13 @@ impl_uri_from!(Asterisk);
 macro_rules! impl_serde {
     ($T:ty, $expected:literal) => {
         #[cfg(feature = "serde")]
-        mod serde {
+        mod serde_impl {
             use std::fmt;
             use std::marker::PhantomData;
             use super::*;
 
-            use serde_::ser::{Serialize, Serializer};
-            use serde_::de::{Deserialize, Deserializer, Error, Visitor};
+            use serde::ser::{Serialize, Serializer};
+            use serde::de::{Deserialize, Deserializer, Error, Visitor};
 
             impl<'a> Serialize for $T {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

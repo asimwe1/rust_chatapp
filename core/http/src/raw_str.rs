@@ -901,8 +901,8 @@ impl RawStr {
 }
 
 #[cfg(feature = "serde")]
-mod serde {
-    use serde_::{ser, de, Serialize, Deserialize};
+mod serde_impl {
+    use serde::{ser, de, Serialize, Deserialize};
 
     use super::*;
 

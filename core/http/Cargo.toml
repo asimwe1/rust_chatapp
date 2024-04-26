@@ -17,8 +17,8 @@ rust-version = "1.75"
 
 [features]
 default = []
-serde = ["uncased/with-serde-alloc", "serde_"]
-uuid = ["uuid_"]
+serde = ["dep:serde", "uncased/with-serde-alloc"]
+uuid = ["dep:uuid"]
 
 [lints.clippy]
 module_inception = "allow"
@@ -39,15 +39,13 @@ stable-pattern = "0.1"
 cookie = { version = "0.18", features = ["percent-encode"] }
 state = "0.6"
 
-[dependencies.serde_]
-package = "serde"
+[dependencies.serde]
 version = "1.0"
 optional = true
 default-features = false
 features = ["std"]
 
-[dependencies.uuid_]
-package = "uuid"
+[dependencies.uuid]
 version = "1"
 optional = true
 default-features = false
