@@ -65,6 +65,8 @@ jobs:
         if: matrix.platform.name == 'macOS'
         run: |
             brew install mysql-client libpq sqlite coreutils
+            brew link --force --overwrite mysql-client
+            brew link --force --overwrite libpq
             echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
 
       # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
