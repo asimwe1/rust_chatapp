@@ -2,25 +2,25 @@
 
 struct Q;
 
-#[get("/<foo>")]
-fn f0(foo: Q) {}
+#[get("/<_foo>")]
+fn f0(_foo: Q) {}
 
-#[get("/<foo..>")]
-fn f1(foo: Q) {}
+#[get("/<_foo..>")]
+fn f1(_foo: Q) {}
 
-#[get("/?<foo>")]
-fn f2(foo: Q) {}
+#[get("/?<_foo>")]
+fn f2(_foo: Q) {}
 
-#[get("/?<foo..>")]
-fn f3(foo: Q) {}
+#[get("/?<_foo..>")]
+fn f3(_foo: Q) {}
 
-#[post("/", data = "<foo>")]
-fn f4(foo: Q) {}
+#[post("/", data = "<_foo>")]
+fn f4(_foo: Q) {}
 
-#[get("/<foo>")]
-fn f5(a: Q, foo: Q) {}
+#[get("/<_foo>")]
+fn f5(_a: Q, _foo: Q) {}
 
-#[get("/<foo>/other/<bar>/<good>/okay")]
-fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+#[get("/<_foo>/other/<_bar>/<_good>/okay")]
+fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
 
 fn main() {  }

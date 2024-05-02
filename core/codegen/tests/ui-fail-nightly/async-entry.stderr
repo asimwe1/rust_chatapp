@@ -22,6 +22,7 @@ note: this function is not `main`
    |
 11 |     async fn foo() { }
    |              ^^^
+   = note: apply `#[suppress(arbitrary_main)]` before the item to suppress this lint
    = note: this warning originates in the attribute macro `rocket::main` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: attribute can only be applied to `async` functions
@@ -109,7 +110,15 @@ error[E0728]: `await` is only allowed inside `async` functions and blocks
   --> tests/ui-fail-nightly/async-entry.rs:73:42
    |
 72 |     fn rocket() -> _ {
-   |        ------ this is not `async`
+   |     ---------------- this is not `async`
+73 |         let _ = rocket::build().launch().await;
+   |                                          ^^^^^ only allowed inside `async` functions and blocks
+
+error[E0728]: `await` is only allowed inside `async` functions and blocks
+  --> tests/ui-fail-nightly/async-entry.rs:73:42
+   |
+72 |     fn rocket() -> _ {
+   |     ----------- this is not `async`
 73 |         let _ = rocket::build().launch().await;
    |                                          ^^^^^ only allowed inside `async` functions and blocks
 

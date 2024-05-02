@@ -11,15 +11,15 @@ impl r2d2::ManageConnection for Manager {
     type Error = std::convert::Infallible;
 
     fn connect(&self) -> Result<Self::Connection, Self::Error> { Ok(Connection) }
-    fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> { Ok(()) }
-    fn has_broken(&self, conn: &mut Self::Connection) -> bool { true }
+    fn is_valid(&self, _: &mut Self::Connection) -> Result<(), Self::Error> { Ok(()) }
+    fn has_broken(&self, _: &mut Self::Connection) -> bool { true }
 }
 
 impl Poolable for Connection {
     type Manager = Manager;
     type Error = std::convert::Infallible;
 
-    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
+    fn pool(_: &str, _: &Rocket<Build>) -> PoolResult<Self> {
         todo!()
     }
 }

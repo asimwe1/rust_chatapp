@@ -185,6 +185,7 @@ warning: `segment` starts with `<` but does not end with `>`
    |                    ^^^^
    |
    = help: perhaps you meant the dynamic parameter `<foo>`?
+   = note: apply `#[suppress(segment_chars)]` before the item to suppress this lint
 
 error: unexpected static parameter
   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:80:20
@@ -224,6 +225,7 @@ warning: `segment` starts with `<` but does not end with `>`
    |         ^^^^^
    |
    = help: perhaps you meant the dynamic parameter `<id>`?
+   = note: apply `#[suppress(segment_chars)]` before the item to suppress this lint
 
 warning: `segment` starts with `<` but does not end with `>`
   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:99:9
@@ -232,6 +234,7 @@ warning: `segment` starts with `<` but does not end with `>`
    |         ^^^^^^^^
    |
    = help: perhaps you meant the dynamic parameter `<id>`?
+   = note: apply `#[suppress(segment_chars)]` before the item to suppress this lint
 
 warning: `segment` starts with `<` but does not end with `>`
    --> tests/ui-fail-nightly/route-path-bad-syntax.rs:102:9
@@ -240,3 +243,4 @@ warning: `segment` starts with `<` but does not end with `>`
     |         ^^^^^^^^
     |
     = help: perhaps you meant the dynamic parameter `<name>`?
+    = note: apply `#[suppress(segment_chars)]` before the item to suppress this lint

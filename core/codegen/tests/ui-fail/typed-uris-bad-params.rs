@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 #[macro_use] extern crate rocket;
 
 use rocket::http::CookieJar;

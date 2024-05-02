@@ -27,6 +27,6 @@ fn e5(_request: &Request) { }
 fn e5(_request: &Request) { }
 
 #[catch(404)]
-fn f3(_request: &Request, other: bool) { }
+fn f3(_request: &Request, _other: bool) { }
 
 fn main() { }

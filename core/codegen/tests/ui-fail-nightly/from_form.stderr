@@ -521,7 +521,7 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
    --> tests/ui-fail-nightly/from_form.rs:209:23
     |
 209 |     #[field(default = "no conversion")]
-    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`
+    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`, which is required by `&str: Into<_>`
     |
     = help: the following other types implement trait `From<T>`:
               <bool as From<format_description::parse::format_item::HourBase>>

@@ -150,4 +150,4 @@ error: route expects 2 parameters but 0 were supplied
 13 |     uri!(simple,);
    |          ^^^^^^
    |
-   = note: route `simple` has uri "/<id>/<name>"
+   = note: route `simple` has uri "/<_id>/<_name>"

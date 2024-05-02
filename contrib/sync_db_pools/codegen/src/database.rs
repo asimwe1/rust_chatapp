@@ -73,15 +73,16 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let rocket = quote!(#root::rocket);
 
     let request_guard_type = quote_spanned! { span =>
-        #(#attrs)* #vis struct #guard_type(#root::Connection<Self, #conn_type>);
+        #(#attrs)* #vis struct #guard_type(#[allow(dead_code)] #root::Connection<Self, #conn_type>);
     };
 
     let pool = quote_spanned!(span => #root::ConnectionPool<Self, #conn_type>);
     let conn = quote_spanned!(span => #root::Connection<Self, #conn_type>);
 
-    Ok(quote! {
+    Ok(quote_spanned! { span =>
         #request_guard_type
 
+        #[allow(dead_code)]
         impl #guard_type {
             /// Returns a fairing that initializes the database connection pool.
             pub fn fairing() -> impl #rocket::fairing::Fairing {

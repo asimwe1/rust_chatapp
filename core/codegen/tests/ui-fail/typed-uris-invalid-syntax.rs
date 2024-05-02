@@ -3,8 +3,8 @@
 #[get("/")]
 fn index() {  }
 
-#[post("/<id>/<name>")]
-fn simple(id: i32, name: String) -> &'static str { "" }
+#[post("/<_id>/<_name>")]
+fn simple(_id: i32, _name: String) -> &'static str { "" }
 
 fn main() {
     uri!(simple: id = 100, "Hello");

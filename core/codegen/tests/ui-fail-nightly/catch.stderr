@@ -65,16 +65,16 @@ error: unexpected attribute parameter: `message`
 error[E0308]: arguments to this function are incorrect
   --> tests/ui-fail-nightly/catch.rs:30:4
    |
-30 | fn f3(_request: &Request, other: bool) { }
-   |    ^^           --------         ---- an argument of type `bool` is missing
+30 | fn f3(_request: &Request, _other: bool) { }
+   |    ^^           --------          ---- an argument of type `bool` is missing
    |                 |
    |                 unexpected argument of type `Status`
    |
 note: function defined here
   --> tests/ui-fail-nightly/catch.rs:30:4
    |
-30 | fn f3(_request: &Request, other: bool) { }
-   |    ^^ ------------------  -----------
+30 | fn f3(_request: &Request, _other: bool) { }
+   |    ^^ ------------------  ------------
 help: provide the argument
    |
 29 | f3(bool, /* bool */)

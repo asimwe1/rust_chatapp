@@ -5,7 +5,6 @@ mod sqlite_shutdown_test {
     use rocket_sync_db_pools::database;
 
     #[database("test")]
-    #[allow(dead_code)]
     struct Pool(diesel::SqliteConnection);
 
     async fn rocket() -> Rocket<Build> {
