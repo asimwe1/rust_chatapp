@@ -3,6 +3,7 @@
 use std::{fmt, io};
 use std::num::{ParseIntError, ParseFloatError};
 use std::str::{Utf8Error, ParseBoolError};
+use std::char::ParseCharError;
 use std::net::AddrParseError;
 use std::borrow::Cow;
 
@@ -200,6 +201,8 @@ pub enum ErrorKind<'v> {
     Multipart(multer::Error),
     /// A string was invalid UTF-8.
     Utf8(Utf8Error),
+    /// A value failed to parse as a char.
+    Char(ParseCharError),
     /// A value failed to parse as an integer.
     Int(ParseIntError),
     /// A value failed to parse as a boolean.
@@ -857,6 +860,7 @@ impl fmt::Display for ErrorKind<'_> {
             ErrorKind::Custom(_, e) => e.fmt(f)?,
             ErrorKind::Multipart(e) => write!(f, "invalid multipart: {}", e)?,
             ErrorKind::Utf8(e) => write!(f, "invalid UTF-8: {}", e)?,
+            ErrorKind::Char(e) => write!(f, "invalid character: {}", e)?,
             ErrorKind::Int(e) => write!(f, "invalid integer: {}", e)?,
             ErrorKind::Bool(e) => write!(f, "invalid boolean: {}", e)?,
             ErrorKind::Float(e) => write!(f, "invalid float: {}", e)?,
@@ -885,6 +889,7 @@ impl crate::http::ext::IntoOwned for ErrorKind<'_> {
             Custom(s, e) => Custom(s, e),
             Multipart(e) => Multipart(e),
             Utf8(e) => Utf8(e),
+            Char(e) => Char(e),
             Int(e) => Int(e),
             Bool(e) => Bool(e),
             Float(e) => Float(e),
@@ -985,6 +990,7 @@ macro_rules! impl_from_for {
 
 impl_from_for!(<'a> Utf8Error => ErrorKind<'a> as Utf8);
 impl_from_for!(<'a> ParseIntError => ErrorKind<'a> as Int);
+impl_from_for!(<'a> ParseCharError => ErrorKind<'a> as Char);
 impl_from_for!(<'a> ParseFloatError => ErrorKind<'a> as Float);
 impl_from_for!(<'a> ParseBoolError => ErrorKind<'a> as Bool);
 impl_from_for!(<'a> AddrParseError => ErrorKind<'a> as Addr);
@@ -1024,6 +1030,7 @@ impl Entity {
             | ErrorKind::OutOfRange { .. }
             | ErrorKind::Validation { .. }
             | ErrorKind::Utf8(_)
+            | ErrorKind::Char(_)
             | ErrorKind::Int(_)
             | ErrorKind::Float(_)
             | ErrorKind::Bool(_)

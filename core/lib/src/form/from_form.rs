@@ -102,29 +102,33 @@ use crate::http::uncased::AsUncased;
 /// applications will never need a custom implementation of `FromForm` or
 /// `FromFormField`. Their behavior is documented in the table below.
 ///
-/// | Type               | Strategy    | Default           | Data   | Value  | Notes                                              |
-/// |--------------------|-------------|-------------------|--------|--------|----------------------------------------------------|
-/// | [`Strict<T>`]      | **strict**  | if `strict` `T`   | if `T` | if `T` | `T: FromForm`                                      |
-/// | [`Lenient<T>`]     | **lenient** | if `lenient` `T`  | if `T` | if `T` | `T: FromForm`                                      |
-/// | `Option<T>`        | **strict**  | `None`            | if `T` | if `T` | Infallible, `T: FromForm`                          |
-/// | [`Result<T>`]      | _inherit_   | `T::finalize()`   | if `T` | if `T` | Infallible, `T: FromForm`                          |
-/// | `Vec<T>`           | _inherit_   | `vec![]`          | if `T` | if `T` | `T: FromForm`                                      |
-/// | [`HashMap<K, V>`]  | _inherit_   | `HashMap::new()`  | if `V` | if `V` | `K: FromForm + Eq + Hash`, `V: FromForm`           |
-/// | [`BTreeMap<K, V>`] | _inherit_   | `BTreeMap::new()` | if `V` | if `V` | `K: FromForm + Ord`, `V: FromForm`                 |
-/// | `bool`             | _inherit_   | `false`           | No     | Yes    | `"yes"/"on"/"true"`, `"no"/"off"/"false"`          |
-/// | (un)signed int     | _inherit_   | **no default**    | No     | Yes    | `{u,i}{size,8,16,32,64,128}`                       |
-/// | _nonzero_ int      | _inherit_   | **no default**    | No     | Yes    | `NonZero{I,U}{size,8,16,32,64,128}`                |
-/// | float              | _inherit_   | **no default**    | No     | Yes    | `f{32,64}`                                         |
-/// | `&str`             | _inherit_   | **no default**    | Yes    | Yes    | Percent-decoded. Data limit `string` applies.      |
-/// | `&[u8]`            | _inherit_   | **no default**    | Yes    | Yes    | Raw bytes. Data limit `bytes` applies.             |
-/// | `String`           | _inherit_   | **no default**    | Yes    | Yes    | Exactly `&str`, but owned. Prefer `&str`.          |
-/// | IP Address         | _inherit_   | **no default**    | No     | Yes    | [`IpAddr`], [`Ipv4Addr`], [`Ipv6Addr`]             |
-/// | Socket Address     | _inherit_   | **no default**    | No     | Yes    | [`SocketAddr`], [`SocketAddrV4`], [`SocketAddrV6`] |
-/// | [`TempFile`]       | _inherit_   | **no default**    | Yes    | Yes    | Data limits apply. See [`TempFile`].               |
-/// | [`Capped<C>`]      | _inherit_   | **no default**    | Yes    | Yes    | `C` is `&str`, `String`, `&[u8]` or `TempFile`.    |
-/// | [`time::Date`]     | _inherit_   | **no default**    | No     | Yes    | `%F` (`YYYY-MM-DD`). HTML "date" input.            |
-/// | [`time::DateTime`] | _inherit_   | **no default**    | No     | Yes    | `%FT%R` or `%FT%T` (`YYYY-MM-DDTHH:MM[:SS]`)       |
-/// | [`time::Time`]     | _inherit_   | **no default**    | No     | Yes    | `%R` or `%T` (`HH:MM[:SS]`)                        |
+/// | Type                   | Strategy    | Default           | Data   | Value  | Notes                                              |
+/// |------------------------|-------------|-------------------|--------|--------|----------------------------------------------------|
+/// | [`Strict<T>`]          | **strict**  | if `strict` `T`   | if `T` | if `T` | `T: FromForm`                                      |
+/// | [`Lenient<T>`]         | **lenient** | if `lenient` `T`  | if `T` | if `T` | `T: FromForm`                                      |
+/// | `Option<T>`            | **strict**  | `None`            | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | [`Result<T>`]          | _inherit_   | `T::finalize()`   | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | `Vec<T>`               | _inherit_   | `vec![]`          | if `T` | if `T` | `T: FromForm`                                      |
+/// | [`HashMap<K, V>`]      | _inherit_   | `HashMap::new()`  | if `V` | if `V` | `K: FromForm + Eq + Hash`, `V: FromForm`           |
+/// | [`BTreeMap<K, V>`]     | _inherit_   | `BTreeMap::new()` | if `V` | if `V` | `K: FromForm + Ord`, `V: FromForm`                 |
+/// | [`Range<T>`]           | _inherit_   | **no default**    | if `T` | if `T` | `T: FromForm`, expects `start`, `end` fields       |
+/// | [`RangeFrom<T>`]       | _inherit_   | **no default**    | if `T` | if `T` | `T: FromForm`, expects `start` field               |
+/// | [`RangeTo<T>`]         | _inherit_   | **no default**    | if `T` | if `T` | `T: FromForm`, expects `end` field                 |
+/// | [`RangeToInclusive<T>`]| _inherit_   | **no default**    | if `T` | if `T` | `T: FromForm`, expects `end` field                 |
+/// | `bool`                 | _inherit_   | `false`           | No     | Yes    | `"yes"/"on"/"true"`, `"no"/"off"/"false"`          |
+/// | (un)signed int         | _inherit_   | **no default**    | No     | Yes    | `{u,i}{size,8,16,32,64,128}`                       |
+/// | _nonzero_ int          | _inherit_   | **no default**    | No     | Yes    | `NonZero{I,U}{size,8,16,32,64,128}`                |
+/// | float                  | _inherit_   | **no default**    | No     | Yes    | `f{32,64}`                                         |
+/// | `&str`                 | _inherit_   | **no default**    | Yes    | Yes    | Percent-decoded. Data limit `string` applies.      |
+/// | `&[u8]`                | _inherit_   | **no default**    | Yes    | Yes    | Raw bytes. Data limit `bytes` applies.             |
+/// | `String`               | _inherit_   | **no default**    | Yes    | Yes    | Exactly `&str`, but owned. Prefer `&str`.          |
+/// | IP Address             | _inherit_   | **no default**    | No     | Yes    | [`IpAddr`], [`Ipv4Addr`], [`Ipv6Addr`]             |
+/// | Socket Address         | _inherit_   | **no default**    | No     | Yes    | [`SocketAddr`], [`SocketAddrV4`], [`SocketAddrV6`] |
+/// | [`TempFile`]           | _inherit_   | **no default**    | Yes    | Yes    | Data limits apply. See [`TempFile`].               |
+/// | [`Capped<C>`]          | _inherit_   | **no default**    | Yes    | Yes    | `C` is `&str`, `String`, `&[u8]` or `TempFile`.    |
+/// | [`time::Date`]         | _inherit_   | **no default**    | No     | Yes    | `%F` (`YYYY-MM-DD`). HTML "date" input.            |
+/// | [`time::DateTime`]     | _inherit_   | **no default**    | No     | Yes    | `%FT%R` or `%FT%T` (`YYYY-MM-DDTHH:MM[:SS]`)       |
+/// | [`time::Time`]         | _inherit_   | **no default**    | No     | Yes    | `%R` or `%T` (`HH:MM[:SS]`)                        |
 ///
 /// [`Result<T>`]: crate::form::Result
 /// [`Strict<T>`]: crate::form::Strict
@@ -140,6 +144,10 @@ use crate::http::uncased::AsUncased;
 /// [`SocketAddr`]: std::net::SocketAddr
 /// [`SocketAddrV4`]: std::net::SocketAddrV4
 /// [`SocketAddrV6`]: std::net::SocketAddrV6
+/// [`Range<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.Range.html
+/// [`RangeFrom<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.RangeFrom.html
+/// [`RangeTo<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.RangeTo.html
+/// [`RangeToInclusive<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.RangeToInclusive.html
 ///
 /// ## Additional Notes
 ///
@@ -931,3 +939,51 @@ impl<'v, T: FromForm<'v> + Sync> FromForm<'v> for Arc<T> {
         T::finalize(this).map(Arc::new)
     }
 }
+
+macro_rules! impl_via_proxy {
+    ($R:ident => struct $T:ident <$($G:ident),*> { $($f:ident : $F:ident),* }) => {
+        const _: () = {
+            use super::*;
+
+            mod proxy {
+                #[derive(rocket::FromForm)]
+                pub struct $T<$($G),*> {
+                    $(pub $f : $F),*
+                }
+            }
+
+            #[crate::async_trait]
+            impl<'v, $($G: Send),*> FromForm<'v> for $R<$($G),*>
+                where proxy::$T<$($G),*>: FromForm<'v>
+            {
+                type Context = <proxy::$T<$($G),*> as FromForm<'v>>::Context;
+
+                fn init(opts: Options) -> Self::Context {
+                    <proxy::$T<$($G),*>>::init(opts)
+                }
+
+                fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
+                    <proxy::$T<$($G),*>>::push_value(ctxt, field)
+                }
+
+                async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
+                    <proxy::$T<$($G),*>>::push_data(ctxt, field).await
+                }
+
+                fn finalize(this: Self::Context) -> Result<'v, Self> {
+                    let proxy = <proxy::$T<$($G),*>>::finalize(this)?;
+                    Ok($R {
+                        $($f : proxy.$f),*
+                    })
+                }
+            }
+        };
+    }
+}
+
+use std::ops::{Range, RangeFrom, RangeTo, RangeToInclusive};
+
+impl_via_proxy!(Range => struct Range<T> { start: T, end: T });
+impl_via_proxy!(RangeFrom => struct RangeFrom<T> { start: T });
+impl_via_proxy!(RangeTo => struct RangeTo<T> { end: T });
+impl_via_proxy!(RangeToInclusive => struct RangeToInclusive<T> { end: T });

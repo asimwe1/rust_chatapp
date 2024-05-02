@@ -391,6 +391,7 @@ macro_rules! impl_with_parse {
 }
 
 impl_with_parse!(
+    char,
     f32, f64,
     isize, i8, i16, i32, i64, i128,
     usize, u8, u16, u32, u64, u128,
@@ -398,7 +399,7 @@ impl_with_parse!(
     NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
     Ipv4Addr, IpAddr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
 );
-//
+
 // Keep formats in sync with 'FromFormField' impls.
 static DATE_FMT: &[FormatItem<'_>] = format_description!("[year padding:none]-[month]-[day]");
 static TIME_FMT1: &[FormatItem<'_>] = format_description!("[hour padding:none]:[minute]:[second]");
