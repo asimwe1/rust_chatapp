@@ -9,6 +9,14 @@ use quote::{ToTokens, TokenStreamExt};
 use crate::syn_ext::IdentExt;
 use crate::name::Name;
 
+macro_rules! quote_spanned {
+    ($span:expr => $($token:tt)*) => (
+        quote::quote_spanned!(
+            proc_macro2::Span::call_site().located_at($span) => $($token)*
+        )
+    )
+}
+
 #[derive(Debug)]
 pub enum FieldName {
     Cased(Name),

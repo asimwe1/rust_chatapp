@@ -6,36 +6,43 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
   |
   = help: the following other types implement trait `FromFormField<'v>`:
             bool
+            char
             isize
             i8
             i16
             i32
             i64
             i128
-            usize
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
 
 error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
  --> tests/ui-fail-stable/from_form_type_errors.rs:5:10
   |
-5 | #[derive(FromForm)]
-  |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
+5 |   #[derive(FromForm)]
+  |            ^-------
+  |            |
+  |  __________in this derive macro expansion
+  | |
+6 | | struct BadType3 {
+  | |_______________^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
   |
   = help: the following other types implement trait `FromFormField<'v>`:
             bool
+            char
             isize
             i8
             i16
             i32
             i64
             i128
-            usize
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
 note: required because it appears within the type `_::FromFormGeneratedContext<'r>`
  --> tests/ui-fail-stable/from_form_type_errors.rs:6:8
   |
+5 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
 6 | struct BadType3 {
   |        ^^^^^^^^
 note: required by a bound in `rocket::form::FromForm::Context`
@@ -53,36 +60,43 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
    |
    = help: the following other types implement trait `FromFormField<'v>`:
              bool
+             char
              isize
              i8
              i16
              i32
              i64
              i128
-             usize
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
 
 error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:12:10
    |
-12 | #[derive(FromForm)]
-   |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
+12 |   #[derive(FromForm)]
+   |            ^-------
+   |            |
+   |  __________in this derive macro expansion
+   | |
+13 | | struct Other {
+   | |____________^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
    |
    = help: the following other types implement trait `FromFormField<'v>`:
              bool
+             char
              isize
              i8
              i16
              i32
              i64
              i128
-             usize
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
 note: required because it appears within the type `_::FromFormGeneratedContext<'r>`
   --> tests/ui-fail-stable/from_form_type_errors.rs:13:8
    |
+12 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
 13 | struct Other {
    |        ^^^^^
 note: required by a bound in `rocket::form::FromForm::Context`
@@ -100,56 +114,56 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
   |
   = help: the following other types implement trait `FromFormField<'v>`:
             bool
+            char
             isize
             i8
             i16
             i32
             i64
             i128
-            usize
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
- --> tests/ui-fail-stable/from_form_type_errors.rs:7:5
-  |
-7 |     field: Unknown,
-  |     ^^^^^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
-  |
-  = help: the following other types implement trait `FromFormField<'v>`:
-            bool
-            isize
-            i8
-            i16
-            i32
-            i64
-            i128
-            usize
-          and $N others
-  = note: required for `Unknown` to implement `FromForm<'r>`
-
-error[E0277]: the trait bound `Unknown: FromFormField<'r>` is not satisfied
+error[E0277]: the trait bound `Unknown: FromForm<'r>` is not satisfied
  --> tests/ui-fail-stable/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'r>` is not implemented for `Unknown`
+  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |
+  = help: the following other types implement trait `FromForm<'r>`:
+            <BadType3 as FromForm<'r>>
+            <Other as FromForm<'r>>
+            <HashMap<K, V> as FromForm<'v>>
+            <BTreeMap<K, V> as FromForm<'v>>
+            <Arc<T> as FromForm<'v>>
+            <form::from_form::_::proxy::Range<T> as FromForm<'r>>
+            <form::from_form::_::proxy::RangeFrom<T> as FromForm<'r>>
+            <form::from_form::_::proxy::RangeTo<T> as FromForm<'r>>
+          and $N others
+  = note: required for `Unknown` to implement `FromForm<'r>`
+
+error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
+ --> tests/ui-fail-stable/from_form_type_errors.rs:7:12
+  |
+5 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
+6 | struct BadType3 {
+7 |     field: Unknown,
+  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
   |
   = help: the following other types implement trait `FromFormField<'v>`:
             bool
+            char
             isize
             i8
             i16
             i32
             i64
             i128
-            usize
           and $N others
-note: required by a bound in `FromFieldContext`
- --> $WORKSPACE/core/lib/src/form/from_form_field.rs
-  |
-  | pub struct FromFieldContext<'v, T: FromFormField<'v>> {
-  |                                    ^^^^^^^^^^^^^^^^^ required by this bound in `FromFieldContext`
+  = note: required for `Unknown` to implement `FromForm<'r>`
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:12:10
@@ -159,53 +173,53 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
    |
    = help: the following other types implement trait `FromFormField<'v>`:
              bool
+             char
              isize
              i8
              i16
              i32
              i64
              i128
-             usize
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
-  --> tests/ui-fail-stable/from_form_type_errors.rs:14:5
-   |
-14 |     field: Foo<usize>,
-   |     ^^^^^^^^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
-   |
-   = help: the following other types implement trait `FromFormField<'v>`:
-             bool
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
-             usize
-           and $N others
-   = note: required for `Foo<usize>` to implement `FromForm<'r>`
-
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'r>` is not satisfied
+error[E0277]: the trait bound `Foo<usize>: FromForm<'r>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |
+   = help: the following other types implement trait `FromForm<'r>`:
+             <BadType3 as FromForm<'r>>
+             <Other as FromForm<'r>>
+             <HashMap<K, V> as FromForm<'v>>
+             <BTreeMap<K, V> as FromForm<'v>>
+             <Arc<T> as FromForm<'v>>
+             <form::from_form::_::proxy::Range<T> as FromForm<'r>>
+             <form::from_form::_::proxy::RangeFrom<T> as FromForm<'r>>
+             <form::from_form::_::proxy::RangeTo<T> as FromForm<'r>>
+           and $N others
+   = note: required for `Foo<usize>` to implement `FromForm<'r>`
+
+error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
+  --> tests/ui-fail-stable/from_form_type_errors.rs:14:12
+   |
+12 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+13 | struct Other {
+14 |     field: Foo<usize>,
+   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
    |
    = help: the following other types implement trait `FromFormField<'v>`:
              bool
+             char
              isize
              i8
              i16
              i32
              i64
              i128
-             usize
            and $N others
-note: required by a bound in `FromFieldContext`
-  --> $WORKSPACE/core/lib/src/form/from_form_field.rs
-   |
-   | pub struct FromFieldContext<'v, T: FromFormField<'v>> {
-   |                                    ^^^^^^^^^^^^^^^^^ required by this bound in `FromFieldContext`
+   = note: required for `Foo<usize>` to implement `FromForm<'r>`
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

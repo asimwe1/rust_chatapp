@@ -379,6 +379,9 @@ note: error occurred while deriving `FromForm`
 error: duplicate default field expression
    --> tests/ui-fail-nightly/from_form.rs:184:23
     |
+181 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 184 |     #[field(default = 2)]
     |                       ^
     |
@@ -393,6 +396,9 @@ note: error occurred while deriving `FromForm`
 error: duplicate default expressions
    --> tests/ui-fail-nightly/from_form.rs:190:23
     |
+188 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+189 | struct Default3 {
 190 |     #[field(default = 1, default_with = None)]
     |                       ^
     |
@@ -412,6 +418,9 @@ note: error occurred while deriving `FromForm`
 error: duplicate default expressions
    --> tests/ui-fail-nightly/from_form.rs:197:23
     |
+194 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 197 |     #[field(default = 1)]
     |                       ^
     |
@@ -487,6 +496,9 @@ error[E0308]: mismatched types
 help: the type constructed contains `{integer}` due to the type of the argument passed
    --> tests/ui-fail-nightly/from_form.rs:171:23
     |
+169 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+170 | struct Default0 {
 171 |     #[field(default = 123)]
     |                       ^^^ this argument influences the type of `Some`
 note: tuple variant defined here
@@ -494,6 +506,7 @@ note: tuple variant defined here
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:203:33
@@ -520,8 +533,14 @@ note: tuple variant defined here
 error[E0277]: the trait bound `bool: From<&str>` is not satisfied
    --> tests/ui-fail-nightly/from_form.rs:209:23
     |
+207 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+208 | struct Default6 {
 209 |     #[field(default = "no conversion")]
-    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`, which is required by `&str: Into<_>`
+    |                       ^^^^^^^^^^^^^^^
+    |                       |
+    |                       the trait `From<&str>` is not implemented for `bool`, which is required by `&str: Into<_>`
+    |                       this tail expression is of type `&str`
     |
     = help: the following other types implement trait `From<T>`:
               <bool as From<format_description::parse::format_item::HourBase>>
@@ -533,3 +552,4 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
               <bool as From<format_description::parse::format_item::WeekdayOneIndexed>>
               <bool as From<format_description::parse::format_item::YearBase>>
     = note: required for `&str` to implement `Into<bool>`
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

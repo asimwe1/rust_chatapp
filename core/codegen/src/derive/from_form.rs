@@ -4,10 +4,19 @@ use syn::parse::Parser;
 use devise::*;
 
 use crate::exports::*;
-use crate::derive::form_field::{*, FieldName::*};
+use crate::derive::form_field::FieldName::*;
+use crate::derive::form_field::{FieldExt, default, first_duplicate, validators};
 use crate::syn_ext::{GenericsExt as _, TypeExt as _};
 
 type WherePredicates = syn::punctuated::Punctuated<syn::WherePredicate, syn::Token![,]>;
+
+macro_rules! quote_spanned {
+    ($span:expr => $($token:tt)*) => (
+        quote::quote_spanned!(
+            proc_macro2::Span::call_site().located_at($span) => $($token)*
+        )
+    )
+}
 
 // F: fn(field_ty: Ty, field_context: Expr)
 fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
@@ -32,8 +41,8 @@ fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
         }
 
         matchers.extend(field.field_names()?.into_iter().map(|f| match f {
-            Cased(name) => quote!(#name => { #push }),
-            Uncased(name) => quote!(__n if __n.as_uncased() == #name => { #push }),
+            Cased(f) => quote_spanned!(ty.span() => #f => { #push }),
+            Uncased(f) => quote_spanned!(ty.span() => __n if __n.as_uncased() == #f => { #push }),
         }));
     }
 
@@ -192,7 +201,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 let (ctxt_ty, gen) = context_type(input)?;
                 let (_, ty_gen, _) = gen.split_for_impl();
                 let output = mapper::input_default(mapper, input)?;
-                Ok(quote! {
+                Ok(quote_spanned! { ctxt_ty.span() =>
                     async fn push_data(
                         __c: &mut #ctxt_ty #ty_gen,
                         __f: #_form::DataField<'r, '_>
@@ -234,7 +243,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 let ident = fields.iter().map(|f| f.context_ident());
                 let builder = fields.builder(|f| {
                     let ident = f.context_ident();
-                    quote!(#ident.unwrap())
+                    quote_spanned!(ident.span() => #ident.unwrap())
                 });
 
                 Ok(quote_spanned!(fields.span() =>

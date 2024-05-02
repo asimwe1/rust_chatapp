@@ -991,3 +991,50 @@ struct Q<T>(T);
 // This is here to ensure we don't warn, which we can't test with trybuild.
 #[derive(FromForm)]
 pub struct JsonTokenBad<T>(Q<T>);
+
+#[test]
+fn range() {
+    use std::ops::{Range, RangeFrom, RangeTo, RangeToInclusive};
+
+    let range: Range<usize> = strict("start=1&end=2").unwrap();
+    assert_eq!(range, Range { start: 1, end: 2 });
+
+    let range: Range<isize> = strict_encoded("start=-1&end=2").unwrap();
+    assert_eq!(range, Range { start: -1, end: 2 });
+
+    let range: Range<isize> = strict("start=-1&end=-95").unwrap();
+    assert_eq!(range, Range { start: -1, end: -95 });
+
+    let range: Range<isize> = strict_encoded("start=-1&end=-95").unwrap();
+    assert_eq!(range, Range { start: -1, end: -95 });
+
+    let range: RangeFrom<char> = strict("start=a").unwrap();
+    assert_eq!(range, RangeFrom { start: 'a' });
+
+    let range: RangeTo<char> = strict("end=z").unwrap();
+    assert_eq!(range, RangeTo { end: 'z' });
+
+    let range: RangeToInclusive<u8> = strict("end=255").unwrap();
+    assert_eq!(range, RangeToInclusive { end: 255 });
+
+    // now with compound, non-Step values
+    let form_string = &["start.start=0", "start.end=1", "end.start=1", "end.end=2"].join("&");
+    let range: Range<Range<usize>> = strict(&form_string).unwrap();
+    assert_eq!(range, Range {
+        start: Range { start: 0, end : 1},
+        end: Range { start: 1, end : 2 }
+    });
+
+    let form_string = &[
+        "start.description=some%20task",
+        "start.completed=false",
+        "end.description=yet%20more%20work",
+        "end.completed=true",
+    ].join("&");
+
+    let range: Range<TodoTask> = strict_encoded(form_string).unwrap();
+    assert_eq!(range, Range {
+        start: TodoTask { description: "some task".into(), completed: false, },
+        end: TodoTask { description: "yet more work".into(), completed: true, },
+    });
+}
