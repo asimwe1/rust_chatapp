@@ -180,11 +180,14 @@
 //! [default.databases.db_name]
 //! url = "db.sqlite"
 //!
-//! # only `url` is required. the rest have defaults and are thus optional
+//! # Only `url` is required. These have sane defaults and are optional.
 //! min_connections = 64
 //! max_connections = 1024
 //! connect_timeout = 5
 //! idle_timeout = 120
+//!
+//! # This option is only supported by the `sqlx_sqlite` driver.
+//! extensions = ["memvfs", "rot13"]
 //! ```
 //!
 //! Or via environment variables:

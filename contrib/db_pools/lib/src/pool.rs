@@ -281,6 +281,12 @@ mod sqlx {
             *o = std::mem::take(o)
                 .busy_timeout(Duration::from_secs(__config.connect_timeout))
                 .create_if_missing(true);
+
+            if let Some(ref exts) = __config.extensions {
+                for ext in exts {
+                    *o = std::mem::take(o).extension(ext.clone());
+                }
+            }
         }
     }
 

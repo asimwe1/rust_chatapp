@@ -15,11 +15,14 @@ use rocket::serde::{Deserialize, Serialize};
 /// [default.databases.db_name]
 /// url = "/path/to/db.sqlite"
 ///
-/// # only `url` is required. `Initializer` provides defaults for the rest.
+/// # Only `url` is required. These have sane defaults and are optional.
 /// min_connections = 64
 /// max_connections = 1024
 /// connect_timeout = 5
 /// idle_timeout = 120
+///
+/// # This option is only supported by the `sqlx_sqlite` driver.
+/// extensions = ["memvfs", "rot13"]
 /// ```
 ///
 /// Alternatively, a custom provider can be used. For example, a custom `Figment`
@@ -36,6 +39,7 @@ use rocket::serde::{Deserialize, Serialize};
 ///             max_connections: 1024,
 ///             connect_timeout: 3,
 ///             idle_timeout: None,
+///             extensions: None,
 ///         }));
 ///
 ///     rocket::custom(figment)
@@ -45,7 +49,8 @@ use rocket::serde::{Deserialize, Serialize};
 /// For general information on configuration in Rocket, see [`rocket::config`].
 /// For higher-level details on configuring a database, see the [crate-level
 /// docs](crate#configuration).
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+// NOTE: Defaults provided by the figment created in the `Initializer` fairing.
+#[derive(Default, Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(crate = "rocket::serde")]
 pub struct Config {
     /// Database-specific connection and configuration URL.
@@ -80,4 +85,11 @@ pub struct Config {
     ///
     /// _Default:_ `None`.
     pub idle_timeout: Option<u64>,
+    /// A list of database extensions to load at run-time.
+    ///
+    /// **Note:** Only the `sqlx_sqlite` driver supports this option (for SQLite
+    /// extensions) at this time. All other drivers ignore this option.
+    ///
+    /// _Default:_ `None`.
+    pub extensions: Option<Vec<String>>,
 }
