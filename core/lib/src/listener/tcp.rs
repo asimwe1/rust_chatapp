@@ -39,7 +39,8 @@ impl Bind for TcpListener {
             e.map(|e| e.tcp()).unwrap_or(Some(default))
         }).map_err(Left)?;
 
-        if let Some(port) = figment.extract_inner("port").map_err(Left)? {
+        if figment.contains("port") {
+            let port = figment.extract_inner("port").map_err(Left)?;
             address.set_port(port);
         }
 
