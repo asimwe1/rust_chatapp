@@ -1,0 +1,30 @@
+[package]
+name = "rust_chatapp"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rust_chatapp"
+path = "src/main.rs"
+
+[dependencies]
+rocket = { version = "^0.5.0", features = ["json", "msgpack", "serde"] }
+rocket_dyn_templates = "0.1" 
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+tokio = { version = "^1", features = ["full"] }
+
+[workspace]
+resolver = "2"
+members = [
+  "core/lib/",
+  "core/codegen/",
+  "core/http/",
+  "contrib/db_pools/codegen/",
+  "contrib/db_pools/lib/",
+  "contrib/sync_db_pools/codegen/",
+  "contrib/sync_db_pools/lib/",
+  "contrib/dyn_templates/",
+  "contrib/ws/",
+  "docs/tests",
+]
