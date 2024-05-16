@@ -1,0 +1,13 @@
+E:\justBK\rs\rust_chatapp\target\debug\deps\libtoml-fa4307931518920b.rmeta: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\map.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\value.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\de.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\ser.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\macros.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\edit.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\fmt.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\table.rs
+
+E:\justBK\rs\rust_chatapp\target\debug\deps\toml-fa4307931518920b.d: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\map.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\value.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\de.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\ser.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\macros.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\edit.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\fmt.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\table.rs
+
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\lib.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\map.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\value.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\de.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\ser.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\macros.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\edit.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\fmt.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\toml-0.8.9\src\table.rs:

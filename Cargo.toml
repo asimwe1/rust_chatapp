@@ -10,7 +10,9 @@ edition = "2021"
 
 [dependencies]
 rocket ={version="0.5.0-rc.4", features=["json"]} 
+rocket_dyn_templates = "0.1.0-rc.1"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.21.0"
 

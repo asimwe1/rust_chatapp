@@ -1,0 +1,12 @@
+E:\justBK\rs\rust_chatapp\target\debug\deps\libtempfile-016549eccf7898dd.rmeta: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\dir.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\error.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\mod.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\mod.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\spooled.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\util.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\windows.rs
+
+E:\justBK\rs\rust_chatapp\target\debug\deps\tempfile-016549eccf7898dd.d: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\dir.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\error.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\mod.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\mod.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\spooled.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\util.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\windows.rs
+
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\lib.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\dir.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\error.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\mod.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\mod.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\spooled.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\util.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\tempfile-3.9.0\src\file\imp\windows.rs:

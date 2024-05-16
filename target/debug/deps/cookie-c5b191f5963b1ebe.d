@@ -1,0 +1,12 @@
+E:\justBK\rs\rust_chatapp\target\debug\deps\libcookie-c5b191f5963b1ebe.rmeta: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\builder.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\parse.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\jar.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\delta.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\same_site.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\expiration.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\prefix.rs
+
+E:\justBK\rs\rust_chatapp\target\debug\deps\cookie-c5b191f5963b1ebe.d: C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\lib.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\builder.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\parse.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\jar.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\delta.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\same_site.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\expiration.rs C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\prefix.rs
+
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\lib.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\builder.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\parse.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\jar.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\delta.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\same_site.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\expiration.rs:
+C:\Users\Landry\.cargo\registry\src\index.crates.io-6f17d22bba15001f\cookie-0.18.0\src\prefix.rs:
