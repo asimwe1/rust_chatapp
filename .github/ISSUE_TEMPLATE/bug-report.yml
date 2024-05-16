@@ -1,0 +1,133 @@
+name: Bug Report
+description: Report a functionality issue that deviates from the documentation.
+labels: ["triage"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **Thanks for taking the time to fill out this bug report!** Your report
+        helps make Rocket better.
+
+
+        Please only report issues related to _functionality_ that deviates from
+        published specification or reasonable expectation. Do not report issues
+        with documentation, infrastructure, or anything unrelated to functional
+        correctness here.
+  - type: input
+    attributes:
+      label: Rocket Version
+      description: >
+        Enter the exact version of Rocket (x.y.z) or git shorthash (8d9dfce) you're using.
+
+
+        Please ensure you're using the latest release before reporting a bug.
+      placeholder: "ex: 0.5.0"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Operating System
+      description: Which operating system and version are you running?
+      placeholder: "examples: macOS 13.6.2, Arch Linux 4.16.13"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Rust Toolchain Version
+      description: Which version of `rustc` are you using? (`rustc --version`)
+      placeholder: "ex: rustc 1.74.0 (79e9716c9 2023-11-13)"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Provide a brief overview of what went wrong.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Test Case
+      description: >
+        Provide a Rocket application that elicits the bug. Ideally the program
+        contains a `#[test]` case using Rocket's
+        [`local`](https://api.rocket.rs/v0.5/rocket/local/index.html) testing
+        module.
+      placeholder: >
+        #[macro_use] extern crate rocket;
+
+
+        #[launch]
+
+        fn rocket() -> _ {
+            rocket::build()
+        }
+
+
+        #[test]
+
+        fn failing_test() {
+            use rocket::local::blocking::Client;
+
+            let client = Client::tracked(rocket()).unwrap();
+            let response = client.get("/").dispatch();
+            assert!(response.status().class().is_success());
+        }
+      render: rust
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Log Output
+      description: >
+        Please provide the complete log output captured with
+        `ROCKET_LOG_LEVEL=debug` when the test case is run.
+      placeholder: >
+        ❯ ROCKET_LOG_LEVEL=debug cargo test
+
+        running 1 test
+
+        test failing_test ... FAILED
+
+        failures:
+
+
+        ---- failing_test stdout ----
+
+        -- configuration trace information --
+           >> "address" parameter source: rocket::Config::default()
+           >> "port" parameter source: rocket::Config::default()
+           >> "workers" parameter source: rocket::Config::default()
+           >> "max_blocking" parameter source: rocket::Config::default()
+           >> "keep_alive" parameter source: rocket::Config::default()
+           >> "ident" parameter source: rocket::Config::default()
+           >> "ip_header" parameter source: rocket::Config::default()
+           >> "limits" parameter source: rocket::Config::default()
+           >> "temp_dir" parameter source: rocket::Config::default()
+           >> "log_level" parameter source: `ROCKET_` environment variable(s)
+           >> "shutdown" parameter source: rocket::Config::default()
+           >> "cli_colors" parameter source: rocket::Config::default()
+        🔧 Configured for debug.
+           >> address: 127.0.0.1
+           >> port: 8000
+           [...]
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: >
+        Feel free to provide any additional context for your bug report.
+  - type: checkboxes
+    attributes:
+      label: System Checks
+      description: "Please confirm all of the following:"
+      options:
+        - label: My bug report relates to functionality.
+          required: true
+        - label: I have tested against the latest Rocket release or a recent git commit.
+          required: true
+        - label: I have tested against the latest stable `rustc` toolchain.
+          required: true
+        - label: I was unable to find this issue previously reported.
+          required: true

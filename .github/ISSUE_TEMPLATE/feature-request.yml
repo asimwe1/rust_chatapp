@@ -1,0 +1,73 @@
+name: Feature Request
+description: Propose a change that introduces new functionality.
+labels: ["request"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **Thanks for taking the time to request a feature!** Your request helps
+        make Rocket better.
+
+
+        Please note that Rocket is designed to have a small but pluggable core.
+        Feature requests that can be implemented outside of Rocket _are
+        typically declined._ In your request, please make a strong case for why
+        this feature can't or shouldn't be implemented outside of Rocket.
+  - type: textarea
+    attributes:
+      label: What's missing?
+      description: >
+        Provide a brief overview of the functionality that's missing in Rocket
+        today, which problem(s) that functionality would solve for you, and what
+        the functionality would enable you to do.
+      placeholder: >
+        example: I frequently want to do X, but Rocket makes it hard. It would
+        be nice if Rocket...
+
+        example: I want to do X but Rocket makes it impossible because...
+
+        example: Feature Z exists, but it has these N drawbacks: [..]. What if...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Ideal Solution
+      description: >
+        If you already have an idea of how this feature can be implemented,
+        please describe it here. Hypothetical code examples are particularly
+        useful.
+  - type: textarea
+    attributes:
+      label: Why can't this be implemented outside of Rocket?
+      description: >
+        Please make a strong case for why this feature can't or shouldn't be
+        implemented outside of Rocket. We are likely to decline feature requests
+        that can exist outside of Rocket without compromise.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Are there workarounds usable today?
+      description: >
+        If the functionality being requested can be achieved today, please detail
+        how here.
+  - type: textarea
+    attributes:
+      label: Alternative Solutions
+      description: >
+        If you have other ideas about how this feature can be implemented, let
+        us know.
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: >
+        Feel free to provide any additional context for your request.
+  - type: checkboxes
+    attributes:
+      label: System Checks
+      description: "Please confirm all of the following:"
+      options:
+        - label: I do not believe that this feature can or should be implemented outside of Rocket.
+          required: true
+        - label: I was unable to find a previous request for this feature.
+          required: true
